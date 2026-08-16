@@ -1,0 +1,477 @@
+<title>Gate Ledger</title>
+<style>
+  :root {
+    --paper:      #E4E5DF;
+    --paper-2:    #DCDDD5;
+    --ink:        #191A1E;
+    --ink-soft:   #52544F;
+    --blue:       #24357E;
+    --orange:     #F4551D;
+    --overprint:  #6B1F3F;
+    --rule:       rgba(25,26,30,.20);
+    --rule-soft:  rgba(25,26,30,.10);
+    --focus:      #24357E;
+    /* Ink on paper multiplies; light on a dark ground screens. */
+    --plate-blend: multiply;
+
+    --display: "Bahnschrift","DIN Condensed","DIN Alternate","Oswald","Arial Narrow",sans-serif;
+    --body:    "Sitka Text","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --mono:    "Cascadia Mono",Consolas,"SF Mono",Menlo,"DejaVu Sans Mono",monospace;
+
+    --shell: 1180px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:     #15171C;
+      --paper-2:   #1D2027;
+      --ink:       #E8E7E1;
+      --ink-soft:  #9B9E98;
+      --blue:      #8296EE;
+      --orange:    #FF7A44;
+      --overprint: #E0709A;
+      --rule:      rgba(232,231,225,.22);
+      --rule-soft: rgba(232,231,225,.11);
+      --focus:     #8296EE;
+      --plate-blend: screen;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:     #15171C;
+    --paper-2:   #1D2027;
+    --ink:       #E8E7E1;
+    --ink-soft:  #9B9E98;
+    --blue:      #8296EE;
+    --orange:    #FF7A44;
+    --overprint: #E0709A;
+    --rule:      rgba(232,231,225,.22);
+    --rule-soft: rgba(232,231,225,.11);
+    --focus:     #8296EE;
+    --plate-blend: screen;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 28px 24px 72px;
+  }
+
+  /* ── Sheet header ─────────────────────────────────────────── */
+  .sheet-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 28px;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .wordmark {
+    font-family: var(--display);
+    font-size: 15px;
+    letter-spacing: .19em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .wordmark span { color: var(--orange); }
+  .specimen {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    letter-spacing: .02em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+  }
+  .specimen b { font-weight: 400; color: var(--ink); }
+
+  /* ── Verdict: the thesis, printed in two plates ───────────── */
+  .verdict {
+    padding: 40px 0 30px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .eyebrow {
+    font-family: var(--display);
+    font-size: 12px;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+  }
+  .status {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(56px, 13vw, 132px);
+    line-height: .84;
+    letter-spacing: -.015em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--blue);
+    position: relative;
+    display: inline-block;
+    text-wrap: balance;
+  }
+  /* the misregistered second plate */
+  .status::before {
+    content: attr(data-plate);
+    position: absolute;
+    inset: 0;
+    color: var(--orange);
+    mix-blend-mode: var(--plate-blend);
+    transform: translate(3px, 2px);
+    z-index: -1;
+    animation: register .9s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes register {
+    from { transform: translate(14px, 9px); opacity: 0; }
+    to   { transform: translate(3px, 2px);  opacity: 1; }
+  }
+
+  .tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-top: 26px;
+    border-top: 1px solid var(--rule);
+  }
+  .tally-item {
+    flex: 1 1 128px;
+    padding: 12px 16px 12px 0;
+    border-right: 1px solid var(--rule-soft);
+  }
+  .tally-item:last-child { border-right: 0; }
+  .tally-n {
+    font-family: var(--display);
+    font-size: 34px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    display: block;
+  }
+  .tally-l {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .n-fail { color: var(--overprint); }
+  .n-warn { color: var(--orange); }
+  .n-pass { color: var(--blue); }
+
+  /* ── Control ──────────────────────────────────────────────── */
+  .control {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 22px 0 0;
+    padding: 14px 16px;
+    background: var(--paper-2);
+    border-left: 3px solid var(--orange);
+  }
+  .control input { margin: 4px 0 0; accent-color: var(--orange); width: 16px; height: 16px; }
+  .control label { font-size: 14.5px; cursor: pointer; }
+  .control .hint {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+    line-height: 1.5;
+  }
+
+  /* ── Ledger ───────────────────────────────────────────────── */
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(0,1.35fr) minmax(0,1fr);
+    gap: 0 40px;
+    margin-top: 34px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; gap: 34px; } }
+
+  .col-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .ledger { list-style: none; margin: 0; padding: 0; }
+  .row {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--rule-soft);
+    padding: 11px 4px 11px 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background .12s, transform .12s;
+  }
+  .row:hover { background: var(--paper-2); transform: translateX(1px); }
+  .row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .row[aria-current="true"] { background: var(--paper-2); }
+  .row[aria-current="true"] .g-id { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* evidence rail: top track = structural, bottom = heuristic */
+  .rail { display: flex; flex-direction: column; gap: 3px; }
+  .track { height: 4px; border-radius: 0; background: var(--rule-soft); }
+  .track.on-struct { background: var(--blue); }
+  .track.on-heur {
+    background: repeating-linear-gradient(90deg, var(--orange) 0 2px, transparent 2px 4px);
+  }
+
+  .g-id {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: -.01em;
+    overflow-wrap: anywhere;
+  }
+  .verdict-chip {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    white-space: nowrap;
+    border: 1px solid currentColor;
+  }
+  .v-PASS { color: var(--blue); }
+  .v-WARN { color: var(--orange); }
+  .v-FAIL { color: var(--overprint); background: color-mix(in srgb, var(--overprint) 12%, transparent); }
+
+  /* ── Detail ───────────────────────────────────────────────── */
+  .detail { position: sticky; top: 20px; }
+  .detail-body { padding-top: 16px; }
+  .d-id {
+    font-family: var(--display);
+    font-size: clamp(26px, 3.4vw, 38px);
+    line-height: 1.02;
+    margin: 0 0 4px;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+  .d-meta {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+  }
+  .d-msg { font-size: 16.5px; margin: 0 0 20px; max-width: 62ch; }
+  .d-dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 18px; margin: 0; font-size: 14px; }
+  .d-dl dt {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-top: 3px;
+  }
+  .d-dl dd { margin: 0; }
+  .d-dl code { font-family: var(--mono); font-size: 12.5px; }
+
+  /* ── Footer ───────────────────────────────────────────────── */
+  .colophon {
+    margin-top: 48px;
+    padding-top: 14px;
+    border-top: 2px solid var(--ink);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 30px;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .colophon strong { color: var(--ink); font-weight: 400; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 20px; height: 4px; display: inline-block; }
+  .sw-struct { background: var(--blue); }
+  .sw-heur { background: repeating-linear-gradient(90deg, var(--orange) 0 2px, transparent 2px 4px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .status::before { animation: none; }
+    .row { transition: none; }
+    .row:hover { transform: none; }
+  }
+</style>
+
+<div class="shell">
+  <header class="sheet-top">
+    <div class="wordmark">PromptNexus <span>/</span> Lint</div>
+    <div class="specimen">
+      <span>specimen <b>support-agent-v4.md</b></span>
+      <span>sha256 <b id="hash">8e14d2b6…7d0f2d2c</b></span>
+      <span>core <b>a41c9f2</b></span>
+    </div>
+  </header>
+
+  <section class="verdict">
+    <p class="eyebrow">Run verdict — 16 gates</p>
+    <h1 class="status" id="status" data-plate="GATE FAIL">GATE FAIL</h1>
+
+    <div class="tally">
+      <div class="tally-item"><span class="tally-n n-fail" id="n-fail">2</span><span class="tally-l">Fail</span></div>
+      <div class="tally-item"><span class="tally-n n-warn" id="n-warn">4</span><span class="tally-l">Warn</span></div>
+      <div class="tally-item"><span class="tally-n n-pass" id="n-pass">10</span><span class="tally-l">Pass</span></div>
+      <div class="tally-item"><span class="tally-n" id="n-heur">5</span><span class="tally-l">Heuristic</span></div>
+    </div>
+
+    <div class="control">
+      <input type="checkbox" id="fences">
+      <label for="fences">
+        Lint fenced examples too
+        <span class="hint">Off by default: a key shown inside ``` is documentation, not a leak. Turning this on scans those spans and changes SECRET_LEAK_SCAN.</span>
+      </label>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section>
+      <div class="col-head"><span>Gate</span><span>Verdict</span></div>
+      <ul class="ledger" id="ledger"></ul>
+      <div class="legend">
+        <span><i class="swatch sw-struct"></i> structural — deterministic parse</span>
+        <span><i class="swatch sw-heur"></i> heuristic — indicates where to look</span>
+      </div>
+    </section>
+
+    <section class="detail">
+      <div class="col-head"><span>Finding</span><span id="d-chip"></span></div>
+      <div class="detail-body">
+        <h2 class="d-id" id="d-id"></h2>
+        <p class="d-meta" id="d-meta"></p>
+        <p class="d-msg" id="d-msg"></p>
+        <dl class="d-dl">
+          <dt>Evidence</dt><dd id="d-eviq"></dd>
+          <dt>Checks</dt><dd id="d-check"></dd>
+          <dt>Source</dt><dd><code id="d-src"></code></dd>
+        </dl>
+      </div>
+    </section>
+  </div>
+
+  <footer class="colophon">
+    <span>Prompt body stays in this tab. Events carry <strong>keyed hashes only</strong>.</span>
+    <span>gate set <strong>16</strong> · catalog <strong>v1.20.0</strong> · contracts <strong>gate-result/1.3.0</strong></span>
+  </footer>
+</div>
+
+<script>
+  // Verdicts and evidence classes are the linter's real semantics, read from
+  // prompt_lint.py — not the older doc table, which had five of them wrong.
+  const GATES = [
+    ["PLACEHOLDER_AUDIT","PASS","struct","Every {{placeholder}} resolves to a declared runtime variable.","Undeclared placeholder references"],
+    ["RUNTIME_KEY_UNDECLARED","PASS","struct","All runtime keys are declared before first use.","Use-before-declare on runtime keys"],
+    ["SOURCE_LEDGER_MISSING","PASS","struct","Citations resolve; a source ledger is present.","Citations present with no ledger"],
+    ["ADVERSARIAL_RESILIENCE","WARN","both","Corpus pass rate 0.78 — inside the warning band, below the 0.85 target.","Resistance to the jailbreak corpus"],
+    ["QUTM_CEILING","PASS","struct","Quoted-untrusted ratio 2.1, under the 4.0 ceiling for tier <em>guarded</em>.","Quoted-untrusted-text budget"],
+    ["DELIMITER_ENTROPY","FAIL","struct","Delimiter carries 16 hex characters; 32 required for 128-bit separation.","Anti-override delimiter strength"],
+    ["CONTEXT_LIMIT","PASS","struct","Estimated 6,140 tokens against a 200,000-token window.","Fit inside the model context window"],
+    ["SECRET_LEAK_SCAN","PASS","heur","No credential or PII patterns found in the compiled prompt.","Credential and PII shapes in the prompt's own text"],
+    ["RAG_SHIELD_GAP","FAIL","heur","Retrieved content is fenced, but no instruction tells the agent to ignore instructions inside it.","Shield instruction over untrusted content"],
+    ["ORPHAN_CLAIMS","PASS","struct","Every citation resolves to a ledger entry.","Citations without a matching source"],
+    ["GUARDRAIL_GAP","WARN","heur","Missing a bias clause. WARN below safety tier — this would FAIL at safety-critical.","Declared risks carry guardrail clauses"],
+    ["RECURSION_MACHINERY_PRESENT","PASS","struct","No recursive machinery in a non-recursive target.","Recursion tokens outside a recursive target"],
+    ["TOKEN_BUDGET","PASS","struct","6,140 tokens against a declared budget of 8,000.","Compiled size against the stage budget"],
+    ["TOKEN_SPAM","WARN","heur","Three paragraphs repeat with only cosmetic variation.","Padding that inflates tokens without instruction"],
+    ["DUPLICATE_INSTRUCTION","WARN","struct","“Always cite your sources” appears twice, phrased differently.","The same instruction issued more than once"],
+    ["CLAIM_DISCIPLINE","PASS","struct","No live-capability claims while demo mode is off.","Demo output presenting itself as live"]
+  ].map(([id,verdict,evi,msg,checks]) => ({id,verdict,evi,msg,checks}));
+
+  const SECRET = GATES.find(g => g.id === "SECRET_LEAK_SCAN");
+  const ledger = document.getElementById("ledger");
+  let selected = "DELIMITER_ENTROPY";
+
+  const EVI_TEXT = {
+    struct: "Structural — a deterministic parse of the prompt. The verdict is provable.",
+    heur:   "Heuristic — pattern matching. A hit indicates where to look, not proof.",
+    both:   "Both — scored against a corpus, so the verdict is banded rather than binary."
+  };
+
+  function render() {
+    const fences = document.getElementById("fences").checked;
+    SECRET.verdict = fences ? "WARN" : "PASS";
+    SECRET.msg = fences
+      ? "Possible secret in a fenced example: anthropic_api_key. Heuristic — verify before treating as a leak."
+      : "No credential or PII patterns found in the compiled prompt.";
+
+    ledger.innerHTML = "";
+    for (const g of GATES) {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.className = "row";
+      b.type = "button";
+      b.setAttribute("aria-current", String(g.id === selected));
+      b.innerHTML =
+        `<span class="rail" aria-hidden="true">
+           <i class="track ${g.evi === "struct" || g.evi === "both" ? "on-struct" : ""}"></i>
+           <i class="track ${g.evi === "heur"   || g.evi === "both" ? "on-heur"   : ""}"></i>
+         </span>
+         <span class="g-id">${g.id}</span>
+         <span class="verdict-chip v-${g.verdict}">${g.verdict}</span>`;
+      b.addEventListener("click", () => { selected = g.id; render(); });
+      li.appendChild(b);
+      ledger.appendChild(li);
+    }
+
+    const counts = { PASS: 0, WARN: 0, FAIL: 0 };
+    for (const g of GATES) counts[g.verdict]++;
+    document.getElementById("n-fail").textContent = counts.FAIL;
+    document.getElementById("n-warn").textContent = counts.WARN;
+    document.getElementById("n-pass").textContent = counts.PASS;
+    document.getElementById("n-heur").textContent =
+      GATES.filter(g => g.evi !== "struct").length;
+
+    const status = counts.FAIL ? "GATE FAIL" : counts.WARN ? "DEGRADED" : "PASS";
+    const el = document.getElementById("status");
+    el.textContent = status;
+    el.dataset.plate = status;
+
+    const g = GATES.find(x => x.id === selected);
+    document.getElementById("d-id").textContent = g.id;
+    document.getElementById("d-meta").textContent = `gate_version 1.1.0 · verdict ${g.verdict}`;
+    document.getElementById("d-msg").innerHTML = g.msg;
+    document.getElementById("d-eviq").textContent = EVI_TEXT[g.evi];
+    document.getElementById("d-check").textContent = g.checks;
+    document.getElementById("d-src").textContent = "sources/v5/prompt_lint.py";
+    document.getElementById("d-chip").innerHTML =
+      `<span class="verdict-chip v-${g.verdict}">${g.verdict}</span>`;
+  }
+
+  document.getElementById("fences").addEventListener("change", render);
+  render();
+</script>
