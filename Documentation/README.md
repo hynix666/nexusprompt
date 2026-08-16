@@ -39,6 +39,7 @@ Every count and file name above has been checked against the source artifacts �
 | [0004](./0004-dual-shell-strategy.md) | Dual Shell strategy (pipeline-ui, toolkit-ui, cli) | Accepted — amended by 0006 |
 | [0005](./0005-application-orchestration-boundary.md) | Application/Orchestration boundary and Composition Root; pure Core | Accepted — amends 0001 |
 | [0006](./0006-shell-composition-and-shared-ui.md) | Shared presentation packages; `CI-bot` removed from the Shell inventory | Accepted — amends 0004 |
+| [0007](./0007-permanent-differential-oracle.md) | The differential oracle is permanent, not migration scaffolding | Accepted |
 
 An amended ADR stays in force except where its amendment supersedes it; the amendment states which parts. Where an ADR and `ARCHITECTURE.md` disagree on current shape, `ARCHITECTURE.md` is authoritative.
 

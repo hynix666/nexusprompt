@@ -46,6 +46,8 @@ Cross-shell parity asserts that two implementations agree. **It cannot detect a 
 
 The third one is the sharpest: a port inherits its source's bugs along with its behavior, so two implementations that agree perfectly can be wrong together — and the closer the port, the more reliably they agree on the error.
 
+**The oracle is permanent, not migration scaffolding** — see [ADR-0007](./0007-permanent-differential-oracle.md). Deleting it when the port completes removes the check at exactly the moment the code looks most finished and gets the least scrutiny, which is when a shared defect is most dangerous.
+
 Both checks are needed, and they answer different questions:
 
 - **Parity** — do our implementations agree with each other? Catches divergence introduced during a port. Cheap, runs on every PR.
