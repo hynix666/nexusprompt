@@ -27,11 +27,12 @@
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { runGates, listGates } from "../core/src/gates/registry.js";
+import { runGates, listGates, SOURCE_GATE_COUNT } from "../core/src/gates/registry.js";
 import type { GateResult, Verdict } from "../contracts/index.js";
 
 const LINTER = "sources/v5/prompt_lint.py";
 const FIXTURES = "sources/v5/fixtures.json";
+const PORTED = "scripts/ported-gates.json";
 
 /* ── arguments ───────────────────────────────────────────────────────────── */
 
@@ -59,6 +60,54 @@ if (!Number.isFinite(N) || N < 0 || !Number.isFinite(SEED)) {
 // 16; the port currently registers 2. Comparing outside the intersection would
 // report a disagreement that is really just an unported gate.
 const SHARED = new Set(listGates().map((g) => g.id));
+
+/**
+ * The intersection rule has a cost, found by mutation: unregister a gate and the
+ * comparison silently shrinks while the oracle still exits 0. "Compared nothing is
+ * not agreement" was guarded; "compared half as much as yesterday" was not.
+ *
+ * So the ported set is pinned in a committed file and checked before any comparison
+ * runs. Refuses (exit 2) rather than failing (exit 1) — a mismatch means the harness
+ * does not know what it is supposed to be comparing, which is a different situation
+ * from the two implementations disagreeing.
+ */
+const manifest = JSON.parse(readFileSync(PORTED, "utf8")) as {
+  source_gate_count: number;
+  ported: string[];
+};
+
+const registered = [...SHARED].sort();
+const declared = [...manifest.ported].sort();
+
+if (registered.join(",") !== declared.join(",")) {
+  const missing = declared.filter((g) => !SHARED.has(g));
+  const extra = registered.filter((g) => !manifest.ported.includes(g));
+  console.error(`differential: the registry and ${PORTED} disagree about what is ported.`);
+  if (missing.length) console.error(`  declared but not registered: ${missing.join(", ")}`);
+  if (extra.length) console.error(`  registered but not declared:  ${extra.join(", ")}`);
+  console.error(`  Refusing to compare a gate set nobody declared.`);
+  process.exit(2);
+}
+
+/**
+ * The source gate count is a claim about a frozen artifact, so it is checked against
+ * that artifact rather than trusted. `SOURCE_VERIFICATION.md` exists because a
+ * documented gate count was wrong for months; a constant in code is no safer than a
+ * number in a document unless something re-derives it.
+ */
+const emittedGateIds = new Set(
+  [...readFileSync(LINTER, "utf8").matchAll(/"gate":\s*"([A-Z_]+)"/g)].map((m) => m[1]),
+);
+
+if (emittedGateIds.size !== manifest.source_gate_count || SOURCE_GATE_COUNT !== manifest.source_gate_count) {
+  console.error(`differential: gate-count claims disagree with the frozen linter.`);
+  console.error(`  ${LINTER} emits ${emittedGateIds.size} distinct gate ids`);
+  console.error(`  ${PORTED} declares source_gate_count=${manifest.source_gate_count}`);
+  console.error(`  core/src/gates/registry.ts declares SOURCE_GATE_COUNT=${SOURCE_GATE_COUNT}`);
+  process.exit(2);
+}
+
+const unported = [...emittedGateIds].filter((g) => !SHARED.has(g)).sort();
 
 /* ── options ─────────────────────────────────────────────────────────────── */
 
@@ -218,7 +267,11 @@ function compare(source: string, text: string, options: CaseOptions): void {
   }
 }
 
-console.log(`differential — ${[...SHARED].join(", ")} (${SHARED.size} of 16 gates ported)\n`);
+console.log(
+  `differential — ${[...SHARED].join(", ")} ` +
+    `(${SHARED.size} of ${emittedGateIds.size} gates ported, verified against ${LINTER})`,
+);
+console.log(`  not yet ported: ${unported.join(", ")}\n`);
 
 // 1. The frozen corpus. Eleven of these pin a defect that actually shipped.
 const fixtures = JSON.parse(readFileSync(FIXTURES, "utf8")) as {

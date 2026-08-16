@@ -4,13 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this directory actually is
 
-A **staging area for a merge that has not happened yet** — not a codebase. It holds:
+Mostly documentation, plus **one vertical slice that really runs**. It holds:
 
-- `Documentation/` — 24 Markdown files describing the *target* architecture of the PromptNexus Unified Platform, plus three review documents assessing it
-- Four source archives (still zipped) containing the real prior systems the target merges
-- `SystemPromptBuilderPipeline.tsx` — the pipeline component, loose on disk. **This copy is stale** (nine stages); the current one is inside `~/Downloads/Compressed/files_3.zip` and has eleven
+- `Documentation/` — 26 Markdown files describing the *target* architecture of the PromptNexus Unified Platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists.
+- `sources/` — 420 files extracted from five archives, frozen and SHA-256-verified against `sources/MANIFEST.json`. Read from these; never write into them.
+- A working slice: `contracts/`, `core/` (2 of 16 gates, one pipeline stage), `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `shells/cli`, `scripts/`, `test/`.
+- Four source archives (still zipped) and `SystemPromptBuilderPipeline.tsx`, loose on disk. **That copy is stale** (nine stages); the current one is inside `~/Downloads/Compressed/files_3.zip` and has eleven.
 
-There is no `package.json`, no `git init`, no `core/`, no `contracts/`, and nothing extracted from the archives. **No build, lint, or test command runs here.** Do not attempt `pnpm install` or `npm run verify` in this directory; they will fail, and their absence is the current state of the project, not a misconfiguration.
+`npm install && npm run verify` works and takes about ten seconds. **Use `npm`, not `pnpm`** — pnpm is not installed and the workspace is defined with npm workspaces, though much of the documentation still says `pnpm`.
+
+**Read `Documentation/GATES_REFERENCE.md`'s status block before assuming a gate exists.** The documentation was written target-state, in the present tense, before any code existed. Where a document says the system "implements" something, check.
 
 ## The archives (the actual source material)
 
@@ -66,12 +69,28 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 3. **`storage-db` revision persistence is new work, not a port.** The inherited Drizzle schema (MySQL) has `users` and `promptAssets` and no revisions table. The revision schema needs designing and should land as a reviewed migration before either storage adapter is built.
 4. **Neither scaffolding generator exists.** `scripts/new-gate.ts` and `scripts/new-technique.py` were never written. Build them or write gate/technique files by hand — but don't tell contributors to use them.
 
-## Commands (target state — none run yet)
+## Commands
 
-These are the interfaces the documentation specifies for the merged monorepo. They exist as design, not as scripts. Listed so a future session recognizes them, not so it runs them:
+**These run:**
 
-`pnpm run verify` (lint + typecheck + schema-validate + Core tests) · `pnpm run lint:boundaries` (import-boundary rule) · `npm run verify:gates -- --input <file>` · `npm run adversarial` · `npm run trace:view -- --run-id <id>` · `pnpm run docs:matrix` · `pnpm run verify:hash`
+| Command | What it does |
+|---|---|
+| `npm run verify` | boundaries → typecheck → source freeze → tests → differential oracle. The whole check, ~10s. |
+| `npm run lint:boundaries` | Import-boundary rule (`scripts/check-boundaries.mjs`). |
+| `npm run verify:sources` | Re-hashes all 420 frozen files against `MANIFEST.json`. |
+| `npm test` | Vitest: projects `core`, `application`, `adapters`, `contracts`. |
+| `npm run differential` | The oracle — ported gates vs. the frozen Python linter. Needs Python. |
+| `npm run cli` | `promptnexus lint\|run\|gates`. |
 
-`scaffold:gate` and `scaffold:technique` appear in the docs but have no implementation in any source — treat them as unbuilt, not as missing scripts to restore.
+**These are target state and do not exist:** `npm run verify:gates`, `npm run adversarial`, `npm run trace:view`, `docs:matrix`, `verify:hash`, `scaffold:gate`, `scaffold:technique`. Treat them as unbuilt, not as scripts to restore.
 
-CI order is meaningful: boundaries and schema validation first, then Core tests **with purity instrumentation** (the harness fails the stage if any network, filesystem, clock, or randomness call occurs during a Core test), then Application orchestration tests, adapter contract tests against both implementations, cross-shell parity, adversarial corpus, and build-hash reproducibility last.
+**There is no CI service** — no `.github/`, no pipeline. Documents describing "CI stages" describe intent. The intended order is meaningful and `npm run verify` follows it: boundaries and schema validation first, then Core tests, then Application, adapters, cross-shell parity, adversarial corpus, build-hash reproducibility last.
+
+## Two guards, and what each one actually covers
+
+Core purity is enforced by two mechanisms, and conflating them is how the codebase spent a while believing it was checking something it was not:
+
+- **`scripts/check-boundaries.mjs`** — the filesystem/network guard. `core/src/**` may not import `node:fs` or any other effectful builtin at all. Reads every file, so it does not depend on test coverage.
+- **`core/test/purity.setup.ts`** — traps `fetch`, `Math.random`, `Date.now`, and `new Date()`. **It does not block the filesystem**, and cannot: Node snapshots a builtin's ESM exports when the module is first evaluated, so patching `node:fs` afterwards changes an object nothing reads. Only `require("fs")` is interceptable, and no Core module uses it.
+
+Do not "fix" the harness to block fs. It was tried, measured, and documented in the file's header.

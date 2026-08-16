@@ -1,10 +1,17 @@
 /**
  * Contract types for the vertical slice.
  *
- * These are hand-written bindings around the JSON Schemas in this directory.
- * The schemas are the source of truth: the tests validate real values against
- * them, so a type that drifts from its schema is caught by a failing fixture
- * rather than by review.
+ * These are hand-written bindings around the JSON Schemas in this directory. The
+ * schemas are the source of truth, and `test/contract-conformance.test.ts` validates
+ * a value the running system produced against every one of them — plus a deliberately
+ * broken value that must be rejected, because a validator that cannot fail proves
+ * nothing.
+ *
+ * That file also asserts that the set of `*.schema.json` files on disk equals the set
+ * it covers, so a new schema cannot arrive without a conformance case.
+ *
+ * This comment used to claim all of that while three of the five schemas were loaded
+ * by no test at all. The claim is now the thing the suite checks.
  */
 
 /* ── Core values ──────────────────────────────────────────────────────────── */

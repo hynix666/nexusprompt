@@ -4,15 +4,23 @@
 
 ```
 git clone <repo>
-pnpm install
-pnpm run verify        # lint + typecheck + schema-validate + Core test suite, no network
+npm install
+npm run verify         # boundaries → typecheck → source freeze → tests → differential oracle
 ```
 
-Monorepo layout: `core/`, `application/`, `contracts/`, `adapters/`, `shells/`, `packages/` (shared presentation), `observability/`, `docs/adr/`, `scripts/` (see `ARCHITECTURE.md`).
+`npm`, not `pnpm`: pnpm is not installed here and the workspace is defined with npm workspaces. The documented layout still names packages that do not exist yet — built today are `contracts/`, `core/`, `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `shells/cli`, `scripts/`, and `test/`. `packages/` (shared presentation) and `observability/` are target state.
+
+`npm run verify` is the whole check and runs in about ten seconds. There is **no CI service** configured — no `.github/`, no pipeline. Everything below that says "CI" describes intent; the local command is what actually runs.
 
 ## Enforced boundaries
 
-An ESLint `no-restricted-imports` rule fails any PR that violates the dependency table in `ARCHITECTURE.md`. This is checked in CI, not left to code review. The rules that catch the most mistakes:
+`npm run lint:boundaries` (`scripts/check-boundaries.mjs`) fails on any import that violates the dependency table in `ARCHITECTURE.md`.
+
+This is a plain script rather than an ESLint rule, and it exists because the sentence that used to sit here — an ESLint `no-restricted-imports` rule, "checked in CI, not left to code review" — described nothing. There was no ESLint config, no CI, and the only Shell in the repository imported Core and two concrete adapters while its own header comment said it did not. An audit found it in about a minute; the rule that was supposed to catch it had never existed.
+
+The checker reads every file under each layer, so it does not depend on a test exercising the line. Exemptions are declared in the script with a reason attached — `shells/cli/src/composition-root.ts` is the only one, because naming concrete adapters is precisely a composition root's job.
+
+The rules that catch the most mistakes:
 
 - `core/*` may not import `adapters/*`, `shells/*`, or `application/*`
 - `shells/<a>/*` may not import `shells/<b>/*` — cross-Shell reuse goes through a shared presentation package ([ADR-0006](./0006-shell-composition-and-shared-ui.md))
@@ -72,12 +80,38 @@ npm run scaffold:technique -- --source "<citation>"
 
 **Neither generator exists yet.** They appear in no source archive, despite earlier drafts of this document and `CONTRIBUTING.md` instructing contributors to use them rather than hand-write files. They are worth building — pre-wiring the contract shape and a stub test is exactly how the property-test requirement stops being a review-time argument — but until then, write the files by hand.
 
-What CI does enforce today is the requirement itself: a gate without a property test fails the Core stage, whether or not a generator produced it.
+**Nothing enforces the property-test requirement either.** This paragraph used to claim that "a gate without a property test fails the Core stage." There is no Core stage; there is no CI. Both ported gates do have property tests, and `CLAIM_DISCIPLINE` only got one after an audit noticed it had no test file at all while `GATES_REFERENCE.md` asserted every gate had both. Until something checks it, treat the requirement as a review convention.
 
-## CI pipeline stages
+What a new gate *is* checked against: `scripts/ported-gates.json` must list it, or `npm run differential` refuses to run — see [ADR-0007](./0007-permanent-differential-oracle.md).
+
+## Purity instrumentation: what it covers, exactly
+
+Core purity is enforced by **two** mechanisms that fail differently, and the distinction matters because for a while the documentation described one mechanism doing both jobs, and it was not doing the second.
+
+| Concern | Mechanism | Why that one |
+|---|---|---|
+| Network via `fetch`, clock, randomness | `core/test/purity.setup.ts` | Globals are resolved at call time, so replacing them traps the call |
+| Filesystem, sockets, subprocesses | `scripts/check-boundaries.mjs` | `core/src/**` may not import `node:fs` or any other effectful builtin at all |
+
+The runtime harness **does not block the filesystem**, and three places — including its own header — said it did until an audit put `readFileSync` inside a Core gate and watched the suite pass. It cannot: Node builds the ESM facade for a builtin by copying the CJS exports when the module is first evaluated, which happens as the test file's import graph loads, before any setup hook runs. Measured on this repository:
+
+```
+import { readFileSync } from "node:fs"     → NOT interceptable
+import * as fs from "node:fs"              → NOT interceptable
+(await import("node:fs")).readFileSync     → NOT interceptable
+require("fs").readFileSync                 → interceptable
+```
+
+Every Core module uses static ESM imports, so a runtime filesystem guard would have caught nothing while looking like it worked. The static check is stronger anyway: it reads every file under `core/src` whether or not a test runs it, which closes the coverage hole an earlier audit found — a Core module the harness never watched because no Core test imported it.
+
+Neither mechanism subsumes the other. The static check cannot see an effect handed in at runtime; the harness cannot see a line no test reaches.
+
+## Intended CI pipeline stages
+
+**No CI service is configured.** These stages describe the intended pipeline; `npm run verify` runs stages 1, 2 and part of 3 locally today.
 
 1. Lint (including import-boundary rule) + typecheck + contract schema validation
-2. Core unit + property tests (no network) + Core purity instrumentation — the test harness fails the stage if any network, filesystem, clock, or randomness call occurs during a Core test
+2. Core unit + property tests (no network) + Core purity instrumentation — see the table above for what that does and does not cover
 3. Application orchestration tests against fake adapters
 4. Adapter contract tests (against both implementations of each interface)
 5. Shell integration tests + cross-shell parity check

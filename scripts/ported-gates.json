@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "The gates the TypeScript port currently registers, pinned.",
+    "",
+    "The differential oracle compares the intersection of the two gate sets, so an",
+    "unported gate is never reported as a disagreement. An audit found the cost of",
+    "that: unregistering CLAIM_DISCIPLINE left `npm run differential` exiting 0. The",
+    "comparison silently halved and the harness still printed agreement, because the",
+    "only guard fired at zero cases and one gate is not zero.",
+    "",
+    "So the ported set is declared here rather than inferred from the registry.",
+    "Porting a gate means adding it in two places, which is the point: a shrinking",
+    "comparison is now a deliberate, reviewable act rather than a side effect.",
+    "",
+    "source_gate_count is checked against the frozen linter on every run — the number",
+    "of distinct gate ids prompt_lint.py can emit — so it cannot drift into fiction",
+    "the way the documented gate count did before SOURCE_VERIFICATION.md existed."
+  ],
+  "source_gate_count": 16,
+  "ported": ["SECRET_LEAK_SCAN", "CLAIM_DISCIPLINE"]
+}

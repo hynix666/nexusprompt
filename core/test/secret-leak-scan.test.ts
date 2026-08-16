@@ -7,6 +7,7 @@ import fc from "fast-check";
 import {
   secretLeakScan,
   secretLeakLabels,
+  SECRET_PATTERNS,
   GATE_ID,
 } from "../src/gates/secret-leak-scan.js";
 import { stripDocumentationSpans } from "../src/strip-documentation-spans.js";
@@ -99,24 +100,75 @@ describe("determinism", () => {
   });
 });
 
+/**
+ * These two tests replace two that could not fail.
+ *
+ * The originals timed `"sk-" + "A".repeat(500_000)` and a run of near-miss `sk-ant-`
+ * prefixes against a 1000 ms budget, under a comment promising that removing a bound
+ * would be caught. An audit removed the `sk-ant-…{20,128}` upper bound and both stayed
+ * green — measured at 0.176 ms bounded versus 0.037 ms unbounded, the mutation being
+ * marginally *faster*. Neither input forces backtracking against a key pattern,
+ * because nothing follows the quantifier: the match succeeds at the minimum length and
+ * the engine never retries.
+ *
+ * So the invariant is checked where it actually lives — in the shape of the patterns —
+ * and timing is used only for `pii_email`, the one pattern where a removed bound is
+ * genuinely a performance cliff.
+ */
 describe("bounded-quantifier invariant", () => {
-  // The source bounds every quantifier at both ends because an open-ended one made
-  // the scan quadratic — a 500 KB prompt took minutes. This is the test that catches
-  // a "simplification" that removes a bound.
-  it("scans a 500 KB adversarial input well under a second", () => {
-    const adversarial = "sk-" + "A".repeat(500_000);
-    const start = process.hrtime.bigint();
-    secretLeakScan(adversarial);
-    const ms = Number(process.hrtime.bigint() - start) / 1e6;
-    expect(ms).toBeLessThan(1000);
+  /**
+   * Walk a regex source and report quantifiers with no upper bound. Escapes and
+   * character classes are tracked because `\+` is a literal plus and `[0-9 ().-]`
+   * contains characters that are quantifiers anywhere else.
+   */
+  function unboundedQuantifiers(source: string): string[] {
+    const found: string[] = [];
+    let inClass = false;
+    for (let i = 0; i < source.length; i++) {
+      const c = source[i];
+      if (c === "\\") { i++; continue; }
+      if (inClass) { if (c === "]") inClass = false; continue; }
+      if (c === "[") { inClass = true; continue; }
+      if (c === "+" || c === "*") { found.push(`${c} at ${i}`); continue; }
+      if (c === "{") {
+        const end = source.indexOf("}", i);
+        if (end === -1) continue;
+        const body = source.slice(i + 1, end);
+        if (/^\d+,$/.test(body)) found.push(`{${body}} at ${i}`);
+        i = end;
+      }
+    }
+    return found;
+  }
+
+  it("the scanner itself recognises an unbounded quantifier", () => {
+    // A structural check is only worth as much as its detector, so the detector is
+    // tested on both answers before being trusted on the real patterns.
+    expect(unboundedQuantifiers("[A-Za-z]{1,64}@x")).toEqual([]);
+    expect(unboundedQuantifiers("\\+[0-9]{8,20}[0-9]")).toEqual([]);
+    expect(unboundedQuantifiers("[A-Za-z]+@x")).toHaveLength(1);
+    expect(unboundedQuantifiers("[A-Za-z]{1,}@x")).toHaveLength(1);
+    expect(unboundedQuantifiers("a.*b")).toHaveLength(1);
   });
 
-  it("stays bounded on repeated near-miss prefixes", () => {
-    const adversarial = ("sk-ant-" + "x".repeat(19) + " ").repeat(20_000);
+  it("every secret pattern bounds every quantifier at both ends", () => {
+    for (const [pattern, label] of SECRET_PATTERNS) {
+      expect(
+        { label, unbounded: unboundedQuantifiers(pattern.source) },
+        `${label} has an unbounded quantifier — see the note in secret-leak-scan.ts`,
+      ).toEqual({ label, unbounded: [] });
+    }
+  });
+
+  it("stays linear on a long local-part run with no '@'", () => {
+    // The measured discriminator. Bounded ≈ 8 ms; with `{1,64}` relaxed to `+` the
+    // same input took ≈ 1370 ms on the machine that wrote this. The budget sits
+    // between those, far from both.
+    const adversarial = "a".repeat(60_000);
     const start = process.hrtime.bigint();
     secretLeakScan(adversarial);
     const ms = Number(process.hrtime.bigint() - start) / 1e6;
-    expect(ms).toBeLessThan(1000);
+    expect(ms).toBeLessThan(300);
   });
 
   it("never throws, on arbitrary input", () => {

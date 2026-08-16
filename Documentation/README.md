@@ -60,6 +60,23 @@ This documentation set describes the target state of a system merged from four p
 
 This documentation describes the **target architecture**. Nothing in this set should be read as "already shipped."
 
+### What is actually built
+
+A vertical slice — one stage end to end — plus the machinery that checks it. This section exists because the doc set is written in the present tense and code now exists to contradict it; an audit found `GATES_REFERENCE.md` asserting sixteen implemented gates against a repository holding two.
+
+| Area | Built | Target |
+|---|---|---|
+| Lint gates | 2 (`SECRET_LEAK_SCAN`, `CLAIM_DISCIPLINE`) | 16 |
+| Pipeline stages | 1 (`compile`) | 11 |
+| Contracts | 5 schemas, each validated against a real produced value | full inventory in `CONTRACTS.md` |
+| Provider adapters | `local-proxy` | + `hosted-server` |
+| Storage adapters | `storage-local` (run bundles) | + `storage-db` |
+| Shells | `cli` | + `pipeline-ui`, `toolkit-ui` |
+| Technique catalog | none | 172 records |
+| CI | none — `npm run verify` runs locally | full pipeline |
+
+Verified by: `npm run verify` (boundaries → typecheck → source freeze → 111 tests → differential oracle against the frozen linter).
+
 Two caveats matter when reading it:
 
 - **`IMPLEMENTATION_PLAN.md` is not published.** Several documents were written against it and cited it for phase numbering, exit gates, and the risk register. Those inline citations have been made self-contained, but the plan itself is unwritten, so any phase number appearing in this set is a label rather than a milestone anyone has defined.

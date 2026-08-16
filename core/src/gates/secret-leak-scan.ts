@@ -28,10 +28,25 @@ export const GATE_VERSION = "1.1.0";
  * run, then backtracks one character at a time — and a 500 KB prompt took minutes.
  * Real keys and addresses fit inside these caps comfortably.
  *
- * A property test asserts a fixed time budget on large adversarial input. If someone
- * "simplifies" a bound away, that test is what catches it.
+ * **Which bound actually bites, measured rather than assumed.** An audit removed the
+ * upper bound from `sk-ant-…{20,128}` and every test stayed green. The key patterns
+ * cannot blow up on their own: nothing follows the quantifier, so the match succeeds
+ * as soon as the minimum is met and the engine never backtracks. It is `pii_email`
+ * that drives the quadratic case, because a long run of valid local-part characters
+ * with no `@` forces the engine to retry from every start position:
+ *
+ *     40 KB of local-part characters, no "@"      bounded 5.4 ms · unbounded 611 ms
+ *     80 KB                                       bounded 10.8 ms · unbounded 2444 ms
+ *
+ * The bounds on the key patterns are defence in depth, not the hot path — worth
+ * keeping, but a timing test will never speak for them. `bounded-quantifier
+ * invariant` in the test file therefore checks the *structure* of every pattern
+ * deterministically, and times only the one where time is the real signal.
+ *
+ * Exported for that test: the invariant is a property of this list, and a test that
+ * cannot see the list can only guess at it from behaviour.
  */
-const SECRET_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
+export const SECRET_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
   [/sk-ant-[A-Za-z0-9_-]{20,128}/, "anthropic_api_key"],
   [/sk-[A-Za-z0-9]{20,128}/, "generic_sk_key"],
   [/AKIA[0-9A-Z]{16}/, "aws_access_key_id"],

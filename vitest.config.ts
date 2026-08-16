@@ -20,6 +20,13 @@ export default defineConfig({
         // Adapters are impure by definition; their tests inject fakes instead.
         test: { name: "adapters", include: ["adapters/*/test/**/*.test.ts"] },
       },
+      {
+        // Contract conformance sits above every layer: it drives the real
+        // orchestrator, store, and provider adapter to produce values, then
+        // validates them against the JSON Schemas. No purity harness — producing a
+        // real value is the point.
+        test: { name: "contracts", include: ["test/**/*.test.ts"] },
+      },
     ],
   },
 });

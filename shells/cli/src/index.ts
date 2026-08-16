@@ -2,9 +2,13 @@
 /**
  * The CLI shell.
  *
- * It calls the Application protocol and Core's pure gate registry. It does not
- * call an adapter, and it does not reach into Core's stage logic — the
- * composition root below is the only place a concrete adapter is named.
+ * It calls the Application protocol and nothing else. It does not import Core,
+ * and it does not name an adapter — `composition-root.ts` does that, and it is
+ * the only file in this Shell allowed to.
+ *
+ * The header used to claim "it does not call an adapter" while importing two of
+ * them eleven lines below. That is now true rather than asserted, and
+ * `npm run lint:boundaries` is what keeps it true.
  *
  *   promptnexus lint <file>
  *   promptnexus run --stage compile <file>
@@ -12,11 +16,8 @@
 
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { join } from "node:path";
-import { runGates, listGates, SOURCE_GATE_COUNT } from "../../../core/src/gates/registry.js";
-import { Orchestrator } from "../../../application/src/orchestrator.js";
-import { LocalProxyProvider } from "../../../adapters/provider-local-proxy/src/index.js";
-import { LocalRevisionStore } from "../../../adapters/storage-local/src/index.js";
+import { lint, listPortedGates, worstVerdict } from "../../../application/src/lint.js";
+import { composeOrchestrator } from "./composition-root.js";
 import type { ObservabilityEvent, PipelineCommand } from "../../../contracts/index.js";
 
 const C = {
@@ -31,31 +32,29 @@ const paint = (v: string) => (v === "PASS" ? C.pass(v) : v === "WARN" ? C.warn(v
 
 async function cmdLint(file: string): Promise<number> {
   const text = await readFile(file, "utf8");
-  const results = runGates(text);
+  const report = lint(text);
 
-  console.log(`${C.bold("lint")} ${file}   ${C.dim(`${results.length} of ${SOURCE_GATE_COUNT} gates ported`)}`);
-  for (const r of results) {
+  console.log(
+    `${C.bold("lint")} ${file}   ` +
+      C.dim(`${report.ported_gate_count} of ${report.source_gate_count} gates ported`),
+  );
+  for (const r of report.results) {
     console.log(`  ${paint(r.verdict.padEnd(4))} ${r.gate_id}`);
     if (r.verdict !== "PASS") console.log(`       ${C.dim(r.message)}`);
   }
 
   // Exit codes match the source linter: 0 PASS · 1 GATE_FAIL · 3 DEGRADED.
-  if (results.some((r) => r.verdict === "FAIL")) return 1;
-  if (results.some((r) => r.verdict === "WARN")) return 3;
-  return 0;
+  // Precedence lives in the Application layer so two Shells cannot disagree.
+  const worst = worstVerdict(report.results);
+  return worst === "FAIL" ? 1 : worst === "WARN" ? 3 : 0;
 }
 
 async function cmdRun(file: string): Promise<number> {
   const brief = await readFile(file, "utf8");
   const run_id = randomUUID().replace(/-/g, "").slice(0, 16);
 
-  // ── composition root: the only place concrete adapters are named ─────────
   const events: ObservabilityEvent[] = [];
-  const orchestrator = new Orchestrator({
-    provider: new LocalProxyProvider(),
-    store: new LocalRevisionStore(join(process.cwd(), ".promptnexus", "runs")),
-    sink: { emit: (e) => events.push(e) },
-  });
+  const orchestrator = composeOrchestrator({ sink: { emit: (e) => events.push(e) } });
 
   const command: PipelineCommand = {
     command_id: randomUUID(),
@@ -96,7 +95,7 @@ async function main(): Promise<void> {
     if (file) process.exit(await cmdRun(file));
   }
   if (cmd === "gates") {
-    for (const g of listGates()) console.log(`  ${g.id}  ${C.dim(g.version)}`);
+    for (const g of listPortedGates()) console.log(`  ${g.id}  ${C.dim(g.version)}`);
     process.exit(0);
   }
 

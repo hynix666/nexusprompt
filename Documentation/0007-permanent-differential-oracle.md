@@ -95,7 +95,14 @@ This is why the harness prints the failing input and both verdicts rather than a
 
 **Easier**
 - Porting the remaining fourteen gates. Each is checked against its source the moment it registers, and a faithfully-reproduced defect fails the build instead of passing parity.
-- Trusting the two already-shipped gates, which were asserted to match the source and are now actually verified against it (880 verdicts, zero disagreements).
+- Trusting the two already-shipped gates, which were asserted to match the source and are now actually verified against it:
+
+  ```
+  npm run differential -- --n 400 --seed 1
+  → 440 cases, 880 gate verdicts, 0 disagreements, 21s
+  ```
+
+  The invocation is recorded because the figure is meaningless without it. This ADR previously said "880 verdicts" while the command it documented (`npm run differential`, defaulting to 120 generated cases) produces 320 — a real number that nobody could reproduce from the page it was written on.
 
 **Harder**
 - The toolchain. Python is a permanent build dependency; the frozen linter can never be deleted from `sources/`.
@@ -113,14 +120,28 @@ Covered in the options table above. Worth restating one rejection: **parity is r
 ## Enforcement
 
 - `npm run differential` — exit 0 agreement, 1 disagreement with the failing input printed, 2 refusal.
+- `npm run verify` runs it last, after boundaries, typecheck, the source freeze, and the tests.
 - A malformed `--n` **refuses** rather than comparing nothing. A run that compares zero cases and exits 0 reports agreement it never established.
 - Comparison is scoped to the intersection of the two gate sets, so unported gates cannot produce a false red.
+- **The ported set is pinned in `scripts/ported-gates.json`** and checked before any comparison runs. This closes a hole an audit found: the zero-case guard fired only at zero, so unregistering a gate halved the comparison and the oracle still exited 0 reporting agreement. A registry that no longer matches the manifest is a refusal, not a failure — the harness does not know what it is meant to compare.
+- `source_gate_count` is re-derived from `prompt_lint.py` on every run and checked against both the manifest and `SOURCE_GATE_COUNT` in the registry. A constant in code is no safer than a number in a document unless something re-derives it, and this project's ledger exists because a gate count was wrong for months.
 - The oracle's own frozen source is covered by `verify:sources`; changing `prompt_lint.py` changes the oracle and must be a deliberate, visible act.
 
 ## Action items
 
-1. [ ] Add the oracle to the CI pipeline, positioned after Core tests and before adapter tests.
-2. [ ] **Add a divergence allowlist** — a file of `{gate, case, reason, adr}` entries for deliberate differences from the source, where an entry without a stated reason fails. Needed before the first intentionally-improved gate port.
-3. [ ] Batch the runner, or accept the runtime, once the ported gate set exceeds ~6.
-4. [ ] Re-run the injection drill whenever the harness itself changes — a guard not observed failing is not known to work.
-5. [ ] Record in `DEVELOPMENT_AND_TESTING.md` that the oracle is permanent, so it is not read as migration scaffolding by someone tidying up.
+1. [x] ~~Add the oracle to the CI pipeline~~ — added to `npm run verify`, positioned last. There is no CI service to add it to; that remains open and is now stated plainly in `DEVELOPMENT_AND_TESTING.md` rather than implied to exist.
+2. [ ] **Add a divergence allowlist** — a file of `{gate, case, reason, adr}` entries for deliberate differences from the source, where an entry without a stated reason fails. Needed before the first intentionally-improved gate port. Still open, and now has a concrete first candidate: `CLAIM_DISCIPLINE` flags `guarantee-free` because a hyphen is a word boundary. The source shares the false positive, so the port is correct to keep it — but that is the shape of the case this mechanism is for.
+3. [ ] Batch the runner, or accept the runtime, once the ported gate set exceeds ~6. Measured: 440 cases × 2 gates = 21s at one process spawn per case.
+4. [x] Re-run the injection drill whenever the harness itself changes — done for this change. The gate-set pin was verified by unregistering a gate and confirming the oracle now refuses; the two implementations' agreement was re-confirmed at n=400.
+5. [x] Record in `DEVELOPMENT_AND_TESTING.md` that the oracle is permanent, so it is not read as migration scaffolding by someone tidying up.
+
+## Postscript: what the oracle has actually caught
+
+Recorded because ADR-0007 argued for a permanent cost on the strength of an argument, and an argument is weaker than a measurement. A mutation probe run after this ADR was accepted broke six behaviours across Core and the adapters. Two were caught **only** by the oracle, with the entire test suite green:
+
+| Mutation | `npm test` | `npm run differential` |
+|---|---|---|
+| `CLAIM_DISCIPLINE` regex reverted to requiring a literal space — the shipped `100%accurate` defect | pass | **fail** |
+| `sk-ant` key-length bound widened by one character | pass | **fail** |
+
+Both are exactly the class this ADR predicted: a change that the port's own tests have no reason to object to, because the port is behaving as its author intended. That is the argument, observed rather than asserted.
