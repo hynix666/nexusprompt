@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/observability-event/1.0.0",
+  "title": "ObservabilityEvent",
+  "description": "Redacted operational event. Carries keyed hashes only; a payload containing a prompt body is rejected by the sink, not truncated.",
+  "type": "object",
+  "required": ["event_id", "event_type", "run_id", "timestamp", "layer", "component", "schema_version"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1 },
+    "event_type": {
+      "enum": ["PIPELINE_COMMAND_RECEIVED", "STAGE_DECISION", "PROVIDER_CALL_STARTED", "PROVIDER_CALL_SUCCEEDED", "PROVIDER_CALL_FAILED", "DEGRADE", "REVISION_PERSISTED", "HEALTH_CHECK"]
+    },
+    "run_id": { "type": "string" },
+    "parent_event_id": { "type": ["string", "null"] },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "layer": { "enum": ["shell", "application", "core", "adapter"] },
+    "component": { "type": "string" },
+    "duration_ms": { "type": ["integer", "null"] },
+    "attempt": { "type": ["integer", "null"] },
+    "input_hash": { "type": ["string", "null"] },
+    "output_hash": { "type": ["string", "null"] },
+    "provider_id": { "type": ["string", "null"] },
+    "model_id": { "type": ["string", "null"] },
+    "failure_code": { "type": ["string", "null"] },
+    "verdict": { "type": ["string", "null"] },
+    "schema_version": { "type": "string" }
+  }
+}

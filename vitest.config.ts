@@ -10,6 +10,10 @@ export default defineConfig({
           setupFiles: ["core/test/purity.setup.ts"],
         },
       },
+      {
+        // No purity harness here — this layer is *supposed* to have effects.
+        test: { name: "application", include: ["application/test/**/*.test.ts"] },
+      },
     ],
   },
 });

@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/revision-entry/1.1.0",
+  "title": "RevisionEntry",
+  "description": "One stage execution. freshness and status are independent: a revision can be SUCCEEDED and STALE at once.",
+  "type": "object",
+  "required": ["revision_id", "run_id", "stage_id", "timestamp", "input_hash", "output_hash", "gate_results", "freshness", "status", "execution_provenance", "retention_scope"],
+  "additionalProperties": false,
+  "properties": {
+    "revision_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "stage_id": { "type": "string" },
+    "parent_revision_ids": { "type": "array", "items": { "type": "string" } },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "stage_attempt": { "type": "integer", "minimum": 1 },
+    "input_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "output_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "gate_results": { "type": "array" },
+    "freshness": { "enum": ["FRESH", "STALE"] },
+    "status": { "enum": ["SUCCEEDED", "DEMO", "FAILED", "CANCELLED"] },
+    "provider_used": { "type": ["string", "null"] },
+    "execution_provenance": { "type": "object" },
+    "retention_scope": { "enum": ["LOCAL_BUNDLE", "DB", "EXPORT"] }
+  }
+}

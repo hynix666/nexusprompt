@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/provider-failure/1.0.0",
+  "title": "ProviderFailure",
+  "description": "A typed provider failure. Adapters return this instead of throwing, so the Application can classify without parsing messages and Core never sees an exception.",
+  "type": "object",
+  "required": ["request_id", "category", "retriable", "reason_code", "safe_message", "attempt", "provider_id"],
+  "additionalProperties": false,
+  "properties": {
+    "request_id": { "type": "string", "minLength": 1 },
+    "category": {
+      "enum": ["TIMEOUT", "RATE_LIMIT", "AUTH", "UNAVAILABLE", "INVALID_REQUEST", "CONTENT_FILTER", "INTERNAL", "CANCELLED"]
+    },
+    "retriable": { "type": "boolean" },
+    "reason_code": { "type": "string", "minLength": 1 },
+    "safe_message": {
+      "type": "string",
+      "description": "Safe to log and display. Never contains request content or credentials."
+    },
+    "retry_after_ms": { "type": ["integer", "null"], "minimum": 0 },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "provider_id": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/pipeline-outcome/1.0.0",
+  "title": "PipelineOutcome",
+  "description": "What a Shell receives. demo_mode is required, so a consumer cannot render output without knowing whether a model produced it.",
+  "type": "object",
+  "required": ["command_id", "run_id", "stage_id", "output", "gate_results", "demo_mode", "revision_id", "execution_provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "command_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "stage_id": {
+      "enum": ["deconstruct", "calibrate", "compile", "harden", "critique", "refine", "lint", "critic", "preview", "cost_estimate", "tone_check"]
+    },
+    "output": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": { "text": { "type": "string" } }
+    },
+    "gate_results": {
+      "type": "array",
+      "items": { "$ref": "https://promptnexus.dev/contracts/gate-result/1.3.0" }
+    },
+    "demo_mode": { "type": "boolean" },
+    "revision_id": { "type": "string", "minLength": 1 },
+    "execution_provenance": { "$ref": "#/definitions/provenance" }
+  },
+  "definitions": {
+    "provenance": {
+      "type": "object",
+      "required": ["core_build_hash", "contract_versions"],
+      "additionalProperties": false,
+      "properties": {
+        "core_build_hash": { "type": "string" },
+        "contract_versions": { "type": "object" },
+        "provider_model_fingerprint": { "type": ["string", "null"] },
+        "config_fingerprint": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

@@ -2,18 +2,28 @@
   "name": "promptnexus",
   "private": true,
   "type": "module",
-  "workspaces": ["contracts", "core", "application", "adapters/*", "shells/*"],
+  "workspaces": [
+    "contracts",
+    "core",
+    "application",
+    "adapters/*",
+    "shells/*"
+  ],
   "scripts": {
     "verify:sources": "node scripts/verify-sources.mjs",
     "test": "vitest run",
     "test:core": "vitest run --project core",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:app": "vitest run --project application",
+    "lint:sources": "node scripts/verify-sources.mjs",
+    "cli": "tsx shells/cli/src/index.ts"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.4",
+    "@types/node": "^24.7.0",
     "ajv": "^8.17.1",
     "fast-check": "^4.3.0",
-    "@types/node": "^24.7.0"
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }
