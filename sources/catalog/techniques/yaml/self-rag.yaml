@@ -1,0 +1,76 @@
+id: self-rag
+name: Self-RAG (Self-Reflective Retrieval-Augmented Generation)
+category: retrieval-augmentation
+subcategory: adaptive-retrieval
+executive_summary: Train a single model to decide for itself whether retrieval is even needed, then critique
+  the relevance of what it retrieved and the quality of its own output, using special reflection tokens
+  generated inline.
+description: 'Directly addresses plain RAG''s stated pitfall in this catalog — that acknowledging insufficient
+  retrieval isn''t automatic and must be separately prompted for. Self-RAG bakes the decision into the
+  model''s own generation policy via trained ''reflection tokens'': the model decides on-demand whether
+  retrieval would help for the current segment, retrieves only when it judges retrieval necessary, generates
+  while emitting tokens that assess the relevance/support of retrieved passages, and emits a token critiquing
+  its own output quality. Reports outperforming ChatGPT and retrieval-augmented Llama2-chat on open-domain
+  QA, reasoning, and fact verification, with notable gains in citation accuracy for long-form generation.'
+verification_status: verifier-checkable
+cost_profile: training-time
+when_to_use:
+- You control fine-tuning and want retrieval-necessity and passage-relevance judgments built into the
+  model's generation policy rather than governed entirely by prompt-level instructions.
+- Long-form generation tasks where citation accuracy and avoiding over-retrieval (or under-retrieval)
+  both matter.
+when_not_to_use:
+- Working with a fixed, already-trained model with no fine-tuning access — use plain retrieval-augmented-generation's
+  prompt-level insufficiency guard instead.
+known_pitfalls:
+- Requires training infrastructure and reflection-token-annotated training data; the specific reflection-token
+  vocabulary is fixed at training time and doesn't adapt to a genuinely novel retrieval-quality signal
+  introduced later without retraining.
+related_techniques:
+- retrieval-augmented-generation
+- chain-of-verification
+primary_source:
+  authors: Asai, Wu, Wang, Sil, Hajishirzi
+  year: 2024
+  title: 'Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection'
+  venue: ICLR 2024
+  arxiv_id: '2310.11511'
+  url: https://arxiv.org/abs/2310.11511
+usage_templates:
+- template_name: Reflection-token-gated retrieval and generation
+  template: |-
+    # At each generation segment, the trained model itself emits:
+    [Retrieve=Yes/No/Continue] — whether retrieval would help for this segment
+    # If Retrieve=Yes:
+    Retrieve passages for: {{current_segment_query}}
+    [IsRel=Relevant/Irrelevant] for each retrieved passage: {{retrieved_passage}}
+    Generate the segment conditioned on relevant passages only.
+    [IsSup=Fully supported/Partially supported/No support] — how well the generated segment is supported by the passages used
+    [IsUse=1-5] — overall usefulness self-rating of the segment
+
+    # At inference, these tokens can be used to filter/rerank multiple sampled generations, not just to produce a single pass.
+  variables:
+  - name: current_segment_query
+    description: Implicit query for the segment currently being generated
+    example: null
+  - name: retrieved_passage
+    description: One passage retrieved for relevance assessment
+    example: null
+  template_id: self-rag--reflection-token-gated-retrieval-and-generation
+  determinism: training-time-not-applicable
+  reproducibility_note: This template describes a training-time process (fine-tuning or policy training),
+    not a single reproducible inference call; reproducibility depends on the training pipeline and data,
+    not on prompt text alone.
+tags:
+- retrieval
+- training-time
+- self-reflection
+- adaptive
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

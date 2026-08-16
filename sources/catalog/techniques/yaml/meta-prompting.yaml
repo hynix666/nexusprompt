@@ -1,0 +1,72 @@
+id: meta-prompting
+name: Meta-Prompting
+category: agentic-tool-use
+subcategory: conductor-orchestration
+executive_summary: 'One LLM instance acts as a task-agnostic conductor: it decomposes a task, dispatches
+  subtasks to fresh model instances (optionally with tool access), and synthesizes their outputs into
+  a final answer.'
+description: A single high-level 'meta model' orchestrates the overall process without solving subtasks
+  itself — it delegates each subtask to a fresh, appropriately-instructed instance, which may include
+  using external tools, then integrates the returned results. Positioned as a task-agnostic generalization
+  of the various chaining/agentic techniques, since the conductor's own prompt does not need task-specific
+  tuning.
+verification_status: verifier-checkable
+cost_profile: agentic-loop
+when_to_use:
+- Complex, multi-part tasks spanning different subtask types (e.g. some needing computation, some needing
+  retrieval) where a single fixed pipeline shape doesn't fit.
+when_not_to_use:
+- Simple or homogeneous tasks — the orchestration overhead isn't justified.
+known_pitfalls:
+- Conductor quality is a single point of failure for task decomposition, similar to Least-to-Most and
+  Plan-and-Solve's dependency on their planning step.
+related_techniques:
+- react
+- plan-and-solve-prompting
+- multiagent-debate
+primary_source:
+  authors: Suzgun, Kalai
+  year: 2024
+  title: 'Meta-Prompting: Enhancing Language Models with Task-Agnostic Scaffolding'
+  venue: arXiv preprint
+  arxiv_id: '2401.12954'
+  url: https://arxiv.org/abs/2401.12954
+usage_templates:
+- template_name: Conductor-dispatch-synthesize
+  template: |-
+    You are a conductor. Given the task: {{task}}
+    Decompose it into subtasks. For each subtask, specify: (a) a fresh-instance prompt to solve it, (b) whether it needs a tool.
+
+    # Dispatch (per subtask, fresh context)
+    {{subtask_prompt}}
+
+    # Synthesize
+    Subtask results: {{all_subtask_results}}
+    Combine these into a final answer to: {{task}}
+  variables:
+  - name: task
+    description: The overall complex task
+    example: null
+  - name: subtask_prompt
+    description: Prompt for one dispatched subtask, run in a fresh context
+    example: null
+  - name: all_subtask_results
+    description: Collected results from every dispatched subtask
+    example: null
+  template_id: meta-prompting--conductor-dispatch-synthesize
+  determinism: requires-external-system
+  reproducibility_note: This template depends on an external system (retrieval index, tool, solver, or
+    interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires
+    that system's state to also be fixed.
+tags:
+- agentic
+- orchestration
+- multi-call
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

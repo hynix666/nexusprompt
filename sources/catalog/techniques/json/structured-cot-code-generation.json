@@ -1,0 +1,67 @@
+{
+  "id": "structured-cot-code-generation",
+  "name": "Structured Chain-of-Thought for Code Generation",
+  "category": "domain-specific-application",
+  "subcategory": "code-generation",
+  "executive_summary": "Impose program-structure-aware intermediate reasoning (branches, loops) for code-generation tasks, instead of free-text CoT that ignores the target language's actual control-flow structure.",
+  "description": "Adapts chain-of-thought specifically to code generation by having the intermediate reasoning steps mirror program structures (conditionals, loops) that the final code will actually contain, rather than generic natural-language reasoning. Machine-checkable via test execution, unlike most reasoning-elicitation techniques.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Code-generation tasks where a test suite or execution harness can verify correctness."
+  ],
+  "when_not_to_use": [
+    "Non-code generation tasks, or code-generation with no way to execute/verify output."
+  ],
+  "known_pitfalls": [
+    "Benefit is language- and task-dependent; structured reasoning helps most where target control-flow is genuinely nontrivial."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "program-of-thoughts",
+    "modularization-of-thought-code-gen"
+  ],
+  "primary_source": {
+    "authors": "Li, Li, Li, Jin",
+    "year": 2023,
+    "title": "Structured Chain-of-Thought Prompting for Code Generation",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2305.06599",
+    "url": "https://arxiv.org/abs/2305.06599"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Structure-mirrored reasoning for code",
+      "template": "Task: {{coding_task}}\nBefore writing code, outline the control-flow structure you will use (loops, conditionals, function boundaries) as pseudocode-level structured reasoning, not prose. Then write the actual {{target_language}} code implementing that structure.",
+      "variables": [
+        {
+          "name": "coding_task",
+          "description": "The code-generation task description",
+          "example": null
+        },
+        {
+          "name": "target_language",
+          "description": "Target programming language",
+          "example": "Python"
+        }
+      ],
+      "template_id": "structured-cot-code-generation--structure-mirrored-reasoning-for-code",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "code-generation",
+    "domain-specific",
+    "reasoning"
+  ],
+  "status": "corpus-present",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": "Structured CoT for Code Generation.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

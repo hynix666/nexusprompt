@@ -1,0 +1,86 @@
+id: tree-of-thoughts
+name: Tree of Thoughts (ToT)
+category: reasoning-elicitation
+subcategory: multi-path-reasoning
+executive_summary: Search over a tree of intermediate reasoning steps, using the model itself to self-evaluate
+  branches and backtrack, instead of committing to one linear chain.
+description: 'Generalizes chain-of-thought to a tree: at each step, the model proposes several possible
+  next ''thoughts'', a self-evaluation prompt scores or votes on them, and a search strategy (BFS or DFS)
+  decides which branches to expand or prune, with the ability to backtrack from dead ends. On tasks with
+  a large combinatorial search space and a clear win/loss signal (e.g. Game of 24), this substantially
+  outperforms single-chain CoT.'
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- The task has a genuine branching search space where wrong early choices need to be abandoned, not just
+  retried.
+- A cheap self-evaluation signal exists for scoring partial solutions.
+when_not_to_use:
+- The task is essentially linear (no meaningful branch-and-backtrack structure) — the search overhead
+  buys nothing over CoT or Self-Consistency.
+- Call budget is tightly capped, since tree search cost is unbounded/adaptive rather than fixed.
+known_pitfalls:
+- Cost is not fixed in advance — it depends on how much of the tree gets explored, which complicates budget
+  planning compared to fixed-k Self-Consistency.
+related_techniques:
+- self-consistency
+- graph-of-thoughts
+- skeleton-of-thought
+primary_source:
+  authors: Yao, Yu, Zhao, Shafran, Griffiths, Cao, Narasimhan
+  year: 2023
+  title: 'Tree of Thoughts: Deliberate Problem Solving with Large Language Models'
+  venue: NeurIPS 2023
+  arxiv_id: '2305.10601'
+  url: https://arxiv.org/abs/2305.10601
+usage_templates:
+- template_name: Propose-evaluate-select loop
+  template: |-
+    # Propose
+    Given the current partial solution: {{partial_state}}
+    Propose {{branch_count}} distinct next steps toward solving: {{goal}}
+
+    # Evaluate (run once per proposed branch)
+    Partial solution so far: {{candidate_branch}}
+    On a scale of sure/maybe/impossible, how likely is this partial solution to lead to a correct final answer for: {{goal}}? Answer with one word and one sentence why.
+
+    # Select
+    Keep the top {{beam_width}} branches by evaluation and repeat Propose on each until a branch reaches a complete, verified solution or the depth limit {{max_depth}} is reached.
+  variables:
+  - name: goal
+    description: The problem being solved
+    example: null
+  - name: partial_state
+    description: Current partial solution to branch from
+    example: null
+  - name: branch_count
+    description: How many next-step proposals to generate per node
+    example: '3'
+  - name: candidate_branch
+    description: One specific candidate branch being evaluated
+    example: null
+  - name: beam_width
+    description: How many branches survive each round
+    example: '5'
+  - name: max_depth
+    description: Search depth cutoff
+    example: '4'
+  template_id: tree-of-thoughts--propose-evaluate-select-loop
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- reasoning
+- search
+- multi-call
+- backtracking
+status: verified-external
+aliases:
+- ToT
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

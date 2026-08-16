@@ -1,0 +1,83 @@
+{
+  "id": "self-edit-code",
+  "name": "Self-Edit (Fault-Aware Code Editor)",
+  "category": "self-verification-refinement",
+  "subcategory": "execution-feedback-repair",
+  "executive_summary": "Run the generated program on the example test case, wrap the execution result into a comment, and have a fault-aware editor pass rewrite the code using that comment as guidance.",
+  "description": "Generate-and-edit rather than generate-and-resample. The first pass produces a candidate program; the candidate is executed against the test case supplied with the problem; the observed outcome -- passed, wrong answer, or the actual error message -- is appended as a supplementary comment; and an editing pass repairs the code with that evidence in hand. Because the feedback is an execution result rather than the model's own opinion of its output, the repair signal is grounded, which is what separates this from unguided self-critique.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "The task is code generation and at least one executable test case ships with the problem.",
+    "Sampling many candidates is too expensive and you want to improve pass@1 instead of pass@k.",
+    "A sandbox is available to execute untrusted generated code safely."
+  ],
+  "when_not_to_use": [
+    "No test case or executable specification exists, leaving nothing to generate grounded feedback from.",
+    "Execution is unsafe or unavailable in the deployment environment.",
+    "The example test is so weak that passing it says nothing about correctness."
+  ],
+  "known_pitfalls": [
+    "Overfitting to the single example test: code can be edited until it passes that case while remaining wrong in general.",
+    "Executing model-generated code requires a sandbox; running it unguarded is a security hole.",
+    "Repeated edit rounds show diminishing returns and can oscillate between two broken variants."
+  ],
+  "related_techniques": [
+    "self-refine",
+    "codet",
+    "structured-cot-code-generation",
+    "chain-of-code"
+  ],
+  "primary_source": {
+    "authors": "Zhang, Li, Li, Li, Jin",
+    "year": 2023,
+    "title": "Self-Edit: Fault-Aware Code Editor for Code Generation",
+    "venue": "ACL 2023",
+    "arxiv_id": "2305.04087",
+    "url": "https://arxiv.org/abs/2305.04087"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Execution-annotated edit pass",
+      "template": "Problem:\n{{problem_statement}}\n\nCandidate solution:\n{{generated_code}}\n\n# Execution on the example test case:\n# {{execution_result}}\n\nRewrite the solution so that it is correct. Return only the corrected code.",
+      "variables": [
+        {
+          "name": "problem_statement",
+          "description": "The original problem description and its example test.",
+          "example": "Given a list of integers, return the two indices that sum to the target."
+        },
+        {
+          "name": "generated_code",
+          "description": "The first-pass candidate program.",
+          "example": "def two_sum(nums, target): ..."
+        },
+        {
+          "name": "execution_result",
+          "description": "Verbatim outcome of running the candidate: passed, the wrong output, or the interpreter error.",
+          "example": "IndexError: list index out of range"
+        }
+      ],
+      "template_id": "self-edit-code--execution-annotated-edit",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "Requires a sandboxed execution step between the generation and edit calls; the edit call itself is deterministic at temperature zero given a fixed execution result."
+    }
+  ],
+  "tags": [
+    "code-generation",
+    "execution-feedback",
+    "self-correction",
+    "repair"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "Self-Edit",
+    "Fault-Aware Code Editor"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

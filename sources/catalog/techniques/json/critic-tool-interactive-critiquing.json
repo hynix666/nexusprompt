@@ -1,0 +1,96 @@
+{
+  "id": "critic-tool-interactive-critiquing",
+  "name": "CRITIC (Tool-Interactive Critiquing)",
+  "category": "self-verification-refinement",
+  "subcategory": "tool-grounded-verification",
+  "executive_summary": "Have the model critique its own draft using external tools (search, code, calculators) to check specific claims, then revise based on those findings — grounding self-correction in evidence, not self-assessment.",
+  "description": "Directly addresses a limitation Self-Refine and plain self-critique share: a model critiquing its own output using only its own judgment can't catch errors it doesn't already know are errors — the critique inherits the same knowledge gaps as the original generation. CRITIC breaks this by having the model identify specific, tool-checkable claims in its draft (a fact needing search verification, a calculation needing a calculator, code needing execution), invoke the appropriate external tool for each, and revise the output based on what the tools actually returned — closer to Chain-of-Verification's independent-checking spirit but grounded in real external tools rather than the model's own re-answering. Reported improving performance on free-form QA, mathematical program synthesis, and toxicity reduction relative to prior self-correction methods that verify without external tools.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Tasks where specific claims in a draft output are checkable via an available tool (search for facts, interpreter for code/math) and grounding self-correction in real evidence matters more than the added tool-call cost."
+  ],
+  "when_not_to_use": [
+    "No relevant tools are available to check the draft's claims — falls back to being no better than plain Self-Refine.",
+    "Purely subjective or creative outputs with no tool-checkable factual claims."
+  ],
+  "known_pitfalls": [
+    "Only as good as the model's ability to identify which specific claims are worth tool-checking in the first place — an error the model doesn't think to flag for verification won't get caught."
+  ],
+  "related_techniques": [
+    "self-refine",
+    "chain-of-verification",
+    "react"
+  ],
+  "primary_source": {
+    "authors": "Gou, Shao, Gong, Shen, Yang, Duan, Chen",
+    "year": 2024,
+    "title": "CRITIC: Large Language Models Can Self-Correct with Tool-Interactive Critiquing",
+    "venue": "ICLR 2024",
+    "arxiv_id": "2305.11738",
+    "url": "https://arxiv.org/abs/2305.11738"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Draft, tool-check specific claims, revise",
+      "template": "# Draft\n{{task_prompt}}\n\n# Identify tool-checkable claims\nDraft: {{draft_output}}\nIdentify specific claims in this draft that could be checked with a tool (search, calculator, code interpreter): {{checkable_claims}}\n\n# Tool-check each claim\nClaim: {{one_claim}}\nTool: {{tool_name}}\nTool result: {{tool_result}}\n\n# Revise\nDraft: {{draft_output}}\nTool-verified findings: {{all_tool_results}}\nProduce a revised output correcting any claims the tools contradicted.",
+      "variables": [
+        {
+          "name": "task_prompt",
+          "description": "The original task",
+          "example": null
+        },
+        {
+          "name": "draft_output",
+          "description": "The first-pass draft being critiqued",
+          "example": null
+        },
+        {
+          "name": "checkable_claims",
+          "description": "Specific claims identified as tool-checkable",
+          "example": null
+        },
+        {
+          "name": "one_claim",
+          "description": "One specific claim being checked",
+          "example": null
+        },
+        {
+          "name": "tool_name",
+          "description": "The tool used to check this claim",
+          "example": null
+        },
+        {
+          "name": "tool_result",
+          "description": "What the tool returned",
+          "example": null
+        },
+        {
+          "name": "all_tool_results",
+          "description": "Collected results from all tool checks",
+          "example": null
+        }
+      ],
+      "template_id": "critic-tool-interactive-critiquing--draft-tool-check-specific-claims-revise",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "This template depends on an external system (retrieval index, tool, solver, or interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires that system's state to also be fixed."
+    }
+  ],
+  "tags": [
+    "verification",
+    "tool-use",
+    "grounding",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "CRITIC"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

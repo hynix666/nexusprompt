@@ -1,0 +1,85 @@
+{
+  "id": "smoothllm-randomized-smoothing-defense",
+  "name": "SmoothLLM",
+  "category": "prompt-injection-defense",
+  "subcategory": "detection-and-preprocessing",
+  "executive_summary": "Generate randomly character-perturbed copies of an input, query the model on each, and aggregate outputs — adversarial suffixes are brittle to small changes, so perturbation breaks the attack but keeps benign meaning.",
+  "description": "Motivated by the same GCG-style adversarial-suffix vulnerability documented elsewhere in this catalog: those optimized suffixes are precise token sequences whose effectiveness is highly sensitive to small perturbations, since they're optimized for one exact string. SmoothLLM exploits this fragility defensively — apply several independent random character-level perturbations (swaps, insertions, deletions at a tuned rate) to the incoming input, query the target model on each perturbed copy, and aggregate the resulting outputs (e.g. via majority vote on refusal/compliance) rather than trusting any single response. Reports reducing attack success rates on GCG-style suffix attacks to below 1% on the models tested, while incurring only a slight computational cost from the multiple queries, and works as a model-agnostic wrapper requiring no retraining.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Adding a lightweight, model-agnostic, no-retraining-required defense layer specifically against optimization-based (GCG-style) suffix attacks, where perturbation-fragility is the exploitable weakness.",
+    "Deployments where the multiple-query cost overhead of aggregation is acceptable in exchange for a large drop in attack success rate."
+  ],
+  "when_not_to_use": [
+    "Attacks specifically designed to be robust to character-level perturbation (fluent, semantically-optimized attacks like AutoDAN or PAIR rather than brittle token-optimized suffixes) — SmoothLLM's core assumption doesn't hold as strongly there."
+  ],
+  "known_pitfalls": [
+    "The perturbation rate is a real tuning tradeoff: too aggressive degrades benign-input performance, too mild doesn't reliably break brittle attacks — the paper reports this tradeoff explicitly rather than claiming a universally-safe default."
+  ],
+  "related_techniques": [
+    "gcg-adversarial-suffix-attack",
+    "baseline-adversarial-defenses",
+    "autodan-genetic-jailbreak"
+  ],
+  "primary_source": {
+    "authors": "Robey, Wong, Hassani, Pappas",
+    "year": 2023,
+    "title": "SmoothLLM: Defending Large Language Models Against Jailbreaking Attacks",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2310.03684",
+    "url": "https://arxiv.org/abs/2310.03684"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Perturb-query-aggregate defense wrapper",
+      "template": "Incoming input: {{raw_input}}\nGenerate {{num_perturbed_copies}} independent copies, each with random character-level perturbations (swap/insert/delete) at rate {{perturbation_rate}}: {{perturbed_copies}}\n\nQuery {{target_model}} with each perturbed copy independently, obtaining {{num_perturbed_copies}} responses.\n\nAggregate via majority vote on refusal-vs-compliance across the responses; return the majority-class response (or a refusal if compliance is not the majority) as the final output.",
+      "variables": [
+        {
+          "name": "raw_input",
+          "description": "The incoming, potentially adversarial input",
+          "example": null
+        },
+        {
+          "name": "num_perturbed_copies",
+          "description": "How many randomly perturbed copies to generate",
+          "example": "10"
+        },
+        {
+          "name": "perturbation_rate",
+          "description": "Fraction of characters perturbed per copy (tuned tradeoff)",
+          "example": "0.1"
+        },
+        {
+          "name": "perturbed_copies",
+          "description": "The generated perturbed input copies",
+          "example": null
+        },
+        {
+          "name": "target_model",
+          "description": "The model being queried and defended",
+          "example": null
+        }
+      ],
+      "template_id": "smoothllm-randomized-smoothing-defense--perturb-query-aggregate-defense-wrapper",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "security",
+    "detection",
+    "preprocessing",
+    "defense",
+    "model-agnostic"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "corrective-rag",
+  "name": "Corrective RAG (CRAG)",
+  "category": "retrieval-augmentation",
+  "subcategory": "retrieval-evaluation",
+  "executive_summary": "Adds a retrieval evaluator (Correct/Incorrect/Ambiguous) that triggers web-search fallback or decomposition when retrieved documents are poor. Directly addresses RAG confabulation on empty or irrelevant retrieval.",
+  "description": "CRAG evaluates each retrieved document against the query, labeling it Correct, Incorrect, or Ambiguous. If any document is Incorrect or all are Ambiguous, the system triggers a fallback. Only Correct documents are used for generation.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Production RAG systems where retrieval quality is variable.",
+    "Domains where stale or incorrect documents may be retrieved.",
+    "When a web-search fallback is available as a safety net."
+  ],
+  "when_not_to_use": [
+    "When retrieval quality is consistently high and evaluation adds overhead.",
+    "When no fallback source is available.",
+    "Latency-critical applications where the evaluator adds unacceptable delay."
+  ],
+  "known_pitfalls": [
+    "The evaluator itself can be wrong, leading to false positives or false negatives.",
+    "Web-search fallback may introduce new hallucination sources.",
+    "All-Ambiguous routing can be overly conservative."
+  ],
+  "related_techniques": [
+    "self-rag",
+    "retrieval-augmented-generation"
+  ],
+  "primary_source": {
+    "authors": "Yan, Gu, Zhu, Ling",
+    "year": 2024,
+    "title": "Corrective Retrieval Augmented Generation",
+    "venue": "arXiv",
+    "arxiv_id": "2401.15884",
+    "url": "https://arxiv.org/abs/2401.15884"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Retrieval evaluator with fallback",
+      "template": "Query: {{query}}\nRetrieved Documents: {{documents}}\n\nEvaluate each document: [Correct] / [Incorrect] / [Ambiguous]\nIf any document is Incorrect or all are Ambiguous, trigger web-search fallback.\nIf Correct documents exist, answer from them.",
+      "variables": [
+        {
+          "name": "query",
+          "description": "The user query.",
+          "example": "What is the latest version of Python?"
+        },
+        {
+          "name": "documents",
+          "description": "Retrieved documents to evaluate.",
+          "example": "[Doc1: Python 3.9 released Oct 2020...], [Doc2: Python 3.11 features...]"
+        }
+      ],
+      "template_id": "corrective-rag--evaluator-fallback",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "Multi-step pipeline: retrieval → evaluation → conditional fallback → generation. Evaluator prompt should be deterministic."
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "evaluation",
+    "fallback",
+    "robustness"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "CRAG",
+    "Corrective Retrieval-Augmented Generation"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

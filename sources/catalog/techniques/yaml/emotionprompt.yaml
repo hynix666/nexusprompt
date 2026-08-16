@@ -1,0 +1,69 @@
+id: emotionprompt
+name: EmotionPrompt (Psychology-Inspired Emotional Stimulus)
+category: reasoning-elicitation
+subcategory: single-path-reasoning
+executive_summary: Append a short, psychology-derived emotional-stimulus sentence to an unchanged zero-shot
+  prompt — a near-zero-cost addition shown to outperform plain zero-shot and Zero-Shot-CoT baselines across
+  tasks and models.
+description: Grounded in established psychology theory (social identity theory, social cognition theory)
+  rather than ad hoc phrasing, EmotionPrompt appends one of a small set of tested emotional-stimulus sentences
+  to a prompt, using the same underlying task template otherwise unchanged. Evaluated against plain zero-shot
+  and Zero-Shot-CoT baselines across 8 tasks and multiple models (ChatGPT, Vicuna-13b, Bloom, T5), with
+  reported improvements in truthfulness and informativeness as well as raw performance, and a human study
+  reporting a 10.9% average improvement across performance, truthfulness, and responsibility metrics.
+  Notable as one of the cheapest interventions in this catalog — a single appended sentence, no additional
+  calls, no exemplars, no fine-tuning.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- As a near-free addition to an existing zero-shot or Zero-Shot-CoT prompt when squeezing out additional
+  performance is worth testing, given the marginal cost is close to zero.
+- Generative tasks where truthfulness/informativeness, not just raw accuracy, matters.
+when_not_to_use:
+- Tasks where prompt tone must remain strictly neutral/formal for domain reasons (e.g. some regulated
+  or clinical contexts) — the emotional framing may be inappropriate regardless of any performance gain.
+- As a substitute for more substantive reasoning-elicitation techniques when the task genuinely needs
+  multi-step decomposition — this is a low-cost add-on, not a replacement for chain-of-thought or self-consistency.
+known_pitfalls:
+- Effect size and which specific stimulus sentence works best is somewhat model- and task-dependent; the
+  paper tests a fixed small set of stimuli rather than claiming any emotional framing helps.
+related_techniques:
+- zero-shot-cot
+- chain-of-thought
+primary_source:
+  authors: Li, Wang, Zhang, Zhu, Hou, Lian, Luo, Yang, Xie
+  year: 2023
+  title: Large Language Models Understand and Can be Enhanced by Emotional Stimuli
+  venue: arXiv preprint
+  arxiv_id: '2307.11760'
+  url: https://arxiv.org/abs/2307.11760
+usage_templates:
+- template_name: Emotional-stimulus appendix
+  template: |-
+    {{base_zero_shot_prompt}}
+    {{emotional_stimulus_sentence}}
+  variables:
+  - name: base_zero_shot_prompt
+    description: The unmodified underlying zero-shot (or Zero-Shot-CoT) prompt
+    example: null
+  - name: emotional_stimulus_sentence
+    description: A tested psychology-derived stimulus sentence appended after the task prompt
+    example: This is very important to my career. You'd better be sure.
+  template_id: emotionprompt--emotional-stimulus-appendix
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reasoning
+- zero-shot
+- low-cost
+- psychology
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

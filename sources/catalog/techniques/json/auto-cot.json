@@ -1,0 +1,75 @@
+{
+  "id": "auto-cot",
+  "name": "Auto-CoT (Automatic Chain-of-Thought)",
+  "category": "reasoning-elicitation",
+  "subcategory": "example-curation",
+  "executive_summary": "Automatically construct a diverse set of few-shot CoT exemplars by clustering unlabeled questions and generating reasoning chains for one representative per cluster — no manual exemplar writing at all.",
+  "description": "Clusters a pool of unlabeled questions by similarity, picks one representative question per cluster (favoring simpler, shorter questions to reduce generated-chain error), and generates a Zero-Shot-CoT reasoning chain for each representative automatically. The resulting set is used directly as the few-shot exemplar block, removing both the manual-writing cost of hand-built CoT and the cost of Active Prompting's human-in-the-loop annotation step.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Building a reusable few-shot CoT exemplar set fully automatically, with no human annotation budget at all."
+  ],
+  "when_not_to_use": [
+    "A small human-annotation budget is available — Active Prompting's uncertainty-targeted human annotation generally yields higher-quality exemplars."
+  ],
+  "known_pitfalls": [
+    "Automatically generated chains for the cluster representatives can themselves be wrong, silently propagating an incorrect reasoning pattern into every prompt that reuses the exemplar set."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "zero-shot-cot",
+    "active-prompting"
+  ],
+  "primary_source": {
+    "authors": "Zhang, Zhang, Li, Smola",
+    "year": 2023,
+    "title": "Automatic Chain of Thought Prompting in Large Language Models",
+    "venue": "ICLR 2023",
+    "arxiv_id": "2210.03493",
+    "url": "https://arxiv.org/abs/2210.03493"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Cluster-then-auto-generate exemplars",
+      "template": "# Cluster\nCluster this pool of unlabeled questions into {{num_clusters}} groups by similarity: {{unlabeled_question_pool}}\n\n# Select representative + generate chain (per cluster)\nRepresentative question: {{cluster_representative_question}}\nLet's think step by step.\n(the resulting chain becomes one exemplar in the final few-shot block)\n\n# Assemble\nConcatenate all {{num_clusters}} generated exemplars into a single few-shot CoT prompt prefix for future questions.",
+      "variables": [
+        {
+          "name": "unlabeled_question_pool",
+          "description": "Pool of unlabeled candidate questions to cluster",
+          "example": null
+        },
+        {
+          "name": "num_clusters",
+          "description": "How many clusters (= how many few-shot exemplars) to produce",
+          "example": "8"
+        },
+        {
+          "name": "cluster_representative_question",
+          "description": "The chosen representative question for one cluster",
+          "example": null
+        }
+      ],
+      "template_id": "auto-cot--cluster-then-auto-generate-exemplars",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "example-selection",
+    "automatic",
+    "zero-human-effort"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "Auto-CoT"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

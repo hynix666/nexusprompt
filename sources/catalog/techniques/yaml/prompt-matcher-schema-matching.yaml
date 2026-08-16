@@ -1,0 +1,61 @@
+id: prompt-matcher-schema-matching
+name: Prompt-Matcher (LLM-Prompted Schema Matching)
+category: domain-specific-application
+subcategory: data-integration
+executive_summary: Use LLM prompting to reduce uncertainty in schema-matching tasks — deciding which fields
+  across two different data schemas refer to the same underlying concept.
+description: 'Applies prompting to the data-integration problem of schema matching: given two schemas
+  (e.g. from different databases or APIs), prompts the model to assess candidate field correspondences
+  and resolve ambiguous or low-confidence matches, reducing the manual review burden in schema-matching
+  pipelines.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Integrating data from multiple schemas where field correspondence is not already known with certainty.
+when_not_to_use:
+- Schemas are already fully mapped, or field names are unambiguous enough that matching is trivial.
+known_pitfalls:
+- High-confidence-looking matches can still be wrong when field names are superficially similar but semantically
+  distinct (e.g. two different meanings of 'status').
+related_techniques:
+- calibrate-before-use
+primary_source:
+  authors: (local corpus)
+  year: 2024
+  title: 'Prompt-Matcher: Uncertainty-Guided Schema Matching with LLM Prompting'
+  venue: arXiv preprint
+  arxiv_id: '2408.14507'
+  url: https://arxiv.org/abs/2408.14507
+usage_templates:
+- template_name: Uncertainty-guided field matching
+  template: |-
+    Schema A fields: {{schema_a_fields}}
+    Schema B fields: {{schema_b_fields}}
+    For each field in Schema A, propose the most likely corresponding field in Schema B (or 'no match'), with a confidence level. Flag matches below {{confidence_threshold}} confidence for human review.
+  variables:
+  - name: schema_a_fields
+    description: Fields (with descriptions) from the first schema
+    example: null
+  - name: schema_b_fields
+    description: Fields (with descriptions) from the second schema
+    example: null
+  - name: confidence_threshold
+    description: Confidence cutoff below which a match is flagged for human review
+    example: '0.7'
+  template_id: prompt-matcher-schema-matching--uncertainty-guided-field-matching
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- data-integration
+- domain-specific
+- schema-matching
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: Prompt-Matcher.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

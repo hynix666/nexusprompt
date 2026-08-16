@@ -1,0 +1,82 @@
+id: promptbreeder
+name: Promptbreeder (Self-Referential Self-Improvement)
+category: automatic-prompt-optimization
+subcategory: evolutionary-search
+executive_summary: Evolve a population of prompts using an LLM-driven mutation-and-selection loop, including
+  mutating the mutation-prompts themselves.
+description: 'Maintains a population of task-prompts, evaluates them on a training set, and evolves the
+  population via LLM-generated mutations (rewording, hybridization, or entirely new prompts). Critically,
+  the mutation-prompts that generate these mutations are themselves part of the evolving population, making
+  the system self-referential: it can improve its own means of self-improvement, not just the end task-prompt.'
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- A reusable prompt for a fixed task needs to be found automatically and a labeled train/held-out split
+  exists to score candidates.
+when_not_to_use:
+- One-off queries with no reusable prompt being optimized, or no labeled evaluation set to score fitness
+  against.
+known_pitfalls:
+- Search cost is substantial (many generations x population size x eval-set size); overfitting the training
+  split without a genuinely held-out test split invalidates the result — see the selection-protocol literature.
+related_techniques:
+- automatic-prompt-engineer
+- opro
+- self-instruct
+primary_source:
+  authors: Fernando, Banarse, Michalewski, Osindero, Rocktäschel
+  year: 2023
+  title: 'Promptbreeder: Self-Referential Self-Improvement via Prompt Evolution'
+  venue: arXiv preprint
+  arxiv_id: '2309.16797'
+  url: https://arxiv.org/abs/2309.16797
+usage_templates:
+- template_name: Mutate-evaluate-select generation
+  template: |-
+    # Mutate (per population member, using a mutation-prompt)
+    Mutation instruction: {{mutation_prompt}}
+    Original task-prompt: {{parent_prompt}}
+    Produce a mutated task-prompt.
+
+    # Evaluate (per mutated candidate, on the held-out fitness set)
+    Score {{mutated_prompt}} by running it against {{fitness_examples}} and measuring {{fitness_metric}}.
+
+    # Select
+    Keep the top {{population_size}} candidates by fitness for the next generation; occasionally also mutate the mutation-prompts themselves.
+  variables:
+  - name: mutation_prompt
+    description: The (also-evolving) instruction used to mutate a task-prompt
+    example: null
+  - name: parent_prompt
+    description: The task-prompt being mutated
+    example: null
+  - name: mutated_prompt
+    description: Result of the mutation step
+    example: null
+  - name: fitness_examples
+    description: Held-out labeled examples used to score candidates
+    example: null
+  - name: fitness_metric
+    description: The scoring metric, e.g. exact-match accuracy
+    example: null
+  - name: population_size
+    description: How many candidates survive each generation
+    example: '20'
+  template_id: promptbreeder--mutate-evaluate-select-generation
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- optimization
+- evolutionary
+- self-referential
+- multi-call
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: SELF-REFERENTIAL SELF-IMPROVEMENT VIA PROMPT EVOLUTION.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

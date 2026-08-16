@@ -1,0 +1,61 @@
+id: comparative-prompting-code-gen
+name: Comparative Empirical Study of Code-Generation Prompting Strategies
+category: domain-specific-application
+subcategory: code-generation
+executive_summary: An empirical benchmark comparing multiple prompting strategies head-to-head specifically
+  on code-generation tasks, rather than proposing a new technique.
+description: Systematically benchmarks several prompting strategies (varying levels of decomposition,
+  exemplar use, and reasoning structure) against each other on code-generation benchmarks, providing empirical
+  guidance on which strategies actually help for this domain rather than assuming general-purpose reasoning
+  techniques transfer directly.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Choosing among competing code-generation prompting strategies for a specific deployment and wanting
+  empirical, not just theoretical, guidance.
+when_not_to_use:
+- N/A — benchmark/reference material.
+known_pitfalls:
+- Benchmark results are specific to the models and code-generation benchmarks tested; may not transfer
+  to a materially different model or task distribution.
+related_techniques:
+- structured-cot-code-generation
+- modularization-of-thought-code-gen
+primary_source:
+  authors: (local corpus)
+  year: 2025
+  title: A Comparative Empirical Study of Prompting Strategies for Code Generation
+  venue: arXiv preprint
+  arxiv_id: null
+  url: null
+usage_templates:
+- template_name: Strategy comparison harness
+  template: For task {{coding_task}}, generate solutions using each strategy in {{strategy_list}}, run
+    each against the test suite {{test_suite}}, and report pass rate per strategy.
+  variables:
+  - name: coding_task
+    description: The code-generation task under test
+    example: null
+  - name: strategy_list
+    description: The set of prompting strategies being compared
+    example: null
+  - name: test_suite
+    description: The executable test suite used to score correctness
+    example: null
+  template_id: comparative-prompting-code-gen--strategy-comparison-harness
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- code-generation
+- domain-specific
+- benchmark
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: A Comparative Empirical Study of Prompting Strategies for Code Generation.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

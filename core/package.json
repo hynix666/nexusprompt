@@ -1,0 +1,1 @@
+{ "name": "@promptnexus/core", "private": true, "type": "module", "main": "src/index.ts" }

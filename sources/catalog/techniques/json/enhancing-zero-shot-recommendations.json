@@ -1,0 +1,71 @@
+{
+  "id": "enhancing-zero-shot-recommendations",
+  "name": "Enhancing Zero-Shot Recommendations via Semantics and Collaborative Signals",
+  "category": "domain-specific-application",
+  "subcategory": "recommendation",
+  "executive_summary": "A narrower, more recent take on combining semantic and collaborative signals specifically for zero-shot recommendation, with no task-specific fine-tuning.",
+  "description": "Focuses specifically on the zero-shot regime (no fine-tuning on the target recommendation dataset), showing how semantic and collaborative signal fusion can still improve recommendations without any task-specific training, building on the comprehend-then-predict line of work with a narrower zero-shot scope.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Zero-shot recommendation deployments where fine-tuning on the target domain isn't feasible."
+  ],
+  "when_not_to_use": [
+    "A fine-tuned recommendation model is already available and outperforms zero-shot prompting."
+  ],
+  "known_pitfalls": [
+    "Zero-shot performance, even enhanced, typically trails a well-tuned domain-specific recommender; treat as a cold-start solution rather than a permanent replacement."
+  ],
+  "related_techniques": [
+    "comprehend-then-predict-recommendation",
+    "prompting-llms-recommender-systems"
+  ],
+  "primary_source": {
+    "authors": "(local corpus, under review)",
+    "year": 2026,
+    "title": "Enhancing Zero-Shot LLM Recommendations via Semantics and Collaborative Signals",
+    "venue": "Under review, ICLR 2026",
+    "arxiv_id": null,
+    "url": null
+  },
+  "usage_templates": [
+    {
+      "template_name": "Zero-shot semantic + collaborative fusion",
+      "template": "No task-specific training data is used. Item semantics: {{item_semantics}}\nAggregate collaborative signal (e.g. co-purchase/co-view rates): {{collaborative_aggregate}}\nUser query: {{user_query}}\nRecommend and rank candidates using both signals, zero-shot.",
+      "variables": [
+        {
+          "name": "item_semantics",
+          "description": "Text-based item descriptions",
+          "example": null
+        },
+        {
+          "name": "collaborative_aggregate",
+          "description": "Aggregated (not per-user) collaborative signal available without fine-tuning",
+          "example": null
+        },
+        {
+          "name": "user_query",
+          "description": "The user's stated need/query",
+          "example": null
+        }
+      ],
+      "template_id": "enhancing-zero-shot-recommendations--zero-shot-semantic-collaborative-fusion",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "recommendation",
+    "domain-specific",
+    "zero-shot"
+  ],
+  "status": "corpus-present",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": "ENHANCING ZERO-SHOT LLM RECOMMENDATIONS VIA SEMANTICS AND COLLABORATIVE SIGNALS.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

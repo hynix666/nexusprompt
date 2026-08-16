@@ -1,0 +1,76 @@
+{
+  "id": "prompt-chaining",
+  "name": "Prompt Chaining (visual/workflow composition)",
+  "category": "agentic-tool-use",
+  "subcategory": "workflow-tooling",
+  "executive_summary": "Compose multi-step LLM prompt sequences as an explicit visual/workflow graph, treating chain design itself as a first-class engineering problem.",
+  "description": "Rather than a single reasoning technique, this is a design methodology and tooling approach for building, debugging, and iterating on multi-prompt chains — predating most later 'agent framework' tooling. Useful less for the specific prompts it proposes and more for the design principles (visibility into intermediate outputs, easy re-ordering of steps) it established.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Designing or debugging any multi-step prompt pipeline, regardless of the specific reasoning technique used within it."
+  ],
+  "when_not_to_use": [
+    "Single-call prompting with no chain structure to design."
+  ],
+  "known_pitfalls": [
+    "A workflow/tooling paper, not a reasoning-quality technique — doesn't itself improve accuracy, only development ergonomics."
+  ],
+  "related_techniques": [
+    "knowledge-prompt-chaining",
+    "react"
+  ],
+  "primary_source": {
+    "authors": "Wu, Terry, Cai",
+    "year": 2022,
+    "title": "PromptChainer: Chaining Large Language Model Prompts through Visual Programming",
+    "venue": "CHI 2022 Extended Abstracts",
+    "arxiv_id": null,
+    "url": null
+  },
+  "usage_templates": [
+    {
+      "template_name": "Chain design checklist",
+      "template": "For each node in the chain, specify: (1) input variables consumed from prior nodes, (2) the prompt template, (3) output variables produced, (4) whether output feeds one downstream node or several. Node: {{node_name}}. Inputs: {{input_vars}}. Template: {{node_template}}. Outputs: {{output_vars}}.",
+      "variables": [
+        {
+          "name": "node_name",
+          "description": "Identifier for this chain node",
+          "example": null
+        },
+        {
+          "name": "input_vars",
+          "description": "Variables this node consumes from earlier nodes",
+          "example": null
+        },
+        {
+          "name": "node_template",
+          "description": "This node's own prompt template",
+          "example": null
+        },
+        {
+          "name": "output_vars",
+          "description": "Variables this node produces for later nodes",
+          "example": null
+        }
+      ],
+      "template_id": "prompt-chaining--chain-design-checklist",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "workflow",
+    "tooling",
+    "chaining"
+  ],
+  "status": "corpus-present",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": "PromptChainer.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

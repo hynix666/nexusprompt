@@ -1,0 +1,93 @@
+{
+  "id": "maieutic-prompting",
+  "name": "Maieutic Prompting",
+  "category": "self-verification-refinement",
+  "subcategory": "logical-consistency-optimization",
+  "executive_summary": "Recursively generate a tree of both supporting and opposing explanations for a candidate answer, then use a MAX-SAT-style optimization over the tree's logical relations to select the most globally consistent answer.",
+  "description": "Named for the Socratic 'maieutic' (midwife) method of drawing out knowledge through recursive questioning. For a candidate answer, the model generates an explanation, then a counter-explanation for why the candidate might be false, recursing to a fixed depth to build a tree of statements with logical relations (entailment/contradiction) between them. A symbolic MAX-SAT-style solver then finds the most consistent assignment of true/false across the whole tree, which determines the final answer — a fundamentally different verification mechanism from Chain-of-Verification's independent Q&A or Backward Self-Verification's condition-masking, using formal logical consistency across a generated explanation tree instead.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Commonsense or belief-style reasoning tasks with a true/false structure, where logical consistency across supporting and opposing explanations is a meaningful signal."
+  ],
+  "when_not_to_use": [
+    "Open-ended generation with no natural true/false candidate structure to build an explanation tree around."
+  ],
+  "known_pitfalls": [
+    "Cost grows with tree depth and branching factor; the explanation tree must actually be generated and integrated with a symbolic solver, adding real implementation complexity relative to a plain voting-based method."
+  ],
+  "related_techniques": [
+    "chain-of-verification",
+    "backward-self-verification",
+    "self-consistency"
+  ],
+  "primary_source": {
+    "authors": "Jung, Qin, Welleck, Brahman, Bhagavatula, Le Bras, Choi",
+    "year": 2022,
+    "title": "Maieutic Prompting: Logically Consistent Reasoning with Recursive Explanations",
+    "venue": "EMNLP 2022",
+    "arxiv_id": "2205.11822",
+    "url": "https://arxiv.org/abs/2205.11822"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Recursive explanation tree with consistency optimization",
+      "template": "# Generate explanation tree (recurse to depth {{max_depth}})\nCandidate answer: {{candidate_statement}}\nExplain why this is true: {{explanation_for}}\nExplain why this might be false instead: {{explanation_against}}\n(recurse: generate explanation_for/against for each new explanation, to {{max_depth}})\n\n# Extract logical relations between tree nodes\nDoes {{node_a}} entail or contradict {{node_b}}? {{logical_relation}}\n\n# Solve\nFind the truth-value assignment across all tree nodes that maximizes logical consistency with the extracted relations (MAX-SAT). The assignment for {{candidate_statement}} is the final answer.",
+      "variables": [
+        {
+          "name": "candidate_statement",
+          "description": "The candidate true/false statement being evaluated",
+          "example": null
+        },
+        {
+          "name": "max_depth",
+          "description": "Recursion depth for the explanation tree",
+          "example": "2"
+        },
+        {
+          "name": "explanation_for",
+          "description": "Generated explanation supporting the parent statement",
+          "example": null
+        },
+        {
+          "name": "explanation_against",
+          "description": "Generated explanation opposing the parent statement",
+          "example": null
+        },
+        {
+          "name": "node_a",
+          "description": "One tree node being compared for logical relation",
+          "example": null
+        },
+        {
+          "name": "node_b",
+          "description": "Another tree node being compared",
+          "example": null
+        },
+        {
+          "name": "logical_relation",
+          "description": "Entailment, contradiction, or neutral relation between the two nodes",
+          "example": null
+        }
+      ],
+      "template_id": "maieutic-prompting--recursive-explanation-tree-with-consistency-optimization",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "This template intentionally samples multiple times or explores adaptively; outputs vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends on intermediate stochastic choices)."
+    }
+  ],
+  "tags": [
+    "verification",
+    "logical-consistency",
+    "commonsense",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,56 @@
+id: making-slow-thinking-faster
+name: Reasoning Compression via Step-Entropy Analysis
+category: reasoning-elicitation
+subcategory: efficiency
+executive_summary: Compress long chain-of-thought reasoning by identifying and removing low-information-content
+  steps, cutting latency without proportionally hurting accuracy.
+description: Analyzes the entropy contributed by each step of an already-generated CoT trace and prunes
+  or condenses low-entropy (low-information) steps, on the premise that not every reasoning step contributes
+  equally to the final answer. Positioned as an efficiency layer on top of existing reasoning-elicitation
+  techniques rather than a new elicitation method in its own right.
+verification_status: judge-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Base CoT/reasoning traces are verbose and latency/cost is a binding constraint.
+when_not_to_use:
+- Reasoning traces are already short, or interpretability of the full trace matters more than compression.
+known_pitfalls:
+- Aggressive compression risks removing a step that looked low-information locally but was load-bearing
+  for correctness.
+related_techniques:
+- chain-of-thought
+- skeleton-of-thought
+primary_source:
+  authors: (local corpus)
+  year: 2026
+  title: 'Making Slow Thinking Faster: Step-Entropy Guided Reasoning Compression'
+  venue: ICLR 2026
+  arxiv_id: null
+  url: null
+usage_templates:
+- template_name: Post-hoc trace compression
+  template: |-
+    Here is a chain-of-thought reasoning trace: {{full_reasoning_trace}}
+
+    Identify which steps are load-bearing for the final answer and which are low-information restatements or filler. Rewrite the trace keeping only the load-bearing steps, preserving the final answer exactly.
+  variables:
+  - name: full_reasoning_trace
+    description: The original, uncompressed reasoning trace
+    example: null
+  template_id: making-slow-thinking-faster--post-hoc-trace-compression
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reasoning
+- efficiency
+- compression
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: MAKING SLOW THINKING FASTER.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

@@ -1,0 +1,64 @@
+{
+  "id": "grammar-constrained-decoding-efficiency",
+  "name": "Structural Equivalence and Efficiency in Grammar-Constrained Decoding",
+  "category": "structured-constrained-output",
+  "subcategory": "decoding-time-constraints",
+  "executive_summary": "Formal analysis of when two different grammar-constrained decoding implementations produce equivalent output distributions, and how to make constrained decoding more efficient.",
+  "description": "Extends the grammar-constrained decoding line of work (see structured-output-json-mode) with a formal treatment of structural equivalence between decoding implementations and efficiency improvements to the constraint-checking process itself. Downstream, follow-on research rather than the foundational paper.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Implementing or evaluating a grammar-constrained decoding system where correctness/equivalence guarantees matter, not just a single reference implementation."
+  ],
+  "when_not_to_use": [
+    "Using an off-the-shelf structured-output feature without needing to reason about implementation-level equivalence."
+  ],
+  "known_pitfalls": [],
+  "related_techniques": [
+    "structured-output-json-mode",
+    "adaptive-weighted-rejection-sampling"
+  ],
+  "primary_source": {
+    "authors": "(local corpus)",
+    "year": 2026,
+    "title": "Structural Equivalence and Efficiency in Grammar-Constrained LLM Decoding",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2603.05540",
+    "url": null
+  },
+  "usage_templates": [
+    {
+      "template_name": "Grammar-constrained decoding spec",
+      "template": "Grammar (BNF/EBNF): {{grammar_definition}}\nTask: {{task_description}}\nConstrain decoding to only tokens consistent with {{grammar_definition}} at every step.",
+      "variables": [
+        {
+          "name": "grammar_definition",
+          "description": "The formal grammar constraining valid output",
+          "example": null
+        },
+        {
+          "name": "task_description",
+          "description": "The generation task",
+          "example": null
+        }
+      ],
+      "template_id": "grammar-constrained-decoding-efficiency--grammar-constrained-decoding-spec",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "structured-output",
+    "decoding-time",
+    "formal-methods"
+  ],
+  "status": "corpus-present",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": "Structural Equivalence and Efficiency in Grammar-Constrained LLM Decoding.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "id": "xgrammar-structured-generation-engine",
+  "name": "XGrammar",
+  "category": "structured-constrained-output",
+  "subcategory": "grammar-constrained-decoding",
+  "executive_summary": "Accelerate grammar-constrained decoding by splitting the vocabulary into context-independent tokens (precheckable once) and context-dependent tokens (checked at runtime) — fast enough for production LLM-agent pipelines.",
+  "description": "Targets the practical performance bottleneck in grammar-constrained decoding (the general mechanism behind 'structured output/JSON mode' techniques like Outlines): naively executing a context-free grammar requires walking stack states across the entire token vocabulary at every decoding step, adding significant overhead. XGrammar splits the vocabulary ahead of time into context-independent tokens (whose validity doesn't depend on the current grammar state, and so can be prechecked once) and a much smaller set of context-dependent tokens that actually need runtime interpretation, further reduces the context-dependent set via grammar transformations, adds an efficient persistent stack for the runtime checks, and co-designs the grammar engine with the LLM inference engine so grammar computation overlaps with GPU execution rather than blocking it.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Production systems needing grammar-constrained structured output (JSON, function calls, embodied agent commands) at inference speeds that naive grammar-constrained decoding can't hit."
+  ],
+  "when_not_to_use": [
+    "Low-throughput or offline use cases where naive grammar-constrained decoding's overhead is already acceptable — the engineering complexity of the vocabulary split isn't needed."
+  ],
+  "known_pitfalls": [
+    "Requires co-design with the specific LLM inference engine to realize the GPU-overlap benefit; the technique is an engine-level optimization, not a portable prompting instruction."
+  ],
+  "related_techniques": [
+    "structured-output-json-mode",
+    "grammar-constrained-decoding-efficiency"
+  ],
+  "primary_source": {
+    "authors": "Dong, Ruan, Cai, Lai, Xu, Zhao, Chen",
+    "year": 2025,
+    "title": "XGrammar: Flexible and Efficient Structured Generation Engine for Large Language Models",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2411.15100",
+    "url": "https://arxiv.org/abs/2411.15100"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Vocabulary-split grammar-constrained decoding (systems configuration)",
+      "template": "# Preprocessing (once per grammar)\nGrammar: {{context_free_grammar}}\nVocabulary: {{full_vocabulary}}\nPartition into context-independent tokens (precheck once) and context-dependent tokens (check at runtime): {{token_partition}}\nApply grammar transformations to shrink the context-dependent set.\n\n# Runtime (per decoding step)\nMaintain persistent stack state; for the current step, only interpret the context-dependent tokens against {{persistent_stack_state}}, overlapping this computation with the GPU's forward-pass execution.",
+      "variables": [
+        {
+          "name": "context_free_grammar",
+          "description": "The grammar constraining valid output structure",
+          "example": null
+        },
+        {
+          "name": "full_vocabulary",
+          "description": "The model's full token vocabulary",
+          "example": null
+        },
+        {
+          "name": "token_partition",
+          "description": "Split of the vocabulary into context-independent vs. context-dependent tokens",
+          "example": null
+        },
+        {
+          "name": "persistent_stack_state",
+          "description": "The runtime grammar-state stack maintained across decoding steps",
+          "example": null
+        }
+      ],
+      "template_id": "xgrammar-structured-generation-engine--vocabulary-split-grammar-constrained-decoding-systems-configuration",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "structured-output",
+    "grammar-constrained",
+    "systems",
+    "efficiency"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

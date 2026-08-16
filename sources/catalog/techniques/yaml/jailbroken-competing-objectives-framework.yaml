@@ -1,0 +1,83 @@
+id: jailbroken-competing-objectives-framework
+name: 'Jailbroken: Competing Objectives and Mismatched Generalization'
+category: prompt-injection-defense
+subcategory: threat-modeling
+executive_summary: A diagnostic framework explaining WHY jailbreaks succeed — not an attack itself, but
+  two named failure modes (competing training objectives, safety training that doesn't generalize) most
+  attacks in this catalog exploit.
+description: 'Distinct in kind from the other threat-modeling entries in this catalog: rather than proposing
+  a new attack technique, this paper diagnoses the structural reasons safety-trained models remain jailbreakable
+  at all, identifying two failure modes. Competing objectives: pretraining/instruction-following and safety
+  objectives can be placed in tension (e.g. an instruction that''s simultaneously followed faithfully
+  and violates a safety constraint), and a sufficiently capable model may resolve that tension toward
+  compliance. Mismatched generalization: safety training doesn''t cover every input distribution capability
+  training does (e.g. safety training in English but capability extending to low-resource languages or
+  unusual encodings), leaving gaps an attacker can target directly. Uses these two principles to guide
+  design of new attacks that succeed against then-state-of-the-art models on their own curated harmful-behavior
+  benchmark, evaluated against both automated and human red-teaming judgments.'
+verification_status: unverifiable-by-text
+cost_profile: single-call
+when_to_use:
+- Threat-modeling or explaining to a stakeholder *why* a class of jailbreak worked, not just cataloging
+  that it did — useful as a shared vocabulary ('this is a mismatched-generalization gap' vs. 'this is
+  a competing-objectives exploit') for organizing red-team findings from other techniques in this catalog.
+- Designing new red-team test cases by deliberately targeting one of the two named failure modes rather
+  than searching unguided.
+when_not_to_use:
+- N/A — this is a diagnostic framework and threat-model background, not an applied generation technique
+  with its own usage template in the usual sense; the template below is illustrative of applying the framework,
+  not a literal attack recipe.
+known_pitfalls:
+- The two failure modes are a useful organizing lens, not an exhaustive taxonomy — a jailbreak that doesn't
+  cleanly fit either category isn't necessarily out of scope, just not explained by this specific framework.
+related_techniques:
+- prompt-injection-attack-taxonomy
+- harmbench-red-teaming-benchmark
+- many-tier-instruction-hierarchy
+primary_source:
+  authors: Wei, Haghtalab, Steinhardt
+  year: 2023
+  title: 'Jailbroken: How Does LLM Safety Training Fail?'
+  venue: NeurIPS 2023
+  arxiv_id: '2307.02483'
+  url: https://arxiv.org/abs/2307.02483
+usage_templates:
+- template_name: Failure-mode-guided red-team test design
+  template: |-
+    As part of a red-team evaluation, design a test case targeting one of two named failure modes:
+
+    # Competing-objectives probe
+    Construct a request that simultaneously (a) is a legitimate instance of a capability the model is trained to comply with, and (b) conflicts with a safety constraint: {{competing_objectives_probe}}
+    Record whether the model resolves the tension toward compliance or refusal.
+
+    # Mismatched-generalization probe
+    Construct the same underlying harmful request in a distribution safety training is less likely to have covered but capability training likely still handles (e.g. {{distribution_shift_type}}): {{mismatched_generalization_probe}}
+    Record whether the shift alone is sufficient to bypass refusal.
+  variables:
+  - name: competing_objectives_probe
+    description: A request engineered to pit capability-following against safety compliance
+    example: null
+  - name: distribution_shift_type
+    description: The kind of distribution shift being tested, e.g. low-resource language, unusual encoding
+    example: null
+  - name: mismatched_generalization_probe
+    description: The same harmful intent expressed in the shifted distribution
+    example: null
+  template_id: jailbroken-competing-objectives-framework--failure-mode-guided-red-team-test-design
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- security
+- threat-model
+- diagnostic-framework
+- red-teaming
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

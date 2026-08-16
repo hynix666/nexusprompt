@@ -1,0 +1,80 @@
+{
+  "id": "zero-shot-prompting",
+  "name": "Zero-Shot Prompting",
+  "category": "reasoning-elicitation",
+  "subcategory": "foundational",
+  "executive_summary": "Instruct the model to perform a task directly, with no worked examples at all — relying entirely on what the model learned during pretraining/instruction-tuning to interpret and execute the instruction correctly.",
+  "description": "The default, simplest mode of interacting with an instruction-tuned LLM: state the task and let the model respond, with no demonstrations of input/output pairs. Foundational to the whole field — demonstrated at meaningful scale by GPT-2's ability to perform tasks (summarization, translation, reading comprehension) it was never explicitly trained for, purely from a natural-language instruction, and every other technique in this catalog is either a variant of zero-shot (Zero-Shot-CoT adds a trigger phrase), a departure from it (Few-Shot adds exemplars), or built on top of it (nearly everything else). Effective when the task is common enough, or clearly enough specified, that the model doesn't need worked examples to infer the expected input/output mapping.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Common, well-specified tasks (classification, straightforward summarization, translation, simple formatting) where the instruction alone is enough to convey what's expected.",
+    "As the cheapest possible baseline before reaching for any more elaborate technique in this catalog."
+  ],
+  "when_not_to_use": [
+    "Tasks with an idiosyncratic or unusual expected output format/style that the instruction alone doesn't convey — Few-Shot Prompting communicates this more reliably via demonstration.",
+    "Multi-step reasoning tasks where the model benefits from seeing intermediate steps — see Zero-Shot-CoT or Chain-of-Thought instead."
+  ],
+  "known_pitfalls": [
+    "No mechanism to correct a misunderstanding of the task — if the model infers the wrong interpretation of an ambiguous instruction, there's no exemplar to anchor it, unlike Few-Shot Prompting."
+  ],
+  "related_techniques": [
+    "few-shot-prompting",
+    "zero-shot-cot",
+    "chain-of-thought"
+  ],
+  "primary_source": {
+    "authors": "Radford, Wu, Child, Luan, Amodei, Sutskever",
+    "year": 2019,
+    "title": "Language Models are Unsupervised Multitask Learners",
+    "venue": "OpenAI (technical report)",
+    "arxiv_id": null,
+    "url": "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Direct instruction, no exemplars",
+      "template": "{{task_instruction}}\n\n{{input_content}}",
+      "variables": [
+        {
+          "name": "task_instruction",
+          "description": "A clear, direct statement of the task to perform",
+          "example": "Classify the sentiment of the following review as Positive, Negative, or Neutral."
+        },
+        {
+          "name": "input_content",
+          "description": "The actual content the task is performed on",
+          "example": null
+        }
+      ],
+      "template_id": "zero-shot-prompting--direct-instruction-no-exemplars",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "zero-shot",
+    "foundational",
+    "single-call",
+    "low-cost"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [
+    {
+      "authors": "Brown, Mann, Ryder, Subbiah, Kaplan, Dhariwal, Neelakantan, Shyam, Sastry, Askell, et al.",
+      "year": 2020,
+      "title": "Language Models are Few-Shot Learners",
+      "venue": "NeurIPS 2020",
+      "arxiv_id": "2005.14165",
+      "url": "https://arxiv.org/abs/2005.14165"
+    }
+  ],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

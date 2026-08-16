@@ -1,0 +1,86 @@
+id: uncertainty-of-thoughts
+name: Uncertainty of Thoughts (UoT)
+category: agentic-tool-use
+subcategory: information-seeking
+executive_summary: Actively ask effective follow-up questions by simulating possible future scenarios,
+  rewarding questions by expected information gain, and propagating that reward to pick the single best
+  next question to ask.
+description: 'Targets active information-seeking specifically (medical diagnosis, troubleshooting, ''20
+  Questions''-style tasks) where the information needed to solve the task isn''t given upfront and must
+  be elicited through good follow-up questions — a harder problem than Self-Ask''s compositional-question
+  decomposition, since here the answer isn''t already known anywhere, it has to be actively discovered.
+  UoT combines three pieces: an uncertainty-aware simulation of possible future conversation branches
+  and their likelihoods, an information-gain-based reward for candidate questions, and a reward-propagation
+  scheme that selects the single question maximizing expected reward at each turn. Reports a 38.1% average
+  improvement in successful task completion rate across the tested domains.'
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Tasks where the information needed to solve the problem must be actively elicited through a sequence
+  of well-chosen questions, not just retrieved or reasoned from what's already given (diagnostic interviews,
+  troubleshooting dialogues, guessing games).
+when_not_to_use:
+- Tasks where all necessary information is already present in the prompt — there's no information-seeking
+  decision to optimize.
+known_pitfalls:
+- The simulation-based reward estimation adds real computational cost per turn compared to a simpler heuristic
+  like Self-Ask's fixed decomposition.
+related_techniques:
+- self-ask
+- react
+- reflexion
+primary_source:
+  authors: Hu, Liu, Feng, Zhao, Ng, Luu, He, Koh, Hooi
+  year: 2024
+  title: 'Uncertainty of Thoughts: Uncertainty-Aware Planning Enhances Information Seeking in Large Language
+    Models'
+  venue: arXiv preprint
+  arxiv_id: '2402.03271'
+  url: https://arxiv.org/abs/2402.03271
+usage_templates:
+- template_name: Simulate-reward-propagate question selection
+  template: |-
+    Task state so far: {{conversation_state}}
+    Candidate follow-up questions: {{candidate_questions}}
+
+    # Simulate
+    For each candidate question, simulate {{num_simulated_branches}} possible answers and their estimated likelihoods.
+
+    # Reward
+    Estimate the expected information gain of each candidate question based on how much its simulated answer branches would narrow down the solution space.
+
+    # Select
+    Ask the candidate question with the highest expected information gain: {{selected_question}}. Repeat with the updated conversation state until the task is solved or a turn budget is reached.
+  variables:
+  - name: conversation_state
+    description: Everything established so far in the information-seeking dialogue
+    example: null
+  - name: candidate_questions
+    description: Candidate follow-up questions being considered
+    example: null
+  - name: num_simulated_branches
+    description: How many possible answer branches to simulate per candidate question
+    example: '3'
+  - name: selected_question
+    description: The question chosen to ask this turn
+    example: null
+  template_id: uncertainty-of-thoughts--simulate-reward-propagate-question-selection
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- agentic
+- information-seeking
+- uncertainty-aware
+- planning
+- multi-call
+status: verified-external
+aliases:
+- UoT
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

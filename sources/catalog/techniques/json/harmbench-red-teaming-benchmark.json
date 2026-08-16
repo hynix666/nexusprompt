@@ -1,0 +1,76 @@
+{
+  "id": "harmbench-red-teaming-benchmark",
+  "name": "HarmBench: Standardized Red-Teaming and Robust-Refusal Benchmark",
+  "category": "prompt-injection-defense",
+  "subcategory": "benchmarking",
+  "executive_summary": "A standardized benchmark of 18 red-teaming methods against 33 target LLMs/defenses across four harmful-behavior categories, so attacks and defenses can be directly compared rather than evaluated ad hoc.",
+  "description": "Addresses a specific methodological gap the field previously lacked: a common evaluation surface where different attack methods (including GCG, PAIR, AutoDAN-style approaches) and different defenses can be measured against the same behavior set with the same success-rate metric, rather than each paper introducing its own incompatible benchmark. Covers four functional behavior categories (standard, contextual, copyright, multimodal) and introduces an adversarial training defense (R2D2) as a demonstration that the benchmark supports codeveloping attacks and defenses against each other, not just measuring attacks in isolation.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Comparing multiple jailbreak/red-teaming methods or defenses on a common, reproducible basis rather than each on its own ad hoc setup.",
+    "Benchmarking a new defense's robustness against a standardized suite of existing attacks before claiming general robustness."
+  ],
+  "when_not_to_use": [
+    "N/A — benchmark/methodology reference, not an applied generation technique."
+  ],
+  "known_pitfalls": [
+    "Like any fixed benchmark, strong performance against HarmBench's specific 18-method suite doesn't guarantee robustness against future attack methods developed after the benchmark's publication."
+  ],
+  "related_techniques": [
+    "hackaprompt-taxonomy",
+    "formalized-injection-benchmark",
+    "gcg-adversarial-suffix-attack",
+    "autodan-genetic-jailbreak"
+  ],
+  "primary_source": {
+    "authors": "Mazeika, Phan, Yin, Zou, Wang, Mu, Sakhaee, Li, Basart, Li, Forsyth, Hendrycks",
+    "year": 2024,
+    "title": "HarmBench: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal",
+    "venue": "ICML 2024",
+    "arxiv_id": "2402.04249",
+    "url": "https://arxiv.org/abs/2402.04249"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Standardized attack x defense comparison",
+      "template": "Evaluate defense {{defense_under_test}} against the HarmBench behavior set (standard, contextual, copyright, multimodal categories) using attack methods {{attack_method_list}} against target model {{target_model}}.\nReport attack success rate (ASR) per attack-method x behavior-category cell, and compare against HarmBench's published baseline results for the same attack methods on comparable models, to contextualize whether {{defense_under_test}} is meaningfully more robust than the field baseline.",
+      "variables": [
+        {
+          "name": "defense_under_test",
+          "description": "The defense mechanism being benchmarked",
+          "example": null
+        },
+        {
+          "name": "attack_method_list",
+          "description": "Which of HarmBench's attack methods to run",
+          "example": null
+        },
+        {
+          "name": "target_model",
+          "description": "Model under evaluation",
+          "example": null
+        }
+      ],
+      "template_id": "harmbench-red-teaming-benchmark--standardized-attack-x-defense-comparison",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "security",
+    "benchmark",
+    "red-teaming",
+    "methodology",
+    "robustness"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

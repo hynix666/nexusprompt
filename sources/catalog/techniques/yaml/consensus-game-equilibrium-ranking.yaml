@@ -1,0 +1,77 @@
+id: consensus-game-equilibrium-ranking
+name: The Consensus Game (Equilibrium-Ranking)
+category: reasoning-elicitation
+subcategory: decoding-strategy
+executive_summary: Frame decoding as a signaling game between a generator and discriminator role of the
+  same model, and decode by computing an approximate equilibrium instead of just sampling generatively
+  or scoring discriminatively.
+description: Notes that a language model queried generatively (sample an answer) and the same model queried
+  discriminatively (score/rank candidate answers) can give incompatible predictions for the same question
+  — there's no guarantee the two modes agree. This reframes decoding as a regularized imperfect-information
+  signaling game where a 'generator' role tries to communicate a correctness signal via natural language
+  to a 'discriminator' role, and a training-free algorithm (Equilibrium-Ranking) computes an approximate
+  equilibrium of that game to produce the final decoded answer, reconciling the two modes rather than
+  picking one. Reported to let a 7B model outperform much larger 65B/540B models on several benchmarks
+  purely from the decoding procedure.
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Tasks where generative and discriminative use of the same model give inconsistent answers, and a training-free
+  decoding-level fix (rather than retraining) is preferred.
+when_not_to_use:
+- Simple tasks where generative and discriminative scoring already agree — the equilibrium computation
+  adds cost without a consistency problem to fix.
+known_pitfalls:
+- Requires implementing an equilibrium-finding procedure at decode time, which is more involved than standard
+  sampling or reranking and needs a well-defined candidate/scoring setup.
+related_techniques:
+- self-consistency
+- universal-self-consistency
+primary_source:
+  authors: Jacob, Shen, Farina, Andreas
+  year: 2023
+  title: 'The Consensus Game: Language Model Generation via Equilibrium Search'
+  venue: arXiv preprint
+  arxiv_id: '2310.09139'
+  url: https://arxiv.org/abs/2310.09139
+usage_templates:
+- template_name: Generator/discriminator equilibrium decoding (conceptual)
+  template: |-
+    # Generator role
+    Question: {{question}}
+    Generate {{num_candidates}} candidate answers, each with a natural-language justification signal: {{candidate_answers_with_justifications}}
+
+    # Discriminator role
+    Given question: {{question}}
+    Score each candidate-justification pair {{candidate_answers_with_justifications}} for how convincingly the justification signals correctness.
+
+    # Equilibrium computation (algorithmic, not a single prompt)
+    Run Equilibrium-Ranking over the generator/discriminator score matrix to find an approximate equilibrium; the equilibrium strategy's top answer is the final decoded output.
+  variables:
+  - name: question
+    description: The question being answered
+    example: null
+  - name: num_candidates
+    description: How many candidate answers to generate
+    example: '5'
+  - name: candidate_answers_with_justifications
+    description: Generated candidates paired with their justification text
+    example: null
+  template_id: consensus-game-equilibrium-ranking--generator-discriminator-equilibrium-decoding-conceptual
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- reasoning
+- decoding
+- game-theoretic
+- training-free
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

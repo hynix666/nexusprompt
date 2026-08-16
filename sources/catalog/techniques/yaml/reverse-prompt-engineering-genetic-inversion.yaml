@@ -1,0 +1,100 @@
+id: reverse-prompt-engineering-genetic-inversion
+name: Reverse Prompt Engineering (RPE) — Genetic-Algorithm Black-Box Inversion
+category: prompt-inversion-analysis
+subcategory: black-box-inversion
+executive_summary: 'Reconstruct an unknown prompt from as few as 5 outputs, with no model access beyond
+  querying it: an LLM proposes candidates, a genetic algorithm evolves them by how closely their outputs
+  match the target.'
+description: 'Frames prompt reconstruction as a black-box optimization problem: given a small set of outputs
+  produced by an unknown latent prompt, an LLM (acting as both candidate-generator and mutation operator)
+  proposes candidate prompts, each candidate is scored by feeding it back through the target LLM and measuring
+  output similarity to the real observed outputs, and a genetic-algorithm-style loop (selection, crossover,
+  mutation) evolves the population toward candidates whose outputs best match. Unlike prior inversion
+  methods (logit2prompt, output2prompt) that require training a dedicated T5-based recovery model, large
+  numbers of output examples, or access to output logits, RPE requires no training, no logits, and as
+  few as 5 text outputs — making it applicable to closed-source, API-only LLMs. Reports outperforming
+  output2prompt by an average 5.1-9.5% in cosine similarity across models, and produces coherent natural-language
+  prompts rather than the garbled text earlier methods sometimes yield.'
+verification_status: unverifiable-by-text
+cost_profile: multi-call-adaptive
+when_to_use:
+- Security auditing of a deployed LLM application — assessing how easily its hidden system prompt could
+  be reconstructed by an attacker who can only see outputs.
+- Recovering or adapting a prompt behind an output you want to reuse or repurpose, when only the output
+  (not the original prompt) is available.
+when_not_to_use:
+- The target model's outputs are truly logit/probability-inaccessible AND extremely limited (fewer than
+  ~5 examples) — reconstruction quality degrades with too little signal.
+- A white-box audit is possible instead (model weights/gradients available) — SODA-style exact inversion
+  is more precise when that access exists.
+known_pitfalls:
+- Recovers a prompt that is functionally/semantically similar enough to reproduce the outputs, not necessarily
+  the exact original wording — treat the output as a high-quality reconstruction, not a guaranteed verbatim
+  recovery.
+related_techniques:
+- soda-search-based-inversion
+- ipad-inverse-prompt-detection
+- promptbreeder
+primary_source:
+  authors: Li, Klabjan
+  year: 2025
+  title: Reverse Prompt Engineering
+  venue: arXiv preprint (v3)
+  arxiv_id: '2411.06729'
+  url: https://arxiv.org/abs/2411.06729
+usage_templates:
+- template_name: Generate-score-evolve black-box inversion loop
+  template: |-
+    # Inputs: observed target outputs A = {{observed_outputs}} from an unknown prompt p, produced by target model {{target_llm}}
+
+    # Initialize population
+    Using an LLM, propose {{population_size}} distinct candidate prompts that could plausibly have produced outputs like: {{observed_outputs}}
+
+    # Per generation (repeat up to {{max_generations}} times)
+    For each candidate prompt in the population, query {{target_llm}} with it and compare the resulting output(s) to {{observed_outputs}} using distance metric {{similarity_metric}} (e.g. cosine similarity of embeddings).
+    Select the top-scoring candidates, then use the LLM to produce the next generation via crossover (combine elements of two high-scoring candidates) and mutation (rephrase/vary one high-scoring candidate).
+
+    # Output
+    Return the highest-scoring candidate across all generations as the reconstructed prompt p'.
+  variables:
+  - name: observed_outputs
+    description: The small set of real outputs produced by the unknown target prompt
+    example: null
+  - name: target_llm
+    description: The black-box model being queried (only text outputs are needed, not logits)
+    example: null
+  - name: population_size
+    description: How many candidate prompts per generation
+    example: '10'
+  - name: max_generations
+    description: Generation budget for the genetic algorithm
+    example: '20'
+  - name: similarity_metric
+    description: Distance/similarity function comparing candidate output to observed output
+    example: cosine similarity
+  template_id: reverse-prompt-engineering-genetic-inversion--generate-score-evolve-black-box-inversion-loop
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- prompt-inversion
+- security-audit
+- black-box
+- genetic-algorithm
+- zero-shot
+status: corpus-present
+aliases:
+- RPE
+secondary_sources:
+- authors: Li, Klabjan
+  year: 2025
+  title: 'Reverse Prompt Engineering: A Zero-Shot, Genetic Algorithm Approach to Language Model Inversion'
+  venue: Extended version
+  arxiv_id: null
+  url: null
+corpus_file: Reverse Prompt Engineering.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

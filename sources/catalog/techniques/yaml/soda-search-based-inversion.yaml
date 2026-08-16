@@ -1,0 +1,92 @@
+id: soda-search-based-inversion
+name: SODA (Sparse One-hot Discrete Adam) — Exact White-Box Inversion
+category: prompt-inversion-analysis
+subcategory: white-box-inversion
+executive_summary: Given white-box access to a model and its output, run discrete optimization (Adam over
+  relaxed one-hot token vectors, with periodic resets) to exactly reconstruct the original input, token
+  for token.
+description: 'Where RPE targets black-box, API-only reconstruction, SODA targets the harder, more precise
+  problem: given full white-box access to the model (weights, gradients) and an observed output, exactly
+  recover the input text that produced it — not just a functionally similar one. Represents candidate
+  input tokens as a continuous relaxation (one-hot-like vectors) over which Adam can compute gradients,
+  periodically resetting optimizer state to escape local minima in the discrete search space. Reports
+  the first demonstration that exact language model inversion is achievable on both natural-language and
+  random inputs (98% and 79% exact reconstruction respectively for inputs up to 10 tokens, versus 12%
+  for the best prior method), and finds input length and vocabulary size — not model size — are the dominant
+  factors limiting success, letting it scale from 33M to 3B-parameter models. Directly applicable to auditing
+  for hidden system-prompt leakage, backdoor detection, and PII exposure.'
+verification_status: unverifiable-by-text
+cost_profile: multi-call-adaptive
+when_to_use:
+- White-box security auditing where model weights/gradients are available and exact (not just similar)
+  input recovery is required — e.g. formally verifying whether a specific private string could be reconstructed
+  from a model's output.
+- 'Backdoor detection: searching for a trigger input that produces an anomalous target output.'
+when_not_to_use:
+- Only API/black-box query access is available, with no gradient access — use the black-box RPE approach
+  instead.
+- Long inputs or very large vocabularies, where reconstruction success drops sharply per the paper's own
+  scaling analysis.
+known_pitfalls:
+- Reconstruction success degrades substantially as input length and vocabulary size grow — this is an
+  exact-recovery method demonstrated at up to 10 tokens, not a general-purpose long-prompt recovery tool.
+related_techniques:
+- reverse-prompt-engineering-genetic-inversion
+- gcg-adversarial-suffix-attack
+primary_source:
+  authors: Skapars, Manino, Sun, Cordeiro
+  year: 2025
+  title: 'GPT, But Backwards: Search-Based Language Model Inversion'
+  venue: arXiv preprint
+  arxiv_id: '2507.01693'
+  url: https://arxiv.org/abs/2507.01693
+usage_templates:
+- template_name: Gradient-based discrete-relaxation search (white-box, conceptual)
+  template: |-
+    # Setup (requires white-box model access)
+    Target model: {{target_model}}
+    Observed output: {{observed_output}}
+    Initialize a continuous relaxation of a length-{{input_length}} input as one-hot-like vectors over the vocabulary.
+
+    # Optimize (repeat up to {{max_steps}} steps)
+    Compute the objective (how well the current relaxed input, passed through {{target_model}}, reproduces {{observed_output}}) and its gradient with respect to the relaxed input; take an Adam optimizer step.
+    Every {{reset_interval}} steps, reset the Adam optimizer state to escape local minima in the discrete search space.
+
+    # Decode
+    Once converged, decode the relaxed vectors to the nearest discrete tokens as the reconstructed input.
+  variables:
+  - name: target_model
+    description: The model being inverted, with white-box (weights/gradients) access
+    example: null
+  - name: observed_output
+    description: The output whose input is being reconstructed
+    example: null
+  - name: input_length
+    description: Assumed or known length of the target input in tokens
+    example: '10'
+  - name: max_steps
+    description: Optimization step budget
+    example: '500'
+  - name: reset_interval
+    description: How often the optimizer state is periodically reset
+    example: every 50 steps
+  template_id: soda-search-based-inversion--gradient-based-discrete-relaxation-search-white-box-conceptual
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- prompt-inversion
+- security-audit
+- white-box
+- exact-reconstruction
+- gradient-based
+status: corpus-present
+aliases:
+- SODA
+secondary_sources: []
+corpus_file: GPT, But Backwards Exactly Inverting Language Model Outputs.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

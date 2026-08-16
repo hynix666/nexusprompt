@@ -1,0 +1,68 @@
+id: modularization-of-thought-code-gen
+name: Modularization-of-Thought (MoT) for Code Generation
+category: domain-specific-application
+subcategory: code-generation
+executive_summary: Decompose a code-generation task into modular sub-problems before writing any code,
+  mirroring how a human engineer would break a large function into smaller helper functions.
+description: 'Applies decomposition-style reasoning (in the spirit of Least-to-Most Prompting) specifically
+  to code: identify natural module/function boundaries in the target program before generating any implementation,
+  then generate each module with awareness of the others'' interfaces.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Code-generation tasks large or complex enough to naturally decompose into multiple functions/modules.
+when_not_to_use:
+- Small, single-function code-generation tasks where decomposition is pure overhead.
+known_pitfalls:
+- Interface mismatches between independently-generated modules are a real failure mode if module boundaries/signatures
+  aren't fixed before generation.
+related_techniques:
+- structured-cot-code-generation
+- least-to-most-prompting
+primary_source:
+  authors: (local corpus)
+  year: 2025
+  title: Modularization-of-Thought for Code Generation
+  venue: arXiv preprint
+  arxiv_id: '2503.12483'
+  url: https://arxiv.org/abs/2503.12483
+usage_templates:
+- template_name: Module-boundary-first code generation
+  template: |-
+    Task: {{coding_task}}
+    # Step 1: Identify modules
+    Decompose this into distinct functions/modules with fixed signatures (name, parameters, return type) before implementing any of them.
+
+    # Step 2: Implement (repeat per module)
+    Given these fixed signatures: {{all_module_signatures}}
+    Implement module {{module_name}} with signature {{module_signature}}.
+  variables:
+  - name: coding_task
+    description: The overall coding task
+    example: null
+  - name: all_module_signatures
+    description: All module signatures decided in step 1
+    example: null
+  - name: module_name
+    description: Which module is being implemented this call
+    example: null
+  - name: module_signature
+    description: That module's fixed signature
+    example: null
+  template_id: modularization-of-thought-code-gen--module-boundary-first-code-generation
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- code-generation
+- domain-specific
+- decomposition
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: Modularization-of-Thought.pdf
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

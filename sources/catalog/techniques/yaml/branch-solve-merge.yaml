@@ -1,0 +1,86 @@
+id: branch-solve-merge
+name: Branch-Solve-Merge (BSM)
+category: self-verification-refinement
+subcategory: bias-reduction
+executive_summary: Reduces positional bias and length bias in evaluation by decomposing criteria into
+  parallel sub-criteria, evaluating each independently, and merging results via consensus.
+description: 'BSM addresses evaluation biases (positional bias — favoring first/last options; length bias
+  — favoring longer/shorter responses) by: (1) Branching — decomposing the evaluation into multiple independent
+  sub-criteria, (2) Solving — evaluating each sub-criterion separately, and (3) Merging — aggregating
+  sub-criterion scores into a final judgment. This parallel structure dilutes the impact of any single
+  bias dimension.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Evaluation tasks where positional or length bias is suspected.
+- LLM-as-judge scenarios requiring fair comparison.
+- Ranking or scoring multiple candidate outputs.
+when_not_to_use:
+- When evaluation criteria cannot be decomposed into independent sub-criteria.
+- When the cost of multiple parallel evaluations is prohibitive.
+- Simple binary classification where bias is not a concern.
+known_pitfalls:
+- Sub-criterion decomposition quality affects final judgment.
+- Merging strategy (average, weighted, consensus) must be chosen carefully.
+- Does not eliminate all biases, only reduces their impact.
+related_techniques:
+- self-consistency
+- universal-self-consistency
+- multiagent-debate
+- confidence-informed-self-consistency
+primary_source:
+  authors: Saha, Levy, Celikyilmaz, Bansal, Weston, Li
+  year: 2023
+  title: Branch-Solve-Merge Improves Large Language Model Evaluation and Generation
+  venue: arXiv
+  arxiv_id: '2310.15123'
+  url: https://arxiv.org/abs/2310.15123
+usage_templates:
+- template_name: Parallel sub-criteria evaluation
+  template: |-
+    Candidates: {{candidates}}
+    Evaluation Criteria: {{criteria}}
+
+    Step 1 (Branch): Decompose criteria into sub-criteria.
+    Sub-criteria: {{sub_criteria}}
+
+    Step 2 (Solve): Evaluate each candidate on each sub-criterion independently with shuffled ordering.
+    Scores: {{sub_criterion_scores}}
+
+    Step 3 (Merge): Aggregate sub-criterion scores via consensus.
+    Final Rankings: {{final_rankings}}
+  variables:
+  - name: candidates
+    description: The outputs to evaluate.
+    example: '[Response A, Response B, Response C]'
+  - name: criteria
+    description: The evaluation criteria.
+    example: Accuracy, clarity, completeness
+  - name: sub_criteria
+    description: Decomposed sub-criteria.
+    example: '[Factual correctness, Logical coherence, Coverage of key points]'
+  - name: sub_criterion_scores
+    description: Scores per candidate per sub-criterion.
+    example: '{A: [9,8,7], B: [8,9,8], C: [7,7,9]}'
+  - name: final_rankings
+    description: Final ranking after aggregation.
+    example: 1. B (25), 2. A (24), 3. C (23)
+  template_id: branch-solve-merge--parallel-evaluation
+  determinism: stochastic-by-design
+  reproducibility_note: Independent evaluations should use temperature=0 for consistency. Shuffling order
+    introduces variance by design. Aggregation is deterministic.
+tags:
+- evaluation
+- bias-reduction
+- consensus
+- fairness
+status: verified-external
+aliases:
+- BSM
+- Branch Solve Merge
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

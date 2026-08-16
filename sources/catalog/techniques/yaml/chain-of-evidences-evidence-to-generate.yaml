@@ -1,0 +1,80 @@
+id: chain-of-evidences-evidence-to-generate
+name: Chain of Evidences / Evidence to Generate (CoE / E2G)
+category: retrieval-augmentation
+subcategory: evidence-grounded-reasoning
+executive_summary: Instead of letting the model produce unverified reasoning claims, first extract only
+  the thought sequences explicitly grounded in the given context as 'evidence,' then have the evidence
+  itself drive output generation.
+description: 'Targets a specific weakness shared by CoT, Self-Consistency, ReAct, Reflexion, and Tree
+  of Thoughts: limited grounding in the actual provided context, leading to hallucinated or inconsistent
+  claims, plus iterative sluggishness in the multi-step variants. CoE/E2G is a mono/dual-step zero-shot
+  framework: it first identifies and extracts only the reasoning steps that are explicitly supported by
+  the given context (the ''chain of evidences''), then uses that verified evidence — rather than free-generated
+  reasoning — to guide the final output. Reports state-of-the-art results on knowledge-intensive reasoning
+  and generation tasks, framed as faster and more reliable than the iterative multi-call methods it''s
+  compared against.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Knowledge-intensive, context-grounded reasoning tasks (retrieval-augmented QA, document-grounded generation)
+  where hallucinated intermediate claims are a specific risk to avoid.
+when_not_to_use:
+- Tasks with no given context to ground evidence extraction against — the technique specifically depends
+  on there being a source context to extract evidence from.
+known_pitfalls:
+- 'Evidence-extraction quality is a single point of failure: if genuinely relevant evidence is missed
+  during extraction, the final generation is grounded in an incomplete evidence set.'
+related_techniques:
+- retrieval-augmented-generation
+- chain-of-verification
+- faithful-chain-of-thought
+primary_source:
+  authors: Parvez
+  year: 2024
+  title: 'Chain of Evidences and Evidence to Generate: Prompting for Context Grounded and Retrieval Augmented
+    Reasoning'
+  venue: arXiv preprint
+  arxiv_id: '2401.05787'
+  url: https://arxiv.org/abs/2401.05787
+usage_templates:
+- template_name: Extract-evidence-then-generate
+  template: |-
+    Context: {{source_context}}
+    Question: {{question}}
+
+    # Chain of Evidences (extract)
+    Identify only the thought sequences explicitly present in the context above that are relevant to answering the question. Do not infer or add anything not stated in the context. Evidence chain: {{extracted_evidence_chain}}
+
+    # Evidence to Generate
+    Using only the extracted evidence chain: {{extracted_evidence_chain}}
+    Generate the final answer to: {{question}}
+  variables:
+  - name: source_context
+    description: The given grounding context
+    example: null
+  - name: question
+    description: The question to answer
+    example: null
+  - name: extracted_evidence_chain
+    description: The extracted, context-grounded evidence sequence
+    example: null
+  template_id: chain-of-evidences-evidence-to-generate--extract-evidence-then-generate
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- retrieval
+- grounding
+- hallucination-reduction
+- single-call
+status: verified-external
+aliases:
+- CoE
+- E2G
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

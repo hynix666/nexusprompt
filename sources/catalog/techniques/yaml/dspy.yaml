@@ -1,0 +1,74 @@
+id: dspy
+name: DSPy
+category: automatic-prompt-optimization
+subcategory: compiled-pipelines
+executive_summary: A declarative programming framework that compiles pipelines of prompting techniques
+  (CoT, ReAct, RAG, etc.) into optimized programs via automatic 'teleprompters', rather than hand-tuning
+  prompt text directly.
+description: Lets a developer specify a pipeline's structure (which modules — e.g. a CoT step, a retrieval
+  step — are used and how they connect) declaratively, separately from the prompt text implementing each
+  module. A compiler ('teleprompter') then automatically searches for good prompts and/or few-shot demonstrations
+  for each module given a training signal, shifting the unit of engineering from hand-written prompt strings
+  to program structure plus an optimization objective.
+verification_status: unverifiable-by-text
+cost_profile: training-time
+when_to_use:
+- Building a multi-module pipeline (retrieval + reasoning + generation, etc.) where you want prompts auto-tuned
+  against an end metric rather than hand-written per module.
+when_not_to_use:
+- Single simple prompts with no multi-module pipeline structure to compile.
+known_pitfalls:
+- Requires a training/validation signal to compile against, same as the other search-based optimizers
+  in this category; results are only as good as that signal.
+related_techniques:
+- automatic-prompt-engineer
+- opro
+- retrieval-augmented-generation
+primary_source:
+  authors: Khattab, Singhvi, Maheshwari, Zhang, Santhanam, Vardhamanan, Haq, Sharma, Joshi, Moazam, Miller,
+    Zaharia, Potts
+  year: 2023
+  title: 'DSPy: Compiling Declarative Language Model Calls into Self-Improving Pipelines'
+  venue: arXiv preprint
+  arxiv_id: '2310.03714'
+  url: https://arxiv.org/abs/2310.03714
+usage_templates:
+- template_name: Declarative module + compile step
+  template: |-
+    # Declare pipeline structure (pseudocode, framework-specific in practice)
+    module_1 = {{module_1_signature}}  # e.g. 'question -> search_query'
+    module_2 = {{module_2_signature}}  # e.g. 'context, question -> answer'
+
+    # Compile
+    Given a training set {{training_examples}} and metric {{eval_metric}}, the teleprompter searches for prompt wording and/or few-shot demonstrations for module_1 and module_2 that maximize {{eval_metric}} on {{training_examples}}.
+  variables:
+  - name: module_1_signature
+    description: Declared input->output signature of the first pipeline module
+    example: null
+  - name: module_2_signature
+    description: Declared input->output signature of the second pipeline module
+    example: null
+  - name: training_examples
+    description: Labeled examples used to compile/optimize the pipeline
+    example: null
+  - name: eval_metric
+    description: The end-to-end metric being optimized
+    example: null
+  template_id: dspy--declarative-module-compile-step
+  determinism: training-time-not-applicable
+  reproducibility_note: This template describes a training-time process (fine-tuning or policy training),
+    not a single reproducible inference call; reproducibility depends on the training pipeline and data,
+    not on prompt text alone.
+tags:
+- optimization
+- framework
+- compiled-pipeline
+- training-time
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

@@ -1,0 +1,65 @@
+id: program-of-thoughts
+name: Program of Thoughts (PoT)
+category: reasoning-elicitation
+subcategory: tool-offloaded-reasoning
+executive_summary: Have the model write out the reasoning as executable code and let an interpreter do
+  the actual computation, instead of doing arithmetic in free text.
+description: Separates 'what to compute' (produced by the LLM as a short program, typically Python) from
+  'computing it' (delegated to a real interpreter). This removes a large class of numerical/arithmetic
+  slip errors that plain CoT is prone to, since the LLM never has to simulate arithmetic token-by-token
+  — it only has to get the program logic right.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- The task is fundamentally computational (arithmetic, numerical reasoning, symbolic manipulation) and
+  a code interpreter is available.
+when_not_to_use:
+- No code execution sandbox is available in the deployment environment.
+- The task is not computational — writing code adds overhead without benefit for purely qualitative reasoning.
+known_pitfalls:
+- Program logic errors still occur; PoT eliminates arithmetic-simulation errors, not reasoning errors
+  in general.
+related_techniques:
+- chain-of-thought
+- react
+primary_source:
+  authors: Chen, Ma, Wang, Cohen
+  year: 2023
+  title: 'Program of Thoughts Prompting: Disentangling Computation from Reasoning for Numerical Reasoning
+    Tasks'
+  venue: TMLR
+  arxiv_id: '2211.12588'
+  url: https://arxiv.org/abs/2211.12588
+usage_templates:
+- template_name: Code-as-reasoning
+  template: |-
+    Solve the following problem by writing a short Python program that computes the answer. Do not compute the arithmetic yourself in text — write code and let the interpreter run it.
+
+    Problem: {{problem}}
+
+    ```python
+    # your program here, ending with `answer = ...`
+    ```
+  variables:
+  - name: problem
+    description: The numerical/computational problem
+    example: null
+  template_id: program-of-thoughts--code-as-reasoning
+  determinism: requires-external-system
+  reproducibility_note: This template depends on an external system (retrieval index, tool, solver, or
+    interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires
+    that system's state to also be fixed.
+tags:
+- reasoning
+- code-execution
+- numerical
+- single-call
+status: verified-external
+aliases:
+- PoT
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

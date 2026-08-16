@@ -1,0 +1,62 @@
+id: hackaprompt-taxonomy
+name: HackAPrompt Adversarial-Prompt Benchmark
+category: prompt-injection-defense
+subcategory: benchmarking
+executive_summary: The largest empirical corpus of real adversarial prompts (600K+, crowd-sourced from
+  a global competition) with a taxonomy of attack types — the natural external benchmark for any adversarial-resilience
+  test suite.
+description: Ran a public competition soliciting real human-crafted prompt-injection and prompt-leaking
+  attacks against deployed models, resulting in a taxonomical ontology of attack categories and the largest
+  known empirical dataset of real adversarial prompts. Useful both as a source of concrete attack examples
+  and as a benchmark to compare the coverage of a smaller, hand-built adversarial test suite against.
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Building or auditing an adversarial-resilience test suite — use this as an external coverage benchmark.
+when_not_to_use:
+- N/A — this is benchmark/reference material, not a generation technique.
+known_pitfalls:
+- A benchmark's coverage reflects the attack surface at the time it was built; new attack categories continue
+  to emerge after any fixed benchmark's publication.
+related_techniques:
+- prompt-injection-attack-taxonomy
+- formalized-injection-benchmark
+primary_source:
+  authors: Schulhoff, Pinto, Khan, Bouchard, Si, Anati, Tagliabue, Kost, Carnahan, Boyd-Graber
+  year: 2023
+  title: 'Ignore This Title and HackAPrompt: Exposing Systemic Vulnerabilities of LLMs Through a Global
+    Prompt Hacking Competition'
+  venue: EMNLP 2023
+  arxiv_id: '2311.16119'
+  url: https://arxiv.org/abs/2311.16119
+usage_templates:
+- template_name: Coverage audit against an external taxonomy
+  template: |-
+    Our adversarial test suite covers these attack categories: {{our_categories}}
+    HackAPrompt's taxonomy includes these categories: {{hackaprompt_categories}}
+    List categories present in HackAPrompt's taxonomy but absent from our suite, and for each, draft one representative test case.
+  variables:
+  - name: our_categories
+    description: Attack categories already covered by the internal test suite
+    example: null
+  - name: hackaprompt_categories
+    description: Attack categories from the external taxonomy
+    example: null
+  template_id: hackaprompt-taxonomy--coverage-audit-against-an-external-taxonomy
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- security
+- benchmark
+- injection
+- red-teaming
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

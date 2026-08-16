@@ -1,0 +1,70 @@
+{
+  "id": "thread-of-thought",
+  "name": "Thread of Thought (ThoT)",
+  "category": "example-selection-formatting",
+  "subcategory": "context-positioning",
+  "executive_summary": "A plug-and-play prompt that has the model segment and analyze a long, distractor-heavy ('chaotic') context step by step before answering, rather than trying to attend to the whole thing at once.",
+  "description": "Distinguishes 'chaotic contexts' (many distractors mixed with relevant content, as in noisy multi-passage retrieval) from mere 'long contexts' (high token count but not necessarily disordered) — Lost in the Middle characterizes the positional attention bias in long contexts generally, while ThoT is a technique specifically for surviving chaotic ones. A single added instruction ('walk me through this context in manageable parts step by step, summarizing and analyzing as we go') has the model progressively segment, summarize, and filter the context before producing a final answer, requiring no fine-tuning and working as a drop-in addition to other prompting techniques.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Long contexts specifically containing distractors or irrelevant passages mixed with relevant content (noisy multi-document retrieval, long multi-turn conversation history) — the chaotic-context case, not just plain length."
+  ],
+  "when_not_to_use": [
+    "Short or clean (non-distractor-heavy) contexts, where the segmentation instruction is pure overhead."
+  ],
+  "known_pitfalls": [
+    "Being zero-shot and instruction-only, effectiveness depends on the base model actually following the segment-and-analyze instruction faithfully rather than skimming."
+  ],
+  "related_techniques": [
+    "lost-in-the-middle",
+    "chain-of-thought",
+    "retrieval-augmented-generation"
+  ],
+  "primary_source": {
+    "authors": "Zhou, Geng, Shen, Tao, Long, Lou, Shen",
+    "year": 2023,
+    "title": "Thread of Thought Unraveling Chaotic Contexts",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2311.08734",
+    "url": "https://arxiv.org/abs/2311.08734"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Segment-and-analyze chaotic context trigger",
+      "template": "{{chaotic_context_with_distractors}}\n\nWalk me through this context in manageable parts step by step, summarizing and analyzing as we go, then answer: {{question}}",
+      "variables": [
+        {
+          "name": "chaotic_context_with_distractors",
+          "description": "The long, distractor-heavy context (e.g. multiple retrieved passages, only some relevant)",
+          "example": null
+        },
+        {
+          "name": "question",
+          "description": "The question to answer using only the relevant parts of the context",
+          "example": null
+        }
+      ],
+      "template_id": "thread-of-thought--segment-and-analyze-chaotic-context-trigger",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reliability",
+    "long-context",
+    "chaotic-context",
+    "zero-shot"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "ThoT"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

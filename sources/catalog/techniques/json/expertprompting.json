@@ -1,0 +1,73 @@
+{
+  "id": "expertprompting",
+  "name": "ExpertPrompting",
+  "category": "agentic-tool-use",
+  "subcategory": "persona-generation",
+  "executive_summary": "Automatically synthesize a detailed, instruction-specific expert-identity description, then condition the answer on that generated persona — an automated, per-instruction version of hand-writing a persona into a prompt.",
+  "description": "Rather than a single fixed persona ('You are an expert...') applied uniformly, ExpertPrompting generates a customized expert identity tailored to each specific instruction — distinguished, informative, and automatic by design — using a small number of hand-revised identity exemplars as in-context guidance for the generation step. The augmented instructions (identity + original instruction) were used to produce a new instruction-following dataset with GPT-3.5, training an open-source assistant (ExpertLLaMA) that reportedly reaches 96% of ChatGPT's capability by GPT4-based evaluation, with expert-conditioned answers preferred over vanilla answers 48.5% to 23% by a reviewer model.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Instructions where framing the answer as coming from a specific, well-matched expert persona would plausibly improve depth or relevance, and hand-writing a persona per instruction isn't practical at scale."
+  ],
+  "when_not_to_use": [
+    "Simple factual or formatting tasks where an expert framing adds no value.",
+    "Domains where a fabricated persona (implying credentials the assistant doesn't have) is undesirable or could mislead the user about its actual capabilities."
+  ],
+  "known_pitfalls": [
+    "The synthesized expert identity is itself a generated artifact and can be generic or mismatched if the in-context exemplars don't cover the instruction's domain well."
+  ],
+  "related_techniques": [
+    "self-instruct",
+    "prompt-pattern-catalog"
+  ],
+  "primary_source": {
+    "authors": "Xu, Yang, Lin, Wang, Zhou, Zhang, Mao",
+    "year": 2023,
+    "title": "ExpertPrompting: Instructing Large Language Models to be Distinguished Experts",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2305.14688",
+    "url": "https://arxiv.org/abs/2305.14688"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Generate expert identity, then condition on it",
+      "template": "# Generate expert identity (in-context, using a few hand-written examples)\n{{identity_generation_exemplars}}\nInstruction: {{target_instruction}}\nExpert identity: {{generated_expert_identity}}\n\n# Answer conditioned on the generated identity\n{{generated_expert_identity}}\nAs this expert, respond to: {{target_instruction}}",
+      "variables": [
+        {
+          "name": "identity_generation_exemplars",
+          "description": "A handful of hand-revised (instruction, expert identity) exemplar pairs guiding identity generation",
+          "example": null
+        },
+        {
+          "name": "target_instruction",
+          "description": "The instruction to generate an expert identity for and then answer",
+          "example": null
+        },
+        {
+          "name": "generated_expert_identity",
+          "description": "The auto-generated, instruction-specific expert persona description",
+          "example": null
+        }
+      ],
+      "template_id": "expertprompting--generate-expert-identity-then-condition-on-it",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "agentic",
+    "persona",
+    "instruction-tuning",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

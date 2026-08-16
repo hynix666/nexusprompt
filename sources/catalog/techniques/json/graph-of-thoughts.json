@@ -1,0 +1,79 @@
+{
+  "id": "graph-of-thoughts",
+  "name": "Graph of Thoughts (GoT)",
+  "category": "reasoning-elicitation",
+  "subcategory": "multi-path-reasoning",
+  "executive_summary": "Generalize Tree of Thoughts from a tree to an arbitrary graph, allowing thoughts to be merged and aggregated, not just branched and pruned.",
+  "description": "Models reasoning as a directed graph of 'thought' vertices connected by dependency edges, with operations to generate, aggregate (combine multiple thoughts into one), and refine vertices. This lets solutions that benefit from merging multiple partial results — such as sorting a long list in chunks and combining the sorted chunks — outperform tree-structured search, which can only branch and prune, not merge.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "The problem naturally decomposes into sub-solutions that need to be combined or merged, not just chosen between."
+  ],
+  "when_not_to_use": [
+    "The problem is purely sequential or purely branching — Tree of Thoughts or Self-Consistency is simpler and sufficient."
+  ],
+  "known_pitfalls": [
+    "Graph construction and aggregation-operation design require more upfront engineering than tree or chain approaches."
+  ],
+  "related_techniques": [
+    "tree-of-thoughts",
+    "skeleton-of-thought"
+  ],
+  "primary_source": {
+    "authors": "Besta, Blach, Kubicek, Gerstenberger, Podstawski, Gianinazzi, Gajda, Lehmann, Niewiadomski, Nyczyk, Hoefler",
+    "year": 2024,
+    "title": "Graph of Thoughts: Solving Elaborate Problems with Large Language Models",
+    "venue": "AAAI 2024",
+    "arxiv_id": "2308.09687",
+    "url": "https://arxiv.org/abs/2308.09687"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Generate-aggregate-refine graph step",
+      "template": "# Generate (per subproblem)\nSolve this sub-part of the larger problem: {{subproblem}}\n\n# Aggregate (once >=2 sub-solutions exist)\nYou have these partial solutions to combine: {{partial_solutions_list}}\nMerge them into a single coherent solution to: {{goal}}\n\n# Refine (optional, on the merged result)\nHere is a merged solution: {{merged_solution}}\nIdentify and fix any inconsistency introduced by the merge.",
+      "variables": [
+        {
+          "name": "goal",
+          "description": "The overall problem",
+          "example": null
+        },
+        {
+          "name": "subproblem",
+          "description": "One decomposed piece of the goal",
+          "example": null
+        },
+        {
+          "name": "partial_solutions_list",
+          "description": "The set of sub-solutions to merge",
+          "example": null
+        },
+        {
+          "name": "merged_solution",
+          "description": "Output of the aggregate step",
+          "example": null
+        }
+      ],
+      "template_id": "graph-of-thoughts--generate-aggregate-refine-graph-step",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "This template intentionally samples multiple times or explores adaptively; outputs vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends on intermediate stochastic choices)."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "search",
+    "multi-call",
+    "aggregation"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "GoT"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

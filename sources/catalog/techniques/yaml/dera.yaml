@@ -1,0 +1,95 @@
+id: dera
+name: DERA (Dialog-Enabled Resolving Agents)
+category: agentic-tool-use
+subcategory: researcher-decider-dialog
+executive_summary: 'Split generation into two agent roles that hold a dialog: a Researcher that surfaces
+  the crucial components of the problem, and a Decider that integrates them and owns the final output.
+  Aimed at factual accuracy and completeness in safety-critical text.'
+description: 'DERA frames output improvement as a conversation between two agent types rather than as
+  a critique loop. The Researcher processes the available information and identifies the components of
+  the problem that matter; the Decider has the autonomy to integrate what the Researcher surfaces and
+  to make the judgment calls that fix the final output. The asymmetry is the point: one role widens the
+  field of considerations, the other narrows it and remains accountable for what ships, which keeps the
+  dialog from collapsing into two agents negotiating. Nair et al. evaluate it on three clinically-focused
+  tasks, where the governing criterion is whether the output is factually accurate and complete rather
+  than whether it is stylistically better; gains are reported in human evaluation of medical conversation
+  summarization and care plan generation.'
+verification_status: judge-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Output must be factually complete, and omissions matter as much as errors — clinical summaries, incident
+  reports, compliance text.
+- A single pass reliably misses considerations that a second reader would raise.
+- Someone or something must remain accountable for the final text, so a symmetric multi-agent debate is
+  the wrong shape.
+when_not_to_use:
+- The task has a checkable answer, where a verifier or test beats a second model's judgment.
+- Latency or cost rules out a multi-turn dialog per output.
+- The domain is one where neither agent has grounding, in which case the dialog compounds error rather
+  than removing it.
+known_pitfalls:
+- 'The Decider inherits the Researcher''s blind spots: anything neither role surfaces is invisible to
+  the process.'
+- Role separation degrades if both agents share a prompt and a model without distinct instructions, collapsing
+  into one voice agreeing with itself.
+- Reported gains are strongest on human evaluation of completeness; automated metrics moved far less,
+  so evaluate on what you actually care about.
+related_techniques:
+- self-refine
+- chain-of-verification
+- medprompt-framework
+primary_source:
+  authors: Nair, Schumacher, Tso, Kannan
+  year: 2023
+  title: 'DERA: Enhancing Large Language Model Completions with Dialog-Enabled Resolving Agents'
+  venue: arXiv
+  arxiv_id: '2303.17071'
+  url: https://arxiv.org/abs/2303.17071
+usage_templates:
+- template_name: Researcher / Decider dialog
+  template: |-
+    You are the RESEARCHER. Read the source material and the draft output. List the components of the problem that matter for correctness and completeness, and any information in the source that the draft has not used. Do not rewrite the output.
+
+    Source material:
+    {{source_material}}
+
+    Draft output:
+    {{draft_output}}
+
+    ---
+
+    You are the DECIDER. You own the final text. Take the Researcher's list, decide which items belong in the output and which do not, and produce the corrected version. State briefly which items you rejected and why.
+
+    Researcher's findings:
+    {{researcher_findings}}
+  variables:
+  - name: source_material
+    description: The ground-truth material the output must reflect.
+    example: Transcript of a patient consultation.
+  - name: draft_output
+    description: The first-pass generation to be resolved.
+    example: Draft visit summary.
+  - name: researcher_findings
+    description: The Researcher turn's output, passed to the Decider.
+    example: Medication change discussed at 04:12 is missing from the summary.
+  template_id: dera--researcher-decider-dialog
+  determinism: stochastic-by-design
+  reproducibility_note: Two or more model calls per output, with the Decider's input depending on the
+    Researcher's turn. Fix both prompts, the model and the turn limit to reproduce; the dialog length
+    varies with what the Researcher surfaces.
+tags:
+- agent
+- dialogue
+- multi-agent
+- factuality
+- clinical
+status: verified-external
+aliases:
+- DERA
+- Dialog-Enabled Resolving Agents
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

@@ -1,0 +1,74 @@
+id: self-instruct
+name: Self-Instruct
+category: automatic-prompt-optimization
+subcategory: bootstrapped-instruction-data
+executive_summary: Bootstrap a large set of instruction-following training examples from a small human-written
+  seed set, by having the model generate new instructions, inputs, and outputs itself.
+description: Starting from a small seed pool of human-written tasks, the model is prompted to generate
+  new task instructions, then corresponding inputs and outputs for those instructions, with filtering
+  steps to remove low-quality or duplicate generations. The result is a large instruction-tuning dataset
+  produced with minimal human annotation. Conceptually the ancestor of later self-referential improvement
+  loops such as Promptbreeder.
+verification_status: unverifiable-by-text
+cost_profile: training-time
+when_to_use:
+- Bootstrapping instruction-following training data with a small human-written seed set and limited annotation
+  budget.
+when_not_to_use:
+- Inference-time-only use cases with no training/fine-tuning step.
+known_pitfalls:
+- Quality depends heavily on the filtering step; ungated bootstrapping can amplify low-quality or repetitive
+  generations across iterations.
+related_techniques:
+- promptbreeder
+- salmon
+primary_source:
+  authors: Wang, Kordi, Mishra, Liu, Smith, Khashabi, Hajishirzi
+  year: 2023
+  title: 'Self-Instruct: Aligning Language Models with Self-Generated Instructions'
+  venue: ACL 2023
+  arxiv_id: '2212.10560'
+  url: https://arxiv.org/abs/2212.10560
+usage_templates:
+- template_name: Bootstrap instruction-input-output triples
+  template: |-
+    # Generate new instructions
+    Here are example task instructions: {{seed_instructions}}
+    Generate {{num_new}} new, diverse task instructions in the same style.
+
+    # Generate input/output for each new instruction
+    Instruction: {{new_instruction}}
+    Generate a plausible input and the correct output for this instruction.
+
+    # Filter
+    Discard any generated triple that is near-duplicate of an existing one (similarity above {{dedup_threshold}}) or fails basic quality checks.
+  variables:
+  - name: seed_instructions
+    description: Small human-written seed task set
+    example: null
+  - name: num_new
+    description: How many new instructions to generate
+    example: '20'
+  - name: new_instruction
+    description: One newly generated instruction
+    example: null
+  - name: dedup_threshold
+    description: Similarity cutoff for filtering near-duplicates
+    example: '0.7'
+  template_id: self-instruct--bootstrap-instruction-input-output-triples
+  determinism: training-time-not-applicable
+  reproducibility_note: This template describes a training-time process (fine-tuning or policy training),
+    not a single reproducible inference call; reproducibility depends on the training pipeline and data,
+    not on prompt text alone.
+tags:
+- optimization
+- data-bootstrapping
+- training-time
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

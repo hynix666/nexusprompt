@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/gate-result/1.3.0",
+  "title": "GateResult",
+  "description": "Output of a single lint-gate evaluation. Pure value; carries no effects and no prompt body.",
+  "type": "object",
+  "required": ["gate_id", "gate_version", "verdict", "message", "input_hash"],
+  "additionalProperties": false,
+  "properties": {
+    "gate_id": { "type": "string", "minLength": 1 },
+    "gate_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "verdict": { "enum": ["PASS", "FAIL", "WARN"] },
+    "message": { "type": "string" },
+    "message_code": { "type": "string" },
+    "input_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "location": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

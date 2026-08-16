@@ -1,0 +1,91 @@
+id: decomposed-prompting
+name: Decomposed Prompting
+category: reasoning-elicitation
+subcategory: decomposition
+executive_summary: Break a complex task into sub-tasks, then hand each sub-task to its own dedicated prompt
+  (a specialized 'handler'), rather than solving every sub-step with the same generic prompt the way Least-to-Most
+  does.
+description: 'Shares Least-to-Most Prompting''s decomposition instinct but takes it further: instead of
+  solving every decomposed subproblem with the same general-purpose few-shot prompt, Decomposed Prompting
+  defines a distinct prompting strategy (a specialized sub-handler, potentially with its own exemplars,
+  tool access, or even a different decomposition recursively) for each type of sub-task, coordinated by
+  a top-level decomposer. This modularity means individual sub-task handlers can be debugged, improved,
+  or swapped independently — closer to software decomposition into functions than to a single flat prompt.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Complex tasks that decompose into sub-tasks of genuinely different types (e.g. some retrieval-based,
+  some computational, some requiring different exemplars) where a single generic sub-solving prompt would
+  be a poor fit for all of them.
+when_not_to_use:
+- Tasks that decompose into homogeneous sub-steps — Least-to-Most's simpler single-prompt-reused-per-step
+  approach is sufficient and less engineering overhead.
+known_pitfalls:
+- More complex to build and maintain than Least-to-Most, since each sub-task type needs its own handler
+  design rather than reusing one prompt.
+related_techniques:
+- least-to-most-prompting
+- self-ask
+- plan-and-solve-prompting
+primary_source:
+  authors: Khot, Trivedi, Finlayson, Fu, Richardson, Clark, Sabharwal
+  year: 2022
+  title: 'Decomposed Prompting: A Modular Approach for Solving Complex Tasks'
+  venue: ICLR 2023
+  arxiv_id: '2210.02406'
+  url: https://arxiv.org/abs/2210.02406
+usage_templates:
+- template_name: Decomposer + specialized sub-handlers
+  template: |-
+    # Top-level decomposer
+    Task: {{complex_task}}
+    Decompose into sub-tasks, labeling each with the handler type needed: {{subtask_list_with_handler_types}}
+
+    # Per sub-task, dispatch to its specialized handler
+    Handler type: {{handler_type}}
+    Handler-specific prompt/exemplars: {{handler_specific_prompt}}
+    Sub-task input: {{subtask_input}}
+    Sub-task output: {{subtask_output}}
+
+    # Combine
+    Using all sub-task outputs {{all_subtask_outputs}}, produce the final answer to: {{complex_task}}
+  variables:
+  - name: complex_task
+    description: The overall task being decomposed
+    example: null
+  - name: subtask_list_with_handler_types
+    description: Decomposed sub-tasks, each labeled with which handler type solves it
+    example: null
+  - name: handler_type
+    description: Which specialized handler is being invoked
+    example: null
+  - name: handler_specific_prompt
+    description: That handler's own dedicated prompt/exemplars
+    example: null
+  - name: subtask_input
+    description: Input to this specific sub-task
+    example: null
+  - name: subtask_output
+    description: Output from this sub-task's handler
+    example: null
+  - name: all_subtask_outputs
+    description: Collected outputs from every sub-task handler
+    example: null
+  template_id: decomposed-prompting--decomposer-specialized-sub-handlers
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reasoning
+- decomposition
+- modular
+- multi-call
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

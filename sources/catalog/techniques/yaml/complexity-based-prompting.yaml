@@ -1,0 +1,83 @@
+id: complexity-based-prompting
+name: Complexity-Based Prompting
+category: reasoning-elicitation
+subcategory: example-curation
+executive_summary: Select and vote using the most complex (most reasoning steps) chain-of-thought exemplars
+  and generations — more steps in exemplars and in majority-voted outputs both correlate with better performance.
+description: 'Answers a specific version of the ''which exemplars make the best prompt'' question: rather
+  than picking exemplars for coverage or clarity, Complexity-Based Prompting deliberately selects few-shot
+  exemplars with more reasoning steps, finding this substantially outperforms shorter-chain exemplars
+  on multi-step reasoning tasks. Extends the same complexity criterion from prompting (selecting inputs)
+  to decoding (selecting outputs): when sampling multiple reasoning chains à la Self-Consistency, it votes
+  using only the majority answer among the most complex generated chains rather than all sampled chains
+  equally.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Multi-step reasoning tasks where an exemplar pool with varying reasoning-chain lengths is available
+  to select from.
+- Combined with Self-Consistency-style sampling, to bias voting toward more thoroughly-reasoned generations.
+when_not_to_use:
+- Single-step or shallow-reasoning tasks where chain complexity isn't a meaningful signal to select or
+  vote by.
+known_pitfalls:
+- Complexity (step count) is a proxy for reasoning quality, not a guarantee — a long chain can still be
+  a long wrong chain.
+related_techniques:
+- chain-of-thought
+- self-consistency
+- active-prompting
+primary_source:
+  authors: Fu, Peng, Sabharwal, Clark, Khot
+  year: 2023
+  title: Complexity-Based Prompting for Multi-Step Reasoning
+  venue: ICLR 2023
+  arxiv_id: '2210.00720'
+  url: https://arxiv.org/abs/2210.00720
+usage_templates:
+- template_name: Complexity-selected exemplars and complexity-weighted voting
+  template: |-
+    # Exemplar selection (once, from an exemplar pool)
+    From this pool of candidate exemplars {{exemplar_pool}}, select the {{num_exemplars}} exemplars with the most reasoning steps for the few-shot prompt.
+
+    # Sample and complexity-weighted vote
+    {{complex_few_shot_cot_prompt}}
+    (sample {{num_samples}} generations at temperature {{temperature}})
+    Among the generated chains, take the majority answer considering only the {{top_k_complex}} chains with the most reasoning steps, rather than all {{num_samples}} chains equally.
+  variables:
+  - name: exemplar_pool
+    description: Pool of candidate exemplars with varying reasoning-chain lengths
+    example: null
+  - name: num_exemplars
+    description: How many high-complexity exemplars to select for the prompt
+    example: '8'
+  - name: complex_few_shot_cot_prompt
+    description: The assembled prompt using the selected high-complexity exemplars
+    example: null
+  - name: num_samples
+    description: How many chains to sample
+    example: '10'
+  - name: temperature
+    description: Sampling temperature
+    example: '0.7'
+  - name: top_k_complex
+    description: How many of the most-complex sampled chains to vote among
+    example: '5'
+  template_id: complexity-based-prompting--complexity-selected-exemplars-and-complexity-weighted-voting
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- reasoning
+- example-selection
+- voting
+- multi-call
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

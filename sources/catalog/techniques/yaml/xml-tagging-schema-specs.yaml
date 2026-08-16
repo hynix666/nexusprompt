@@ -1,0 +1,84 @@
+id: xml-tagging-schema-specs
+name: XML Tagging / Schema Specs
+category: template-pattern-scaffolding
+subcategory: structural-delimiters
+executive_summary: Explicit structural delimiters (XML tags, markdown fences, schema specs) to separate
+  instructions, context, and output zones. Reduces parsing errors, improves model comprehension, and mitigates
+  injection risk.
+description: XML tagging and schema specifications provide unambiguous boundaries between different semantic
+  zones in a prompt. By wrapping instructions in <instructions>, context in <context>, and expected output
+  in <output_format>, the model can better distinguish trusted instructions from untrusted user input.
+verification_status: unverifiable-by-text
+cost_profile: single-call
+when_to_use:
+- Any production prompt where instructions and user input coexist.
+- When parsing errors occur due to ambiguous boundaries.
+- As a defense-in-depth measure against prompt injection.
+when_not_to_use:
+- Simple conversational prompts with no structured sections.
+- When the model is known to struggle with XML formatting.
+- When token minimization is critical and tags add unacceptable overhead.
+known_pitfalls:
+- Malformed XML (unclosed tags) can confuse the model.
+- Over-nesting tags adds token overhead without proportional benefit.
+- Not all models handle XML equally well; test with your target model.
+related_techniques:
+- structured-output-json-mode
+primary_source:
+  authors: Anthropic / Claude Best Practices
+  year: 2025
+  title: 'Prompt Engineering Best Practices: XML Tagging'
+  venue: Practitioner Guide
+  arxiv_id: null
+  url: https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/use-xml-tags
+usage_templates:
+- template_name: XML-structured prompt with zones
+  template: |-
+    <instructions>
+      {{system_instructions}}
+    </instructions>
+
+    <context>
+      {{retrieved_documents}}
+    </context>
+
+    <user_query>
+      {{query}}
+    </user_query>
+
+    <output_format>
+      {{schema_or_template}}
+    </output_format>
+  variables:
+  - name: system_instructions
+    description: Trusted system instructions.
+    example: You are a helpful assistant. Answer based only on the provided context.
+  - name: retrieved_documents
+    description: Context documents or passages.
+    example: 'Doc 1: The Eiffel Tower is 330 meters tall. Doc 2: Paris is the capital of France.'
+  - name: query
+    description: User query.
+    example: How tall is the Eiffel Tower and where is it located?
+  - name: schema_or_template
+    description: Expected output structure.
+    example: '{"height": "...", "location": "..."}'
+  template_id: xml-tagging-schema-specs--structured-zones
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: Single LLM call. XML structure is deterministic. Output format depends on schema
+    specification clarity.
+tags:
+- structure
+- xml
+- production
+- security
+status: practitioner-guide
+aliases:
+- XML Delimiters
+- Schema Specifications
+- Structural Tagging
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

@@ -1,0 +1,93 @@
+{
+  "id": "few-shot-prompting",
+  "name": "Few-Shot Prompting",
+  "category": "reasoning-elicitation",
+  "subcategory": "foundational",
+  "executive_summary": "Show the model a handful of input/output demonstration pairs before the real query, so it infers the task's expected pattern from examples alone — no gradient updates, no fine-tuning, purely in-context.",
+  "description": "The foundational in-context-learning result: GPT-3 demonstrated that a sufficiently large language model can perform a new task competitively just from seeing a handful of demonstrations in its context window, without any parameter updates — a qualitatively different capability from the fine-tuning-per-task paradigm that preceded it. Distinct from Chain-of-Thought's few-shot variant specifically: plain Few-Shot Prompting demonstrates the input-to-output mapping directly (no intermediate reasoning shown), which is exactly what CoT few-shot exemplars add on top of. This is the general in-context-learning mechanism nearly every exemplar-based technique in this catalog (CoT, Contrastive CoT, Analogical Prompting, and more) specializes or extends.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Tasks with an output format, style, or convention that's hard to fully specify in an instruction but easy to demonstrate (e.g. a specific JSON schema, a particular tone, an unusual classification scheme).",
+    "No labeled training set or fine-tuning budget is available, but a handful of hand-picked examples are."
+  ],
+  "when_not_to_use": [
+    "The task is simple/common enough that Zero-Shot Prompting already performs reliably — exemplars add token cost without benefit.",
+    "Multi-step reasoning tasks — plain input/output exemplars don't show the reasoning process; see Chain-of-Thought instead."
+  ],
+  "known_pitfalls": [
+    "Sensitive to exemplar selection, ordering, and formatting — see Calibrate Before Use and Fantastically Ordered Prompts elsewhere in this catalog for documented failure modes and mitigations specific to this sensitivity.",
+    "Uses meaningfully more tokens than zero-shot, scaling with exemplar count."
+  ],
+  "related_techniques": [
+    "zero-shot-prompting",
+    "chain-of-thought",
+    "what-makes-good-in-context-examples",
+    "calibrate-before-use"
+  ],
+  "primary_source": {
+    "authors": "Brown, Mann, Ryder, Subbiah, Kaplan, Dhariwal, Neelakantan, Shyam, Sastry, Askell, et al.",
+    "year": 2020,
+    "title": "Language Models are Few-Shot Learners",
+    "venue": "NeurIPS 2020",
+    "arxiv_id": "2005.14165",
+    "url": "https://arxiv.org/abs/2005.14165"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Input/output demonstration pairs",
+      "template": "{{task_instruction}}\n\nInput: {{example_input_1}}\nOutput: {{example_output_1}}\n\nInput: {{example_input_2}}\nOutput: {{example_output_2}}\n\nInput: {{target_input}}\nOutput:",
+      "variables": [
+        {
+          "name": "task_instruction",
+          "description": "Brief statement of the task (optional if the pattern is clear from exemplars alone)",
+          "example": null
+        },
+        {
+          "name": "example_input_1",
+          "description": "First demonstration's input",
+          "example": null
+        },
+        {
+          "name": "example_output_1",
+          "description": "First demonstration's corresponding output",
+          "example": null
+        },
+        {
+          "name": "example_input_2",
+          "description": "Second demonstration's input",
+          "example": null
+        },
+        {
+          "name": "example_output_2",
+          "description": "Second demonstration's corresponding output",
+          "example": null
+        },
+        {
+          "name": "target_input",
+          "description": "The actual input to produce an output for",
+          "example": null
+        }
+      ],
+      "template_id": "few-shot-prompting--input-output-demonstration-pairs",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "few-shot",
+    "foundational",
+    "in-context-learning",
+    "single-call"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

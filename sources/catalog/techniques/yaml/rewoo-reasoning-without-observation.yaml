@@ -1,0 +1,90 @@
+id: rewoo-reasoning-without-observation
+name: ReWOO (Reasoning WithOut Observation)
+category: agentic-tool-use
+subcategory: planning
+executive_summary: Generate the entire multi-step tool-use plan up front, with placeholders for tool results,
+  then execute all planned calls afterward — instead of interleaving reasoning and tool calls step-by-step
+  like ReAct.
+description: 'Targets a specific inefficiency in ReAct-style interleaved tool use: each tool call halts
+  generation, waits for the observation, then resumes, which is straightforward but leads to redundant
+  prompts and repeated execution, especially when the same context has to be re-sent at every step. ReWOO
+  decouples this into three modules — Planner (produces the full plan with variable placeholders like
+  ''#E1 = Search[query]'' up front, without waiting for real results), Worker (executes the planned tool
+  calls to fill in the placeholders), and Solver (produces the final answer from the completed plan).
+  Reports 5x token efficiency and a 4% accuracy improvement on HotpotQA versus ReAct-style interleaving,
+  and demonstrates offloading reasoning ability from 175B GPT-3.5 into a 7B LLaMA via instruction tuning
+  on ReWOO-style plans.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Multi-step tool-use tasks where the tool-call sequence can reasonably be planned in full up front, and
+  reducing token consumption / redundant re-prompting matters.
+- Tasks where tool-failure robustness matters — ReWOO's decoupled plan is reported more robust to individual
+  tool failures than interleaved ReAct.
+when_not_to_use:
+- Tasks where later tool calls genuinely depend on unpredictable results of earlier ones in a way that
+  can't be planned upfront — ReAct's interleaved, adaptive approach fits better there.
+known_pitfalls:
+- If little context about the environment/available tools is known in advance, the upfront planner is
+  less effective — the paper notes this can be mitigated with few-shot prompting or fine-tuning.
+related_techniques:
+- react
+- plan-and-solve-prompting
+- chain-of-abstraction
+primary_source:
+  authors: Xu, Peng, Lei, Mukherjee, Liu, Xu
+  year: 2023
+  title: 'ReWOO: Decoupling Reasoning from Observations for Efficient Augmented Language Models'
+  venue: arXiv preprint
+  arxiv_id: '2305.18323'
+  url: https://arxiv.org/abs/2305.18323
+usage_templates:
+- template_name: Plan-then-work-then-solve
+  template: |-
+    # Planner (produces the full plan up front, no tool calls yet)
+    Task: {{task}}
+    Available tools: {{tool_list}}
+    Produce a plan with placeholder variables for each tool result, e.g. '#E1 = {{tool_name}}[query]', '#E2 = {{tool_name}}[query using #E1]': {{full_plan_with_placeholders}}
+
+    # Worker (executes each planned call, filling placeholders)
+    Execute {{full_plan_with_placeholders}} step by step, substituting real tool results for each #E placeholder as they resolve.
+
+    # Solver (produces final answer from the completed plan)
+    Given the completed plan with all placeholders resolved: {{completed_plan_with_results}}
+    Produce the final answer to: {{task}}
+  variables:
+  - name: task
+    description: The overall multi-step task
+    example: null
+  - name: tool_list
+    description: Available tools the planner can reference
+    example: null
+  - name: tool_name
+    description: A specific tool referenced in the plan
+    example: null
+  - name: full_plan_with_placeholders
+    description: 'The complete upfront plan with unresolved #E placeholders'
+    example: null
+  - name: completed_plan_with_results
+    description: The plan after the Worker has resolved every placeholder with real tool results
+    example: null
+  template_id: rewoo-reasoning-without-observation--plan-then-work-then-solve
+  determinism: requires-external-system
+  reproducibility_note: This template depends on an external system (retrieval index, tool, solver, or
+    interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires
+    that system's state to also be fixed.
+tags:
+- agentic
+- tool-use
+- planning
+- efficiency
+- multi-call
+status: verified-external
+aliases:
+- ReWOO
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

@@ -1,0 +1,91 @@
+{
+  "id": "cache-optimized-context-engineering",
+  "name": "Cache-Optimized Context Engineering",
+  "category": "template-pattern-scaffolding",
+  "subcategory": "infrastructure-aware-prompting",
+  "executive_summary": "Structural layout optimized for API-level prefix caching (e.g., Anthropic Prompt Caching, OpenAI Prompt Caching). Places static content first to maximize cache hits, reducing latency and token cost substantially, per the providers' own published figures.",
+  "description": "Modern LLM APIs offer prefix caching: if the initial portion of a prompt (the prefix) is identical across requests, the provider caches the KV activations and only charges for the new suffix tokens. Cache-Optimized Context Engineering explicitly structures prompts with a long static prefix followed by a short dynamic suffix.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "High-volume APIs where the same system instructions and tool schemas are reused across thousands of requests.",
+    "When using providers that support prefix caching.",
+    "RAG systems where retrieved documents vary but the retrieval prompt structure is fixed."
+  ],
+  "when_not_to_use": [
+    "Providers that do not support prefix caching.",
+    "Applications where every prompt is unique with no reusable prefix.",
+    "When the static prefix is shorter than the provider's minimum cache window."
+  ],
+  "known_pitfalls": [
+    "Cache hit rate depends on exact byte-level prefix matching.",
+    "Provider cache TTL may be short; monitor cache hit metrics.",
+    "Over-optimizing for cache may hurt readability or maintainability."
+  ],
+  "related_techniques": [
+    "llmlingua-prompt-compression",
+    "retrieval-augmented-generation"
+  ],
+  "primary_source": {
+    "authors": "Anthropic / OpenAI Documentation",
+    "year": 2025,
+    "title": "Prompt Engineering Best Practices: Prefix Caching",
+    "venue": "Practitioner Guide",
+    "arxiv_id": null,
+    "url": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Static-prefix cached layout",
+      "template": "<!-- STATIC PREFIX (Prefix-Cached across requests) -->\n[SYSTEM INSTRUCTIONS / PERSONA]\n{{system_instructions}}\n\n[TOOL SCHEMAS / API DEFINITIONS]\n{{tool_schemas}}\n\n[FEW-SHOT EXEMPLAR BLOCK]\n{{few_shot_exemplars}}\n\n<!-- DYNAMIC SUFFIX (Appended per request) -->\n[RETRIEVED CONTEXT / DOCUMENT PASSAGES]\n{{retrieved_context}}\n\n[USER QUERY]\n{{user_query}}",
+      "variables": [
+        {
+          "name": "system_instructions",
+          "description": "Static system prompt reused across all requests.",
+          "example": "You are a helpful medical assistant. Be concise and evidence-based."
+        },
+        {
+          "name": "tool_schemas",
+          "description": "Static tool/API definitions reused across requests.",
+          "example": "Available tools: search_web(query), calculate(expression)"
+        },
+        {
+          "name": "few_shot_exemplars",
+          "description": "Static few-shot examples reused across requests.",
+          "example": "Q: What is hypertension? A: Hypertension is high blood pressure..."
+        },
+        {
+          "name": "retrieved_context",
+          "description": "Dynamic retrieved documents unique to each request.",
+          "example": "Document 1: Recent study on ACE inhibitors..."
+        },
+        {
+          "name": "user_query",
+          "description": "The unique user query.",
+          "example": "What are the side effects of lisinopril?"
+        }
+      ],
+      "template_id": "cache-optimized-context-engineering--static-prefix-layout",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "The static prefix must be byte-identical across requests to trigger cache hits. Any change (whitespace, ordering, content) invalidates the cache."
+    }
+  ],
+  "tags": [
+    "infrastructure",
+    "cost-reduction",
+    "caching",
+    "production"
+  ],
+  "status": "practitioner-guide",
+  "aliases": [
+    "Prefix Caching",
+    "Static-Dynamic Prompt Layout"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

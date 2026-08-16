@@ -1,0 +1,71 @@
+{
+  "id": "self-refine",
+  "name": "Self-Refine",
+  "category": "self-verification-refinement",
+  "subcategory": "iterative-self-critique",
+  "executive_summary": "The same model generates an output, critiques its own output, and revises it — repeated for several rounds with no external feedback signal.",
+  "description": "A single model plays three roles in sequence: generator, critic (producing specific, actionable feedback), and refiner (incorporating that feedback into a revision). Iterates for a fixed number of rounds or until the critic reports no more issues. Requires no additional training or external verifier, at the cost of being unable to catch systemic errors the model can't self-diagnose.",
+  "verification_status": "judge-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Output quality benefits from iterative polish (writing, code style, argument structure) and no external verifier is available."
+  ],
+  "when_not_to_use": [
+    "Errors the model is systematically unable to detect in its own output — self-critique inherits the same blind spots as generation."
+  ],
+  "known_pitfalls": [
+    "Can plateau or oscillate without converging; needs a stopping rule (fixed rounds or critic-reports-clean) to avoid unbounded cost."
+  ],
+  "related_techniques": [
+    "chain-of-verification",
+    "reflexion"
+  ],
+  "primary_source": {
+    "authors": "Madaan, Tandon, Gupta, Hallinan, Gao, Wiegreffe, Alon, Dziri, Prabhumoye, Yang, et al.",
+    "year": 2023,
+    "title": "Self-Refine: Iterative Refinement with Self-Feedback",
+    "venue": "NeurIPS 2023",
+    "arxiv_id": "2303.17651",
+    "url": "https://arxiv.org/abs/2303.17651"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Generate-critique-refine loop",
+      "template": "# Generate\n{{task_prompt}}\n\n# Critique\nOutput: {{current_output}}\nIdentify specific, actionable problems with this output relative to the task: {{task_prompt}}. If there are none, say \"NO ISSUES\".\n\n# Refine (skip if critique said NO ISSUES)\nOutput: {{current_output}}\nCritique: {{critique}}\nProduce a revised output addressing the critique.",
+      "variables": [
+        {
+          "name": "task_prompt",
+          "description": "The original task",
+          "example": null
+        },
+        {
+          "name": "current_output",
+          "description": "The most recent draft to critique/refine",
+          "example": null
+        },
+        {
+          "name": "critique",
+          "description": "Output of the critique step",
+          "example": null
+        }
+      ],
+      "template_id": "self-refine--generate-critique-refine-loop",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "This template intentionally samples multiple times or explores adaptively; outputs vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends on intermediate stochastic choices)."
+    }
+  ],
+  "tags": [
+    "verification",
+    "self-critique",
+    "iterative"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

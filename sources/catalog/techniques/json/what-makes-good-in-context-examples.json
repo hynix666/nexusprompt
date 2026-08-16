@@ -1,0 +1,72 @@
+{
+  "id": "what-makes-good-in-context-examples",
+  "name": "Nearest-Neighbor In-Context Example Selection",
+  "category": "example-selection-formatting",
+  "subcategory": "exemplar-selection",
+  "executive_summary": "Select few-shot exemplars by embedding similarity to the target input (nearest neighbors) rather than at random — a systematically better exemplar-selection strategy.",
+  "description": "One of the earliest systematic studies of exemplar selection (as opposed to exemplar wording): retrieves the k training examples whose embeddings are closest to the target test input and uses those as the few-shot exemplars for that specific input, rather than a single fixed exemplar set for all inputs. Substantially outperforms random exemplar selection.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "A labeled example pool exists and inputs vary enough that per-input exemplar selection would help (as opposed to one fixed exemplar set serving all inputs equally well)."
+  ],
+  "when_not_to_use": [
+    "No embedding index over the example pool is available, or the task is too homogeneous for per-input selection to matter."
+  ],
+  "known_pitfalls": [
+    "Requires maintaining an embedding index over the example pool and doing a retrieval call per input, adding infrastructure compared to a fixed exemplar set."
+  ],
+  "related_techniques": [
+    "active-prompting",
+    "fantastically-ordered-prompts"
+  ],
+  "primary_source": {
+    "authors": "Liu, Shen, Zhang, Dolan, Carin, Chen",
+    "year": 2021,
+    "title": "What Makes Good In-Context Examples for GPT-3?",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2101.06804",
+    "url": "https://arxiv.org/abs/2101.06804"
+  },
+  "usage_templates": [
+    {
+      "template_name": "kNN exemplar retrieval",
+      "template": "# Per target input\nEmbed {{target_input}} and retrieve the {{k}} nearest examples from the labeled pool by embedding similarity.\n\n{{retrieved_exemplars_block}}\n\nInput: {{target_input}}\nOutput:",
+      "variables": [
+        {
+          "name": "target_input",
+          "description": "The specific input being predicted on",
+          "example": null
+        },
+        {
+          "name": "k",
+          "description": "How many nearest-neighbor exemplars to retrieve",
+          "example": "4"
+        },
+        {
+          "name": "retrieved_exemplars_block",
+          "description": "The k retrieved nearest-neighbor exemplars, concatenated in input/output pairs",
+          "example": null
+        }
+      ],
+      "template_id": "what-makes-good-in-context-examples--knn-exemplar-retrieval",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "This template depends on an external system (retrieval index, tool, solver, or interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires that system's state to also be fixed."
+    }
+  ],
+  "tags": [
+    "reliability",
+    "exemplar-selection",
+    "retrieval",
+    "few-shot"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "id": "evoprompt",
+  "name": "EvoPrompt",
+  "category": "automatic-prompt-optimization",
+  "subcategory": "evolutionary-search",
+  "executive_summary": "Genetic algorithm over prompts. Treats prompts as individuals in a population, applying crossover and mutation operators to evolve higher-performing prompts over generations.",
+  "description": "EvoPrompt initializes a population of prompt variants, evaluates each on a validation task, and applies genetic operators: (1) Selection — keep top-performing prompts, (2) Crossover — combine parts of two high-performing prompts, and (3) Mutation — randomly alter words or phrases in a prompt. This evolutionary process continues for a fixed number of generations or until performance plateaus.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Prompt optimization where the search space is large and unstructured.",
+    "When gradient-based or Bayesian methods are impractical.",
+    "Tasks where prompt structure matters more than individual word choice."
+  ],
+  "when_not_to_use": [
+    "When evaluation is too expensive for large populations over many generations.",
+    "When prompts must remain interpretable (evolution can produce gibberish).",
+    "When a strong initial prompt already exists (evolution may degrade it)."
+  ],
+  "known_pitfalls": [
+    "Premature convergence to local optima.",
+    "Mutation may destroy prompt coherence.",
+    "Population size and generation count require careful tuning."
+  ],
+  "related_techniques": [
+    "automatic-prompt-engineer",
+    "promptbreeder",
+    "mipro",
+    "textgrad"
+  ],
+  "primary_source": {
+    "authors": "Guo, Wang, Guo, Li, Song, Tan, Liu, Bian, Yang",
+    "year": 2023,
+    "title": "EvoPrompt: Connecting LLMs with Evolutionary Algorithms Yields Powerful Prompt Optimizers",
+    "venue": "arXiv",
+    "arxiv_id": "2309.08532",
+    "url": "https://arxiv.org/abs/2309.08532"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Genetic algorithm prompt evolution",
+      "template": "Task: {{task}}\nInitial Population: {{initial_prompts}}\n\nFor generation = 1 to {{max_generations}}:\n  1. Evaluate fitness of each prompt.\n     Fitness Scores: {{fitness_scores}}\n  2. Select top-{{k}} prompts.\n  3. Apply crossover between pairs.\n     Offspring: {{offspring_prompts}}\n  4. Apply mutation to offspring.\n     Mutated: {{mutated_prompts}}\n  5. Form new population.\n\nBest Prompt: {{best_prompt}}",
+      "variables": [
+        {
+          "name": "task",
+          "description": "The task for which to optimize prompts.",
+          "example": "Sentiment classification"
+        },
+        {
+          "name": "initial_prompts",
+          "description": "Starting population of prompt variants.",
+          "example": "[\"Classify sentiment:\", \"Determine if positive or negative:\", \"Analyze emotion:\"]"
+        },
+        {
+          "name": "max_generations",
+          "description": "Number of evolutionary generations.",
+          "example": "20"
+        },
+        {
+          "name": "fitness_scores",
+          "description": "Performance score per prompt.",
+          "example": "[0.72, 0.68, 0.75]"
+        },
+        {
+          "name": "k",
+          "description": "Number of top prompts to select.",
+          "example": "5"
+        },
+        {
+          "name": "offspring_prompts",
+          "description": "Prompts created by crossover.",
+          "example": "[\"Classify sentiment as positive or negative:\"]"
+        },
+        {
+          "name": "mutated_prompts",
+          "description": "Prompts after mutation.",
+          "example": "[\"Classify sentiment as happy or sad:\"]"
+        },
+        {
+          "name": "best_prompt",
+          "description": "Highest-fitness prompt after evolution.",
+          "example": "\"Determine sentiment: positive, negative, or neutral\""
+        }
+      ],
+      "template_id": "evoprompt--genetic-evolution",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "Evolution is inherently stochastic. Fix random seeds for crossover and mutation to improve reproducibility."
+    }
+  ],
+  "tags": [
+    "optimization",
+    "evolutionary",
+    "genetic",
+    "search"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "EvoPrompt",
+    "Evolutionary Prompt Optimization"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

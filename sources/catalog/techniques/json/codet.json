@@ -1,0 +1,97 @@
+{
+  "id": "codet",
+  "name": "CodeT (Code Generation with Testers)",
+  "category": "agentic-tool-use",
+  "subcategory": "code-generation-ensemble",
+  "executive_summary": "Generate-and-test ensemble for code generation. Has the model generate both candidate solutions and test cases, then selects by execution agreement across them. Improves code correctness over single-sample generation.",
+  "description": "CodeT has the model generate both candidate solutions and test cases for the same problem, removing the need for hand-written tests. Solutions are then executed against those generated tests and scored by dual execution agreement: a solution is trusted when it agrees with other solutions on the tests they pass, so consensus across the sampled pairs — not a single test suite — does the selecting. This significantly improves functional correctness over single-sample code generation.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Code generation tasks with available test cases.",
+    "Competitive programming and software engineering benchmarks.",
+    "When code correctness is more important than generation speed."
+  ],
+  "when_not_to_use": [
+    "When no test cases are available for verification.",
+    "When compilation/execution environments are unavailable or unsafe.",
+    "When latency requirements prohibit multi-sample generation and testing."
+  ],
+  "known_pitfalls": [
+    "Test cases may be incomplete (passing all tests does not guarantee correctness).",
+    "Compilation errors may discard valid but syntactically unconventional solutions.",
+    "Execution of untrusted code requires sandboxing."
+  ],
+  "related_techniques": [
+    "program-of-thoughts",
+    "self-consistency",
+    "swe-agent",
+    "chain-of-code"
+  ],
+  "primary_source": {
+    "authors": "Chen, Zhang, Nguyen, Zan, Lin, Lou, Chen",
+    "year": 2022,
+    "title": "CodeT: Code Generation with Generated Tests",
+    "venue": "arXiv",
+    "arxiv_id": "2207.10397",
+    "url": "https://arxiv.org/abs/2207.10397"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Generate-test-select ensemble",
+      "template": "Programming Problem: {{problem}}\n\nStep 1: Generate {{n}} candidate solutions.\nCandidates: {{candidates}}\n\nStep 2: Filter by compilation.\nCompiling Candidates: {{compiling_candidates}}\n\nStep 3: Execute against test cases.\nTest Results: {{test_results}}\n\nStep 4: Select candidate with highest test pass rate.\nSelected Solution: {{selected_solution}}",
+      "variables": [
+        {
+          "name": "problem",
+          "description": "The programming problem.",
+          "example": "Write a function to check if a binary tree is balanced."
+        },
+        {
+          "name": "n",
+          "description": "Number of candidate solutions to generate.",
+          "example": "10"
+        },
+        {
+          "name": "candidates",
+          "description": "Generated code candidates.",
+          "example": "[def is_balanced_1(root): ..., def is_balanced_2(root): ...]"
+        },
+        {
+          "name": "compiling_candidates",
+          "description": "Candidates that successfully compile.",
+          "example": "[is_balanced_1, is_balanced_3, is_balanced_7]"
+        },
+        {
+          "name": "test_results",
+          "description": "Test execution results per candidate.",
+          "example": "{is_balanced_1: 5/5, is_balanced_3: 4/5, is_balanced_7: 5/5}"
+        },
+        {
+          "name": "selected_solution",
+          "description": "The final selected code.",
+          "example": "def is_balanced(root): ... (passes all tests)"
+        }
+      ],
+      "template_id": "codet--generate-test-select",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "Code generation is non-deterministic at temperature > 0. Compilation and test execution are deterministic. Selection is deterministic based on pass rates."
+    }
+  ],
+  "tags": [
+    "code",
+    "ensemble",
+    "testing",
+    "compilation"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "CodeT"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

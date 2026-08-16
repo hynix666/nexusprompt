@@ -1,0 +1,61 @@
+id: reliable-constrained-diffusion-decoding
+name: Reliable Constrained Decoding for Diffusion LLMs under Context-Free Grammars
+category: structured-constrained-output
+subcategory: non-autoregressive-constraints
+executive_summary: A lookahead-then-verify approach to enforcing context-free-grammar constraints reliably
+  on diffusion-model output, addressing failure cases the more basic diffusion-constraint approach misses.
+description: 'Complements the formal-syntax-for-diffusion line of work with a specifically reliability-focused
+  method: rather than constraining each denoising step locally, it uses lookahead and post-hoc verification
+  to catch cases where locally-valid steps still produce a globally invalid final sequence.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Diffusion-model structured generation where the basic per-step constraint approach has observed reliability
+  gaps.
+when_not_to_use:
+- Autoregressive generation, or diffusion generation with looser reliability requirements.
+known_pitfalls:
+- Lookahead-then-verify adds computational overhead relative to purely local constraint enforcement.
+related_techniques:
+- diffusion-formal-syntax
+- structured-output-json-mode
+primary_source:
+  authors: (local corpus)
+  year: 2026
+  title: Reliable Constrained Decoding for Diffusion LLMs under Context-Free Grammars
+  venue: arXiv preprint
+  arxiv_id: '2602.00612'
+  url: null
+usage_templates:
+- template_name: Lookahead-verify diffusion decoding
+  template: |-
+    Grammar: {{grammar_definition}}
+    Task: {{task_description}}
+    At each denoising step, look ahead {{lookahead_window}} steps and verify grammar-consistency before committing; reject and resample steps that would make the final sequence unrecoverable.
+  variables:
+  - name: grammar_definition
+    description: The formal grammar constraining valid output
+    example: null
+  - name: task_description
+    description: The generation task
+    example: null
+  - name: lookahead_window
+    description: How many steps ahead to verify
+    example: '3'
+  template_id: reliable-constrained-diffusion-decoding--lookahead-verify-diffusion-decoding
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- structured-output
+- diffusion
+- reliability
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: Reliable Constrained Decoding for Diffusion LLMs under Context-Free Grammars.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

@@ -1,0 +1,76 @@
+{
+  "id": "chain-of-draft",
+  "name": "Chain of Draft (CoD)",
+  "category": "reasoning-elicitation",
+  "subcategory": "token-minimal-reasoning",
+  "executive_summary": "Forces intermediate reasoning steps to a strict word limit (typically ≤5 words per step), matching or exceeding CoT accuracy while reducing token generation by up to 90%.",
+  "description": "Inspired by human cognitive shorthand, CoD instructs the model to think step by step but keep only a minimum draft for each thinking step. Each draft step is capped at a configurable word count. The final answer is returned after a separator (e.g., ####). Works best on capable models.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Token cost is a binding constraint and you need step-by-step reasoning.",
+    "The target model is capable (≥7B parameters).",
+    "Tasks involve arithmetic, logic, or multi-step deduction."
+  ],
+  "when_not_to_use": [
+    "Model is small (<3B) and may misinterpret ultra-concise drafts.",
+    "The reasoning trace itself is a deliverable.",
+    "Tasks requiring rich intermediate context."
+  ],
+  "known_pitfalls": [
+    "Smaller models may produce ambiguous or incomplete drafts.",
+    "The separator must be clearly distinguished from reasoning content.",
+    "Draft length hyperparameter may need tuning per task."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "skeleton-of-thought"
+  ],
+  "primary_source": {
+    "authors": "Xu, Xie, Zhao, He",
+    "year": 2025,
+    "title": "Chain of Draft: Thinking Faster by Writing Less",
+    "venue": "arXiv",
+    "arxiv_id": "2502.18600",
+    "url": "https://arxiv.org/abs/2502.18600"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Zero-shot CoD with word limit",
+      "template": "Think step by step, but only keep a minimum draft for each thinking step, with {{max_words}} words at most. Return the final answer at the end of the response after a separator ####.\n\nProblem:\n{{problem_statement}}",
+      "variables": [
+        {
+          "name": "max_words",
+          "description": "Maximum words allowed per reasoning draft step.",
+          "example": "5"
+        },
+        {
+          "name": "problem_statement",
+          "description": "The problem or question to solve.",
+          "example": "If a train travels 60 km in 30 minutes, how far will it travel in 2 hours at the same speed?"
+        }
+      ],
+      "template_id": "chain-of-draft--zero-shot-word-limit",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call with explicit formatting constraints. Output length varies by problem complexity but is bounded by max_words * estimated_steps."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "token-efficiency",
+    "cost-reduction",
+    "single-call"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "CoD",
+    "Chain-of-Draft"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

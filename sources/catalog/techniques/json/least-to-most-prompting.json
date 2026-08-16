@@ -1,0 +1,73 @@
+{
+  "id": "least-to-most-prompting",
+  "name": "Least-to-Most Prompting",
+  "category": "reasoning-elicitation",
+  "subcategory": "decomposition",
+  "executive_summary": "Break a hard problem into an ordered sequence of strictly easier subproblems, then solve them in order, each conditioned on the answers so far.",
+  "description": "Stage one asks the model to decompose the target problem into a list of simpler subproblems, ordered so each depends only on subproblems already solved. Stage two solves them one at a time, feeding prior subanswers into each subsequent prompt. This targets a specific CoT failure mode: easy-to-hard generalization, where a single chain trained/prompted on easy examples struggles to generalize to harder compositional instances.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "The task is compositional — a hard instance is built from a known sequence of easier sub-tasks (e.g. multi-step math word problems, compositional generalization benchmarks)."
+  ],
+  "when_not_to_use": [
+    "The problem doesn't decompose cleanly into an ordered, dependency-respecting subproblem sequence."
+  ],
+  "known_pitfalls": [
+    "Decomposition quality (stage one) bottlenecks everything downstream — a bad decomposition guarantees a bad final answer regardless of stage-two solving quality."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "plan-and-solve-prompting",
+    "program-of-thoughts"
+  ],
+  "primary_source": {
+    "authors": "Zhou, Schärli, Hou, Wei, Scales, Wang, Schuurmans, Cui, Bousquet, Le, Chi",
+    "year": 2023,
+    "title": "Least-to-Most Prompting Enables Complex Reasoning in Large Language Models",
+    "venue": "ICLR 2023",
+    "arxiv_id": "2205.10625",
+    "url": "https://arxiv.org/abs/2205.10625"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Decompose-then-solve-in-order",
+      "template": "# Decompose\nTo solve \"{{problem}}\", what sequence of simpler subproblems must be solved first? List them in dependency order, one per line.\n\n# Solve (repeat per subproblem, in order)\nPreviously established: {{prior_subanswers}}\nNow solve: {{current_subproblem}}",
+      "variables": [
+        {
+          "name": "problem",
+          "description": "The full, hard target problem",
+          "example": null
+        },
+        {
+          "name": "prior_subanswers",
+          "description": "Running list of subproblem: subanswer pairs solved so far",
+          "example": null
+        },
+        {
+          "name": "current_subproblem",
+          "description": "The next subproblem in the decomposition",
+          "example": null
+        }
+      ],
+      "template_id": "least-to-most-prompting--decompose-then-solve-in-order",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "decomposition",
+    "multi-call",
+    "compositional"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

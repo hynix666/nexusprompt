@@ -1,0 +1,93 @@
+id: swe-agent
+name: SWE-agent
+category: agentic-tool-use
+subcategory: software-engineering-agent
+executive_summary: Autonomous agent for resolving real-world GitHub issues. Combines code search, editing,
+  and testing in an agentic loop with specialized tools for software engineering tasks.
+description: SWE-agent is designed specifically for software engineering workflows. It receives a GitHub
+  issue description, searches the codebase for relevant files, proposes edits, runs tests, and iterates
+  until the issue is resolved or a maximum effort is reached. It uses specialized tools (file viewer,
+  search, editor, test runner) rather than general-purpose APIs, making it more effective for code-specific
+  tasks than general agents.
+verification_status: verifier-checkable
+cost_profile: agentic-loop
+when_to_use:
+- Real-world software bug fixing and feature implementation.
+- When you need an agent that understands code structure and testing.
+- Benchmarking on SWE-bench or similar code agent evaluations.
+when_not_to_use:
+- Non-code tasks where general agents like ReAct are sufficient.
+- When test infrastructure is unavailable.
+- When code execution safety is a concern (untrusted repositories).
+known_pitfalls:
+- May introduce new bugs while fixing existing ones.
+- Code search quality depends on repository structure and documentation.
+- Test flakiness can mislead the agent about fix correctness.
+related_techniques:
+- react
+- autogen
+- codet
+- self-edit-code
+primary_source:
+  authors: Yang, Jimenez, Wettig, Lieret, Yao, Narasimhan, Press
+  year: 2024
+  title: 'SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering'
+  venue: arXiv
+  arxiv_id: '2405.15793'
+  url: https://arxiv.org/abs/2405.15793
+usage_templates:
+- template_name: GitHub issue resolution agent
+  template: |-
+    GitHub Issue: {{issue_description}}
+
+    Repository: {{repository}}
+
+    Agent Loop:
+    1. Search codebase for relevant files.
+       Relevant Files: {{relevant_files}}
+    2. Read and understand code context.
+    3. Propose edit(s).
+       Proposed Edit: {{proposed_edit}}
+    4. Apply edit and run tests.
+       Test Results: {{test_results}}
+    5. If tests fail, revise and retry.
+    6. If tests pass, submit solution.
+
+    Final Patch: {{final_patch}}
+  variables:
+  - name: issue_description
+    description: The GitHub issue to resolve.
+    example: 'Bug: function crashes on empty input list'
+  - name: repository
+    description: The code repository.
+    example: https://github.com/example/project
+  - name: relevant_files
+    description: Files identified as relevant to the issue.
+    example: '[src/utils.py, tests/test_utils.py]'
+  - name: proposed_edit
+    description: The code change proposed by the agent.
+    example: 'Add null check at line 42: if not input_list: return []'
+  - name: test_results
+    description: Results after running tests.
+    example: All tests passed (15/15)
+  - name: final_patch
+    description: The final code patch.
+    example: diff --git a/src/utils.py b/src/utils.py...
+  template_id: swe-agent--issue-resolution
+  determinism: stochastic-by-design
+  reproducibility_note: Agent loop is non-deterministic. Search, reasoning, and edit choices vary across
+    runs. Set temperature=0 for maximum reproducibility.
+tags:
+- agent
+- software-engineering
+- github
+- code
+status: verified-external
+aliases:
+- SWE Agent
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

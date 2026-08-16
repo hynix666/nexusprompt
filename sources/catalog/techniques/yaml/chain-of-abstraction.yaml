@@ -1,0 +1,92 @@
+id: chain-of-abstraction
+name: Chain-of-Abstraction (CoA)
+category: agentic-tool-use
+subcategory: tool-use-training
+executive_summary: Train the model to decode a reasoning chain with abstract placeholders first, then
+  call domain tools to fill each one in — decoupling general reasoning strategy from the specific tool
+  results it depends on.
+description: 'Addresses a specific inefficiency in interleaved tool-use methods like ReAct: when text
+  generation and API calls alternate step-by-step, the whole reasoning chain has to wait on each tool
+  call before continuing, and the reasoning strategy gets entangled with tool-call-specific results. CoA
+  trains the model (two-stage fine-tuning) to first produce a complete reasoning chain with abstract placeholders
+  (e.g. ''y1 = Calculator(x1 + x2)'') without waiting for real values, then reifies every placeholder
+  with actual tool calls afterward, which can be parallelized. This also makes the learned reasoning strategy
+  more robust to shifts in the underlying domain knowledge, since the abstract chain doesn''t hard-code
+  specific facts.'
+verification_status: unverifiable-by-text
+cost_profile: training-time
+when_to_use:
+- Multi-step tool-use tasks where the reasoning structure is reusable across many different specific fact
+  values (e.g. the same arithmetic strategy applied to different numbers), and you control fine-tuning.
+when_not_to_use:
+- Working with a fixed, already-trained model with no fine-tuning access — ReAct's interleaved prompting
+  approach is the inference-time-only alternative.
+known_pitfalls:
+- Like Toolformer and APAR, this is a training-time technique, not a drop-in prompting pattern for an
+  off-the-shelf model.
+related_techniques:
+- toolformer-self-supervised-tool-use
+- program-of-thoughts
+- react
+primary_source:
+  authors: Gao, Dwivedi-Yu, Yu, Tan, Pasunuru, Golovneva, Sinha, Celikyilmaz, Bosselut, Wang
+  year: 2024
+  title: Efficient Tool Use with Chain-of-Abstraction Reasoning
+  venue: ICML 2024
+  arxiv_id: '2401.17464'
+  url: https://arxiv.org/abs/2401.17464
+usage_templates:
+- template_name: Abstract-chain-then-reify training data format
+  template: |-
+    # Stage 1 — abstract reasoning chain (placeholders, no real tool calls yet)
+    Query: {{query}}
+    Abstract chain: {{placeholder_var_1}} = {{tool_name_1}}({{abstract_args_1}}); {{placeholder_var_2}} = {{tool_name_2}}({{abstract_args_2}} using {{placeholder_var_1}}); ... final answer uses {{placeholder_var_n}}
+
+    # Stage 2 — reify (call real tools, can run in parallel where independent)
+    {{placeholder_var_1}} = call {{tool_name_1}} with real arguments derived from {{query}}
+    {{placeholder_var_2}} = call {{tool_name_2}} with real arguments, substituting the resolved value of {{placeholder_var_1}}
+    Substitute all resolved placeholder values back into the abstract chain to produce the final answer.
+  variables:
+  - name: query
+    description: The original multi-step query
+    example: null
+  - name: placeholder_var_1
+    description: First abstract placeholder variable
+    example: y1
+  - name: tool_name_1
+    description: Tool invoked for the first placeholder
+    example: null
+  - name: abstract_args_1
+    description: Abstract (placeholder-referencing) arguments for the first tool call
+    example: null
+  - name: placeholder_var_2
+    description: Second abstract placeholder, possibly depending on the first
+    example: y2
+  - name: tool_name_2
+    description: Tool invoked for the second placeholder
+    example: null
+  - name: abstract_args_2
+    description: Abstract arguments for the second tool call
+    example: null
+  - name: placeholder_var_n
+    description: The final placeholder whose reified value is the answer
+    example: null
+  template_id: chain-of-abstraction--abstract-chain-then-reify-training-data-format
+  determinism: training-time-not-applicable
+  reproducibility_note: This template describes a training-time process (fine-tuning or policy training),
+    not a single reproducible inference call; reproducibility depends on the training pipeline and data,
+    not on prompt text alone.
+tags:
+- agentic
+- tool-use
+- training-time
+- efficiency
+status: verified-external
+aliases:
+- CoA
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

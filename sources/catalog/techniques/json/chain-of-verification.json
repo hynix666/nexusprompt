@@ -1,0 +1,83 @@
+{
+  "id": "chain-of-verification",
+  "name": "Chain-of-Verification (CoVe)",
+  "category": "self-verification-refinement",
+  "subcategory": "fact-checking",
+  "executive_summary": "Draft an answer, generate independent fact-checking questions about it, answer those questions independently, then revise the draft in light of the answers.",
+  "description": "Decouples verification from the context that produced the original error: the verification questions are answered without seeing the original draft's reasoning, which prevents the model from simply rationalizing its own mistake. Reduces hallucination on fact-heavy generation tasks (e.g. listing entities) relative to plain generation.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Fact-heavy generation tasks (lists of entities, biographical facts) prone to hallucination."
+  ],
+  "when_not_to_use": [
+    "Purely creative or subjective generation with no checkable factual claims."
+  ],
+  "known_pitfalls": [
+    "Verification questions answered by the same model family can inherit the same knowledge gaps as the original draft."
+  ],
+  "related_techniques": [
+    "self-refine",
+    "reflexion"
+  ],
+  "primary_source": {
+    "authors": "Dhuliawala, Komeili, Xu, Raileanu, Li, Celikyilmaz, Weston",
+    "year": 2023,
+    "title": "Chain-of-Verification Reduces Hallucination in Large Language Models",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2309.11495",
+    "url": "https://arxiv.org/abs/2309.11495"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Draft-verify-revise",
+      "template": "# Draft\n{{original_prompt}}\n\n# Plan verification questions\nGiven this draft answer: {{draft_answer}}\nWrite {{num_questions}} independent fact-checking questions that would catch any factual errors in it.\n\n# Answer verification questions independently (no access to the draft)\n{{verification_question}}\n\n# Revise\nOriginal draft: {{draft_answer}}\nVerification Q&A: {{verification_qa_pairs}}\nProduce a final, corrected answer.",
+      "variables": [
+        {
+          "name": "original_prompt",
+          "description": "The prompt that produced the draft",
+          "example": null
+        },
+        {
+          "name": "draft_answer",
+          "description": "First-pass answer to verify",
+          "example": null
+        },
+        {
+          "name": "num_questions",
+          "description": "How many verification questions to generate",
+          "example": "5"
+        },
+        {
+          "name": "verification_question",
+          "description": "One verification question, answered without draft context",
+          "example": null
+        },
+        {
+          "name": "verification_qa_pairs",
+          "description": "All verification Q&A pairs collected",
+          "example": null
+        }
+      ],
+      "template_id": "chain-of-verification--draft-verify-revise",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "verification",
+    "hallucination-reduction",
+    "multi-call"
+  ],
+  "status": "corpus-present",
+  "aliases": [
+    "CoVe"
+  ],
+  "secondary_sources": [],
+  "corpus_file": "Chain-of-Verification.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

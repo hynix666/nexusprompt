@@ -1,0 +1,89 @@
+id: chain-of-thought
+name: Chain-of-Thought (CoT) Prompting
+category: reasoning-elicitation
+subcategory: single-path-reasoning
+executive_summary: Prompt the model with worked examples that show step-by-step reasoning, so it reasons
+  in steps before answering instead of jumping straight to a conclusion.
+description: Few-shot exemplars that include intermediate reasoning steps, not just final answers, are
+  shown before the target question. The model learns from the pattern to produce its own intermediate
+  steps, which substantially improves performance on multi-step arithmetic, commonsense, and symbolic
+  reasoning tasks. It is the foundation nearly every later reasoning-elicitation technique builds on or
+  varies.
+verification_status: judge-checkable
+cost_profile: single-call
+when_to_use:
+- The task requires more than one logical or arithmetic step to reach a correct answer.
+- You have or can write 2-8 worked examples in the target domain.
+when_not_to_use:
+- The task is a single lookup or classification with no multi-step structure — CoT adds tokens without
+  adding accuracy.
+- Model is small enough that CoT exemplars don't reliably improve over direct answering (an empirically
+  observed emergent-capability threshold).
+known_pitfalls:
+- A plausible-looking chain does not guarantee a correct answer; the model can rationalize a wrong answer
+  just as fluently as a right one.
+- Long chains increase token cost roughly linearly without a matching accuracy gain past a task-dependent
+  point.
+related_techniques:
+- zero-shot-cot
+- self-consistency
+- tree-of-thoughts
+- least-to-most-prompting
+primary_source:
+  authors: Wei, Wang, Schuurmans, Bosma, Ichter, Xia, Chi, Le, Zhou
+  year: 2022
+  title: Chain-of-Thought Prompting Elicits Reasoning in Large Language Models
+  venue: NeurIPS 2022
+  arxiv_id: '2201.11903'
+  url: https://arxiv.org/abs/2201.11903
+usage_templates:
+- template_name: Few-shot CoT exemplar block
+  template: |-
+    Q: {{example_question_1}}
+    A: {{example_stepwise_reasoning_1}} So the answer is {{example_answer_1}}.
+
+    Q: {{example_question_2}}
+    A: {{example_stepwise_reasoning_2}} So the answer is {{example_answer_2}}.
+
+    Q: {{target_question}}
+    A:
+  variables:
+  - name: example_question_1
+    description: First worked example's question
+    example: Roger has 5 tennis balls. He buys 2 cans of 3 balls each. How many does he have now?
+  - name: example_stepwise_reasoning_1
+    description: The worked step-by-step reasoning for example 1
+    example: Roger started with 5 balls. 2 cans of 3 balls each is 6 balls. 5 + 6 = 11.
+  - name: example_answer_1
+    description: Final answer for example 1
+    example: '11'
+  - name: example_question_2
+    description: Second worked example's question
+    example: null
+  - name: example_stepwise_reasoning_2
+    description: Worked reasoning for example 2
+    example: null
+  - name: example_answer_2
+    description: Final answer for example 2
+    example: null
+  - name: target_question
+    description: The actual question to answer
+    example: null
+  template_id: chain-of-thought--few-shot-cot-exemplar-block
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reasoning
+- few-shot
+- foundational
+status: corpus-present
+aliases:
+- CoT
+secondary_sources: []
+corpus_file: Chain-of-Thought.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

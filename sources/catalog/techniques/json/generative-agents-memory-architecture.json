@@ -1,0 +1,98 @@
+{
+  "id": "generative-agents-memory-architecture",
+  "name": "Generative Agents (Memory Stream + Reflection + Planning)",
+  "category": "agentic-tool-use",
+  "subcategory": "persistent-agent-architecture",
+  "executive_summary": "Give an agent a long-term memory stream, periodically synthesize it into reflections, and retrieve relevant memories dynamically to inform planning — an architecture for believable, persistent agent behavior.",
+  "description": "Distinct from Reflexion's episodic retry-memory: this is a standing architecture for agents that operate continuously over long horizons, not just across retries at one task. Three components work together — a memory stream recording every observation in natural language, a reflection process that periodically synthesizes recent memories into higher-level insights, and a retrieval function that scores stored memories by recency, importance, and relevance to pull the right context into each planning decision. Demonstrated in a sandbox environment where 25 agents exhibited emergent believable behaviors (planning a party, spreading information, forming relationships) purely from this memory/reflection/planning loop, without any of it being scripted.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "agentic-loop",
+  "when_to_use": [
+    "Building an agent that needs to operate coherently over a long horizon with many interactions, where relevant context from far in the past needs to resurface at the right moment (not just the most recent turns)."
+  ],
+  "when_not_to_use": [
+    "Short, single-session tasks where a standing memory architecture is pure overhead — Reflexion's lighter episodic memory or plain context suffices."
+  ],
+  "known_pitfalls": [
+    "Memory retrieval quality (the recency/importance/relevance scoring function) is a single point of failure — poorly tuned retrieval surfaces the wrong memories at the wrong time, degrading planning quality without an obvious error signal."
+  ],
+  "related_techniques": [
+    "reflexion",
+    "meta-prompting",
+    "react"
+  ],
+  "primary_source": {
+    "authors": "Park, O'Brien, Cai, Morris, Liang, Bernstein",
+    "year": 2023,
+    "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+    "venue": "UIST 2023",
+    "arxiv_id": "2304.03442",
+    "url": "https://arxiv.org/abs/2304.03442"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Memory stream / reflect / retrieve-and-plan loop",
+      "template": "# Record (per observation)\nAppend to memory stream: {{timestamp}} — {{observation_text}}\n\n# Reflect (periodically, e.g. once memory importance sum exceeds a threshold)\nRecent memories: {{recent_memory_batch}}\nWhat are the {{num_reflections}} most salient high-level insights or questions these memories suggest? For each, cite the specific memories that support it.\n\n# Retrieve-and-plan (before each action)\nCurrent situation: {{current_context}}\nRetrieve the memories most relevant by recency, importance, and relevance to this situation from: {{full_memory_stream}}\nRetrieved memories: {{retrieved_memories}}\nGiven these, what should {{agent_name}} do next?",
+      "variables": [
+        {
+          "name": "timestamp",
+          "description": "When this observation occurred",
+          "example": null
+        },
+        {
+          "name": "observation_text",
+          "description": "A natural-language record of what happened",
+          "example": null
+        },
+        {
+          "name": "recent_memory_batch",
+          "description": "Recent memories being synthesized into reflections",
+          "example": null
+        },
+        {
+          "name": "num_reflections",
+          "description": "How many high-level reflections to generate",
+          "example": "3"
+        },
+        {
+          "name": "current_context",
+          "description": "The agent's present situation, used to query memory",
+          "example": null
+        },
+        {
+          "name": "full_memory_stream",
+          "description": "The complete accumulated memory store being queried",
+          "example": null
+        },
+        {
+          "name": "retrieved_memories",
+          "description": "The subset of memories retrieved as most relevant",
+          "example": null
+        },
+        {
+          "name": "agent_name",
+          "description": "Identifier for the agent whose next action is being planned",
+          "example": null
+        }
+      ],
+      "template_id": "generative-agents-memory-architecture--memory-stream-reflect-retrieve-and-plan-loop",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "This template depends on an external system (retrieval index, tool, solver, or interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires that system's state to also be fixed."
+    }
+  ],
+  "tags": [
+    "agentic",
+    "memory",
+    "planning",
+    "persistent-architecture"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

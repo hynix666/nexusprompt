@@ -1,0 +1,78 @@
+id: factscore
+name: FActScore
+category: self-verification-refinement
+subcategory: atomic-fact-verification
+executive_summary: Decomposes long-form text into atomic facts and verifies each one independently, producing
+  a granular factuality score for the entire generation.
+description: FActScore addresses the challenge of evaluating long-form factuality by breaking text into
+  atomic, verifiable claims. Each claim is checked against a knowledge source. The ratio of supported
+  facts to total facts yields the FActScore.
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Evaluating factuality of long-form generation.
+- When you need to localize which specific claims are hallucinated.
+- Benchmarking model factuality with a fine-grained metric.
+when_not_to_use:
+- Short answers with only 1–2 facts.
+- When no verification source is available.
+- Creative writing where factual claims are intentionally fictional.
+known_pitfalls:
+- Atomic fact decomposition itself can be error-prone.
+- Verification source may be incomplete or outdated.
+- Cost scales with the number of atomic facts.
+related_techniques:
+- chain-of-verification
+primary_source:
+  authors: Min, Krishna, Lyu, Lewis, Yih, Koh, Iyyer, Zettlemoyer, Hajishirzi
+  year: 2023
+  title: 'FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation'
+  venue: arXiv
+  arxiv_id: '2305.14251'
+  url: https://arxiv.org/abs/2305.14251
+usage_templates:
+- template_name: Atomic fact decomposition and verification
+  template: |-
+    Long-form text: {{text}}
+
+    Step 1: Decompose into atomic facts.
+    Atomic Facts: {{atomic_facts}}
+
+    Step 2: Verify each atomic fact against a reliable source.
+    Scores: {{scores}}
+
+    Step 3: Aggregate into overall factuality score.
+    FActScore: {{overall_score}}
+  variables:
+  - name: text
+    description: The long-form text to evaluate.
+    example: Albert Einstein was born in Germany in 1879. He developed the theory of relativity...
+  - name: atomic_facts
+    description: List of decomposed atomic claims.
+    example: '["Albert Einstein was born in Germany.", "Albert Einstein was born in 1879.", "Albert Einstein
+      developed the theory of relativity."]'
+  - name: scores
+    description: Per-fact verification results (Supported / Not Supported).
+    example: '[Supported, Supported, Supported]'
+  - name: overall_score
+    description: Ratio of supported facts to total facts.
+    example: '0.95'
+  template_id: factscore--atomic-verification
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: Decomposition and verification are typically deterministic. Score may vary slightly
+    based on verification source coverage.
+tags:
+- verification
+- factuality
+- atomic
+- long-form
+status: verified-external
+aliases:
+- FactScore
+- Atomic Fact Score
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

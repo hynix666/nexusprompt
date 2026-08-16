@@ -1,0 +1,68 @@
+id: confidence-informed-self-consistency
+name: Confidence-Informed Self-Consistency (CISC)
+category: reasoning-elicitation
+subcategory: consensus-methods
+executive_summary: Improves standard Self-Consistency by replacing unweighted majority voting with confidence-weighted
+  voting, achieving comparable accuracy with a significantly smaller sample size.
+description: Generate N distinct reasoning paths. At the end of each path, the model states the final
+  answer and a self-assessed confidence score (0–100). Aggregate candidate answers using weighted tally
+  proportional to confidence scores.
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- You already use Self-Consistency and want to reduce sampling cost.
+- The model can reliably self-assess confidence.
+- Tasks with clear right/wrong answers.
+when_not_to_use:
+- Models that are poorly calibrated.
+- Open-ended generative tasks without discrete answer choices.
+- When the cost of even 3–5 samples is prohibitive.
+known_pitfalls:
+- Model confidence may not correlate with actual accuracy on all task types.
+- Requires temperature > 0 to generate diverse paths.
+- Confidence elicitation format must be consistent.
+related_techniques:
+- self-consistency
+- chain-of-thought
+primary_source:
+  authors: Taubenfeld, Sheffer, Ofek, Feder, Goldstein, Gekhman, Yona
+  year: 2025
+  title: Confidence Improves Self-Consistency in LLMs
+  venue: Findings of ACL 2025
+  arxiv_id: '2502.06233'
+  url: https://arxiv.org/abs/2502.06233
+usage_templates:
+- template_name: Confidence-weighted path sampling
+  template: |-
+    Question: {{target_question}}
+
+    Instructions:
+    1. Generate {{num_samples}} distinct reasoning paths to solve the question.
+    2. At the end of each path, state the final answer and a self-assessed confidence score between 0 and 100 based on logical certainty.
+    3. Aggregate the candidate answers using a weighted tally proportional to their confidence scores to produce the final consensus answer.
+  variables:
+  - name: target_question
+    description: The question to answer via multiple reasoning paths.
+    example: What is the capital of Australia?
+  - name: num_samples
+    description: Number of distinct reasoning paths to generate.
+    example: '5'
+  template_id: confidence-informed-self-consistency--confidence-weighted-sampling
+  determinism: stochastic-by-design
+  reproducibility_note: Requires temperature > 0 for path diversity. Results vary across runs. Aggregate
+    confidence-weighted scores for consensus.
+tags:
+- reasoning
+- ensemble
+- cost-reduction
+- confidence
+status: verified-external
+aliases:
+- CISC
+- Confidence-Weighted Self-Consistency
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

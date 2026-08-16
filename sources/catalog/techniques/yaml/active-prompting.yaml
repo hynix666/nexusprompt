@@ -1,0 +1,70 @@
+id: active-prompting
+name: Active Prompting
+category: reasoning-elicitation
+subcategory: example-curation
+executive_summary: Instead of picking few-shot CoT exemplars at random or by hand, actively identify which
+  unlabeled questions the model is most uncertain about and prioritize annotating those.
+description: Runs the model multiple times on a pool of unlabeled questions, measures disagreement/uncertainty
+  across samples per question, then has a human annotate CoT reasoning only for the highest-uncertainty
+  questions. Those become the few-shot exemplar set. This targets exemplar-selection quality rather than
+  the reasoning mechanism itself.
+verification_status: unverifiable-by-text
+cost_profile: training-time
+when_to_use:
+- Building a reusable few-shot exemplar set for a new task type and a modest human-annotation budget is
+  available.
+when_not_to_use:
+- One-off queries with no reusable exemplar set being built — the uncertainty-sampling overhead isn't
+  worth it.
+known_pitfalls:
+- Requires a human annotator in the loop for the selected high-uncertainty examples; not a fully automatic
+  pipeline.
+related_techniques:
+- chain-of-thought
+- what-makes-good-in-context-examples
+- auto-cot
+primary_source:
+  authors: Diao, Wang, Hong, Zhang
+  year: 2023
+  title: Active Prompting with Chain-of-Thought for Large Language Models
+  venue: arXiv preprint
+  arxiv_id: '2302.12246'
+  url: https://arxiv.org/abs/2302.12246
+usage_templates:
+- template_name: Uncertainty-sampling exemplar selection
+  template: |-
+    # Step 1 — measure uncertainty (repeat per unlabeled question, k times each)
+    {{zero_shot_cot_prompt_for_question}}
+
+    # Step 2 — rank
+    For each question, compute disagreement across its {{k}} sampled answers (e.g. entropy over the answer distribution). Select the top {{num_to_annotate}} highest-disagreement questions.
+
+    # Step 3 — annotate
+    A human writes gold CoT reasoning for each selected question; these become the few-shot exemplar set for future prompts on this task.
+  variables:
+  - name: zero_shot_cot_prompt_for_question
+    description: Zero-Shot-CoT prompt for one candidate question
+    example: null
+  - name: k
+    description: Samples drawn per question to measure disagreement
+    example: '5'
+  - name: num_to_annotate
+    description: How many top-uncertainty questions get human CoT annotation
+    example: '8'
+  template_id: active-prompting--uncertainty-sampling-exemplar-selection
+  determinism: training-time-not-applicable
+  reproducibility_note: This template describes a training-time process (fine-tuning or policy training),
+    not a single reproducible inference call; reproducibility depends on the training pipeline and data,
+    not on prompt text alone.
+tags:
+- reasoning
+- example-selection
+- human-in-the-loop
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

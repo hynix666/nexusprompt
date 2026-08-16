@@ -1,0 +1,76 @@
+id: lmql
+name: LMQL
+category: structured-constrained-output
+subcategory: query-language-constraints
+executive_summary: Query-language constraints over LLM decoding. Allows developers to specify output structure,
+  variable bindings, and control flow in a SQL-like language that is compiled into constrained decoding
+  operations.
+description: LMQL (Language Model Query Language) provides a high-level syntax for constraining LLM outputs.
+  Developers write queries with placeholders (variables) and constraints (e.g., ANSWER must be one of
+  [yes, no]). The LMQL runtime compiles these into efficient decoding constraints, reducing token waste
+  from invalid outputs and eliminating post-hoc parsing. It supports conditional generation, loops, and
+  function calls.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Applications requiring strict output schemas (forms, structured data extraction).
+- When post-hoc parsing of free-form output is unreliable.
+- Interactive applications needing constrained multi-turn generation.
+when_not_to_use:
+- Simple tasks where unconstrained generation suffices.
+- When the LMQL runtime is not available for your target model.
+- When constraint complexity exceeds the runtime capabilities.
+known_pitfalls:
+- Complex constraints may slow decoding significantly.
+- LMQL runtime adds dependency and deployment complexity.
+- Not all models support the necessary logits access for constrained decoding.
+related_techniques:
+- structured-output-json-mode
+- grammar-constrained-decoding-efficiency
+- sglang
+- xgrammar-structured-generation-engine
+primary_source:
+  authors: Beurer-Kellner, Fischer, Vechev
+  year: 2022
+  title: 'Prompting Is Programming: A Query Language for Large Language Models'
+  venue: arXiv
+  arxiv_id: '2212.06094'
+  url: https://arxiv.org/abs/2212.06094
+usage_templates:
+- template_name: Constrained decoding with query language
+  template: |-
+    LMQL Query:
+    {{lmql_query}}
+
+    Example:
+    argmax
+      "Review: {{review_text}}\n"
+      "Sentiment: [SENTIMENT]"
+      where SENTIMENT in ["positive", "negative", "neutral"]
+      distribution SENTIMENT
+  variables:
+  - name: lmql_query
+    description: The LMQL query defining constraints.
+    example: 'argmax "Name: [NAME]\nAge: [AGE]" where len(AGE) < 3 and AGE.isdigit()'
+  - name: review_text
+    description: The input text interpolated into the worked example inside the LMQL query body.
+    example: The battery lasts two days but the screen scratches easily.
+  template_id: lmql--constrained-query
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: Constraints are enforced at decode time. Output is guaranteed to satisfy constraints.
+    Variable bindings are deterministic.
+tags:
+- structured-generation
+- constraint
+- dsl
+- decoding
+status: verified-external
+aliases:
+- LMQL
+- Language Model Query Language
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

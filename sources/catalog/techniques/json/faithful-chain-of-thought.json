@@ -1,0 +1,74 @@
+{
+  "id": "faithful-chain-of-thought",
+  "name": "Faithful Chain-of-Thought",
+  "category": "reasoning-elicitation",
+  "subcategory": "faithful-reasoning",
+  "executive_summary": "Split reasoning into a Translation stage (query → symbolic reasoning chain) and a Problem Solving stage handled by a deterministic solver, guaranteeing the stated reasoning is what actually produced the answer.",
+  "description": "Directly addresses a specific gap plain CoT has: the generated reasoning chain does not necessarily reflect how the model actually arrived at its answer (unfaithfulness), which undermines using CoT text as an interpretability signal. Faithful CoT's two-stage architecture — translate the query into an explicit symbolic form (e.g. a program or logical expression), then hand that off to a deterministic external solver rather than having the LM 'solve' it in free text — guarantees the reasoning chain is a faithful explanation of the final answer by construction, not just plausible-looking. Outperforms standard CoT on 9 of 10 benchmarks across 4 domains.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Tasks where the reasoning trace itself needs to be trustworthy as an explanation (auditing, high-stakes decisions), not just the final answer.",
+    "Domains with a natural symbolic representation (math, logic, some planning tasks) and an available deterministic solver."
+  ],
+  "when_not_to_use": [
+    "Open-ended tasks with no natural symbolic translation or deterministic solver to hand off to."
+  ],
+  "known_pitfalls": [
+    "Faithfulness is only as good as the Translation stage — if the natural-language-to-symbolic translation itself misrepresents the query, the 'faithful' chain is faithfully wrong."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "program-of-thoughts",
+    "chain-of-verification"
+  ],
+  "primary_source": {
+    "authors": "Lyu, Havaldar, Stein, Zhang, Rao, Wong, Apidianaki, Callison-Burch",
+    "year": 2023,
+    "title": "Faithful Chain-of-Thought Reasoning",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2301.13379",
+    "url": "https://arxiv.org/abs/2301.13379"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Translate-then-solve with a deterministic solver",
+      "template": "# Stage 1 — Translation\nTranslate this query into a symbolic reasoning chain (e.g. a short program or logical expression) that a deterministic solver could execute: {{natural_language_query}}\n\n# Stage 2 — Problem Solving (deterministic, not another LM call)\nExecute {{symbolic_reasoning_chain}} with {{deterministic_solver}} to produce the final answer. The executed chain is, by construction, a faithful explanation of how the answer was reached.",
+      "variables": [
+        {
+          "name": "natural_language_query",
+          "description": "The original query in natural language",
+          "example": null
+        },
+        {
+          "name": "symbolic_reasoning_chain",
+          "description": "Output of the Translation stage",
+          "example": null
+        },
+        {
+          "name": "deterministic_solver",
+          "description": "The external solver executing the symbolic chain (e.g. a Python interpreter, a logic solver)",
+          "example": null
+        }
+      ],
+      "template_id": "faithful-chain-of-thought--translate-then-solve-with-a-deterministic-solver",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "This template depends on an external system (retrieval index, tool, solver, or interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires that system's state to also be fixed."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "faithfulness",
+    "interpretability",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

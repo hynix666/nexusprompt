@@ -1,0 +1,62 @@
+{
+  "id": "plan-and-solve-prompting",
+  "name": "Plan-and-Solve Prompting",
+  "category": "agentic-tool-use",
+  "subcategory": "planning",
+  "executive_summary": "Explicitly separate 'devise a plan' from 'carry out the plan' as two distinct prompted steps, rather than letting planning and execution blur together in one CoT pass.",
+  "description": "Stage one produces an explicit multi-step plan for solving the problem without yet solving any step. Stage two executes the plan step by step, referencing the plan text throughout. Zero-shot, requiring no exemplars, and specifically targets CoT failure modes caused by missing steps or calculation errors from conflating planning and execution.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Multi-step problems where plain zero-shot CoT tends to skip steps or lose track of the overall structure."
+  ],
+  "when_not_to_use": [
+    "Very short, single-step tasks where an explicit plan step is pure overhead."
+  ],
+  "known_pitfalls": [
+    "An incomplete or wrong plan still constrains the execution step, similar to Least-to-Most's decomposition-quality bottleneck."
+  ],
+  "related_techniques": [
+    "least-to-most-prompting",
+    "react",
+    "meta-prompting"
+  ],
+  "primary_source": {
+    "authors": "Wang, Wei, Schuurmans, Le, Chi, Narang, Chowdhery, Zhou",
+    "year": 2023,
+    "title": "Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models",
+    "venue": "ACL 2023",
+    "arxiv_id": "2305.04091",
+    "url": "https://arxiv.org/abs/2305.04091"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Plan-then-execute",
+      "template": "{{question}}\nLet's first understand the problem, extract relevant variables and their corresponding numerals, and devise a complete plan. Then, let's carry out the plan, calculate intermediate results, and solve the problem step by step.",
+      "variables": [
+        {
+          "name": "question",
+          "description": "The problem to solve",
+          "example": null
+        }
+      ],
+      "template_id": "plan-and-solve-prompting--plan-then-execute",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "planning",
+    "zero-shot"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

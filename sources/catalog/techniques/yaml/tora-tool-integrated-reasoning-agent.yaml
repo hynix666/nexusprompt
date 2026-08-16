@@ -1,0 +1,90 @@
+id: tora-tool-integrated-reasoning-agent
+name: ToRA (Tool-Integrated Reasoning Agent)
+category: agentic-tool-use
+subcategory: tool-integrated-reasoning
+executive_summary: Train a model on trajectories interleaving reasoning with executable tool calls for
+  math problems, plus an 'output space shaping' step teaching it to imitate diverse effective reasoning
+  from its own successful attempts.
+description: 'A training-time specialization of the reasoning-plus-tool-use pattern (shared conceptually
+  with PAL and ART) specifically for mathematics: rather than a single prompting recipe, ToRA fine-tunes
+  on synthesized interleaved natural-language-reasoning-and-tool-call trajectories, then applies an additional
+  output-space-shaping step where the model imitates diverse, correct reasoning behaviors sampled from
+  its own successful outputs on training problems. Reported significantly outperforming existing open-source
+  models on math reasoning benchmarks (GSM8k, MATH, and others) at the time of publication, with the smallest
+  7B variant reported outperforming a much larger 70B model that lacked tool integration.'
+verification_status: unverifiable-by-text
+cost_profile: training-time
+when_to_use:
+- Building or fine-tuning a specialized mathematical-reasoning model with tool access, where training-time
+  specialization (not just prompting a general-purpose model) is the goal.
+when_not_to_use:
+- Working with a fixed, general-purpose model with no fine-tuning access — PAL or Program-of-Thoughts
+  achieve a similar tool-integrated-reasoning effect via prompting alone, without requiring training infrastructure.
+known_pitfalls:
+- Training-time technique requiring synthesized trajectory data and a training pipeline — not a drop-in
+  prompting pattern for an off-the-shelf model, same class of limitation as Toolformer and Chain-of-Abstraction
+  elsewhere in this catalog.
+related_techniques:
+- pal-program-aided-language-models
+- program-of-thoughts
+- art-automatic-reasoning-tool-use
+- toolformer-self-supervised-tool-use
+primary_source:
+  authors: Gou, Shao, Gong, Yang, Huang, Duan, Chen, et al.
+  year: 2024
+  title: 'ToRA: A Tool-Integrated Reasoning Agent for Mathematical Problem Solving'
+  venue: ICLR 2024
+  arxiv_id: '2309.17452'
+  url: https://arxiv.org/abs/2309.17452
+usage_templates:
+- template_name: Interleaved reasoning-and-tool-call training trajectory format
+  template: |-
+    # Training example format
+    Problem: {{math_problem}}
+    Reasoning: {{natural_language_reasoning_step}}
+    Tool call: {{tool_call_expression}}
+    Tool output: {{tool_output}}
+    Reasoning: {{next_reasoning_step_using_tool_output}}
+    ... (continue interleaving until solved) ...
+    Final answer: {{final_answer}}
+
+    # Output-space shaping (post-training step)
+    From the model's own successful trajectories on training problems, sample diverse correct reasoning behaviors and further fine-tune the model to imitate that diversity, not just a single canonical solution path per problem.
+  variables:
+  - name: math_problem
+    description: The mathematical problem in a training trajectory
+    example: null
+  - name: natural_language_reasoning_step
+    description: A reasoning step in natural language
+    example: null
+  - name: tool_call_expression
+    description: An executable tool/computation call
+    example: null
+  - name: tool_output
+    description: The tool's returned result
+    example: null
+  - name: next_reasoning_step_using_tool_output
+    description: The next reasoning step, informed by the tool's output
+    example: null
+  - name: final_answer
+    description: The final answer the trajectory arrives at
+    example: null
+  template_id: tora-tool-integrated-reasoning-agent--interleaved-reasoning-and-tool-call-training-trajectory-format
+  determinism: training-time-not-applicable
+  reproducibility_note: This template describes a training-time process (fine-tuning or policy training),
+    not a single reproducible inference call; reproducibility depends on the training pipeline and data,
+    not on prompt text alone.
+tags:
+- agentic
+- tool-use
+- training-time
+- mathematical
+status: verified-external
+aliases:
+- ToRA
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

@@ -1,0 +1,98 @@
+{
+  "id": "tap-tree-of-attacks-with-pruning",
+  "name": "TAP (Tree of Attacks with Pruning)",
+  "category": "prompt-injection-defense",
+  "subcategory": "threat-modeling",
+  "executive_summary": "A black-box jailbreak that grows a tree of candidate prompts via an attacker LLM, self-evaluates and prunes weak branches before querying the target, reporting higher success rates than PAIR at fewer target queries.",
+  "description": "Builds directly on PAIR's black-box attacker-LLM refinement loop (already in this catalog) but adds tree structure and pruning: rather than PAIR's single iteratively-refined candidate, TAP's attacker LLM generates and refines several candidate prompts per iteration, an evaluator LLM prunes branches judged unlikely to succeed or off-topic before they're ever sent to the target, and only the survivors are actually queried against the target model. Reports jailbreaking a higher percentage of prompts than PAIR (using fewer queries against the target in the process) for both open- and closed-source LLMs, and also demonstrated effective against LLMs protected by state-of-the-art guardrails.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "agentic-loop",
+  "when_to_use": [
+    "Red-teaming a deployed system's robustness against black-box, LLM-driven jailbreak search specifically under a limited target-query budget — TAP's pruning is explicitly aimed at reducing queries to the target relative to PAIR.",
+    "Evaluating whether guardrails effective against simpler black-box attacks (PAIR) hold up against a tree-structured, pruned search variant."
+  ],
+  "when_not_to_use": [
+    "N/A — threat-model/red-teaming background, not an applied generation technique."
+  ],
+  "known_pitfalls": [
+    "The pruning step's quality depends on the evaluator LLM's judgment of which branches are 'unpromising' — a poorly-calibrated evaluator could prune a branch that would have succeeded."
+  ],
+  "related_techniques": [
+    "pair-black-box-jailbreak",
+    "gcg-adversarial-suffix-attack",
+    "harmbench-red-teaming-benchmark"
+  ],
+  "primary_source": {
+    "authors": "Mehrotra, Zampetakis, Kassianik, Nelson, Anderson, Singer, Karbasi",
+    "year": 2024,
+    "title": "Tree of Attacks: Jailbreaking Black-Box LLMs Automatically",
+    "venue": "NeurIPS 2024",
+    "arxiv_id": "2312.02119",
+    "url": "https://arxiv.org/abs/2312.02119"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Tree-structured attacker-LLM search with pruning (red-team use)",
+      "template": "As part of a red-team evaluation, grow a pruned attack tree:\nRoot: initial candidate jailbreak prompts targeting behavior {{target_behavior}}: {{initial_candidates}}\n\n# Per iteration\nFor each surviving branch, the attacker LLM generates {{branching_factor}} refined child candidates: {{child_candidates}}\nEvaluator LLM prunes children judged off-topic or unpromising, keeping only: {{surviving_candidates}}\nQuery the target model {{target_llm}} only with the surviving candidates; record compliance/refusal for each.\nRepeat until a successful jailbreak is found or the depth/query budget {{max_depth}} is exhausted.",
+      "variables": [
+        {
+          "name": "target_behavior",
+          "description": "The red-team objective behavior being tested for",
+          "example": null
+        },
+        {
+          "name": "initial_candidates",
+          "description": "Root-level candidate jailbreak prompts",
+          "example": null
+        },
+        {
+          "name": "branching_factor",
+          "description": "How many child candidates each surviving branch generates per iteration",
+          "example": null
+        },
+        {
+          "name": "child_candidates",
+          "description": "Refined candidates generated this iteration before pruning",
+          "example": null
+        },
+        {
+          "name": "surviving_candidates",
+          "description": "Candidates that survived pruning and get queried against the target",
+          "example": null
+        },
+        {
+          "name": "target_llm",
+          "description": "The model under red-team evaluation",
+          "example": null
+        },
+        {
+          "name": "max_depth",
+          "description": "Tree depth / query budget cutoff",
+          "example": null
+        }
+      ],
+      "template_id": "tap-tree-of-attacks-with-pruning--tree-structured-attacker-llm-search-with-pruning-red-team-use",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "This template intentionally samples multiple times or explores adaptively; outputs vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends on intermediate stochastic choices)."
+    }
+  ],
+  "tags": [
+    "security",
+    "adversarial",
+    "red-teaming",
+    "black-box",
+    "tree-search",
+    "agentic-loop"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "TAP"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

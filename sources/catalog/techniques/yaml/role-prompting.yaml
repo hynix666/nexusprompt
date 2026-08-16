@@ -1,0 +1,66 @@
+id: role-prompting
+name: Role Prompting
+category: reasoning-elicitation
+subcategory: foundational
+executive_summary: Assign the model a specific role or persona before the actual task — a simple, extremely
+  widely-used technique shown to measurably improve zero-shot reasoning performance on top of just the
+  role framing alone.
+description: 'One of the most common prompting practices in casual use, formalized and measured academically:
+  prepending a role assignment changes not just tone but measured task accuracy, including on reasoning
+  benchmarks — the role framing shown to elicit more careful, systematic reasoning even without additional
+  exemplars. Distinct from ExpertPrompting (already in this catalog): plain Role Prompting typically uses
+  a single fixed, hand-written role description, while ExpertPrompting automatically generates a tailored,
+  instruction-specific expert identity per query using in-context learning.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Zero-shot tasks where framing the response as coming from a specific relevant role plausibly improves
+  depth, tone, or reasoning care — and a single fixed role (not per-instruction generation) is sufficient.
+when_not_to_use:
+- Tasks where a role framing would be misleading about the assistant's actual capabilities or credentials.
+- Cases needing a different, tailored persona per instruction — see ExpertPrompting instead.
+known_pitfalls:
+- A mismatched or overly narrow role can bias the response toward that role's assumed perspective even
+  when a more general answer would serve the user better.
+related_techniques:
+- expertprompting
+- zero-shot-prompting
+primary_source:
+  authors: Kong, Zhang, Wang, Chen, Yin, Zhang, Zhang, Liu, Liu, Huang
+  year: 2024
+  title: Better Zero-Shot Reasoning with Role-Play Prompting
+  venue: NAACL 2024
+  arxiv_id: '2308.07702'
+  url: https://arxiv.org/abs/2308.07702
+usage_templates:
+- template_name: Fixed role assignment
+  template: |-
+    You are {{role_description}}.
+
+    {{task}}
+  variables:
+  - name: role_description
+    description: The assigned role/persona
+    example: a senior software architect reviewing a pull request for security issues
+  - name: task
+    description: The actual task to perform in that role
+    example: null
+  template_id: role-prompting--fixed-role-assignment
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reasoning
+- persona
+- zero-shot
+- single-call
+- foundational
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

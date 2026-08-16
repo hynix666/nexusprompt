@@ -1,0 +1,65 @@
+id: adaptive-weighted-rejection-sampling
+name: Fast Controlled Generation with Adaptive Weighted Rejection Sampling
+category: structured-constrained-output
+subcategory: rejection-sampling
+executive_summary: Enforce output constraints via rejection sampling with adaptively weighted proposals,
+  trading the finite-state-machine indexing approach for a sampling-based alternative that can be faster
+  in some regimes.
+description: 'An alternative family to index-based grammar-constrained decoding: propose candidate continuations
+  from the unconstrained model, weight proposals adaptively based on how likely they are to satisfy the
+  constraint, and reject-and-resample when a proposal fails. Useful when building a full constrained-decoding
+  index (as in structured-output-json-mode) is impractical for the constraint at hand.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- The constraint is difficult to compile into an efficient finite-state index, or a lighter-weight/library-free
+  approach is preferred.
+when_not_to_use:
+- A well-supported finite-state-index implementation (e.g. structured-output-json-mode) is already available
+  for the constraint type.
+known_pitfalls:
+- Rejection sampling efficiency degrades if the constraint is very restrictive relative to the unconstrained
+  model's proposal distribution — most proposals get rejected.
+related_techniques:
+- structured-output-json-mode
+- grammar-constrained-decoding-efficiency
+primary_source:
+  authors: (local corpus)
+  year: 2025
+  title: Fast Controlled Generation with Adaptive Weighted Rejection Sampling
+  venue: COLM 2025
+  arxiv_id: '2504.05410'
+  url: https://arxiv.org/abs/2504.05410
+usage_templates:
+- template_name: Weighted rejection-sampling loop
+  template: |-
+    Constraint: {{constraint_definition}}
+    Task: {{task_description}}
+    Propose a continuation; weight it by {{adaptive_weight_function}}; accept if it satisfies {{constraint_definition}}, else resample.
+  variables:
+  - name: constraint_definition
+    description: The output constraint being enforced
+    example: null
+  - name: task_description
+    description: The generation task
+    example: null
+  - name: adaptive_weight_function
+    description: How proposal weights are adapted over rejections
+    example: null
+  template_id: adaptive-weighted-rejection-sampling--weighted-rejection-sampling-loop
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- structured-output
+- rejection-sampling
+- efficiency
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: Fast Controlled Generation with Adaptive Weighted Rejection Sampling.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

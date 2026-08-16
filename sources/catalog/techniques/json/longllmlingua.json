@@ -1,0 +1,92 @@
+{
+  "id": "longllmlingua",
+  "name": "LongLLMLingua",
+  "category": "prompt-compression-context-engineering",
+  "subcategory": "question-aware-compression",
+  "executive_summary": "Question-aware coarse-to-fine prompt compression that preserves information relevant to the specific query. Direct successor to LLMLingua with better retention of task-critical tokens.",
+  "description": "LongLLMLingua extends prompt compression by incorporating the question into the compression objective. It first performs coarse compression (removing irrelevant documents), then fine compression (removing irrelevant tokens within retained documents), guided by question relevance scores. This ensures that tokens critical to answering the specific query are preserved.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Long-context RAG where retrieved documents exceed context window.",
+    "When standard compression removes query-relevant information.",
+    "Multi-document QA where only a subset of documents is relevant."
+  ],
+  "when_not_to_use": [
+    "Short contexts where compression is unnecessary.",
+    "When the question is unknown at compression time.",
+    "When compression latency is unacceptable."
+  ],
+  "known_pitfalls": [
+    "Question-aware scoring adds computational overhead.",
+    "Coarse compression may discard documents with subtle relevance.",
+    "Fine compression may break semantic coherence of retained text."
+  ],
+  "related_techniques": [
+    "llmlingua-prompt-compression",
+    "selective-context",
+    "recomp",
+    "retrieval-augmented-generation"
+  ],
+  "primary_source": {
+    "authors": "Jiang, Wu, Luo, Li, Lin, Yang, Qiu",
+    "year": 2023,
+    "title": "LongLLMLingua: Accelerating and Enhancing LLMs in Long Context Scenarios via Prompt Compression",
+    "venue": "arXiv",
+    "arxiv_id": "2310.06839",
+    "url": "https://arxiv.org/abs/2310.06839"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Question-aware coarse-to-fine compression",
+      "template": "Question: {{question}}\nDocuments: {{documents}}\n\nStep 1 (Coarse): Score each document for question relevance.\nRetain top-{{k}} documents: {{retained_documents}}\n\nStep 2 (Fine): Within retained documents, score each token for question relevance.\nCompress by removing low-relevance tokens while preserving coherence.\nCompressed context: {{compressed_context}}\n\nStep 3: Answer question from compressed context.",
+      "variables": [
+        {
+          "name": "question",
+          "description": "The user question.",
+          "example": "What are the side effects of metformin?"
+        },
+        {
+          "name": "documents",
+          "description": "Retrieved documents to compress.",
+          "example": "Doc 1: Metformin is a first-line diabetes medication... Doc 2: Diabetes management guidelines..."
+        },
+        {
+          "name": "k",
+          "description": "Number of documents to retain after coarse compression.",
+          "example": "3"
+        },
+        {
+          "name": "retained_documents",
+          "description": "Documents kept after coarse filtering.",
+          "example": "Doc 1, Doc 3, Doc 5"
+        },
+        {
+          "name": "compressed_context",
+          "description": "Final compressed text after fine token removal.",
+          "example": "Metformin side effects: gastrointestinal upset, vitamin B12 deficiency, lactic acidosis (rare)..."
+        }
+      ],
+      "template_id": "longllmlingua--coarse-fine",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "Compression is deterministic given fixed relevance scoring. The scoring model itself should be run at temperature=0."
+    }
+  ],
+  "tags": [
+    "compression",
+    "context",
+    "question-aware",
+    "cost-reduction"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "LongLLMLingua"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,86 @@
+id: co-star-framework
+name: CO-STAR Framework
+category: template-pattern-scaffolding
+subcategory: production-framing
+executive_summary: Structured prompt framing using Context, Objective, Style, Tone, Audience, and Response
+  format. High-ROI production pattern for ensuring comprehensive prompt coverage.
+description: The CO-STAR framework provides a mnemonic and structural template for writing complete prompts.
+  By explicitly filling in each of the six dimensions, practitioners reduce omissions and improve output
+  quality.
+verification_status: unverifiable-by-text
+cost_profile: single-call
+when_to_use:
+- Complex tasks where prompt completeness is critical.
+- Team environments where prompt consistency across members is needed.
+- When initial prompts are producing vague or off-target outputs.
+when_not_to_use:
+- Simple, well-understood tasks where a one-sentence prompt suffices.
+- When the six dimensions overlap or confuse the model.
+- Rapid prototyping where speed matters more than completeness.
+known_pitfalls:
+- Over-specifying all six dimensions can create conflicting constraints.
+- The framework is a guide, not a rigid formula.
+- Can add token overhead if each dimension is verbose.
+related_techniques:
+- role-prompting
+primary_source:
+  authors: Teo (GovTech Singapore, Data Science and AI team)
+  year: 2023
+  title: How I Won Singapore's GPT-4 Prompt Engineering Competition
+  venue: Towards Data Science
+  arxiv_id: null
+  url: https://towardsdatascience.com/how-i-won-singapores-gpt-4-prompt-engineering-competition-34c195a93d41/
+usage_templates:
+- template_name: CO-STAR structured prompt
+  template: |-
+    **Context**: {{background_information}}
+    **Objective**: {{what_to_achieve}}
+    **Style**: {{writing_style}}
+    **Tone**: {{communication_tone}}
+    **Audience**: {{target_audience}}
+    **Response Format**: {{output_structure}}
+
+    {{task_description}}
+  variables:
+  - name: background_information
+    description: Relevant context the model needs.
+    example: We are launching a new SaaS product for dental clinics.
+  - name: what_to_achieve
+    description: The specific goal.
+    example: Write a landing page headline and subheadline.
+  - name: writing_style
+    description: Desired style.
+    example: Persuasive and professional
+  - name: communication_tone
+    description: Desired tone.
+    example: Confident but approachable
+  - name: target_audience
+    description: Who the output is for.
+    example: Dental clinic owners aged 35-55
+  - name: output_structure
+    description: Format specification.
+    example: |-
+      Headline: [text]
+      Subheadline: [text]
+  - name: task_description
+    description: Any additional task details.
+    example: Emphasize time-saving and patient satisfaction.
+  template_id: co-star-framework--structured-prompt
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: Single LLM call. Output quality depends on the specificity and non-conflicting
+    nature of the six dimensions.
+tags:
+- framing
+- production
+- template
+- practitioner
+status: practitioner-guide
+aliases:
+- CO-STAR
+- COSTAR
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

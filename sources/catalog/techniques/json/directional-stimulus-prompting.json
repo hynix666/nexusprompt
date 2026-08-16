@@ -1,0 +1,80 @@
+{
+  "id": "directional-stimulus-prompting",
+  "name": "Directional Stimulus Prompting (DSP)",
+  "category": "automatic-prompt-optimization",
+  "subcategory": "policy-guided-hints",
+  "executive_summary": "Train a small policy model to generate short hints (like keywords the output should include) inserted into the prompt to steer a frozen, black-box LLM — optimize the hint-generator, not the LLM or base prompt.",
+  "description": "Rather than optimizing the prompt text directly (APE) or evolving a prompt population (Promptbreeder), DSP optimizes a small auxiliary policy model whose only job is to produce query-specific hints — for example, keywords a summary should include — which are then inserted into an otherwise-fixed prompt template before it goes to the large black-box LLM. The policy model is trained with reinforcement learning using the downstream LLM's output quality as the reward signal, making this a way to steer a frozen LLM's behavior without ever fine-tuning the LLM itself or hand-searching over full prompt text.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "training-time",
+  "when_to_use": [
+    "Steering a frozen, black-box LLM (API-only access, no fine-tuning) toward query-specific desired properties, where a small auxiliary model can be trained to generate the steering hints."
+  ],
+  "when_not_to_use": [
+    "A fixed, task-agnostic prompt already performs adequately — training and maintaining a separate policy model is only worth it when per-query steering matters."
+  ],
+  "known_pitfalls": [
+    "Requires a working RL training loop for the policy model, including a usable reward signal derived from the downstream LLM's output quality — more infrastructure than a static prompt-optimization method."
+  ],
+  "related_techniques": [
+    "automatic-prompt-engineer",
+    "opro",
+    "chain-of-density"
+  ],
+  "primary_source": {
+    "authors": "Li, Peng, He, Galley, Gao, Yan",
+    "year": 2023,
+    "title": "Guiding Large Language Models via Directional Stimulus Prompting",
+    "venue": "NeurIPS 2023",
+    "arxiv_id": "2302.11520",
+    "url": "https://arxiv.org/abs/2302.11520"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Policy-generated hint insertion",
+      "template": "# Policy model generates the stimulus (trained via RL against downstream quality)\nQuery: {{query}}\nGenerate a directional stimulus (e.g. {{stimulus_type}}) that would help produce a high-quality response to this query: {{generated_stimulus}}\n\n# Frozen black-box LLM prompt, stimulus inserted\n{{base_prompt_template}}\nHint: your response should include: {{generated_stimulus}}\nQuery: {{query}}",
+      "variables": [
+        {
+          "name": "query",
+          "description": "The specific query being processed",
+          "example": null
+        },
+        {
+          "name": "stimulus_type",
+          "description": "What kind of hint the policy model produces, e.g. keywords for a summary",
+          "example": "keywords"
+        },
+        {
+          "name": "generated_stimulus",
+          "description": "The policy model's generated hint for this specific query",
+          "example": null
+        },
+        {
+          "name": "base_prompt_template",
+          "description": "The otherwise-fixed prompt template the stimulus is inserted into",
+          "example": null
+        }
+      ],
+      "template_id": "directional-stimulus-prompting--policy-generated-hint-insertion",
+      "determinism": "training-time-not-applicable",
+      "reproducibility_note": "This template describes a training-time process (fine-tuning or policy training), not a single reproducible inference call; reproducibility depends on the training pipeline and data, not on prompt text alone."
+    }
+  ],
+  "tags": [
+    "optimization",
+    "policy-guided",
+    "training-time",
+    "black-box"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "DSP"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

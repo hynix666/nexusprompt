@@ -1,0 +1,85 @@
+id: automatic-prompt-optimization-gradient-beam
+name: Automatic Prompt Optimization with Textual Gradients and Beam Search
+category: automatic-prompt-optimization
+subcategory: textual-gradient-search
+executive_summary: Use LLM-generated critiques of failure cases as 'textual gradients' that drive a beam
+  search over prompt edits, a discrete analogue to numerical gradient descent.
+description: For each prompt candidate, run it on a minibatch, collect the errors, and prompt the model
+  to criticize the prompt based on those specific errors (the 'gradient'). Then prompt the model to edit
+  the prompt text in the direction that gradient suggests, producing several new candidates. Beam search
+  over successive rounds keeps the best-performing candidates, mirroring gradient-descent-with-momentum
+  in a discrete text space.
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- An existing prompt has a diagnosable pattern of failures on a labeled minibatch and you want targeted,
+  error-driven edits rather than free-form mutation.
+when_not_to_use:
+- No labeled minibatch with identifiable failure cases exists to compute a 'gradient' from.
+known_pitfalls:
+- Textual gradients can overfit to the specific failure minibatch shown; a genuinely held-out test set
+  is needed to confirm generalization.
+related_techniques:
+- automatic-prompt-engineer
+- promptbreeder
+- opro
+primary_source:
+  authors: Pryzant, Iter, Li, Lee, Zhu, Zeng
+  year: 2023
+  title: Automatic Prompt Optimization with "Gradient Descent" and Beam Search
+  venue: EMNLP 2023
+  arxiv_id: '2305.03495'
+  url: https://arxiv.org/abs/2305.03495
+usage_templates:
+- template_name: Textual-gradient beam search
+  template: |-
+    # Compute gradient
+    Prompt: {{current_prompt}}
+    This prompt gave these wrong outputs on the following inputs: {{error_examples}}
+    Explain, in a sentence, why the prompt led to these errors (this is the 'gradient').
+
+    # Apply gradient
+    Prompt: {{current_prompt}}
+    Gradient: {{textual_gradient}}
+    Edit the prompt to fix the issue described by the gradient. Produce {{num_candidates}} distinct edited candidates.
+
+    # Beam search
+    Evaluate all candidates on {{eval_minibatch}} and keep the top {{beam_width}} for the next round.
+  variables:
+  - name: current_prompt
+    description: The prompt candidate being improved
+    example: null
+  - name: error_examples
+    description: Minibatch examples the prompt got wrong
+    example: null
+  - name: textual_gradient
+    description: The LLM-generated criticism of the current prompt
+    example: null
+  - name: num_candidates
+    description: Edited candidates to generate per gradient
+    example: '4'
+  - name: eval_minibatch
+    description: Labeled examples used to score candidates each round
+    example: null
+  - name: beam_width
+    description: Surviving candidates per round
+    example: '4'
+  template_id: automatic-prompt-optimization-gradient-beam--textual-gradient-beam-search
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- optimization
+- beam-search
+- error-driven
+- multi-call
+status: verified-external
+aliases:
+- APO
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

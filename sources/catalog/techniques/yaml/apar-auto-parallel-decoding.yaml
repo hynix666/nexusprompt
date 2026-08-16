@@ -1,0 +1,82 @@
+id: apar-auto-parallel-decoding
+name: 'APAR: Auto-Parallel Auto-Regressive Decoding'
+category: reasoning-elicitation
+subcategory: parallel-reasoning
+executive_summary: Instruct-tune the model itself to recognize parallelizable structure in its own output
+  and spawn multiple generation threads directly, instead of relying on an external skeleton-then-expand
+  prompting template.
+description: 'A direct successor to Skeleton-of-Thought''s goal (reduce latency by generating independent
+  parts of an answer in parallel), but moves the mechanism from the prompt into the model: instruct-tuning
+  on data containing hierarchical/parallelizable structures teaches the model to autonomously plan its
+  own generation and emit control tokens that spawn parallel generation threads, rather than requiring
+  a separate skeleton-generation prompting stage. Reports up to 2x speed-up alone, and up to 4x when combined
+  with speculative decoding. Unlike Skeleton-of-Thought, this is a training-time technique, not something
+  achievable through prompting an off-the-shelf model — included here as the training-time complement
+  so the parallel-decoding lineage in this catalog is complete.'
+verification_status: unverifiable-by-text
+cost_profile: training-time
+when_to_use:
+- You control model fine-tuning and want parallel-generation speed-ups without a separate skeleton-prompting
+  stage or the coordination overhead of managing parallel API calls yourself.
+when_not_to_use:
+- Working with a fixed, already-trained model with no fine-tuning access — use Skeleton-of-Thought's prompting-only
+  approach instead.
+known_pitfalls:
+- Requires instruct-tuning infrastructure and training data with hierarchical/parallelizable structure;
+  not a pure prompting-layer technique, so it doesn't transfer to models you can't fine-tune.
+related_techniques:
+- skeleton-of-thought
+- self-consistency
+primary_source:
+  authors: Liu, Zeng, Wang, Zhang, Tang, Dong
+  year: 2024
+  title: 'APAR: LLMs Can Do Auto-Parallel Auto-Regressive Decoding'
+  venue: arXiv preprint
+  arxiv_id: '2401.06761'
+  url: https://arxiv.org/abs/2401.06761
+usage_templates:
+- template_name: Instruct-tuning data format for parallel-structure planning
+  template: |-
+    # Training example format for instruct-tuning
+    Instruction: {{instruction}}
+    Response (annotated with parallelization control tokens where the model identifies independent sub-branches):
+    {{main_response_prefix}}
+    [FORK] {{parallel_branch_1}} [FORK] {{parallel_branch_2}} [JOIN]
+    {{main_response_suffix}}
+
+    # At inference, the fine-tuned model emits [FORK]/[JOIN] tokens itself, and the serving system spawns/merges generation threads accordingly — no separate skeleton-generation prompt call is needed.
+  variables:
+  - name: instruction
+    description: The training instruction
+    example: null
+  - name: main_response_prefix
+    description: Sequential content before the parallelizable section
+    example: null
+  - name: parallel_branch_1
+    description: One independently-generatable branch
+    example: null
+  - name: parallel_branch_2
+    description: Another independently-generatable branch
+    example: null
+  - name: main_response_suffix
+    description: Sequential content after the parallelizable section rejoins
+    example: null
+  template_id: apar-auto-parallel-decoding--instruct-tuning-data-format-for-parallel-structure-planning
+  determinism: training-time-not-applicable
+  reproducibility_note: This template describes a training-time process (fine-tuning or policy training),
+    not a single reproducible inference call; reproducibility depends on the training pipeline and data,
+    not on prompt text alone.
+tags:
+- reasoning
+- parallel
+- latency
+- training-time
+status: verified-external
+aliases:
+- APAR
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

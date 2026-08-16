@@ -1,0 +1,82 @@
+{
+  "id": "toolformer-self-supervised-tool-use",
+  "name": "Toolformer (Self-Supervised Tool-Use Training)",
+  "category": "agentic-tool-use",
+  "subcategory": "tool-use-training",
+  "executive_summary": "Train the model itself, in a self-supervised way from just a handful of demonstrations per API, to decide which tool to call, when to call it, what arguments to pass, and how to weave the result back into generation.",
+  "description": "Distinct from ReAct: rather than a prompting pattern applied to an off-the-shelf model, Toolformer trains the model to autonomously insert API calls (calculator, Q&A system, search engines, translation, calendar) into its own generation wherever doing so would have reduced the model's loss on the next tokens, using self-generated candidate API calls filtered by whether they actually help. The result is a model that spontaneously decides for itself when a tool call would help, without a hand-written ReAct-style Thought/Action/Observation scaffold in the prompt. Reports substantially improved zero-shot performance across downstream tasks, often competitive with much larger models, without sacrificing core language modeling ability.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "training-time",
+  "when_to_use": [
+    "You control fine-tuning and want tool-use behavior built into the model's own generation policy, rather than depending on the prompt to scaffold every tool interaction explicitly."
+  ],
+  "when_not_to_use": [
+    "Working with a fixed, already-trained model with no fine-tuning access — use ReAct's pure-prompting approach instead."
+  ],
+  "known_pitfalls": [
+    "Requires self-supervised training infrastructure and the specific set of tools the model is trained on; doesn't generalize to a novel tool at inference time the way a well-designed ReAct prompt can, since tool-selection behavior is baked in at training time."
+  ],
+  "related_techniques": [
+    "react",
+    "program-of-thoughts"
+  ],
+  "primary_source": {
+    "authors": "Schick, Dwivedi-Yu, Dessì, Raileanu, Lomeli, Zettlemoyer, Cancedda, Scialom",
+    "year": 2023,
+    "title": "Toolformer: Language Models Can Teach Themselves to Use Tools",
+    "venue": "NeurIPS 2023",
+    "arxiv_id": "2302.04761",
+    "url": "https://arxiv.org/abs/2302.04761"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Self-supervised API-call training data format",
+      "template": "# Candidate generation (self-sampled by the model during training)\nText so far: {{text_prefix}}\nSample candidate API calls the model itself thinks might help: {{candidate_api_call}}\n\n# Filter by usefulness\nCompare next-token loss on {{ground_truth_continuation}} with vs. without the API call result {{api_call_result}} inserted. Keep the candidate only if including the result reduces loss by more than {{loss_reduction_threshold}}.\n\n# Fine-tune on the filtered, self-annotated examples so the model learns to insert calls like {{candidate_api_call}} autonomously at inference time.",
+      "variables": [
+        {
+          "name": "text_prefix",
+          "description": "The text preceding a candidate insertion point",
+          "example": null
+        },
+        {
+          "name": "candidate_api_call",
+          "description": "A self-generated candidate API call (tool name + arguments)",
+          "example": "[Calculator(27 * 4)]"
+        },
+        {
+          "name": "ground_truth_continuation",
+          "description": "The actual next tokens used to score whether the call helped",
+          "example": null
+        },
+        {
+          "name": "api_call_result",
+          "description": "What the tool returned for the candidate call",
+          "example": null
+        },
+        {
+          "name": "loss_reduction_threshold",
+          "description": "Minimum loss reduction required to keep a candidate as a training example",
+          "example": "0.05"
+        }
+      ],
+      "template_id": "toolformer-self-supervised-tool-use--self-supervised-api-call-training-data-format",
+      "determinism": "training-time-not-applicable",
+      "reproducibility_note": "This template describes a training-time process (fine-tuning or policy training), not a single reproducible inference call; reproducibility depends on the training pipeline and data, not on prompt text alone."
+    }
+  ],
+  "tags": [
+    "agentic",
+    "tool-use",
+    "training-time",
+    "self-supervised"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

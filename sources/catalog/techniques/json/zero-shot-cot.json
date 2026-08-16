@@ -1,0 +1,71 @@
+{
+  "id": "zero-shot-cot",
+  "name": "Zero-Shot Chain-of-Thought",
+  "category": "reasoning-elicitation",
+  "subcategory": "single-path-reasoning",
+  "executive_summary": "Trigger step-by-step reasoning with a single generic phrase like 'Let's think step by step' — no worked examples required at all.",
+  "description": "Appends a fixed trigger sentence after the question, before generation, then (in the two-stage version) extracts the final answer with a second short prompt. Recovers most of the benefit of few-shot CoT without needing hand-written exemplars, making it far cheaper to deploy across new task types.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "You need reasoning-elicitation on a task type with no existing worked examples.",
+    "You want a fast baseline to compare more elaborate reasoning techniques against."
+  ],
+  "when_not_to_use": [
+    "Task-specific few-shot CoT exemplars are already available and cheap to include — they generally outperform the generic trigger."
+  ],
+  "known_pitfalls": [
+    "Gains are smaller than few-shot CoT on tasks with idiosyncratic reasoning structure the generic trigger doesn't match."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "self-consistency"
+  ],
+  "primary_source": {
+    "authors": "Kojima, Gu, Reid, Matsuo, Iwasawa",
+    "year": 2022,
+    "title": "Large Language Models are Zero-Shot Reasoners",
+    "venue": "NeurIPS 2022",
+    "arxiv_id": "2205.11916",
+    "url": "https://arxiv.org/abs/2205.11916"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Two-stage zero-shot trigger",
+      "template": "{{question}}\nLet's think step by step.\n\n--- (generate reasoning, then in a second call) ---\n{{question}}\n{{generated_reasoning}}\nTherefore, the answer is",
+      "variables": [
+        {
+          "name": "question",
+          "description": "The task question, unmodified",
+          "example": null
+        },
+        {
+          "name": "generated_reasoning",
+          "description": "Output from the first-stage call, fed back in",
+          "example": null
+        }
+      ],
+      "template_id": "zero-shot-cot--two-stage-zero-shot-trigger",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "zero-shot",
+    "foundational",
+    "low-cost"
+  ],
+  "status": "corpus-present",
+  "aliases": [
+    "Zero-Shot-CoT",
+    "Let's think step by step"
+  ],
+  "secondary_sources": [],
+  "corpus_file": "Zero-Shot Reasoners v4.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

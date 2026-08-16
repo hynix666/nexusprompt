@@ -1,0 +1,77 @@
+{
+  "id": "gcg-adversarial-suffix-attack",
+  "name": "GCG: Universal Adversarial Suffix Attack",
+  "category": "prompt-injection-defense",
+  "subcategory": "threat-modeling",
+  "executive_summary": "An automatically-optimized adversarial suffix, appended to a harmful request, reliably drives an aligned model toward compliance instead of refusal — and often transfers across different models.",
+  "description": "Uses a combination of greedy and gradient-based discrete search (Greedy Coordinate Gradient) to find a token suffix that, appended to a wide range of harmful queries, maximizes the model's probability of an affirmative ('Sure, here is...') response rather than a refusal. Distinct from hand-crafted jailbreak prompts: the suffix is found automatically and the same suffix transfers across different open- and closed-weight models, making it a threat-model reference point for how brittle refusal-based alignment can be against optimization-based attack, not something one prompt-level review can catch reliably.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "training-time",
+  "when_to_use": [
+    "Red-teaming a deployed system's robustness against optimization-based (not just hand-written) adversarial inputs.",
+    "Threat-modeling whether refusal-based alignment alone is sufficient for a given deployment."
+  ],
+  "when_not_to_use": [
+    "N/A — threat-model/red-teaming background, not an applied generation technique."
+  ],
+  "known_pitfalls": [
+    "Optimized suffixes tend to be low-fluency, high-perplexity token sequences — detectable via perplexity filtering (see baseline-adversarial-defenses), though fluency-constrained variants exist that partially evade this."
+  ],
+  "related_techniques": [
+    "prompt-injection-attack-taxonomy",
+    "baseline-adversarial-defenses",
+    "hackaprompt-taxonomy"
+  ],
+  "primary_source": {
+    "authors": "Zou, Wang, Carlini, Nasr, Kolter, Fredrikson",
+    "year": 2023,
+    "title": "Universal and Transferable Adversarial Attacks on Aligned Language Models",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2307.15043",
+    "url": "https://arxiv.org/abs/2307.15043"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Red-team robustness probe",
+      "template": "As part of a red-team evaluation, test whether the deployed system remains refusal-consistent under adversarially-optimized suffixes:\nBase harmful-category query: {{base_query}}\nKnown/optimized adversarial suffix under test: {{adversarial_suffix}}\nFull probe: {{base_query}} {{adversarial_suffix}}\nRecord whether the system refuses, partially complies, or fully complies, and whether the same suffix succeeds against {{other_models_tested}}.",
+      "variables": [
+        {
+          "name": "base_query",
+          "description": "A harmful-category request used as the red-team base case",
+          "example": null
+        },
+        {
+          "name": "adversarial_suffix",
+          "description": "The suffix under test",
+          "example": null
+        },
+        {
+          "name": "other_models_tested",
+          "description": "Other models being checked for suffix transfer",
+          "example": null
+        }
+      ],
+      "template_id": "gcg-adversarial-suffix-attack--red-team-robustness-probe",
+      "determinism": "training-time-not-applicable",
+      "reproducibility_note": "This template describes a training-time process (fine-tuning or policy training), not a single reproducible inference call; reproducibility depends on the training pipeline and data, not on prompt text alone."
+    }
+  ],
+  "tags": [
+    "security",
+    "adversarial",
+    "red-teaming",
+    "threat-model"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "GCG",
+    "Greedy Coordinate Gradient"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

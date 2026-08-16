@@ -1,0 +1,86 @@
+{
+  "id": "boosting-of-thoughts",
+  "name": "Boosting of Thoughts (BoT)",
+  "category": "reasoning-elicitation",
+  "subcategory": "multi-path-reasoning",
+  "executive_summary": "Iteratively explore and self-evaluate many trees of thoughts, using error analysis on failed attempts to explicitly revise the prompt for the next round — accumulated trial-and-error becomes the prompt itself.",
+  "description": "Starts from a simple prompt requiring no exemplars, then automates the trial-and-error process a human prompt engineer would otherwise do by hand: it iteratively grows and evaluates a large collection of Tree-of-Thoughts-style reasoning steps, extracts error analysis from the model's own assessment of the weak/failed branches, and uses that analysis to explicitly revise the prompt guiding the next round of exploration. The accumulated trial-and-error experience across rounds becomes a new form of prompt in its own right, distinguishing it from ToT's single-pass search.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Complex problems (the paper demonstrates extensive mathematical problem-solving) where a single ToT-style search pass isn't sufficient and iterative refinement based on the model's own error diagnosis would help."
+  ],
+  "when_not_to_use": [
+    "Simple tasks where a single CoT or ToT pass already succeeds reliably — the iterative trial-and-error loop adds unnecessary cost."
+  ],
+  "known_pitfalls": [
+    "Cost is adaptive and can grow substantially across rounds; needs a stopping rule (final answer reached, or round budget exhausted) to bound expense."
+  ],
+  "related_techniques": [
+    "tree-of-thoughts",
+    "self-refine",
+    "self-discover"
+  ],
+  "primary_source": {
+    "authors": "Chen, Li, Niu",
+    "year": 2024,
+    "title": "Boosting of Thoughts: Trial-and-Error Problem Solving with Large Language Models",
+    "venue": "ICLR 2024",
+    "arxiv_id": "2402.11140",
+    "url": "https://arxiv.org/abs/2402.11140"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Iterative explore-evaluate-revise trial-and-error loop",
+      "template": "# Round 1\nProblem: {{problem}}\nExplore {{num_branches}} distinct reasoning trees toward a solution.\n\n# Evaluate\nFor each branch, self-evaluate correctness and identify specific errors in the weak/failed branches: {{error_analysis}}\n\n# Revise prompt for next round\nGiven this error analysis: {{error_analysis}}\nRevise the guiding prompt to explicitly steer away from these errors: {{revised_prompt}}\n\n# Repeat rounds 2..N with the revised prompt until a verified final answer is reached or the round budget {{max_rounds}} is exhausted.",
+      "variables": [
+        {
+          "name": "problem",
+          "description": "The complex problem being solved",
+          "example": null
+        },
+        {
+          "name": "num_branches",
+          "description": "How many reasoning trees to explore per round",
+          "example": "5"
+        },
+        {
+          "name": "error_analysis",
+          "description": "Model-generated diagnosis of what went wrong in failed branches",
+          "example": null
+        },
+        {
+          "name": "revised_prompt",
+          "description": "The prompt for the next round, revised based on error analysis",
+          "example": null
+        },
+        {
+          "name": "max_rounds",
+          "description": "Round budget cutoff",
+          "example": "5"
+        }
+      ],
+      "template_id": "boosting-of-thoughts--iterative-explore-evaluate-revise-trial-and-error-loop",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "This template intentionally samples multiple times or explores adaptively; outputs vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends on intermediate stochastic choices)."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "search",
+    "trial-and-error",
+    "multi-call",
+    "self-revision"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "BoT"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

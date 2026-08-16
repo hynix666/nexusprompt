@@ -1,0 +1,94 @@
+{
+  "id": "autodan-genetic-jailbreak",
+  "name": "AutoDAN: Hierarchical-Genetic-Algorithm Stealthy Jailbreak",
+  "category": "prompt-injection-defense",
+  "subcategory": "threat-modeling",
+  "executive_summary": "Evolve jailbreak prompts with a genetic algorithm to stay semantically fluent, unlike gradient-optimized suffixes — the same prompt then transfers well across different models and different harmful requests.",
+  "description": "Targets exactly the tradeoff GCG accepts and PAIR avoids differently: GCG's optimized suffixes are effective but low-fluency and thus perplexity-detectable; hand-crafted jailbreaks are stealthy but don't scale or transfer well. AutoDAN uses a hierarchical genetic algorithm (sentence-level and word-level mutation/crossover) to automatically evolve prompts that remain semantically coherent while still being optimized for attack success, explicitly measuring and reporting both cross-model transferability (the same evolved prompt working against different target models) and cross-sample universality (the same evolved template working across different harmful requests) — the two properties 'robust/universal' attack research is centrally about. Demonstrated to bypass perplexity-based defenses specifically because its outputs read as fluent text.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "training-time",
+  "when_to_use": [
+    "Red-teaming specifically against perplexity-filter-evading, transferable/universal jailbreak templates rather than one-off or single-target attacks.",
+    "Evaluating whether a defense's effectiveness depends on attack low-fluency (in which case AutoDAN is the appropriate stress test, since GCG alone would understate real risk)."
+  ],
+  "when_not_to_use": [
+    "N/A — threat-model/red-teaming background, not an applied generation technique."
+  ],
+  "known_pitfalls": [
+    "Because AutoDAN prompts are specifically optimized to remain fluent, defenses relying primarily on perplexity/fluency signals (see baseline-adversarial-defenses) are demonstrated in the paper to be largely ineffective against it — it should not be treated as 'caught by the same defenses that catch GCG'."
+  ],
+  "related_techniques": [
+    "gcg-adversarial-suffix-attack",
+    "pair-black-box-jailbreak",
+    "baseline-adversarial-defenses",
+    "promptbreeder"
+  ],
+  "primary_source": {
+    "authors": "Liu, Xu, Chen, Xiao",
+    "year": 2024,
+    "title": "AutoDAN: Generating Stealthy Jailbreak Prompts on Aligned Large Language Models",
+    "venue": "ICLR 2024",
+    "arxiv_id": "2310.04451",
+    "url": "https://arxiv.org/abs/2310.04451"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Genetic-search stealthy-jailbreak evaluation (red-team use)",
+      "template": "As part of a red-team evaluation, evolve a jailbreak template via hierarchical genetic search:\nSeed jailbreak templates (population): {{seed_template_population}}\nFitness function: attack success rate against {{target_model}} on held-out harmful requests {{harmful_request_sample}}, while penalizing perplexity above {{fluency_threshold}}.\nEvolve for {{num_generations}} generations using sentence-level and word-level mutation/crossover. Report the resulting template's attack success rate transferred to other models {{other_target_models}} (cross-model transferability) and across other harmful requests not in the fitness set (cross-sample universality).",
+      "variables": [
+        {
+          "name": "seed_template_population",
+          "description": "Initial population of hand-written or sampled jailbreak template candidates",
+          "example": null
+        },
+        {
+          "name": "target_model",
+          "description": "The model the genetic search is optimized against",
+          "example": null
+        },
+        {
+          "name": "harmful_request_sample",
+          "description": "Held-out harmful requests used to score fitness",
+          "example": null
+        },
+        {
+          "name": "fluency_threshold",
+          "description": "Perplexity ceiling enforced to keep candidates stealthy",
+          "example": "150"
+        },
+        {
+          "name": "num_generations",
+          "description": "How many generations the genetic algorithm runs",
+          "example": "100"
+        },
+        {
+          "name": "other_target_models",
+          "description": "Models used to test cross-model transferability of the evolved template",
+          "example": null
+        }
+      ],
+      "template_id": "autodan-genetic-jailbreak--genetic-search-stealthy-jailbreak-evaluation-red-team-use",
+      "determinism": "training-time-not-applicable",
+      "reproducibility_note": "This template describes a training-time process (fine-tuning or policy training), not a single reproducible inference call; reproducibility depends on the training pipeline and data, not on prompt text alone."
+    }
+  ],
+  "tags": [
+    "security",
+    "adversarial",
+    "red-teaming",
+    "evolutionary",
+    "universal",
+    "stealthy"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "AutoDAN"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

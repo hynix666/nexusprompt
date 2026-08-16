@@ -1,0 +1,85 @@
+id: cumulative-reasoning
+name: Cumulative Reasoning
+category: reasoning-elicitation
+subcategory: multi-path-reasoning
+executive_summary: Maintain a growing pool of validated intermediate propositions and build new conclusions
+  only from ones already accepted into that pool — accumulating verified sub-results like a proof, rather
+  than one linear chain.
+description: 'Assigns three roles to the LLM across the process: a proposer suggests new intermediate
+  propositions derived from the current pool, a verifier checks each proposed step''s validity before
+  it''s accepted into the pool, and a reporter decides when enough has accumulated to produce the final
+  answer. Unlike Tree of Thoughts'' branch-and-prune search over competing paths, Cumulative Reasoning
+  builds a single growing directed graph of mutually-consistent validated propositions, closer in spirit
+  to constructing a formal proof step by step. Reported improving accuracy on logical inference tasks
+  (reported gains over existing methods on a curated logical deduction benchmark) and competition-level
+  mathematics (reported solving a notably higher fraction of MATH dataset problems in the hardest difficulty
+  level than prior prompting methods at the time).'
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Logical deduction or mathematical proof-style tasks where correctness of each intermediate step can
+  be checked before building on it, and accumulating verified sub-results is more natural than committing
+  to one linear guess.
+when_not_to_use:
+- Tasks with no natural notion of a checkable intermediate 'proposition' to accumulate — open-ended or
+  creative tasks.
+known_pitfalls:
+- Cost is adaptive and grows with how many propositions are proposed and verified before the reporter
+  decides to conclude; needs a stopping rule to bound expense.
+related_techniques:
+- tree-of-thoughts
+- chain-of-verification
+- self-discover
+primary_source:
+  authors: Zhang, Yu, Wen, Li, Yue, Xie, Zhang, Wan, Yin
+  year: 2023
+  title: Cumulative Reasoning with Large Language Models
+  venue: arXiv preprint
+  arxiv_id: '2308.04371'
+  url: https://arxiv.org/abs/2308.04371
+usage_templates:
+- template_name: Propose-verify-accumulate loop
+  template: |-
+    Problem: {{problem}}
+    Validated proposition pool so far: {{proposition_pool}}
+
+    # Propose
+    Given the current pool, propose a new intermediate proposition that follows from it: {{proposed_proposition}}
+
+    # Verify
+    Is {{proposed_proposition}} logically valid given {{proposition_pool}}? {{verification_verdict}}
+    If valid, add it to the pool.
+
+    # Report (once the reporter judges enough has accumulated)
+    Given the accumulated validated pool {{proposition_pool}}, produce the final answer to: {{problem}}
+  variables:
+  - name: problem
+    description: The logical/mathematical problem being solved
+    example: null
+  - name: proposition_pool
+    description: The growing set of already-validated intermediate propositions
+    example: null
+  - name: proposed_proposition
+    description: A new candidate proposition proposed this round
+    example: null
+  - name: verification_verdict
+    description: Whether the proposed proposition is accepted into the pool
+    example: null
+  template_id: cumulative-reasoning--propose-verify-accumulate-loop
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- reasoning
+- formal-verification
+- multi-call
+- mathematical
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

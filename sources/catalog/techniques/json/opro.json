@@ -1,0 +1,69 @@
+{
+  "id": "opro",
+  "name": "Large Language Models as Optimizers (OPRO)",
+  "category": "automatic-prompt-optimization",
+  "subcategory": "general-purpose-optimizer",
+  "executive_summary": "Frame the LLM itself as a general-purpose optimizer: describe past solutions and scores in natural language and ask it to propose a better one — applicable to prompt optimization among other tasks.",
+  "description": "Rather than a prompt-specific search procedure, OPRO poses optimization as a meta-prompting loop: the model is shown the problem description, previously tried solutions and their scores (in this application, previously tried prompts and their accuracy), and asked to propose a new solution expected to score higher. Iterating this loop is a general 'LLM-as-optimizer' pattern, of which prompt optimization is one instance among several tested in the paper.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Any optimization problem — including but not limited to prompt text — where solutions and their scores can be expressed compactly in natural language for the model to read as a trajectory."
+  ],
+  "when_not_to_use": [
+    "The scoring function is expensive enough that many optimization rounds are infeasible."
+  ],
+  "known_pitfalls": [
+    "Performance is sensitive to how the optimization trajectory (past solutions + scores) is formatted in the meta-prompt."
+  ],
+  "related_techniques": [
+    "automatic-prompt-engineer",
+    "automatic-prompt-optimization-gradient-beam",
+    "promptbreeder"
+  ],
+  "primary_source": {
+    "authors": "Yang, Wang, Lin, Lee, Ren, Liu, Wang, Chen, Zhou",
+    "year": 2024,
+    "title": "Large Language Models as Optimizers",
+    "venue": "ICLR 2024",
+    "arxiv_id": "2309.03409",
+    "url": "https://arxiv.org/abs/2309.03409"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Trajectory-conditioned proposal",
+      "template": "You are optimizing: {{objective_description}}\nBelow are previously tried solutions and their scores, best first:\n{{solution_score_trajectory}}\n\nGenerate a new solution, different from those above, that you expect to score higher. Output only the solution text.",
+      "variables": [
+        {
+          "name": "objective_description",
+          "description": "What is being optimized and how it's scored",
+          "example": null
+        },
+        {
+          "name": "solution_score_trajectory",
+          "description": "List of (solution, score) pairs tried so far",
+          "example": null
+        }
+      ],
+      "template_id": "opro--trajectory-conditioned-proposal",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "This template intentionally samples multiple times or explores adaptively; outputs vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends on intermediate stochastic choices)."
+    }
+  ],
+  "tags": [
+    "optimization",
+    "meta-prompting",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "OPRO"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,77 @@
+id: skeleton-of-thought
+name: Skeleton-of-Thought (SoT)
+category: reasoning-elicitation
+subcategory: parallel-reasoning
+executive_summary: Generate a short answer skeleton first, then expand every point in that skeleton in
+  parallel, cutting end-to-end latency substantially.
+description: 'Stage one asks the model for a numbered skeleton of the answer (a few words per point, not
+  full prose). Stage two expands each skeleton point independently and in parallel — via batched decoding
+  or concurrent API calls — then concatenates the results. This targets latency rather than accuracy:
+  reported up to 2.39x speed-up across 11 LLMs, with quality gains on some question categories and losses
+  on others, so it is not a uniform win.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- The answer naturally decomposes into a handful of largely independent points (lists, comparisons, multi-part
+  explanations).
+- Latency matters more than squeezing out the last few points of quality.
+when_not_to_use:
+- The answer requires later points to depend on earlier ones (sequential reasoning) — parallel expansion
+  breaks that dependency.
+- Single-call latency is already acceptable for the use case.
+known_pitfalls:
+- Quality can regress on question types needing tight cross-point coherence, since points are expanded
+  without seeing each other's expansions.
+related_techniques:
+- self-consistency
+- graph-of-thoughts
+primary_source:
+  authors: Ning, Lin, Zhou, Yang, Wang
+  year: 2023
+  title: 'Skeleton-of-Thought: Large Language Models Can Do Parallel Decoding'
+  venue: ICLR 2024
+  arxiv_id: '2307.15337'
+  url: https://arxiv.org/abs/2307.15337
+usage_templates:
+- template_name: Two-stage skeleton-then-expand
+  template: |-
+    # Stage 1 — skeleton
+    You're asked: {{question}}
+    Provide a short skeleton of the answer: a numbered list of 3-10 points, each 3-5 words, covering the distinct parts of a full answer. Do not elaborate.
+
+    # Stage 2 — parallel expansion (one call per point, run concurrently)
+    You're answering: {{question}}
+    The full answer skeleton is: {{full_skeleton}}
+    Write only point {{point_index}}: "{{point_text}}" in 1-3 sentences, consistent in tone and detail with the other points but without repeating them.
+  variables:
+  - name: question
+    description: The original question
+    example: null
+  - name: full_skeleton
+    description: The complete skeleton from stage 1, given as context so each expansion stays consistent
+    example: null
+  - name: point_index
+    description: Which numbered point this call expands
+    example: '3'
+  - name: point_text
+    description: The short skeleton text for this point
+    example: null
+  template_id: skeleton-of-thought--two-stage-skeleton-then-expand
+  determinism: requires-external-system
+  reproducibility_note: This template depends on an external system (retrieval index, tool, solver, or
+    interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires
+    that system's state to also be fixed.
+tags:
+- reasoning
+- parallel
+- latency
+- multi-call
+status: verified-external
+aliases:
+- SoT
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

@@ -1,0 +1,66 @@
+{
+  "id": "fantastically-ordered-prompts",
+  "name": "Fantastically Ordered Prompts (Few-Shot Order Sensitivity)",
+  "category": "example-selection-formatting",
+  "subcategory": "exemplar-ordering",
+  "executive_summary": "The order in which few-shot exemplars are presented can swing accuracy from near-chance to state-of-the-art on its own — pick the ordering deliberately rather than arbitrarily.",
+  "description": "Systematically documents that few-shot prompt accuracy is highly sensitive to exemplar order, independent of which exemplars are chosen or how many. Proposes an entropy-based method for selecting a good ordering that doesn't require a labeled validation set to evaluate candidate orderings against.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Few-shot prompts with more than a couple of exemplars where ordering hasn't been deliberately chosen."
+  ],
+  "when_not_to_use": [
+    "Zero-shot prompts, or prompts with only a single exemplar (no ordering to optimize)."
+  ],
+  "known_pitfalls": [
+    "Order sensitivity itself is a symptom of prompt fragility; treating a lucky ordering as evidence of a 'better' prompt is exactly the false-generalization risk documented by the 'When Better Prompts Hurt' literature."
+  ],
+  "related_techniques": [
+    "calibrate-before-use",
+    "what-makes-good-in-context-examples"
+  ],
+  "primary_source": {
+    "authors": "Lu, Bartolo, Moore, Riedel, Stenetorp",
+    "year": 2022,
+    "title": "Fantastically Ordered Prompts and Where to Find Them: Overcoming Few-Shot Prompt Order Sensitivity",
+    "venue": "ACL 2022",
+    "arxiv_id": "2104.08786",
+    "url": "https://arxiv.org/abs/2104.08786"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Entropy-based ordering selection",
+      "template": "Candidate orderings of the same {{num_exemplars}} exemplars: {{ordering_candidates}}\nFor each ordering, run it on a small probing set with no labels required and compute the entropy of the model's output-label distribution across probing inputs. Prefer the ordering with lowest entropy (most confident/consistent) as the one to deploy.",
+      "variables": [
+        {
+          "name": "num_exemplars",
+          "description": "How many few-shot exemplars are being ordered",
+          "example": "4"
+        },
+        {
+          "name": "ordering_candidates",
+          "description": "Different permutations of the same exemplar set",
+          "example": null
+        }
+      ],
+      "template_id": "fantastically-ordered-prompts--entropy-based-ordering-selection",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reliability",
+    "exemplar-ordering",
+    "few-shot"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

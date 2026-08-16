@@ -1,0 +1,83 @@
+{
+  "id": "demonstrate-search-predict",
+  "name": "DSP (Demonstrate-Search-Predict)",
+  "category": "automatic-prompt-optimization",
+  "subcategory": "declarative-compilation",
+  "executive_summary": "A framework composing retrieval and language-model calls into multi-step pipelines via declarative operators — Demonstrate, Search, Predict — the direct architectural predecessor to DSPy, from the same research group.",
+  "description": "Precedes and directly motivates DSPy (already in this catalog): DSP established the core idea of treating retrieval-and-generation pipelines as compositions of a small number of declarative, reusable operators rather than hand-chained prompt strings, specifically for knowledge-intensive NLP where a single retrieve-then-read step is often insufficient (e.g. multi-hop questions needing several rounds of retrieval interleaved with reasoning). DSPy generalized DSP's operators into a broader programming model with automatic compilation/optimization (teleprompters); DSP itself is the earlier, narrower system focused specifically on the demonstrate/search/predict pattern for retrieval-augmented pipelines. Reported substantially outperforming both a vanilla retrieve-then-read pipeline and the contemporary retrieval-and-reasoning state of the art on multiple knowledge-intensive QA benchmarks.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Multi-hop, knowledge-intensive QA pipelines needing several interleaved rounds of retrieval and reasoning, where a single retrieve-then-generate pass (plain RAG) is insufficient.",
+    "Historical/architectural context for understanding what DSPy generalized from, when deciding whether DSPy's fuller compilation machinery is needed or DSP's narrower pattern suffices."
+  ],
+  "when_not_to_use": [
+    "Single-hop retrieval tasks where plain RAG's one retrieve-then-generate pass already suffices — DSP's multi-step composition is unnecessary overhead.",
+    "New projects with no reason to prefer DSP's narrower operator set over DSPy's more general, actively-maintained successor framework."
+  ],
+  "known_pitfalls": [
+    "Superseded in practice by DSPy for most new work, which generalizes DSP's operators and adds automatic compilation — DSP is primarily relevant now for understanding the lineage rather than as a first choice for new systems."
+  ],
+  "related_techniques": [
+    "dspy",
+    "retrieval-augmented-generation",
+    "retrieval-augmented-thoughts"
+  ],
+  "primary_source": {
+    "authors": "Khattab, Santhanam, Li, Hall, Liang, Potts, Zaharia",
+    "year": 2022,
+    "title": "Demonstrate-Search-Predict: Composing Retrieval and Language Models for Knowledge-Intensive NLP",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2212.14024",
+    "url": "https://arxiv.org/abs/2212.14024"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Demonstrate-search-predict composed pipeline",
+      "template": "# Demonstrate — bootstrap few-shot examples for each pipeline stage\nFrom a small labeled set, bootstrap demonstrations for the search and predict stages: {{bootstrapped_demonstrations}}\n\n# Search — retrieve, possibly across multiple hops\nQuery: {{query}}\nRetrieve relevant passages: {{retrieved_passages_hop_1}}\nIf multi-hop, generate a follow-up query informed by hop 1 and retrieve again: {{retrieved_passages_hop_2}}\n\n# Predict — generate the final answer using retrieved context\nUsing {{bootstrapped_demonstrations}} and all retrieved passages, answer: {{query}}",
+      "variables": [
+        {
+          "name": "bootstrapped_demonstrations",
+          "description": "Few-shot examples auto-bootstrapped for the pipeline stages",
+          "example": null
+        },
+        {
+          "name": "query",
+          "description": "The original knowledge-intensive query",
+          "example": null
+        },
+        {
+          "name": "retrieved_passages_hop_1",
+          "description": "Passages retrieved in the first search hop",
+          "example": null
+        },
+        {
+          "name": "retrieved_passages_hop_2",
+          "description": "Passages retrieved in a second, follow-up search hop",
+          "example": null
+        }
+      ],
+      "template_id": "demonstrate-search-predict--demonstrate-search-predict-composed-pipeline",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "This template depends on an external system (retrieval index, tool, solver, or interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires that system's state to also be fixed."
+    }
+  ],
+  "tags": [
+    "optimization",
+    "retrieval",
+    "declarative",
+    "multi-hop",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "DSP"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,67 @@
+id: analogical-prompting
+name: Analogical Prompting
+category: reasoning-elicitation
+subcategory: example-curation
+executive_summary: Ask the model to generate its own relevant worked examples before solving the actual
+  problem, removing the need for a hand-labeled exemplar set entirely.
+description: Instead of supplying few-shot exemplars, the prompt asks the model to first recall or invent
+  problems related to the target and solve those, then use that self-generated context to solve the real
+  problem — an analogy to how a human might recall a similar solved problem before tackling a new one.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- No hand-labeled few-shot exemplars are available and writing them is costly.
+when_not_to_use:
+- High-quality curated exemplars already exist — hand-picked or actively-selected exemplars generally
+  outperform self-generated ones.
+known_pitfalls:
+- Self-generated 'similar problems' can be superficially similar but structurally misleading, propagating
+  a bad analogy into a bad solution.
+related_techniques:
+- chain-of-thought
+- active-prompting
+- generated-knowledge-prompting
+primary_source:
+  authors: Yasunaga, Chen, Li, Pásztor, Leskovec, Liang, Zhou
+  year: 2024
+  title: Large Language Models as Analogical Reasoners
+  venue: ICLR 2024
+  arxiv_id: '2310.01714'
+  url: https://arxiv.org/abs/2310.01714
+usage_templates:
+- template_name: Self-generated analogy exemplars
+  template: |-
+    Problem: {{problem}}
+
+    # Step 1: Recall
+    Recall {{num_related}} distinct problems that are related to this one and briefly explain why each is related.
+
+    # Step 2: Solve the related problems
+    Solve each of the {{num_related}} related problems, showing your reasoning.
+
+    # Step 3: Solve the target
+    Using the related problems and their solutions above as guidance, now solve the original problem: {{problem}}
+  variables:
+  - name: problem
+    description: The target problem to solve
+    example: null
+  - name: num_related
+    description: How many self-generated analogous problems to produce
+    example: '3'
+  template_id: analogical-prompting--self-generated-analogy-exemplars
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reasoning
+- self-generated-examples
+- zero-shot
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

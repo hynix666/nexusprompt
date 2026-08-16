@@ -1,0 +1,79 @@
+id: hyde
+name: HyDE (Hypothetical Document Embeddings)
+category: retrieval-augmentation
+subcategory: hypothetical-retrieval
+executive_summary: Have the LLM write a hypothetical answer document, embed that, and retrieve against
+  it. Enables zero-shot dense retrieval without a trained query encoder.
+description: 'HyDE addresses the vocabulary mismatch problem in dense retrieval by using the generative
+  model''s own language to bridge query and document embeddings. Step 1: generate a plausible passage.
+  Step 2: embed it. Step 3: retrieve nearest real passages. Step 4: answer from ground-truth passages.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Zero-shot dense retrieval where no labeled query-document pairs exist.
+- Short or ambiguous queries that poorly match document embeddings.
+- Domains where the LLM can generate plausible passages sharing embedding space with real documents.
+- Zero-shot dense retrieval where no labeled query-document pairs exist for training.
+- Domains where the LLM can hallucinate plausible passages that share embedding space with real documents.
+when_not_to_use:
+- When retrieval latency is critical.
+- Domains where the model cannot generate plausible hypothetical documents.
+- When a strong trained retriever already exists.
+- When retrieval latency is critical (adds one generation + embedding call).
+- Domains where the model cannot generate plausible hypothetical documents (very specialized technical
+  domains).
+known_pitfalls:
+- The hypothetical document may introduce hallucinated concepts that pollute retrieval.
+- Requires an embedding model compatible with the generator's output distribution.
+- Performance degrades if the query is already well-formed and specific.
+related_techniques:
+- retrieval-augmented-generation
+- generated-knowledge-prompting
+- self-rag
+- query2doc
+primary_source:
+  authors: Gao, Ma, Lin, Callan
+  year: 2022
+  title: Precise Zero-Shot Dense Retrieval without Relevance Labels
+  venue: arXiv
+  arxiv_id: '2212.10496'
+  url: https://arxiv.org/abs/2212.10496
+usage_templates:
+- template_name: HyDE zero-shot retrieval
+  template: |-
+    Query: {{query}}
+
+    Step 1 — Generate a plausible passage that would answer this query:
+    Hypothetical doc: {{hypothetical_doc}}
+
+    Step 2 — Embed hypothetical_doc and retrieve top-k real passages from index.
+    Step 3 — Answer from retrieved ground-truth passages.
+  variables:
+  - name: query
+    description: The user query for retrieval.
+    example: What are the health benefits of intermittent fasting?
+  - name: hypothetical_doc
+    description: LLM-generated passage that would answer the query.
+    example: Intermittent fasting has been associated with improved insulin sensitivity, weight loss,
+      reduced inflammation, and cellular repair processes such as autophagy...
+  template_id: hyde--zero-shot-retrieval
+  determinism: stochastic-by-design
+  reproducibility_note: Requires one generation call + one embedding call + retrieval call. Hypothetical
+    document varies with temperature.
+tags:
+- retrieval
+- embedding
+- zero-shot
+- dense-retrieval
+status: verified-external
+aliases:
+- HyDE
+- Hypothetical Document Embedding
+- hyde-hypothetical-document-embeddings
+- HyDE (Hypothetical Document Embeddings)
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

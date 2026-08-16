@@ -1,0 +1,72 @@
+{
+  "id": "prompt-decorators",
+  "name": "Prompt Decorators",
+  "category": "template-pattern-scaffolding",
+  "subcategory": "declarative-control-syntax",
+  "executive_summary": "Control LLM reasoning, formatting, and behavior through compact declarative control tokens prepended to a prompt, instead of verbose natural-language instructions — decoupling task content from execution behavior.",
+  "description": "Addresses a specific reproducibility/modularity gap in the Prompt Pattern Catalog's design-pattern approach (already in this catalog): patterns there are documented but still expressed as natural-language instruction text, which is verbose and hard to compose predictably. Prompt Decorators instead formalizes twenty core behavioral control tokens across two families (Cognitive & Generative — reasoning style, structure; Expressive & Systemic — tone, session control), each modifying one behavioral dimension without touching task content, with a defined syntax, scoping model, and deterministic processing pipeline. This makes prompt behavior auditable and composable the way a well-designed configuration flag set is, rather than depending on how persuasively an instruction sentence was phrased.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Building a reusable prompt template library where behavioral control (reasoning style, tone, format) needs to be predictable, composable, and auditable across many prompts, rather than re-specified in prose each time."
+  ],
+  "when_not_to_use": [
+    "One-off prompts with no reuse or composability requirement — plain natural-language instruction is simpler."
+  ],
+  "known_pitfalls": [
+    "Requires the base model to reliably interpret the decorator syntax as control tokens rather than literal text; effectiveness depends on how well the model has been exposed to (or can infer) this convention."
+  ],
+  "related_techniques": [
+    "prompt-pattern-catalog",
+    "promptsource"
+  ],
+  "primary_source": {
+    "authors": "Heris",
+    "year": 2025,
+    "title": "Prompt Decorators: A Declarative and Composable Syntax for Reasoning, Formatting, and Control in LLMs",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2510.19850",
+    "url": "https://arxiv.org/abs/2510.19850"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Decorator-prefixed prompt",
+      "template": "{{decorator_1}}\n{{decorator_2}}\n{{task_prompt}}",
+      "variables": [
+        {
+          "name": "decorator_1",
+          "description": "A control token modifying one behavioral dimension",
+          "example": "+++Reasoning"
+        },
+        {
+          "name": "decorator_2",
+          "description": "A second control token, e.g. tone or formatting",
+          "example": "+++Tone(style=formal)"
+        },
+        {
+          "name": "task_prompt",
+          "description": "The actual task content, unaffected in meaning by the decorators",
+          "example": null
+        }
+      ],
+      "template_id": "prompt-decorators--decorator-prefixed-prompt",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "template",
+    "declarative-syntax",
+    "control",
+    "composable"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

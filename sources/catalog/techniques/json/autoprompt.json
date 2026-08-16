@@ -1,0 +1,86 @@
+{
+  "id": "autoprompt",
+  "name": "AutoPrompt",
+  "category": "automatic-prompt-optimization",
+  "subcategory": "gradient-based-discrete-search",
+  "executive_summary": "Automatically search for a fixed sequence of 'trigger tokens' to insert into a template, using gradient information to guide a discrete search over the vocabulary — one of the earliest automatic prompt-search methods.",
+  "description": "Predates and is a direct conceptual ancestor of the LLM-driven prompt-search methods elsewhere in this catalog (APE, Promptbreeder, APO, OPRO): rather than using an LLM to propose or critique candidate prompts in natural language, AutoPrompt uses a gradient-guided search directly over the token vocabulary — computing which token substitutions at each trigger position would most improve the training objective, then greedily selecting among the top candidates. Applied originally to eliciting factual/relational knowledge and sentiment/NLI behavior from masked and autoregressive language models without any fine-tuning, using only a handful of labeled training examples to guide the search. The resulting 'prompts' are often not fluent, human-readable text — closer to an unconstrained set of tokens optimized purely for the training objective than a hand-writable instruction — which distinguishes AutoPrompt's search space from later LLM-driven optimizers that search over fluent natural-language candidates.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "training-time",
+  "when_to_use": [
+    "Historical/foundational context for understanding the lineage of automatic prompt optimization — useful when explaining why later methods (APE onward) moved to LLM-driven natural-language search instead of raw gradient-guided token search.",
+    "White-box access to model gradients is available and a small labeled training set exists to guide the search, and human-readability of the resulting prompt isn't required."
+  ],
+  "when_not_to_use": [
+    "Black-box, API-only model access with no gradient information — none of the gradient-guided search steps are possible without white-box access.",
+    "A human-readable, editable prompt is required — AutoPrompt's discovered trigger tokens are typically not fluent text."
+  ],
+  "known_pitfalls": [
+    "Requires white-box gradient access, which most production LLM deployments (API-only) don't provide — this limits AutoPrompt's applicability compared to the black-box methods (APE, OPRO, Promptbreeder) that dominate practical use today."
+  ],
+  "related_techniques": [
+    "automatic-prompt-engineer",
+    "gcg-adversarial-suffix-attack",
+    "opro"
+  ],
+  "primary_source": {
+    "authors": "Shin, Razeghi, Logan IV, Wallace, Singh",
+    "year": 2020,
+    "title": "AutoPrompt: Eliciting Knowledge from Language Models with Automatically Generated Prompts",
+    "venue": "EMNLP 2020",
+    "arxiv_id": "2010.15980",
+    "url": "https://arxiv.org/abs/2010.15980"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Gradient-guided trigger-token search (conceptual)",
+      "template": "Prompt template: {{fixed_template_with_trigger_slots}}\nLabeled training examples: {{training_examples}}\n\n# Search (iterative)\nFor each trigger token position, compute which vocabulary substitutions would most improve the training objective (via gradient information), producing a candidate set: {{candidate_substitutions}}\nEvaluate top candidates on {{training_examples}} and greedily select the substitution that most improves performance: {{selected_trigger_tokens}}\nRepeat until convergence or a fixed iteration budget {{max_iterations}} is reached.\n\n# Resulting prompt (may not be fluent text)\n{{fixed_template_with_trigger_slots}} with trigger slots filled by {{selected_trigger_tokens}}",
+      "variables": [
+        {
+          "name": "fixed_template_with_trigger_slots",
+          "description": "The template with fixed structure and searchable trigger-token positions",
+          "example": null
+        },
+        {
+          "name": "training_examples",
+          "description": "Small labeled training set guiding the search",
+          "example": null
+        },
+        {
+          "name": "candidate_substitutions",
+          "description": "Candidate token substitutions at a given position",
+          "example": null
+        },
+        {
+          "name": "selected_trigger_tokens",
+          "description": "The tokens selected via the search process so far",
+          "example": null
+        },
+        {
+          "name": "max_iterations",
+          "description": "Search iteration budget",
+          "example": null
+        }
+      ],
+      "template_id": "autoprompt--gradient-guided-trigger-token-search-conceptual",
+      "determinism": "training-time-not-applicable",
+      "reproducibility_note": "This template describes a training-time process (fine-tuning or policy training), not a single reproducible inference call; reproducibility depends on the training pipeline and data, not on prompt text alone."
+    }
+  ],
+  "tags": [
+    "optimization",
+    "gradient-based",
+    "discrete-search",
+    "training-time",
+    "foundational"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

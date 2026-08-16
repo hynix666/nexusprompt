@@ -1,0 +1,80 @@
+{
+  "id": "autogen",
+  "name": "AutoGen",
+  "category": "agentic-tool-use",
+  "subcategory": "multi-agent-orchestration",
+  "executive_summary": "Microsoft's multi-agent conversation framework supporting flexible conversation patterns between LLM agents and humans, enabling complex collaborative task solving.",
+  "description": "AutoGen provides a programmable framework for building applications with multiple conversational agents. Agents can converse with each other, with humans, or with tools. The framework supports customizable conversation patterns (round-robin, hierarchical, group chat).",
+  "verification_status": "judge-checkable",
+  "cost_profile": "agentic-loop",
+  "when_to_use": [
+    "Complex tasks requiring collaboration between specialized agents.",
+    "Human-in-the-loop workflows where agents must consult users at decision points.",
+    "Rapid prototyping of multi-agent systems without building communication infrastructure from scratch."
+  ],
+  "when_not_to_use": [
+    "Simple single-agent tasks where ReAct or direct prompting suffices.",
+    "Cost-sensitive applications where agent conversation loops can explode token usage.",
+    "When deterministic, reproducible output is required."
+  ],
+  "known_pitfalls": [
+    "Conversation loops can diverge or enter infinite cycles without proper termination conditions.",
+    "Agent role definitions must be precise to avoid role confusion.",
+    "Debugging multi-agent interactions is significantly harder than single-agent chains."
+  ],
+  "related_techniques": [
+    "react",
+    "multiagent-debate"
+  ],
+  "primary_source": {
+    "authors": "Wu, Bansal, Zhang, Wu, Li, Zhu, Jiang, Zhang, Zhang, Liu, et al.",
+    "year": 2023,
+    "title": "AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation",
+    "venue": "arXiv",
+    "arxiv_id": "2308.08155",
+    "url": "https://arxiv.org/abs/2308.08155"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Multi-agent conversation pattern",
+      "template": "Task: {{task}}\n\nAgents: {{agent_list_with_capabilities}}\n\nConversation Pattern: {{pattern}}\n- Round-robin\n- Hierarchical\n- Custom\n\nExecute conversation until task completion or termination condition met.",
+      "variables": [
+        {
+          "name": "task",
+          "description": "The overall task for the agent team.",
+          "example": "Build a Python web scraper that extracts headlines from a news site."
+        },
+        {
+          "name": "agent_list_with_capabilities",
+          "description": "List of agents and their roles.",
+          "example": "[\"Coder: writes Python code\", \"Reviewer: checks for bugs\", \"Tester: validates output\"]"
+        },
+        {
+          "name": "pattern",
+          "description": "Conversation topology.",
+          "example": "round-robin"
+        }
+      ],
+      "template_id": "autogen--multi-agent-conversation",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "Multi-agent conversations are non-deterministic. Set temperature=0 for each agent to maximize reproducibility, but speaker selection and interaction dynamics still introduce variance."
+    }
+  ],
+  "tags": [
+    "agent",
+    "multi-agent",
+    "orchestration",
+    "framework"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "AutoGen Framework"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

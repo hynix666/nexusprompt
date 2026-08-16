@@ -1,0 +1,81 @@
+id: self-discover
+name: Self-Discover
+category: reasoning-elicitation
+subcategory: structure-composition
+executive_summary: Have the model select, adapt, and compose atomic reasoning modules into a task-specific
+  reasoning structure before solving, instead of applying one fixed technique like CoT to every task.
+description: 'Argues that CoT, Least-to-Most, and Step-Back each make an implicit, fixed assumption about
+  how to approach a task — but every task has its own intrinsic reasoning structure, and no single atomic
+  technique fits all of them. Self-Discover works in two stages: an offline stage where the model selects
+  relevant atomic reasoning modules from a set (analogy to human strategies like ''use critical thinking'',
+  ''break into subproblems''), adapts each to the task, then composes them into an explicit task-specific
+  reasoning structure (a JSON-like plan); and an online stage where that discovered structure guides the
+  actual per-instance reasoning. Reports substantial gains over CoT on reasoning-heavy benchmarks (BigBench-Hard,
+  Thinking for Doing, MATH) with 10-40x less inference compute than some other multi-path methods.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- A task's reasoning structure isn't known in advance and a fixed single technique (plain CoT, Least-to-Most)
+  may be a poor match for it.
+- You want the structure-discovery cost amortized once (offline stage) and reused across many task instances
+  of the same type.
+when_not_to_use:
+- The task's reasoning structure is already well understood and a specific technique (e.g. Program-of-Thoughts
+  for numerical tasks) is already known to fit — the discovery overhead is unnecessary.
+known_pitfalls:
+- Discovery quality depends on the model correctly selecting and composing modules from the given set;
+  a poorly composed structure constrains every downstream per-instance reasoning pass.
+related_techniques:
+- chain-of-thought
+- least-to-most-prompting
+- meta-prompting
+primary_source:
+  authors: Zhou, Pujara, Ren, Chen, Cheng, Le, Chi, Zhou, Mishra, Zheng
+  year: 2024
+  title: 'Self-Discover: Large Language Models Self-Compose Reasoning Structures'
+  venue: NeurIPS 2024
+  arxiv_id: '2402.03620'
+  url: https://arxiv.org/abs/2402.03620
+usage_templates:
+- template_name: Discover-then-apply reasoning structure
+  template: |-
+    # Offline: discover the structure (once per task type)
+    Available reasoning modules: {{module_list}}
+    Task description: {{task_description}}
+    SELECT the modules relevant to this task, ADAPT each to the task's specifics, then IMPLEMENT them as a structured, step-by-step reasoning plan (a JSON-like key-value structure): {{discovered_reasoning_structure}}
+
+    # Online: apply the structure (per instance)
+    Reasoning structure: {{discovered_reasoning_structure}}
+    Instance: {{task_instance}}
+    Follow the structure step by step to solve this instance.
+  variables:
+  - name: module_list
+    description: Set of atomic reasoning module descriptions to select from
+    example: null
+  - name: task_description
+    description: General description of the task type
+    example: null
+  - name: discovered_reasoning_structure
+    description: The composed, task-specific reasoning plan from the offline stage
+    example: null
+  - name: task_instance
+    description: A specific instance of the task to solve using the discovered structure
+    example: null
+  template_id: self-discover--discover-then-apply-reasoning-structure
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reasoning
+- structure-discovery
+- multi-call
+- reusable
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

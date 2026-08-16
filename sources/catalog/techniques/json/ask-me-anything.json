@@ -1,0 +1,87 @@
+{
+  "id": "ask-me-anything",
+  "name": "Ask Me Anything (Prompt Ensembling via Weak Supervision)",
+  "category": "template-pattern-scaffolding",
+  "subcategory": "prompt-ensembling",
+  "executive_summary": "Aggregate answers from several deliberately imperfect prompts via weak supervision, instead of searching for one single 'best' prompt.",
+  "description": "Rather than hunting for an optimal prompt, generates several open-ended question-style prompts for the same underlying task (each individually noisy/imperfect), collects their outputs, and combines them with a weak-supervision aggregation model that accounts for each prompt's estimated reliability and correlations between prompts. Reframes prompt design from a single-point optimization problem to an ensembling problem.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "No single prompt reliably captures the task, but several different framings each capture it partially and imperfectly."
+  ],
+  "when_not_to_use": [
+    "A single well-tested prompt already performs reliably — ensembling adds cost without a clear benefit."
+  ],
+  "known_pitfalls": [
+    "Weak-supervision aggregation assumes some structure in how prompts correlate/err; a poorly chosen aggregation model can itself introduce bias."
+  ],
+  "related_techniques": [
+    "self-consistency",
+    "multiagent-debate"
+  ],
+  "primary_source": {
+    "authors": "Arora, Narayan, Chen, Orr, Guha, Bhatia, Chami, Sala, Ré",
+    "year": 2023,
+    "title": "Ask Me Anything: A Simple Strategy for Prompting Language Models",
+    "venue": "ICLR 2023",
+    "arxiv_id": "2210.02441",
+    "url": "https://arxiv.org/abs/2210.02441"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Multi-prompt weak-supervision ensemble",
+      "template": "# Generate several imperfect prompt framings for the same underlying task\n{{prompt_framing_1}}\n{{prompt_framing_2}}\n{{prompt_framing_3}}\n\n# Collect each framing's answer per input, then aggregate\nGiven answers {{answer_from_framing_1}}, {{answer_from_framing_2}}, {{answer_from_framing_3}} for the same input, combine them via a weak-supervision aggregation model weighted by each framing's estimated reliability.",
+      "variables": [
+        {
+          "name": "prompt_framing_1",
+          "description": "One question-style framing of the underlying task",
+          "example": null
+        },
+        {
+          "name": "prompt_framing_2",
+          "description": "A second, differently-worded framing",
+          "example": null
+        },
+        {
+          "name": "prompt_framing_3",
+          "description": "A third framing",
+          "example": null
+        },
+        {
+          "name": "answer_from_framing_1",
+          "description": "Output from framing 1 on a given input",
+          "example": null
+        },
+        {
+          "name": "answer_from_framing_2",
+          "description": "Output from framing 2",
+          "example": null
+        },
+        {
+          "name": "answer_from_framing_3",
+          "description": "Output from framing 3",
+          "example": null
+        }
+      ],
+      "template_id": "ask-me-anything--multi-prompt-weak-supervision-ensemble",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "template",
+    "ensembling",
+    "weak-supervision",
+    "multi-call"
+  ],
+  "status": "corpus-present",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": "Ask Me Anything.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

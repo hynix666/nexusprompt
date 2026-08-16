@@ -1,0 +1,339 @@
+{
+  "note": "Optional addendum to the 168-record file: four records closing its four unresolved cross-references. Append to 'techniques' and set catalog_metadata.entry_count to 172. Citations resolved against the live arXiv record.",
+  "closes": {
+    "chain-of-symbol": [
+      "chain-of-code"
+    ],
+    "knn-prompting": [
+      "medprompt-framework"
+    ],
+    "query2doc": [
+      "hyde"
+    ],
+    "self-edit-code": [
+      "swe-agent"
+    ]
+  },
+  "techniques": [
+    {
+      "id": "chain-of-symbol",
+      "name": "Chain-of-Symbol (CoS) Prompting",
+      "category": "reasoning-elicitation",
+      "subcategory": "symbolic-intermediate-representation",
+      "executive_summary": "Replace the natural-language description of a spatial environment in the reasoning chain with condensed symbols, so the model reasons over a compact symbolic state instead of prose.",
+      "description": "Chain-of-Thought describes intermediate state in natural language, which is verbose and, for spatial or relational problems, ambiguous. CoS keeps the chained-reasoning structure but represents the environment with a fixed symbolic vocabulary -- objects, positions and relations rendered as tokens rather than sentences. On planning tasks that require tracking a virtual spatial layout, this both shortens the prompt and removes the paraphrase noise that causes the model to lose track of the state. The gain is largest where the state is structured and the prose encoding of it is redundant.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "single-call",
+      "when_to_use": [
+        "The task carries a structured state -- spatial layout, graph, board position -- that prose re-describes at every step.",
+        "Prompt length is a constraint and the natural-language state encoding dominates the token budget.",
+        "Chain-of-Thought traces show the model losing track of relations between entities across steps."
+      ],
+      "when_not_to_use": [
+        "The task state is genuinely narrative and has no compact symbolic form.",
+        "The reasoning trace must be read by a human who does not know the symbol vocabulary.",
+        "The model is small enough that it cannot hold an ad-hoc symbol convention consistently across a long chain."
+      ],
+      "known_pitfalls": [
+        "The symbol vocabulary has to be defined in the prompt and used consistently; a drifting convention is worse than prose.",
+        "Gains are concentrated in spatial and relational tasks and do not transfer automatically to arithmetic or commonsense reasoning.",
+        "Compressed traces are harder to audit when the answer is wrong."
+      ],
+      "related_techniques": [
+        "chain-of-thought",
+        "chain-of-code",
+        "chain-of-draft",
+        "plan-and-solve-prompting"
+      ],
+      "primary_source": {
+        "authors": "Hu, Lu, Zhang, Song, Lam, Zhang",
+        "year": 2023,
+        "title": "Chain-of-Symbol Prompting Elicits Planning in Large Langauge Models",
+        "venue": "arXiv",
+        "arxiv_id": "2305.10276",
+        "url": "https://arxiv.org/abs/2305.10276"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Symbolic state chain",
+          "template": "Represent the environment using only these symbols: {{symbol_legend}}\n\nEnvironment:\n{{environment_description}}\n\nTask: {{task_question}}\n\nThink step by step. At each step, restate the environment in symbolic form only -- no prose descriptions of positions. Give the final answer on the last line.",
+          "variables": [
+            {
+              "name": "symbol_legend",
+              "description": "The symbol vocabulary and what each token denotes.",
+              "example": "/ = on top of, | = beside, # = blocked cell"
+            },
+            {
+              "name": "environment_description",
+              "description": "The initial state, in prose or already symbolic.",
+              "example": "Brick A is on brick B; brick C is beside brick B."
+            },
+            {
+              "name": "task_question",
+              "description": "The planning or reasoning question to answer.",
+              "example": "In what order can the bricks be removed?"
+            }
+          ],
+          "template_id": "chain-of-symbol--symbolic-state-chain",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "A single LLM call with a fixed symbol legend. Output varies with the legend chosen; fix the legend to reproduce."
+        }
+      ],
+      "tags": [
+        "reasoning",
+        "spatial",
+        "symbolic",
+        "token-efficiency"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "CoS",
+        "Chain of Symbol"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "knn-prompting",
+      "name": "kNN Prompting",
+      "category": "example-selection-formatting",
+      "subcategory": "retrieval-based-example-selection",
+      "executive_summary": "Query the model once per training example to obtain distributed representations, then classify a test instance by nearest-neighbour lookup over those representations instead of stuffing demonstrations into the context.",
+      "description": "In-context learning cannot scale past the context window, and it needs calibration to counter position and label bias. kNN Prompting sidesteps both: the LLM's output distribution over each training instance becomes that instance's representation, and prediction is a nearest-neighbour vote among stored representations. Because the model's distribution is used to align test and training instances rather than to emit a label directly, no calibration step is required, and the method keeps improving as training data grows well beyond what would fit in a prompt.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "You have far more labelled examples than fit in the context window.",
+        "The task is classification and in-context learning is visibly miscalibrated across label choices or example orderings.",
+        "One-off indexing cost is acceptable in exchange for cheaper, steadier inference."
+      ],
+      "when_not_to_use": [
+        "The task is open-ended generation rather than classification.",
+        "You cannot afford one model call per training instance to build the datastore.",
+        "Labelled data is scarce enough that ordinary few-shot prompting already covers it."
+      ],
+      "known_pitfalls": [
+        "The datastore must be rebuilt when the underlying model changes; representations are model-specific.",
+        "Retrieval quality bounds accuracy -- a noisy or unbalanced datastore propagates straight into predictions.",
+        "Storage and lookup cost grow with the training set."
+      ],
+      "related_techniques": [
+        "few-shot-prompting",
+        "what-makes-good-in-context-examples",
+        "retrieval-augmented-generation"
+      ],
+      "primary_source": {
+        "authors": "Xu, Wang, Mao, Lyu, She, Zhang",
+        "year": 2023,
+        "title": "kNN Prompting: Beyond-Context Learning with Calibration-Free Nearest Neighbor Inference",
+        "venue": "ICLR 2023",
+        "arxiv_id": "2303.13824",
+        "url": "https://arxiv.org/abs/2303.13824"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Datastore probe prompt",
+          "template": "{{task_instruction}}\n\nInput: {{instance_text}}\nLabel:",
+          "variables": [
+            {
+              "name": "task_instruction",
+              "description": "The task framing, identical for every probe.",
+              "example": "Classify the sentiment of the review."
+            },
+            {
+              "name": "instance_text",
+              "description": "A training or test instance to encode.",
+              "example": "The plot dragged but the acting saved it."
+            }
+          ],
+          "template_id": "knn-prompting--datastore-probe",
+          "determinism": "requires-external-system",
+          "reproducibility_note": "The prompt itself is a single deterministic call, but the prediction depends on an external datastore of cached representations and a nearest-neighbour index."
+        }
+      ],
+      "tags": [
+        "example-selection",
+        "retrieval",
+        "classification",
+        "calibration-free"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "kNN Prompting",
+        "kNN-Prompting"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "query2doc",
+      "name": "Query2doc",
+      "category": "retrieval-augmentation",
+      "subcategory": "query-expansion",
+      "executive_summary": "Few-shot prompt an LLM to write a pseudo-document answering the query, then append that pseudo-document to the query before retrieval.",
+      "description": "Short queries are poor retrieval keys: they under-specify intent and share few terms with relevant passages. Query2doc has the model generate a plausible answer document from parametric knowledge and concatenates it with the original query, widening lexical overlap for sparse retrievers and sharpening the embedding for dense ones. The pseudo-document does not need to be factually correct -- it needs to carry the vocabulary and framing of the documents that would answer the query. No retriever fine-tuning is involved.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "Queries are short or ambiguous and recall is the binding constraint.",
+        "You run BM25 or another sparse retriever that depends on term overlap.",
+        "You cannot fine-tune the retriever but can afford one extra generation per query."
+      ],
+      "when_not_to_use": [
+        "Query latency budget does not allow a generation step before retrieval.",
+        "The corpus is in a domain the model knows nothing about, so the pseudo-document adds noise instead of vocabulary.",
+        "Queries are already long, well-specified documents."
+      ],
+      "known_pitfalls": [
+        "A hallucinated pseudo-document can drag retrieval toward the wrong topic; weighting the original query terms higher mitigates this.",
+        "Gains shrink for strong dense retrievers already trained in-domain.",
+        "Adds one model call to every query, which dominates cost at scale."
+      ],
+      "related_techniques": [
+        "hyde",
+        "retrieval-augmented-generation",
+        "few-shot-prompting"
+      ],
+      "primary_source": {
+        "authors": "Wang, Yang, Wei",
+        "year": 2023,
+        "title": "Query2doc: Query Expansion with Large Language Models",
+        "venue": "EMNLP 2023",
+        "arxiv_id": "2303.07678",
+        "url": "https://arxiv.org/abs/2303.07678"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Few-shot pseudo-document expansion",
+          "template": "Write a passage that answers the given query.\n\n{{few_shot_examples}}\n\nQuery: {{query}}\nPassage:",
+          "variables": [
+            {
+              "name": "few_shot_examples",
+              "description": "Four to eight query/passage exemplars from the domain.",
+              "example": "Query: how tall is Everest\nPassage: Mount Everest rises 8,849 m ..."
+            },
+            {
+              "name": "query",
+              "description": "The user query to expand.",
+              "example": "side effects of ibuprofen"
+            }
+          ],
+          "template_id": "query2doc--few-shot-expansion",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "One LLM call per query. The retrieval step that consumes the expanded query is external and deterministic given a fixed index."
+        }
+      ],
+      "tags": [
+        "retrieval",
+        "query-expansion",
+        "sparse-retrieval",
+        "pseudo-document"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "query2doc",
+        "Query Expansion with LLMs"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "self-edit-code",
+      "name": "Self-Edit (Fault-Aware Code Editor)",
+      "category": "self-verification-refinement",
+      "subcategory": "execution-feedback-repair",
+      "executive_summary": "Run the generated program on the example test case, wrap the execution result into a comment, and have a fault-aware editor pass rewrite the code using that comment as guidance.",
+      "description": "Generate-and-edit rather than generate-and-resample. The first pass produces a candidate program; the candidate is executed against the test case supplied with the problem; the observed outcome -- passed, wrong answer, or the actual error message -- is appended as a supplementary comment; and an editing pass repairs the code with that evidence in hand. Because the feedback is an execution result rather than the model's own opinion of its output, the repair signal is grounded, which is what separates this from unguided self-critique.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "The task is code generation and at least one executable test case ships with the problem.",
+        "Sampling many candidates is too expensive and you want to improve pass@1 instead of pass@k.",
+        "A sandbox is available to execute untrusted generated code safely."
+      ],
+      "when_not_to_use": [
+        "No test case or executable specification exists, leaving nothing to generate grounded feedback from.",
+        "Execution is unsafe or unavailable in the deployment environment.",
+        "The example test is so weak that passing it says nothing about correctness."
+      ],
+      "known_pitfalls": [
+        "Overfitting to the single example test: code can be edited until it passes that case while remaining wrong in general.",
+        "Executing model-generated code requires a sandbox; running it unguarded is a security hole.",
+        "Repeated edit rounds show diminishing returns and can oscillate between two broken variants."
+      ],
+      "related_techniques": [
+        "self-refine",
+        "codet",
+        "structured-cot-code-generation",
+        "chain-of-code"
+      ],
+      "primary_source": {
+        "authors": "Zhang, Li, Li, Li, Jin",
+        "year": 2023,
+        "title": "Self-Edit: Fault-Aware Code Editor for Code Generation",
+        "venue": "ACL 2023",
+        "arxiv_id": "2305.04087",
+        "url": "https://arxiv.org/abs/2305.04087"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Execution-annotated edit pass",
+          "template": "Problem:\n{{problem_statement}}\n\nCandidate solution:\n{{generated_code}}\n\n# Execution on the example test case:\n# {{execution_result}}\n\nRewrite the solution so that it is correct. Return only the corrected code.",
+          "variables": [
+            {
+              "name": "problem_statement",
+              "description": "The original problem description and its example test.",
+              "example": "Given a list of integers, return the two indices that sum to the target."
+            },
+            {
+              "name": "generated_code",
+              "description": "The first-pass candidate program.",
+              "example": "def two_sum(nums, target): ..."
+            },
+            {
+              "name": "execution_result",
+              "description": "Verbatim outcome of running the candidate: passed, the wrong output, or the interpreter error.",
+              "example": "IndexError: list index out of range"
+            }
+          ],
+          "template_id": "self-edit-code--execution-annotated-edit",
+          "determinism": "requires-external-system",
+          "reproducibility_note": "Requires a sandboxed execution step between the generation and edit calls; the edit call itself is deterministic at temperature zero given a fixed execution result."
+        }
+      ],
+      "tags": [
+        "code-generation",
+        "execution-feedback",
+        "self-correction",
+        "repair"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "Self-Edit",
+        "Fault-Aware Code Editor"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+id: nemo-guardrails
+name: NeMo Guardrails
+category: prompt-injection-defense
+subcategory: runtime-guardrails
+executive_summary: Programmable runtime rails (Colang) for input/output control. Defines safety and topical
+  boundaries programmatically, enabling fine-grained governance of LLM behavior without modifying the
+  model.
+description: NeMo Guardrails is a framework for adding programmable guardrails to LLM applications. Developers
+  write Colang to define flows that control what topics the model can discuss, what actions it can take,
+  and how it should handle sensitive inputs. The rails operate at runtime, intercepting inputs and outputs
+  to enforce policy.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Production applications requiring enforceable topic boundaries.
+- When you need input/output validation beyond what the prompt can provide.
+- Multi-turn conversations where policy must be maintained across turns.
+when_not_to_use:
+- Simple one-shot tasks where a system prompt is sufficient.
+- When the guardrail rules are so complex they introduce latency or false positives.
+- Applications requiring the model to adapt dynamically to user intent.
+known_pitfalls:
+- Colang rules can become complex and hard to maintain at scale.
+- Guardrails may be bypassed by sophisticated prompt injection if not combined with other defenses.
+- False positives can degrade user experience.
+related_techniques:
+- instruction-hierarchy
+primary_source:
+  authors: Rebedea, Dinu, Sreedhar, Parisien, Cohen
+  year: 2023
+  title: 'NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications with Programmable Rails'
+  venue: arXiv
+  arxiv_id: '2310.10501'
+  url: https://arxiv.org/abs/2310.10501
+usage_templates:
+- template_name: Colang guardrail definition
+  template: |-
+    define user ask politics
+      "What do you think about politics?"
+      "Who should I vote for?"
+
+    define bot refuse politics
+      "I'm not able to discuss politics."
+
+    define flow politics
+      user ask politics
+      bot refuse politics
+
+    # Additional rules:
+    {{additional_colang_rules}}
+  variables:
+  - name: additional_colang_rules
+    description: Additional Colang rules for specific application needs.
+    example: |-
+      define user ask medical advice
+        "Should I take aspirin?"
+      define bot refuse medical
+        "I'm not a doctor. Please consult a healthcare professional."
+  template_id: nemo-guardrails--colang-definition
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: Guardrails are deterministic rule engines. Output depends on whether input matches
+    defined patterns. No LLM non-determinism in the rail matching itself.
+tags:
+- security
+- guardrails
+- runtime
+- production
+status: verified-external
+aliases:
+- Guardrails
+- Colang
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

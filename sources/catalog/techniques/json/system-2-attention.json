@@ -1,0 +1,77 @@
+{
+  "id": "system-2-attention",
+  "name": "System 2 Attention (S2A)",
+  "category": "reasoning-elicitation",
+  "subcategory": "context-filtering",
+  "executive_summary": "Have the model rewrite the input context, stripping irrelevant or biasing material, then reason only over the cleaned version — filtering before reasoning rather than reasoning over the raw, misleading context.",
+  "description": "Named as an analogy to Kahneman's System 1 (fast, automatic) versus System 2 (slow, deliberate) distinction: standard transformer attention is fundamentally System-1-like, since irrelevant or biasing context can still influence the soft attention distribution over all tokens even when the model 'knows better'. S2A adds an explicit, deliberate step: prompt the model to regenerate the context, keeping only the parts relevant and unbiased for the task, then run the actual reasoning/response generation over that regenerated context instead of the original. Demonstrated improving factuality and objectivity on tasks specifically designed to contain distracting opinions or irrelevant context, and reducing sycophancy (agreeing with a stated opinion embedded in the prompt rather than reasoning independently).",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "User-supplied context that may contain irrelevant details, stated opinions, or leading framing that could bias the model's response away from an objective answer.",
+    "Tasks specifically vulnerable to sycophancy, where the prompt itself hints at an expected answer."
+  ],
+  "when_not_to_use": [
+    "Clean, already-relevant context with no plausible source of bias or irrelevant distraction — the filtering step is pure overhead.",
+    "Tasks where the 'irrelevant' details are actually load-bearing in a way a filtering pass might strip out incorrectly."
+  ],
+  "known_pitfalls": [
+    "The filtering step itself is a judgment call by the model — it can strip content that seemed irrelevant but wasn't, same class of risk as any context-rewriting technique."
+  ],
+  "related_techniques": [
+    "thread-of-thought",
+    "rephrase-and-respond",
+    "problem-elaboration-prompting"
+  ],
+  "primary_source": {
+    "authors": "Weston, Sukhbaatar",
+    "year": 2023,
+    "title": "System 2 Attention (is something you might need too)",
+    "venue": "arXiv preprint (Meta AI)",
+    "arxiv_id": "2311.11829",
+    "url": "https://arxiv.org/abs/2311.11829"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Filter-then-reason",
+      "template": "# Stage 1 — regenerate, filtering out irrelevant/biasing content\nOriginal context: {{original_context}}\nRewrite this context, keeping only the parts that are relevant and objective for answering the question, removing any irrelevant details, stated opinions, or leading framing: {{filtered_context}}\n\n# Stage 2 — reason over the filtered context only\n{{filtered_context}}\nQuestion: {{question}}",
+      "variables": [
+        {
+          "name": "original_context",
+          "description": "The raw, potentially biased/distracting input context",
+          "example": null
+        },
+        {
+          "name": "filtered_context",
+          "description": "The model's own regenerated, filtered version of the context",
+          "example": null
+        },
+        {
+          "name": "question",
+          "description": "The actual question to answer using only the filtered context",
+          "example": null
+        }
+      ],
+      "template_id": "system-2-attention--filter-then-reason",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "context-filtering",
+    "bias-reduction",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "S2A"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "id": "thought-propagation",
+  "name": "Thought Propagation (TP)",
+  "category": "reasoning-elicitation",
+  "subcategory": "analogical-reasoning",
+  "executive_summary": "Solves problems by identifying analogous sub-problems, propagating solutions from similar known problems, and adapting them to the target problem.",
+  "description": "Thought Propagation works by: (1) analyzing the target problem to identify its core structure, (2) retrieving or generating analogous problems with known solutions, (3) propagating the solution structure from analogs to the target, and (4) adapting the propagated solution to fit target-specific constraints. This mimics human analogical reasoning and is particularly effective for structured problems.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Problems with identifiable structural analogs.",
+    "Mathematical and logical reasoning where pattern transfer helps.",
+    "When direct reasoning fails but similar problems have been solved before."
+  ],
+  "when_not_to_use": [
+    "Novel problems with no structural analogs.",
+    "When analog retrieval is unreliable or biased.",
+    "Tasks where surface similarity misleads (false analogies)."
+  ],
+  "known_pitfalls": [
+    "False analogies can propagate incorrect solutions.",
+    "Analog retrieval quality determines overall performance.",
+    "Adaptation step may introduce errors when analog and target differ subtly."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "analogical-prompting",
+    "algorithm-of-thoughts",
+    "buffer-of-thoughts"
+  ],
+  "primary_source": {
+    "authors": "Yu, He, Ying",
+    "year": 2023,
+    "title": "Thought Propagation: An Analogical Approach to Complex Reasoning with Large Language Models",
+    "venue": "arXiv",
+    "arxiv_id": "2310.03965",
+    "url": "https://arxiv.org/abs/2310.03965"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Analogical problem solving via thought propagation",
+      "template": "Target Problem: {{target_problem}}\n\nStep 1: Identify core structure of target problem.\nStructure: {{problem_structure}}\n\nStep 2: Find/generate analogous problems with known solutions.\nAnalogs: {{analog_problems}}\n\nStep 3: Propagate solution structure from analogs.\nPropagated Solution: {{propagated_solution}}\n\nStep 4: Adapt to target-specific constraints.\nAdapted Solution: {{adapted_solution}}\n\nFinal Answer:",
+      "variables": [
+        {
+          "name": "target_problem",
+          "description": "The problem to solve.",
+          "example": "Find the shortest path in a weighted graph with negative edges."
+        },
+        {
+          "name": "problem_structure",
+          "description": "The abstract structure of the problem.",
+          "example": "Shortest path in graph with negative weights"
+        },
+        {
+          "name": "analog_problems",
+          "description": "Similar problems with known solutions.",
+          "example": "[Bellman-Ford algorithm for negative weights], [Dijkstra for non-negative weights]"
+        },
+        {
+          "name": "propagated_solution",
+          "description": "Solution structure transferred from analogs.",
+          "example": "Dynamic relaxation approach: iteratively update distances until convergence."
+        },
+        {
+          "name": "adapted_solution",
+          "description": "Solution adapted to target constraints.",
+          "example": "Apply Bellman-Ford with early termination if no updates occur in an iteration."
+        }
+      ],
+      "template_id": "thought-propagation--analogical-propagation",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "Analog generation/retrieval may be non-deterministic. Propagation and adaptation should be deterministic at temperature=0."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "analogy",
+    "pattern-transfer",
+    "problem-solving"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "TP",
+    "Thought Propagation"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

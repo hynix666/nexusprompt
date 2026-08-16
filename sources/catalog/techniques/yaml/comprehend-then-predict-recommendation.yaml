@@ -1,0 +1,75 @@
+id: comprehend-then-predict-recommendation
+name: Comprehend-Then-Predict Recommendation Prompting
+category: domain-specific-application
+subcategory: recommendation
+executive_summary: Combine semantic (text-based item/user understanding) and collaborative (interaction-pattern)
+  signals in a single recommendation prompt, rather than relying on text alone.
+description: 'Structures a recommendation prompt in two conceptual stages: first have the model comprehend
+  semantic content about items/users (descriptions, reviews, attributes), then predict recommendations
+  informed by both that semantic comprehension and collaborative-filtering-style interaction signals (what
+  similar users engaged with).'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Recommendation tasks where both item text/metadata and user interaction history are available.
+when_not_to_use:
+- Cold-start scenarios with no interaction history at all, or tasks with no semantic/text signal to comprehend.
+known_pitfalls:
+- Quality depends on how well collaborative signals are actually summarized into the prompt; naively dumping
+  raw interaction logs risks exceeding context limits.
+related_techniques:
+- prompting-llms-recommender-systems
+- enhancing-zero-shot-recommendations
+primary_source:
+  authors: (local corpus, Zhejiang University)
+  year: 2025
+  title: 'Comprehend Then Predict: Prompting LLMs for Recommendation with Semantic and Collaborative Data'
+  venue: arXiv preprint
+  arxiv_id: null
+  url: null
+usage_templates:
+- template_name: Two-stage semantic + collaborative recommendation
+  template: |-
+    # Comprehend
+    Item descriptions: {{item_metadata}}
+    User profile: {{user_profile_text}}
+    Summarize what this user is likely to value in an item.
+
+    # Predict
+    User value summary: {{value_summary}}
+    Similar users' top interactions: {{collaborative_signal}}
+    Candidate items: {{candidate_items}}
+    Rank the candidates for this user, using both the value summary and the collaborative signal.
+  variables:
+  - name: item_metadata
+    description: Text descriptions/attributes of candidate items
+    example: null
+  - name: user_profile_text
+    description: Text describing the target user
+    example: null
+  - name: value_summary
+    description: Output of the comprehend stage
+    example: null
+  - name: collaborative_signal
+    description: Summarized interaction patterns from similar users
+    example: null
+  - name: candidate_items
+    description: The pool of items being ranked
+    example: null
+  template_id: comprehend-then-predict-recommendation--two-stage-semantic-collaborative-recommendation
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- recommendation
+- domain-specific
+- multi-call
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: Comprehend Then Predict.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

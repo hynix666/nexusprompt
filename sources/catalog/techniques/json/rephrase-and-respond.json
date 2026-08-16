@@ -1,0 +1,64 @@
+{
+  "id": "rephrase-and-respond",
+  "name": "Rephrase and Respond (RaR)",
+  "category": "template-pattern-scaffolding",
+  "subcategory": "self-clarification",
+  "executive_summary": "Have the model rephrase and expand the question itself before answering it, letting the model ask itself a clearer version of an ambiguous or underspecified question.",
+  "description": "A lightweight, single-call technique: the prompt asks the model to first restate and elaborate the question in its own words (surfacing implicit ambiguity or missing detail), then answer the rephrased version. Cheap to add on top of any other technique in this catalog.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Questions that may be ambiguously or tersely phrased, where the model restating them first could surface hidden assumptions."
+  ],
+  "when_not_to_use": [
+    "Already precise, unambiguous questions — the rephrase step is pure overhead."
+  ],
+  "known_pitfalls": [
+    "The model's own rephrasing can introduce a subtly different question than the one actually asked, silently changing what gets answered."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "prompt-pattern-catalog"
+  ],
+  "primary_source": {
+    "authors": "Deng, Zhang, Chen, Wei, Xu",
+    "year": 2023,
+    "title": "Rephrase and Respond: Let Large Language Models Ask Better Questions for Themselves",
+    "venue": "NeurIPS 2023",
+    "arxiv_id": "2311.04205",
+    "url": "https://arxiv.org/abs/2311.04205"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Rephrase-then-answer",
+      "template": "{{original_question}}\nRephrase and expand the question, then respond to your rephrased version.",
+      "variables": [
+        {
+          "name": "original_question",
+          "description": "The original, possibly underspecified question",
+          "example": null
+        }
+      ],
+      "template_id": "rephrase-and-respond--rephrase-then-answer",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "template",
+    "clarification",
+    "single-call",
+    "low-cost"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "RaR"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

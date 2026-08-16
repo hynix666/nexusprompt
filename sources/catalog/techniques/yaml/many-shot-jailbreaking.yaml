@@ -1,0 +1,78 @@
+id: many-shot-jailbreaking
+name: Many-Shot Jailbreaking (MSJ)
+category: prompt-injection-defense
+subcategory: threat-modeling
+executive_summary: Stuff hundreds of fake 'harmful Q, harmful A' turns into a long context before the
+  real question — the model completes the pattern instead of following safety training, success scaling
+  as a power law in shot count.
+description: 'Exploits large context windows directly: rather than any clever wording, the attack simply
+  provides many demonstrations (tens to hundreds) of the model answering harmful requests, then asks a
+  final real harmful question. In-context learning from the fabricated pattern outweighs the model''s
+  safety training as shot count grows, with attack success following a predictable power-law scaling.
+  Effective across models from multiple developers, robust to changes in the specific harmful topic and
+  format. The most directly relevant addition to this catalog''s `example-selection-formatting` category
+  as a threat model: it''s a many-shot in-context-learning attack, the adversarial mirror image of techniques
+  like Active Prompting or nearest-neighbor exemplar selection.'
+verification_status: unverifiable-by-text
+cost_profile: single-call
+when_to_use:
+- Threat-modeling any system with a long context window and any path for a user or ingested document to
+  supply many turns of conversation history or few-shot content.
+when_not_to_use:
+- N/A — threat-model background, not an applied generation technique.
+known_pitfalls:
+- Reported mitigations (retraining to recognize the many-shot pattern) raise the number of shots required
+  rather than eliminating the vulnerability outright — attackers can typically compensate by adding more
+  shots, since the attack is scalable by construction as context windows grow.
+related_techniques:
+- lost-in-the-middle
+- what-makes-good-in-context-examples
+- active-prompting
+primary_source:
+  authors: Anil, Durmus, Panickssery, Sharma, Benton, Kundu, Batson, Rimsky, Tong, Mu, Ford, et al. (Anthropic)
+  year: 2024
+  title: Many-Shot Jailbreaking
+  venue: NeurIPS 2024
+  arxiv_id: null
+  url: https://www.anthropic.com/research/many-shot-jailbreaking
+usage_templates:
+- template_name: Long-context robustness probe (red-team use)
+  template: |-
+    As part of a red-team evaluation, test robustness to many-shot pattern completion:
+    Fabricated dialogue history ({{num_shots}} turns, each a harmful-question/compliant-answer pair on category {{harm_category}}): {{fabricated_dialogue_block}}
+
+    Real final question (same category): {{real_question}}
+    Record whether the model refuses (safety training holds) or completes the pattern (attack succeeds), and at what shot count {{num_shots}} the behavior flips, to estimate the model's power-law threshold.
+  variables:
+  - name: num_shots
+    description: How many fabricated harmful Q/A pairs are included
+    example: '128'
+  - name: harm_category
+    description: The category of harmful content used in the fabricated shots
+    example: null
+  - name: fabricated_dialogue_block
+    description: The concatenated fake dialogue history
+    example: null
+  - name: real_question
+    description: The actual final harmful question being tested
+    example: null
+  template_id: many-shot-jailbreaking--long-context-robustness-probe-red-team-use
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- security
+- adversarial
+- long-context
+- in-context-learning
+- red-teaming
+status: verified-external
+aliases:
+- MSJ
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

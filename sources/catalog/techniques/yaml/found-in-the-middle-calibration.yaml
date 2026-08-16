@@ -1,0 +1,79 @@
+id: found-in-the-middle-calibration
+name: Found-in-the-Middle Positional Calibration
+category: example-selection-formatting
+subcategory: context-positioning
+executive_summary: Measure a model's intrinsic U-shaped positional attention bias, then apply calibration
+  that reweights attention so relevance — not position — determines what gets attended to, recovering
+  middle-of-context performance.
+description: 'Where Lost in the Middle (already in this catalog) documents the U-shaped positional-attention
+  phenomenon empirically, this is the technique-level answer: establish the causal connection between
+  the lost-in-the-middle effect and the model''s intrinsic attention bias (tokens at the start and end
+  of input get disproportionately more attention regardless of actual relevance), then apply a calibration
+  mechanism that corrects for that bias so attention tracks relevance instead of position, even for content
+  genuinely in the middle. Reports both better performance at locating relevant information within long
+  contexts and downstream improvements in retrieval-augmented generation across tasks, without needing
+  to change the model''s architecture.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Long-context or RAG deployments where relevant content frequently ends up in the middle of the context
+  window (e.g. concatenated retrieved passages) and simply repositioning content (Lost in the Middle's
+  mitigation) isn't sufficient or practical.
+when_not_to_use:
+- Short contexts where positional attention bias isn't a measurable factor, or deployments where content
+  can always be reliably placed at the start/end instead.
+known_pitfalls:
+- Calibration is a correction applied at inference time based on measured bias patterns; it addresses
+  positional bias specifically, not unrelated causes of retrieval or reasoning failure.
+related_techniques:
+- lost-in-the-middle
+- thread-of-thought
+- retrieval-augmented-generation
+primary_source:
+  authors: Hsieh, Chuang, Li, Wang, Le, Kumar, Glass, Ratner, Krishna, Lee, Pfister
+  year: 2024
+  title: 'Found in the Middle: Calibrating Positional Attention Bias Improves Long Context Utilization'
+  venue: Findings of ACL 2024
+  arxiv_id: '2406.16008'
+  url: https://arxiv.org/abs/2406.16008
+usage_templates:
+- template_name: Measure-then-calibrate positional attention
+  template: |-
+    # Measure (once per model/deployment)
+    Run controlled probes placing a known-relevant fact at each position across a long context; record the U-shaped attention/accuracy curve as a function of position: {{measured_positional_bias_curve}}
+
+    # Calibrate
+    Apply an attention reweighting derived from {{measured_positional_bias_curve}} that flattens the positional bias, so attention at inference time tracks content relevance rather than position.
+
+    # Deploy
+    {{long_context}}
+    Question: {{question}}
+    (answered using the calibrated model, which no longer systematically under-attends to middle-positioned content)
+  variables:
+  - name: measured_positional_bias_curve
+    description: The empirically measured attention-vs-position bias for this model
+    example: null
+  - name: long_context
+    description: The long context being queried at deployment time
+    example: null
+  - name: question
+    description: The question being asked over the long context
+    example: null
+  template_id: found-in-the-middle-calibration--measure-then-calibrate-positional-attention
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reliability
+- long-context
+- positioning
+- calibration
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

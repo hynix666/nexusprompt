@@ -1,0 +1,79 @@
+id: promptrobust-perturbation-benchmark
+name: PromptRobust (Prompt-Perturbation Robustness Benchmark)
+category: example-selection-formatting
+subcategory: perturbation-robustness
+executive_summary: Measures how much a model's output changes under small, realistic prompt perturbations
+  — typos, synonym swaps, sentence reordering, semantic paraphrase — across 4,788 adversarial prompts
+  over 8 tasks and 13 datasets.
+description: 'Distinct from the security-focused prompt-injection/jailbreak literature elsewhere in this
+  catalog: PromptRobust isn''t about malicious attackers, it''s about ordinary robustness to the kind
+  of small variation real users introduce unintentionally (character-level typos, word-level synonym substitution,
+  sentence-level reordering, and semantic-level paraphrase). Evaluates across sentiment analysis, natural
+  language inference, reading comprehension, machine translation, and math problem-solving, revealing
+  that current LLMs are considerably more sensitive to small input perturbations than their headline benchmark
+  accuracy would suggest, and provides prompt-composition recommendations to reduce that sensitivity.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Evaluating whether a deployed prompt's performance is robust to realistic user-introduced variation
+  (typos, rephrasing) before shipping, not just accurate on a clean test set.
+- Comparing candidate prompt phrasings not just for peak accuracy but for stability under small perturbations.
+when_not_to_use:
+- Threat-modeling deliberate, adversarial manipulation — see the prompt-injection/jailbreak entries in
+  this same category for that distinct threat model.
+known_pitfalls:
+- A prompt can score well on a clean benchmark while being fragile under this kind of perturbation testing
+  — the two properties are measured separately and don't imply each other.
+related_techniques:
+- calibrate-before-use
+- fantastically-ordered-prompts
+- prompt-injection-attack-taxonomy
+primary_source:
+  authors: Zhu, Wang, Zhou, Wang, Chen, Wang, Yang, Ye, Zhang, Gong, Xie
+  year: 2023
+  title: 'PromptRobust: Towards Evaluating the Robustness of Large Language Models on Adversarial Prompts'
+  venue: ACM Workshop on Large AI Systems and Models with Privacy and Safety Analysis (LAMPS) 2024
+  arxiv_id: '2306.04528'
+  url: https://arxiv.org/abs/2306.04528
+usage_templates:
+- template_name: Perturbation-robustness sweep
+  template: |-
+    Base prompt: {{base_prompt}}
+    Generate perturbed variants at each level:
+    - Character-level: introduce {{num_typos}} realistic typos
+    - Word-level: substitute {{num_synonym_swaps}} words with synonyms
+    - Sentence-level: reorder sentences where order isn't semantically required
+    - Semantic-level: paraphrase the whole prompt while preserving meaning
+    Run the target model on the base prompt and all perturbed variants against the same {{eval_examples}}. Report the spread in output/accuracy across variants — a large spread indicates a fragile prompt even if the base prompt's own accuracy looks good.
+  variables:
+  - name: base_prompt
+    description: The unperturbed prompt being stress-tested
+    example: null
+  - name: num_typos
+    description: How many character-level perturbations to introduce
+    example: '2'
+  - name: num_synonym_swaps
+    description: How many word-level substitutions to introduce
+    example: '3'
+  - name: eval_examples
+    description: The evaluation examples run under each variant
+    example: null
+  template_id: promptrobust-perturbation-benchmark--perturbation-robustness-sweep
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reliability
+- robustness
+- benchmark
+- perturbation
+status: verified-external
+aliases:
+- PromptBench
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

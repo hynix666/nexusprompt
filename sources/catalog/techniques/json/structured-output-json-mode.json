@@ -1,0 +1,71 @@
+{
+  "id": "structured-output-json-mode",
+  "name": "Structured Output / Grammar-Constrained JSON Mode",
+  "category": "structured-constrained-output",
+  "subcategory": "decoding-time-constraints",
+  "executive_summary": "Constrain decoding to a finite-state machine built from a regex or grammar, so only tokens keeping the output valid are ever sampled — well-formed by construction, not by hoping the model complies.",
+  "description": "Reformulates constrained generation (JSON schemas, regexes, context-free grammars) as index-guided finite-state-machine traversal: the model's vocabulary is indexed against the grammar so that at each step only tokens leading to a still-valid continuation are eligible, with negligible runtime overhead. This is the foundational technique behind most 'JSON mode' / structured-output features offered by LLM providers, and the direct ancestor of the local grammar-constrained-decoding research cluster (structural-equivalence analysis, diffusion-model variants, rejection-sampling alternatives).",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Output must conform to a strict schema (JSON, a regex, a formal grammar) and correctness of structure is non-negotiable."
+  ],
+  "when_not_to_use": [
+    "Free-form natural-language output where no formal grammar applies."
+  ],
+  "known_pitfalls": [
+    "Guarantees structural validity, not semantic correctness — a syntactically perfect JSON object can still contain wrong values."
+  ],
+  "related_techniques": [
+    "truncproof-json-guardrail",
+    "grammar-constrained-decoding-efficiency",
+    "chain-of-density"
+  ],
+  "primary_source": {
+    "authors": "Willard, Louf",
+    "year": 2023,
+    "title": "Efficient Guided Generation for Large Language Models",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2307.09702",
+    "url": "https://arxiv.org/abs/2307.09702"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Schema-constrained generation request",
+      "template": "Generate output strictly conforming to this schema (do not include any text outside the structure):\n{{json_schema_or_grammar}}\n\nTask: {{task_description}}\n# (Enforced at the decoding layer, not just requested in text, when the runtime supports grammar-constrained decoding.)",
+      "variables": [
+        {
+          "name": "json_schema_or_grammar",
+          "description": "The formal schema/grammar the output must satisfy",
+          "example": null
+        },
+        {
+          "name": "task_description",
+          "description": "What content should populate the structure",
+          "example": null
+        }
+      ],
+      "template_id": "structured-output-json-mode--schema-constrained-generation-request",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "structured-output",
+    "decoding-time",
+    "json",
+    "reliability"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "Outlines",
+    "guided generation"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

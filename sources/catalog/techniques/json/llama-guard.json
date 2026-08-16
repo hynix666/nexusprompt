@@ -1,0 +1,74 @@
+{
+  "id": "llama-guard",
+  "name": "Llama Guard",
+  "category": "prompt-injection-defense",
+  "subcategory": "safety-classification",
+  "executive_summary": "Classifier-based safety taxonomy for prompt/response. Categorizes safety violations into a standardized taxonomy, enabling systematic content moderation.",
+  "description": "Llama Guard is a safety classifier built on Llama2 that evaluates both user inputs (prompts) and model outputs (responses) against a standardized safety taxonomy. It classifies content into categories such as Violence & Hate, Sexual Content, Guns & Illegal Weapons, Regulated Substances, Self-Harm, and Criminal Planning.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "You need a standardized, taxonomy-based safety filter for inputs or outputs.",
+    "Building a content moderation pipeline with multiple violation categories.",
+    "When you want a dedicated safety model rather than relying on the generation model's own alignment."
+  ],
+  "when_not_to_use": [
+    "When latency is critical and an extra classifier call is unacceptable.",
+    "For adversarial robustness against jailbreaks.",
+    "When the built-in taxonomy does not cover your domain's specific risks."
+  ],
+  "known_pitfalls": [
+    "Like all classifiers, it can produce false positives and false negatives.",
+    "Adversarial inputs designed to bypass classifiers may succeed.",
+    "Customizing the taxonomy requires fine-tuning data."
+  ],
+  "related_techniques": [
+    "instruction-hierarchy"
+  ],
+  "primary_source": {
+    "authors": "Inan, Upasani, Chi, Rungta, Iyer, Mao, Tontchev, Hu, Fuller, Testuggine, et al.",
+    "year": 2023,
+    "title": "Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations",
+    "venue": "arXiv",
+    "arxiv_id": "2312.06674",
+    "url": "https://arxiv.org/abs/2312.06674"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Safety taxonomy classification",
+      "template": "Input: {{user_input}}\n\nClassify against safety taxonomy:\n- Violence & Hate\n- Sexual Content\n- Guns & Illegal Weapons\n- Regulated/Controlled Substances\n- Self-Harm\n- Criminal Planning\n\nClassification: {{safety_category_or_safe}}\n\nIf unsafe, provide the violating category and a brief explanation.",
+      "variables": [
+        {
+          "name": "user_input",
+          "description": "The user prompt or model output to classify.",
+          "example": "How do I break into a car?"
+        },
+        {
+          "name": "safety_category_or_safe",
+          "description": "The classification result.",
+          "example": "Criminal Planning"
+        }
+      ],
+      "template_id": "llama-guard--taxonomy-classification",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "Classifier output is deterministic at temperature=0. Classification quality depends on model version and taxonomy coverage."
+    }
+  ],
+  "tags": [
+    "security",
+    "classification",
+    "safety",
+    "moderation"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "LlamaGuard"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

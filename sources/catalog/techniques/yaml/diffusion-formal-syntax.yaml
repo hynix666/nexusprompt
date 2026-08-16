@@ -1,0 +1,57 @@
+id: diffusion-formal-syntax
+name: Continuous Diffusion Models Can Obey Formal Syntax
+category: structured-constrained-output
+subcategory: non-autoregressive-constraints
+executive_summary: Extends grammar-constrained generation from autoregressive models to continuous diffusion-based
+  (non-autoregressive) generation.
+description: Grammar-constrained decoding techniques were originally developed for token-by-token autoregressive
+  generation. This work shows formal syntax constraints can also be enforced on diffusion-based language
+  generation, which produces text through a fundamentally different, non-sequential denoising process.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Using a diffusion-based (non-autoregressive) language model and needing formally constrained output.
+when_not_to_use:
+- Using a standard autoregressive model — structured-output-json-mode's finite-state-machine approach
+  applies directly there.
+known_pitfalls: []
+related_techniques:
+- structured-output-json-mode
+- reliable-constrained-diffusion-decoding
+primary_source:
+  authors: (local corpus)
+  year: 2026
+  title: Continuous Diffusion Models Can Obey Formal Syntax
+  venue: arXiv preprint
+  arxiv_id: '2602.12468'
+  url: null
+usage_templates:
+- template_name: Diffusion-model grammar constraint spec
+  template: |-
+    Grammar: {{grammar_definition}}
+    Diffusion generation task: {{task_description}}
+    Constrain the denoising trajectory so the final output satisfies {{grammar_definition}}.
+  variables:
+  - name: grammar_definition
+    description: The formal grammar constraining valid output
+    example: null
+  - name: task_description
+    description: The generation task
+    example: null
+  template_id: diffusion-formal-syntax--diffusion-model-grammar-constraint-spec
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- structured-output
+- diffusion
+- formal-methods
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: Continuous Diffusion Models Can Obey Formal Syntax.pdf
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

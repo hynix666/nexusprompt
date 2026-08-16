@@ -1,0 +1,867 @@
+{
+  "catalog_version": "1.20.0",
+  "schema_version": "1.3.0",
+  "entry_count": 172,
+  "techniques": [
+    {
+      "id": "chain-of-thought",
+      "name": "Chain-of-Thought (CoT) Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "zero-shot-cot",
+      "name": "Zero-Shot Chain-of-Thought",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "emotionprompt",
+      "name": "EmotionPrompt (Psychology-Inspired Emotional Stimulus)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "self-consistency",
+      "name": "Self-Consistency",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "universal-self-consistency",
+      "name": "Universal Self-Consistency (USC)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "skeleton-of-thought",
+      "name": "Skeleton-of-Thought (SoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "apar-auto-parallel-decoding",
+      "name": "APAR: Auto-Parallel Auto-Regressive Decoding",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "tree-of-thoughts",
+      "name": "Tree of Thoughts (ToT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "graph-of-thoughts",
+      "name": "Graph of Thoughts (GoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "least-to-most-prompting",
+      "name": "Least-to-Most Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "program-of-thoughts",
+      "name": "Program of Thoughts (PoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "active-prompting",
+      "name": "Active Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "auto-cot",
+      "name": "Auto-CoT (Automatic Chain-of-Thought)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "analogical-prompting",
+      "name": "Analogical Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "generated-knowledge-prompting",
+      "name": "Generated Knowledge Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "making-slow-thinking-faster",
+      "name": "Reasoning Compression via Step-Entropy Analysis",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "self-ask",
+      "name": "Self-Ask",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "contrastive-chain-of-thought",
+      "name": "Contrastive Chain-of-Thought",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "faithful-chain-of-thought",
+      "name": "Faithful Chain-of-Thought",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "self-discover",
+      "name": "Self-Discover",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "boosting-of-thoughts",
+      "name": "Boosting of Thoughts (BoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "consensus-game-equilibrium-ranking",
+      "name": "The Consensus Game (Equilibrium-Ranking)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "problem-elaboration-prompting",
+      "name": "Problem Elaboration Prompting (PEP)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "instance-adaptive-zero-shot-cot",
+      "name": "Instance-Adaptive Zero-Shot Chain-of-Thought",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "step-back-prompting",
+      "name": "Step-Back Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "algorithm-of-thoughts",
+      "name": "Algorithm of Thoughts (AoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "decomposed-prompting",
+      "name": "Decomposed Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "complexity-based-prompting",
+      "name": "Complexity-Based Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "progressive-hint-prompting",
+      "name": "Progressive-Hint Prompting (PHP)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "zero-shot-prompting",
+      "name": "Zero-Shot Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "few-shot-prompting",
+      "name": "Few-Shot Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "pal-program-aided-language-models",
+      "name": "PAL (Program-Aided Language Models)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "system-2-attention",
+      "name": "System 2 Attention (S2A)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "cumulative-reasoning",
+      "name": "Cumulative Reasoning",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "role-prompting",
+      "name": "Role Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "re-reading-re2",
+      "name": "Re-Reading (RE2)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "chain-of-verification",
+      "name": "Chain-of-Verification (CoVe)",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "backward-self-verification",
+      "name": "Backward Self-Verification (Deductive Answer Scoring)",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "self-refine",
+      "name": "Self-Refine",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "reflexion",
+      "name": "Reflexion",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "salmon",
+      "name": "SALMON (Self-Alignment with Instructable Reward Models)",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "maieutic-prompting",
+      "name": "Maieutic Prompting",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "constitutional-ai",
+      "name": "Constitutional AI (CAI)",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "critic-tool-interactive-critiquing",
+      "name": "CRITIC (Tool-Interactive Critiquing)",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "self-calibration",
+      "name": "Self-Calibration",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "react",
+      "name": "ReAct (Reason + Act)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "toolformer-self-supervised-tool-use",
+      "name": "Toolformer (Self-Supervised Tool-Use Training)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "generative-agents-memory-architecture",
+      "name": "Generative Agents (Memory Stream + Reflection + Planning)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "plan-and-solve-prompting",
+      "name": "Plan-and-Solve Prompting",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "multiagent-debate",
+      "name": "Multiagent Debate",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "meta-prompting",
+      "name": "Meta-Prompting",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "prompt-chaining",
+      "name": "Prompt Chaining (visual/workflow composition)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "knowledge-prompt-chaining",
+      "name": "Knowledge Prompt Chaining for Semantic Modeling",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "chain-of-abstraction",
+      "name": "Chain-of-Abstraction (CoA)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "uncertainty-of-thoughts",
+      "name": "Uncertainty of Thoughts (UoT)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "rewoo-reasoning-without-observation",
+      "name": "ReWOO (Reasoning WithOut Observation)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "lats-language-agent-tree-search",
+      "name": "LATS (Language Agent Tree Search)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "expertprompting",
+      "name": "ExpertPrompting",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "art-automatic-reasoning-tool-use",
+      "name": "ART (Automatic Reasoning and Tool-use)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "voyager-lifelong-learning-agent",
+      "name": "Voyager (Lifelong Learning Embodied Agent)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "mrkl-systems",
+      "name": "MRKL Systems (Modular Reasoning, Knowledge and Language)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "tora-tool-integrated-reasoning-agent",
+      "name": "ToRA (Tool-Integrated Reasoning Agent)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "promptbreeder",
+      "name": "Promptbreeder (Self-Referential Self-Improvement)",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "automatic-prompt-engineer",
+      "name": "Automatic Prompt Engineer (APE)",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "automatic-prompt-optimization-gradient-beam",
+      "name": "Automatic Prompt Optimization with Textual Gradients and Beam Search",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "opro",
+      "name": "Large Language Models as Optimizers (OPRO)",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "dspy",
+      "name": "DSPy",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "self-instruct",
+      "name": "Self-Instruct",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "directional-stimulus-prompting",
+      "name": "Directional Stimulus Prompting (DSP)",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "dspy-assertions",
+      "name": "DSPy Assertions",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "autoprompt",
+      "name": "AutoPrompt",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "demonstrate-search-predict",
+      "name": "DSP (Demonstrate-Search-Predict)",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "retrieval-augmented-generation",
+      "name": "Retrieval-Augmented Generation (RAG)",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "self-rag",
+      "name": "Self-RAG (Self-Reflective Retrieval-Augmented Generation)",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "retrieval-augmented-thoughts",
+      "name": "Retrieval-Augmented Thoughts (RAT)",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "raptor-recursive-tree-retrieval",
+      "name": "RAPTOR (Recursive Abstractive Processing for Tree-Organized Retrieval)",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "chain-of-evidences-evidence-to-generate",
+      "name": "Chain of Evidences / Evidence to Generate (CoE / E2G)",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "structured-output-json-mode",
+      "name": "Structured Output / Grammar-Constrained JSON Mode",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "grammar-constrained-decoding-efficiency",
+      "name": "Structural Equivalence and Efficiency in Grammar-Constrained Decoding",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "diffusion-formal-syntax",
+      "name": "Continuous Diffusion Models Can Obey Formal Syntax",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "reliable-constrained-diffusion-decoding",
+      "name": "Reliable Constrained Decoding for Diffusion LLMs under Context-Free Grammars",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "adaptive-weighted-rejection-sampling",
+      "name": "Fast Controlled Generation with Adaptive Weighted Rejection Sampling",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "truncproof-json-guardrail",
+      "name": "TruncProof: JSON Generation Guardrail under Token-Length Constraints",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "chain-of-density",
+      "name": "Chain of Density Prompting",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "llmlingua-prompt-compression",
+      "name": "LLMLingua (Coarse-to-Fine Prompt Compression)",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "xgrammar-structured-generation-engine",
+      "name": "XGrammar",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "calibrate-before-use",
+      "name": "Calibrate Before Use",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "fantastically-ordered-prompts",
+      "name": "Fantastically Ordered Prompts (Few-Shot Order Sensitivity)",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "what-makes-good-in-context-examples",
+      "name": "Nearest-Neighbor In-Context Example Selection",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "lost-in-the-middle",
+      "name": "Lost in the Middle (Context-Position Awareness)",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "promptrobust-perturbation-benchmark",
+      "name": "PromptRobust (Prompt-Perturbation Robustness Benchmark)",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "thread-of-thought",
+      "name": "Thread of Thought (ThoT)",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "found-in-the-middle-calibration",
+      "name": "Found-in-the-Middle Positional Calibration",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "prompt-repetition",
+      "name": "Prompt Repetition",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "prompt-pattern-catalog",
+      "name": "Prompt Pattern Catalog (Design-Pattern Framing)",
+      "category": "template-pattern-scaffolding"
+    },
+    {
+      "id": "promptsource",
+      "name": "PromptSource (Prompt Templating Language + Repository)",
+      "category": "template-pattern-scaffolding"
+    },
+    {
+      "id": "rephrase-and-respond",
+      "name": "Rephrase and Respond (RaR)",
+      "category": "template-pattern-scaffolding"
+    },
+    {
+      "id": "ask-me-anything",
+      "name": "Ask Me Anything (Prompt Ensembling via Weak Supervision)",
+      "category": "template-pattern-scaffolding"
+    },
+    {
+      "id": "prompt-decorators",
+      "name": "Prompt Decorators",
+      "category": "template-pattern-scaffolding"
+    },
+    {
+      "id": "prompt-injection-attack-taxonomy",
+      "name": "Direct Prompt-Injection Attack Taxonomy",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "indirect-prompt-injection",
+      "name": "Indirect Prompt Injection",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "hackaprompt-taxonomy",
+      "name": "HackAPrompt Adversarial-Prompt Benchmark",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "formalized-injection-benchmark",
+      "name": "Formalized Prompt-Injection Attack/Defense Framework",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "struq-structured-queries",
+      "name": "StruQ: Structured-Query Defense",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "instruction-hierarchy",
+      "name": "The Instruction Hierarchy (Privileged Instructions)",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "gcg-adversarial-suffix-attack",
+      "name": "GCG: Universal Adversarial Suffix Attack",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "injecagent-agentic-ipi-benchmark",
+      "name": "InjecAgent: Indirect Prompt Injection Benchmark for Tool-Using Agents",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "baseline-adversarial-defenses",
+      "name": "Baseline Defenses: Perplexity Filtering, Paraphrasing, and Adversarial Training",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "pair-black-box-jailbreak",
+      "name": "PAIR: Prompt Automatic Iterative Refinement",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "many-shot-jailbreaking",
+      "name": "Many-Shot Jailbreaking (MSJ)",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "crescendo-multi-turn-jailbreak",
+      "name": "Crescendo (Multi-Turn Escalation Jailbreak)",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "autodan-genetic-jailbreak",
+      "name": "AutoDAN: Hierarchical-Genetic-Algorithm Stealthy Jailbreak",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "harmbench-red-teaming-benchmark",
+      "name": "HarmBench: Standardized Red-Teaming and Robust-Refusal Benchmark",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "spotlight-your-instructions",
+      "name": "Spotlight Your Instructions (Dynamic Attention Steering)",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "many-tier-instruction-hierarchy",
+      "name": "Many-Tier Instruction Hierarchy (ManyIH)",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "tap-tree-of-attacks-with-pruning",
+      "name": "TAP (Tree of Attacks with Pruning)",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "smoothllm-randomized-smoothing-defense",
+      "name": "SmoothLLM",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "jailbroken-competing-objectives-framework",
+      "name": "Jailbroken: Competing Objectives and Mismatched Generalization",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "structured-cot-code-generation",
+      "name": "Structured Chain-of-Thought for Code Generation",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "modularization-of-thought-code-gen",
+      "name": "Modularization-of-Thought (MoT) for Code Generation",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "comparative-prompting-code-gen",
+      "name": "Comparative Empirical Study of Code-Generation Prompting Strategies",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "recube-repo-context",
+      "name": "RECUBE: Repository-Level Context Utilization Evaluation",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "comprehend-then-predict-recommendation",
+      "name": "Comprehend-Then-Predict Recommendation Prompting",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "prompting-llms-recommender-systems",
+      "name": "Comprehensive Framework for LLM-Prompted Recommendation",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "enhancing-zero-shot-recommendations",
+      "name": "Enhancing Zero-Shot Recommendations via Semantics and Collaborative Signals",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "prompt-matcher-schema-matching",
+      "name": "Prompt-Matcher (LLM-Prompted Schema Matching)",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "prompt-engineering-medical-consistency",
+      "name": "Prompt Design for Output Consistency in Medical Applications",
+      "category": "domain-specific-application"
+    },
+    {
+      "id": "reverse-prompt-engineering-genetic-inversion",
+      "name": "Reverse Prompt Engineering (RPE) — Genetic-Algorithm Black-Box Inversion",
+      "category": "prompt-inversion-analysis"
+    },
+    {
+      "id": "soda-search-based-inversion",
+      "name": "SODA (Sparse One-hot Discrete Adam) — Exact White-Box Inversion",
+      "category": "prompt-inversion-analysis"
+    },
+    {
+      "id": "ipad-inverse-prompt-detection",
+      "name": "IPAD (Inverse Prompt for AI Detection)",
+      "category": "prompt-inversion-analysis"
+    },
+    {
+      "id": "chain-of-draft",
+      "name": "Chain of Draft (CoD)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "highlighted-chain-of-thought",
+      "name": "Highlighted Chain of Thought (HoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "confidence-informed-self-consistency",
+      "name": "Confidence-Informed Self-Consistency (CISC)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "hyde",
+      "name": "HyDE (Hypothetical Document Embeddings)",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "flare",
+      "name": "FLARE (Forward-Looking Active REtrieval)",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "corrective-rag",
+      "name": "Corrective RAG (CRAG)",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "selfcheckgpt",
+      "name": "SelfCheckGPT",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "factscore",
+      "name": "FActScore",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "autogen",
+      "name": "AutoGen",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "frugalgpt",
+      "name": "FrugalGPT",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "buffer-of-thoughts",
+      "name": "Buffer of Thoughts (BoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "cache-optimized-context-engineering",
+      "name": "Cache-Optimized Context Engineering",
+      "category": "template-pattern-scaffolding"
+    },
+    {
+      "id": "co-star-framework",
+      "name": "CO-STAR Framework",
+      "category": "template-pattern-scaffolding"
+    },
+    {
+      "id": "xml-tagging-schema-specs",
+      "name": "XML Tagging / Schema Specs",
+      "category": "template-pattern-scaffolding"
+    },
+    {
+      "id": "mipro",
+      "name": "MIPRO",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "nemo-guardrails",
+      "name": "NeMo Guardrails",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "llama-guard",
+      "name": "Llama Guard",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "adaptive-graph-of-thoughts",
+      "name": "Adaptive Graph of Thoughts (AGoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "graphrag",
+      "name": "GraphRAG",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "chain-of-code",
+      "name": "Chain-of-Code (CoC)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "medprompt-framework",
+      "name": "Medprompt Framework",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "hierarchical-chain-of-thought",
+      "name": "Hierarchical Chain-of-Thought (Hi-CoT)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "longllmlingua",
+      "name": "LongLLMLingua",
+      "category": "prompt-compression-context-engineering"
+    },
+    {
+      "id": "spotlighting-hines",
+      "name": "Spotlighting (Hines et al.)",
+      "category": "prompt-injection-defense"
+    },
+    {
+      "id": "adaptive-rag",
+      "name": "Adaptive RAG",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "thought-propagation",
+      "name": "Thought Propagation (TP)",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "dera",
+      "name": "DERA (Dialog-Enabled Resolving Agents)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "verify-and-edit",
+      "name": "Verify-and-Edit",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "codet",
+      "name": "CodeT (Code Generation with Testers)",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "rarr",
+      "name": "RARR (Researching and Revising)",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "textgrad",
+      "name": "TextGrad",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "swe-agent",
+      "name": "SWE-agent",
+      "category": "agentic-tool-use"
+    },
+    {
+      "id": "branch-solve-merge",
+      "name": "Branch-Solve-Merge (BSM)",
+      "category": "self-verification-refinement"
+    },
+    {
+      "id": "evoprompt",
+      "name": "EvoPrompt",
+      "category": "automatic-prompt-optimization"
+    },
+    {
+      "id": "lmql",
+      "name": "LMQL",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "selective-context",
+      "name": "Selective Context",
+      "category": "prompt-compression-context-engineering"
+    },
+    {
+      "id": "recomp",
+      "name": "RECOMP",
+      "category": "prompt-compression-context-engineering"
+    },
+    {
+      "id": "sglang",
+      "name": "SGLang",
+      "category": "structured-constrained-output"
+    },
+    {
+      "id": "chain-of-symbol",
+      "name": "Chain-of-Symbol (CoS) Prompting",
+      "category": "reasoning-elicitation"
+    },
+    {
+      "id": "knn-prompting",
+      "name": "kNN Prompting",
+      "category": "example-selection-formatting"
+    },
+    {
+      "id": "query2doc",
+      "name": "Query2doc",
+      "category": "retrieval-augmentation"
+    },
+    {
+      "id": "self-edit-code",
+      "name": "Self-Edit (Fault-Aware Code Editor)",
+      "category": "self-verification-refinement"
+    }
+  ]
+}

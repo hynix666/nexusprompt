@@ -1,0 +1,97 @@
+{
+  "id": "lats-language-agent-tree-search",
+  "name": "LATS (Language Agent Tree Search)",
+  "category": "agentic-tool-use",
+  "subcategory": "unified-search-agent",
+  "executive_summary": "Unify reasoning, acting, and planning into one Monte Carlo Tree Search: the LLM is action generator, value function, and self-reflective optimizer, searching a tree of trajectories instead of one linear ReAct path.",
+  "description": "Positions itself explicitly as a synthesis: ReAct and Reflexion enhance acting through reasoning and self-reflection but rely on a single linear trajectory; Tree of Thoughts and RAP enhance reasoning through search but aren't grounded in real environment feedback. LATS adapts MCTS's six operations (selection, expansion, evaluation, simulation, backpropagation, reflection) to language agents: at each tree node the LLM proposes candidate actions, an LLM-powered value function (blended with a self-consistency score) estimates node value, and failed trajectories trigger self-reflection incorporated into subsequent search — all grounded by real environment observations rather than search operating on ungrounded imagined reasoning alone. Reports state-of-the-art 92.7% pass@1 on HumanEval with GPT-4 and competitive web-navigation performance on WebShop.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "agentic-loop",
+  "when_to_use": [
+    "Complex decision-making tasks (programming, interactive QA, web navigation) where both search-based deliberation (ToT-style) and real environment grounding (ReAct-style) would help, and the cost of MCTS-scale exploration is acceptable."
+  ],
+  "when_not_to_use": [
+    "Simple tasks where a single ReAct trajectory already succeeds reliably — the full MCTS machinery (selection, expansion, simulation, backpropagation) is substantial overhead for straightforward cases."
+  ],
+  "known_pitfalls": [
+    "Value estimates from the LLM-powered evaluator can be noisy, and effective planning depth may be limited by inconsistency in that scoring — the search is only as good as the value function guiding it."
+  ],
+  "related_techniques": [
+    "react",
+    "tree-of-thoughts",
+    "reflexion",
+    "self-consistency"
+  ],
+  "primary_source": {
+    "authors": "Zhou, Yan, Shlapentokh-Rothman, Wang, Wang",
+    "year": 2024,
+    "title": "Language Agent Tree Search Unifies Reasoning, Acting, and Planning in Language Models",
+    "venue": "ICML 2024",
+    "arxiv_id": "2310.04406",
+    "url": "https://arxiv.org/abs/2310.04406"
+  },
+  "usage_templates": [
+    {
+      "template_name": "MCTS over Thought/Action/Observation trajectories",
+      "template": "Task: {{task}}\nCurrent tree node (trajectory so far): {{current_trajectory}}\n\n# Selection\nSelect the child node maximizing UCT score (balancing estimated value and exploration) among: {{candidate_child_nodes}}\n\n# Expansion\nFrom the selected node, propose {{num_actions}} candidate next Thought/Action pairs: {{candidate_next_actions}}\n\n# Evaluation\nFor each candidate, estimate its value by blending an LLM-judged progress score with a self-consistency score across samples.\n\n# Simulation\nExecute the chosen action against the real environment, obtaining Observation: {{environment_observation}}\n\n# Reflection (on failure)\nIf this trajectory failed, generate a self-reflection to inform future selection: {{trajectory_reflection}}\n\n# Backpropagation\nUpdate value estimates up the tree from this node.",
+      "variables": [
+        {
+          "name": "task",
+          "description": "The overall decision-making task",
+          "example": null
+        },
+        {
+          "name": "current_trajectory",
+          "description": "The Thought/Action/Observation sequence at the current tree node",
+          "example": null
+        },
+        {
+          "name": "candidate_child_nodes",
+          "description": "Child nodes being selected among",
+          "example": null
+        },
+        {
+          "name": "num_actions",
+          "description": "How many candidate next actions to propose at expansion",
+          "example": "5"
+        },
+        {
+          "name": "candidate_next_actions",
+          "description": "Proposed next Thought/Action pairs",
+          "example": null
+        },
+        {
+          "name": "environment_observation",
+          "description": "Real feedback from executing an action in the environment",
+          "example": null
+        },
+        {
+          "name": "trajectory_reflection",
+          "description": "Self-reflection generated after a failed trajectory",
+          "example": null
+        }
+      ],
+      "template_id": "lats-language-agent-tree-search--mcts-over-thought-action-observation-trajectories",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "This template depends on an external system (retrieval index, tool, solver, or interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires that system's state to also be fixed."
+    }
+  ],
+  "tags": [
+    "agentic",
+    "search",
+    "tool-use",
+    "monte-carlo-tree-search",
+    "agentic-loop"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "LATS"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

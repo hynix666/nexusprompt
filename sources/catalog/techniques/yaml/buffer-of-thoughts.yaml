@@ -1,0 +1,88 @@
+id: buffer-of-thoughts
+name: Buffer of Thoughts (BoT)
+category: reasoning-elicitation
+subcategory: meta-reasoning
+executive_summary: Replaces brute-force search over reasoning trees with a Meta-Buffer—a dynamic library
+  of high-level problem-solving templates. A Problem Distiller extracts core structure, retrieves matching
+  templates, and instantiates them for the target task. Reduces token and API costs by ~88% compared to
+  multi-query search.
+description: 'BoT consists of three components: (1) a Problem Distiller that strips task filler to extract
+  core variables and constraints, (2) a Meta-Buffer containing thought templates, and (3) a Buffer Manager
+  that condenses novel verified traces into new templates. At inference time, the distiller analyzes the
+  query, retrieves the most relevant thought template, instantiates it with task-specific values, and
+  executes the structured reasoning.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Complex reasoning tasks where Tree of Thoughts or similar search methods are too expensive.
+- Domains with recurring problem structures that can be templatized.
+- Cost-sensitive applications requiring strong reasoning performance.
+when_not_to_use:
+- Novel problem types with no matching templates in the Meta-Buffer.
+- When the overhead of template retrieval exceeds the savings.
+- Tasks requiring exploration of many diverse solution paths.
+known_pitfalls:
+- Meta-Buffer coverage limits applicability.
+- Template instantiation quality depends on the distiller's extraction accuracy.
+- Buffer maintenance requires ongoing curation.
+related_techniques:
+- tree-of-thoughts
+- graph-of-thoughts
+- least-to-most-prompting
+- plan-and-solve-prompting
+primary_source:
+  authors: Yang, Yu, Zhang, Cao, Xu, Zhang, Gonzalez, Cui
+  year: 2024
+  title: 'Buffer of Thoughts: Thought-Augmented Reasoning with Large Language Models'
+  venue: NeurIPS 2024 (Spotlight)
+  arxiv_id: '2406.04271'
+  url: https://arxiv.org/abs/2406.04271
+usage_templates:
+- template_name: Meta-buffer reasoning with problem distillation
+  template: |-
+    # Phase 1: Problem Distillation
+    Task Input: {{task_input}}
+    Extract and summarize:
+    1. Primary Goal:
+    2. Known Variables & Values:
+    3. Explicit Constraints & Implicit Boundaries:
+
+    # Phase 2: Thought-Template Retrieval & Instantiation
+    Meta-Buffer Thought-Template: {{retrieved_thought_template}}
+    Instantiate the template above by assigning task variables to template slots:
+    {{instantiated_reasoning_structure}}
+
+    # Phase 3: Execution
+    Follow the instantiated structure step-by-step to arrive at the final answer.
+    Final Answer:
+  variables:
+  - name: task_input
+    description: The problem or task to solve.
+    example: A farmer has 17 sheep and all but 9 die. How many are left?
+  - name: retrieved_thought_template
+    description: The matching high-level reasoning template from the Meta-Buffer.
+    example: 1. Identify trick phrases ("all but X"). 2. Compute complement. 3. Verify against literal
+      interpretation.
+  - name: instantiated_reasoning_structure
+    description: The template with task-specific values filled in.
+    example: '1. The phrase "all but 9 die" means 9 survive. 2. Total sheep = 17; dead = 8; alive = 9.
+      3. Literal check: 17 - 8 = 9. Confirmed.'
+  template_id: buffer-of-thoughts--meta-buffer-reasoning
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: Template retrieval and instantiation are deterministic if the Meta-Buffer is fixed.
+    Non-determinism may arise from template generation if the buffer is dynamically updated.
+tags:
+- meta-reasoning
+- template
+- cost-reduction
+- memory
+status: verified-external
+aliases:
+- BoT
+- Thought-Augmented Reasoning
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

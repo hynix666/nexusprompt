@@ -1,0 +1,90 @@
+{
+  "id": "frugalgpt",
+  "name": "FrugalGPT",
+  "category": "agentic-tool-use",
+  "subcategory": "cost-optimization",
+  "executive_summary": "Cascades queries from cheaper, smaller models to more expensive, larger models, only escalating if the smaller model's output is uncertain or low-quality. Reduces cost while maintaining accuracy.",
+  "description": "FrugalGPT addresses the high inference cost of using large LLMs for all queries. A tier-1 cheap model generates an answer and a confidence score. A router evaluates the confidence; if it falls below a threshold, the query escalates to a tier-2 expensive model.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "High-volume inference pipelines where cost is a binding constraint.",
+    "Environments with access to multiple models of varying sizes and costs.",
+    "Tasks where simpler queries can be handled by smaller models without quality loss."
+  ],
+  "when_not_to_use": [
+    "Latency-critical applications where sequential cascading adds unacceptable delay.",
+    "When only a single model is available.",
+    "Tasks where all queries are equally complex and require the largest model."
+  ],
+  "known_pitfalls": [
+    "Requires a reliable confidence/scoring mechanism; a bad scorer wastes money or degrades quality.",
+    "Training the router requires labeled data and adds upfront cost.",
+    "Cascading adds latency; parallel execution of all tiers is wasteful."
+  ],
+  "related_techniques": [
+    "self-calibration"
+  ],
+  "primary_source": {
+    "authors": "Chen, Zaharia, Zou",
+    "year": 2023,
+    "title": "FrugalGPT: How to Use Large Language Models While Reducing Cost and Improving Performance",
+    "venue": "arXiv",
+    "arxiv_id": "2305.05176",
+    "url": "https://arxiv.org/abs/2305.05176"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Two-tier model cascade",
+      "template": "# Tier 1 (Cheap Model)\nQuery: {{query}}\nGenerate an answer and a confidence score (0.0-1.0).\nAnswer: {{tier_1_answer}}\nConfidence: {{tier_1_confidence}}\n\n# Router Logic\nIf {{tier_1_confidence}} < {{threshold}}:\n    # Tier 2 (Expensive Model)\n    Query: {{query}}\n    Answer: {{tier_2_answer}}\nElse:\n    Return {{tier_1_answer}}",
+      "variables": [
+        {
+          "name": "query",
+          "description": "The user input.",
+          "example": "Explain quantum entanglement in simple terms."
+        },
+        {
+          "name": "tier_1_answer",
+          "description": "Answer from the small/cheap model.",
+          "example": "Quantum entanglement is when two particles become connected..."
+        },
+        {
+          "name": "tier_1_confidence",
+          "description": "Model's self-reported or router-predicted confidence.",
+          "example": "0.4"
+        },
+        {
+          "name": "threshold",
+          "description": "Confidence cutoff for escalation.",
+          "example": "0.8"
+        },
+        {
+          "name": "tier_2_answer",
+          "description": "Answer from the large/expensive model.",
+          "example": "Quantum entanglement is a physical phenomenon that occurs when a pair or group of particles..."
+        }
+      ],
+      "template_id": "frugalgpt--two-tier-cascade",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "Router and confidence scorer should be deterministic. Tier models may be non-deterministic depending on temperature setting."
+    }
+  ],
+  "tags": [
+    "cost",
+    "optimization",
+    "cascade",
+    "routing"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "Model Cascade",
+    "LLM Cascade"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

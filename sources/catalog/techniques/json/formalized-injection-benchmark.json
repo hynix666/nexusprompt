@@ -1,0 +1,92 @@
+{
+  "id": "formalized-injection-benchmark",
+  "name": "Formalized Prompt-Injection Attack/Defense Framework",
+  "category": "prompt-injection-defense",
+  "subcategory": "benchmarking",
+  "executive_summary": "A formal framework in which known prompt-injection attacks are special cases of a general attack formulation, evaluated systematically against many defenses, models, and tasks.",
+  "description": "Proposes a formal attack framework generalizing specific known injection attacks, then benchmarks it across 5 attack methods x 10 defense methods x 10 LLMs x 7 tasks, providing a systematic (rather than anecdotal) picture of which defenses actually hold up against which attacks. Useful as a methodology template for evaluating a project's own defenses, not just as a source of specific attacks.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Systematically evaluating a defense mechanism's effectiveness across multiple attack types, not just spot-checking against one or two known attacks."
+  ],
+  "when_not_to_use": [
+    "N/A — methodology/benchmark reference."
+  ],
+  "known_pitfalls": [
+    "A defense that scores well in this benchmark's specific task/model combinations is not guaranteed to generalize to a materially different deployment context."
+  ],
+  "related_techniques": [
+    "hackaprompt-taxonomy",
+    "struq-structured-queries"
+  ],
+  "primary_source": {
+    "authors": "Liu, Jia, Geng, Jia, Gong",
+    "year": 2024,
+    "title": "Formalizing and Benchmarking Prompt Injection Attacks and Defenses",
+    "venue": "USENIX Security 2024",
+    "arxiv_id": "2310.12815",
+    "url": "https://arxiv.org/abs/2310.12815"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Attack x defense evaluation matrix",
+      "template": "Evaluate defense {{defense_name}} against attack {{attack_name}} on task {{task_name}} using model {{model_name}}.\nAttack-injected input: {{attacked_input}}\nRecord: (a) did the model follow the injected instruction (attack success), (b) did the model still complete the original task correctly (utility preserved). Repeat across the full {{attack_list}} x {{defense_list}} grid.",
+      "variables": [
+        {
+          "name": "defense_name",
+          "description": "The specific defense mechanism under test",
+          "example": null
+        },
+        {
+          "name": "attack_name",
+          "description": "The specific attack method under test",
+          "example": null
+        },
+        {
+          "name": "task_name",
+          "description": "The underlying task being defended",
+          "example": null
+        },
+        {
+          "name": "model_name",
+          "description": "Which model is being evaluated",
+          "example": null
+        },
+        {
+          "name": "attacked_input",
+          "description": "The task input with the attack embedded",
+          "example": null
+        },
+        {
+          "name": "attack_list",
+          "description": "Full set of attack methods in the evaluation grid",
+          "example": null
+        },
+        {
+          "name": "defense_list",
+          "description": "Full set of defense methods in the evaluation grid",
+          "example": null
+        }
+      ],
+      "template_id": "formalized-injection-benchmark--attack-x-defense-evaluation-matrix",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "security",
+    "benchmark",
+    "injection",
+    "methodology"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "id": "retrieval-augmented-generation",
+  "name": "Retrieval-Augmented Generation (RAG)",
+  "category": "retrieval-augmentation",
+  "subcategory": "foundational",
+  "executive_summary": "Combine a parametric generator with a non-parametric retrieval index: retrieve relevant documents for the query, then condition generation on both the query and the retrieved text.",
+  "description": "Rather than relying solely on knowledge implicitly stored in model weights, a retriever (originally dense passage retrieval over a Wikipedia index) fetches the top-k relevant documents for the input, which are concatenated with the query and passed to the generator. The foundational paper for the entire retrieval-augmented family of techniques, and the implicit threat model behind any 'insufficient retrieval / say you don't know' guardrail.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Knowledge-intensive tasks where the required facts are unlikely to be reliably present in the model's parametric knowledge, or where up-to-date/external/proprietary information is needed."
+  ],
+  "when_not_to_use": [
+    "No retrieval index/corpus is available, or the task is purely reasoning-based with no external-fact dependency."
+  ],
+  "known_pitfalls": [
+    "If retrieval returns nothing relevant, the generator can still confabulate rather than acknowledging insufficient evidence — this is exactly the failure mode a 'RAG shield' / insufficient-retrieval guardrail needs to catch."
+  ],
+  "related_techniques": [
+    "generated-knowledge-prompting"
+  ],
+  "primary_source": {
+    "authors": "Lewis, Perez, Piktus, Petroni, Karpukhin, Goyal, Küttler, Lewis, Yih, Rocktäschel, Riedel, Kiela",
+    "year": 2020,
+    "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    "venue": "NeurIPS 2020",
+    "arxiv_id": "2005.11401",
+    "url": "https://arxiv.org/abs/2005.11401"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Retrieve-then-generate with insufficiency guard",
+      "template": "# Retrieve\nQuery: {{query}}\nRetrieve the top {{k}} passages from {{retrieval_index}} most relevant to this query.\n\n# Generate\nRetrieved passages: {{retrieved_passages}}\nQuery: {{query}}\nAnswer the query using only information supported by the retrieved passages. If the passages do not contain enough information to answer confidently, say so explicitly instead of guessing.",
+      "variables": [
+        {
+          "name": "query",
+          "description": "The user's question",
+          "example": null
+        },
+        {
+          "name": "k",
+          "description": "Number of passages to retrieve",
+          "example": "5"
+        },
+        {
+          "name": "retrieval_index",
+          "description": "The document index/corpus being searched",
+          "example": null
+        },
+        {
+          "name": "retrieved_passages",
+          "description": "Text of the retrieved passages",
+          "example": null
+        }
+      ],
+      "template_id": "retrieval-augmented-generation--retrieve-then-generate-with-insufficiency-guard",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "This template depends on an external system (retrieval index, tool, solver, or interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires that system's state to also be fixed."
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "foundational",
+    "multi-call",
+    "hallucination-reduction"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "RAG"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

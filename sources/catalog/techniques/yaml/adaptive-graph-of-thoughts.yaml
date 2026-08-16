@@ -1,0 +1,73 @@
+id: adaptive-graph-of-thoughts
+name: Adaptive Graph of Thoughts (AGoT)
+category: reasoning-elicitation
+subcategory: adaptive-graph-reasoning
+executive_summary: Unifies CoT, ToT, and GoT into a single adaptive Directed Acyclic Graph (DAG) that
+  grows based on real-time self-evaluation. Achieves +46% on GPQA compared to static tree/graph methods.
+description: AGoT starts with a single reasoning node and dynamically expands the graph based on a self-evaluation
+  confidence threshold. High-confidence nodes terminate; low-confidence nodes spawn child nodes for exploration.
+  The DAG structure allows merging of convergent reasoning paths, avoiding redundant computation found
+  in tree-based methods.
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Complex reasoning where static tree/graph structures are too rigid.
+- Tasks benefiting from path merging and redundancy elimination.
+- When you want a single technique that adapts between chain, tree, and graph modes.
+when_not_to_use:
+- Simple tasks where CoT alone is sufficient.
+- When the cost of dynamic graph management exceeds its benefits.
+- Real-time applications where graph expansion latency is unacceptable.
+known_pitfalls:
+- Self-evaluation accuracy determines graph quality; poor calibration leads to over/under-expansion.
+- DAG management adds implementation complexity.
+- Convergence detection requires careful threshold tuning.
+related_techniques:
+- chain-of-thought
+- tree-of-thoughts
+- graph-of-thoughts
+- confidence-informed-self-consistency
+primary_source:
+  authors: Pandey, Ghukasyan, Goktas, Radha
+  year: 2025
+  title: 'Adaptive Graph of Thoughts: Test-Time Adaptive Reasoning Unifying Chain, Tree, and Graph Structures'
+  venue: arXiv
+  arxiv_id: '2502.05078'
+  url: https://arxiv.org/abs/2502.05078
+usage_templates:
+- template_name: Adaptive DAG reasoning with self-evaluation
+  template: |-
+    Problem: {{problem}}
+
+    Initialize graph with root node containing initial reasoning.
+    While unprocessed nodes exist:
+      1. Evaluate node confidence (0-100).
+      2. If confidence >= {{threshold}}: mark as terminal.
+      3. If confidence < {{threshold}}: spawn child nodes with alternative reasoning paths.
+      4. Merge convergent paths to eliminate redundancy.
+    Return the highest-confidence terminal node as final answer.
+  variables:
+  - name: problem
+    description: The reasoning problem to solve.
+    example: Prove that the sum of angles in a triangle equals 180 degrees.
+  - name: threshold
+    description: Confidence threshold for terminating a node.
+    example: '85'
+  template_id: adaptive-graph-of-thoughts--adaptive-dag
+  determinism: stochastic-by-design
+  reproducibility_note: Graph expansion is non-deterministic and depends on self-evaluation. Fix random
+    seed for child node generation to improve reproducibility.
+tags:
+- reasoning
+- adaptive
+- graph
+- meta-reasoning
+status: verified-external
+aliases:
+- AGoT
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

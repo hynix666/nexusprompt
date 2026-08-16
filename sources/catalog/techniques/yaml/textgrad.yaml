@@ -1,0 +1,93 @@
+id: textgrad
+name: TextGrad
+category: automatic-prompt-optimization
+subcategory: textual-backpropagation
+executive_summary: Textual backpropagation through LLM pipelines. Computes "text gradients" by having
+  an LLM critique its own outputs, then uses these critiques to update prompts, model calls, or intermediate
+  reasoning steps.
+description: TextGrad treats LLM pipelines as differentiable computation graphs where the "gradients"
+  are natural language critiques. After forward pass (generate output), a backward pass asks an LLM to
+  critique the output and identify what changes to inputs would improve it. These critiques are then used
+  to update prompts or intermediate variables. This enables optimization of complex pipelines without
+  requiring gradient access to model weights.
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Complex multi-step LLM pipelines that need optimization.
+- When you cannot access model weights for gradient-based fine-tuning.
+- Prompt optimization for pipelines with multiple LLM calls.
+when_not_to_use:
+- Simple single-call prompts where APE or manual tuning suffices.
+- When critique quality is too low to drive meaningful improvements.
+- When optimization budget is extremely limited.
+known_pitfalls:
+- Critique quality determines optimization effectiveness.
+- Text gradients are noisy compared to numerical gradients.
+- May require many iterations to converge.
+related_techniques:
+- dspy
+- mipro
+- automatic-prompt-engineer
+- opro
+primary_source:
+  authors: Yuksekgonul, Bianchi, Boen, Liu, Huang, Guestrin, Zou
+  year: 2024
+  title: 'TextGrad: Automatic "Differentiation" via Text'
+  venue: arXiv
+  arxiv_id: '2406.07496'
+  url: https://arxiv.org/abs/2406.07496
+usage_templates:
+- template_name: Textual backpropagation for pipeline optimization
+  template: |-
+    Pipeline: {{pipeline_description}}
+
+    Forward Pass:
+    Input: {{input}}
+    Output: {{output}}
+    Loss: {{loss_description}}
+
+    Backward Pass (Text Gradient):
+    Critique: {{critique}}
+    Suggested Input Changes: {{suggested_changes}}
+
+    Update:
+    Apply suggested changes to prompts/intermediate variables.
+    Repeat until convergence.
+  variables:
+  - name: pipeline_description
+    description: The LLM pipeline to optimize.
+    example: Retrieval → Summarization → Fact-checking
+  - name: input
+    description: Pipeline input.
+    example: Query about climate change impacts
+  - name: output
+    description: Pipeline output.
+    example: Summary with factual errors
+  - name: loss_description
+    description: What makes the output bad.
+    example: Contains hallucinated statistics
+  - name: critique
+    description: LLM-generated critique of the output.
+    example: The summary cites a 50% increase in sea levels which is not supported by the retrieved documents.
+  - name: suggested_changes
+    description: Suggested modifications to improve output.
+    example: 'Add instruction: "Only cite statistics explicitly found in retrieved documents."'
+  template_id: textgrad--textual-backprop
+  determinism: stochastic-by-design
+  reproducibility_note: Critique generation is non-deterministic. Apply at temperature=0 for more stable
+    optimization. Convergence is not guaranteed.
+tags:
+- optimization
+- backpropagation
+- textual
+- pipeline
+status: verified-external
+aliases:
+- TextGrad
+- Textual Backpropagation
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

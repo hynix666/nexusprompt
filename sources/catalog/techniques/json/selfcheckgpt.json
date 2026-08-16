@@ -1,0 +1,80 @@
+{
+  "id": "selfcheckgpt",
+  "name": "SelfCheckGPT",
+  "category": "self-verification-refinement",
+  "subcategory": "consistency-checking",
+  "executive_summary": "Samples multiple responses to the same prompt and checks consistency across them to detect hallucination without requiring an external fact-checker or knowledge base.",
+  "description": "SelfCheckGPT generates N answers to the same question at temperature > 0. It then measures consistency across the answers (via n-gram overlap, BERTScore, or LLM-as-judge). High consistency suggests the answer is grounded; contradictions suggest hallucination.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "You need hallucination detection but lack access to an external knowledge base.",
+    "Using black-box APIs where hidden-state methods are impossible.",
+    "High-stakes generation where a consistency check is better than no check."
+  ],
+  "when_not_to_use": [
+    "When an external fact-checker or retrieval system is available.",
+    "When the model consistently hallucinates the same incorrect fact across samples.",
+    "Cost-sensitive applications where N samples are prohibitive."
+  ],
+  "known_pitfalls": [
+    "Consistent hallucinations across samples will not be detected.",
+    "Requires temperature > 0; some APIs charge per token, making N samples expensive.",
+    "Consistency metrics may miss semantic contradictions."
+  ],
+  "related_techniques": [
+    "chain-of-verification",
+    "self-refine"
+  ],
+  "primary_source": {
+    "authors": "Manakul, Liusie, Gales",
+    "year": 2023,
+    "title": "SelfCheckGPT: Zero-Resource Black-Box Hallucination Detection for Generative Large Language Models",
+    "venue": "arXiv",
+    "arxiv_id": "2303.08896",
+    "url": "https://arxiv.org/abs/2303.08896"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Multi-sample consistency check",
+      "template": "Sample {{n}} answers to the following question at temperature {{temperature}}:\n{{question}}\n\nIf the answers are consistent → likely grounded.\nIf they contradict → likely hallucinated.\nFlag inconsistent claims for review.",
+      "variables": [
+        {
+          "name": "n",
+          "description": "Number of samples to generate.",
+          "example": "5"
+        },
+        {
+          "name": "temperature",
+          "description": "Sampling temperature for diversity.",
+          "example": "0.8"
+        },
+        {
+          "name": "question",
+          "description": "The question to sample multiple answers for.",
+          "example": "Who invented the telephone?"
+        }
+      ],
+      "template_id": "selfcheckgpt--multi-sample",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "Requires N independent samples at temperature > 0. Consistency can be measured via n-gram overlap, BERTScore, or LLM-as-judge."
+    }
+  ],
+  "tags": [
+    "verification",
+    "hallucination",
+    "consistency",
+    "self-checking"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "Self-Check GPT"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

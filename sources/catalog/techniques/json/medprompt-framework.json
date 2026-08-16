@@ -1,0 +1,92 @@
+{
+  "id": "medprompt-framework",
+  "name": "Medprompt Framework",
+  "category": "example-selection-formatting",
+  "subcategory": "domain-specific-ensemble",
+  "executive_summary": "SOTA medical QA ensemble combining kNN exemplar selection, chain-of-thought reasoning, and choice-shuffling ensembling. Achieves ~90% on MedQA, surpassing many fine-tuned medical models.",
+  "description": "Medprompt is a composition of three techniques optimized for medical question answering: (1) dynamic kNN exemplar selection from a medical training set to retrieve similar cases, (2) chain-of-thought prompting with medical reasoning steps, and (3) choice-shuffling ensembling, which re-runs the question with the answer options permuted and votes across the runs. The framework demonstrates that careful prompt engineering can match or exceed domain-specific fine-tuning.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Medical question answering where accuracy is critical.",
+    "When you have access to a medical exemplar dataset for kNN retrieval.",
+    "Benchmarking against fine-tuned medical models."
+  ],
+  "when_not_to_use": [
+    "Non-medical domains (the kNN exemplars are medical-specific).",
+    "When no medical exemplar dataset is available.",
+    "Real-time applications where the multi-call ensemble is too slow."
+  ],
+  "known_pitfalls": [
+    "kNN retrieval quality depends on the exemplar dataset coverage.",
+    "Medical reasoning chains can still hallucinate rare conditions.",
+    "Self-consistency may converge on common but incorrect answers."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "self-consistency",
+    "knn-prompting",
+    "few-shot-prompting"
+  ],
+  "primary_source": {
+    "authors": "Nori, Lee, Zhang, Carignan, Edgar, Fusi, King, Larson, Li, Liu, et al.",
+    "year": 2023,
+    "title": "Can Generalist Foundation Models Outcompete Special-Purpose Tuning? Case Study in Medicine",
+    "venue": "arXiv",
+    "arxiv_id": "2311.16452",
+    "url": "https://arxiv.org/abs/2311.16452"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Medprompt medical QA ensemble",
+      "template": "Medical Question: {{medical_question}}\n\nStep 1: Retrieve k={{k}} most similar exemplars via kNN from medical dataset.\nExemplars: {{exemplars}}\n\nStep 2: Generate {{n}} chain-of-thought reasoning paths with medical reasoning.\n\nStep 3: Apply self-consistency voting across all generated answers.\nFinal Answer: {{consensus_answer}}",
+      "variables": [
+        {
+          "name": "medical_question",
+          "description": "The medical question to answer.",
+          "example": "A 55-year-old male presents with chest pain radiating to the left arm. What is the most likely diagnosis?"
+        },
+        {
+          "name": "k",
+          "description": "Number of kNN exemplars to retrieve.",
+          "example": "5"
+        },
+        {
+          "name": "exemplars",
+          "description": "Retrieved similar medical cases.",
+          "example": "[Case 1: 60M chest pain → MI], [Case 2: 50M chest pain → unstable angina]"
+        },
+        {
+          "name": "n",
+          "description": "Number of reasoning paths for self-consistency.",
+          "example": "5"
+        },
+        {
+          "name": "consensus_answer",
+          "description": "The final answer after majority voting.",
+          "example": "Acute myocardial infarction"
+        }
+      ],
+      "template_id": "medprompt-framework--ensemble-qa",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "kNN retrieval is deterministic given fixed embeddings. CoT generation requires temperature > 0 for path diversity. Self-consistency voting is deterministic."
+    }
+  ],
+  "tags": [
+    "medical",
+    "ensemble",
+    "knn",
+    "domain-specific"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "Medprompt"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "id": "recube-repo-context",
+  "name": "RECUBE: Repository-Level Context Utilization Evaluation",
+  "category": "domain-specific-application",
+  "subcategory": "code-generation",
+  "executive_summary": "Measures how well models actually make use of repository-level context (surrounding files, imports, project conventions) during code generation, rather than assuming more context is automatically better.",
+  "description": "Provides an evaluation methodology for repository-level code generation specifically targeting whether additional project context (beyond the immediate function being written) measurably improves output quality, and where it doesn't. Useful for deciding how much repository context is worth including in a code-generation prompt, rather than defaulting to 'as much as fits'.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Designing a code-generation system that has access to repository-level context and needs to decide how much of it to include per prompt."
+  ],
+  "when_not_to_use": [
+    "Single-file, context-free code-generation tasks with no repository to draw on."
+  ],
+  "known_pitfalls": [
+    "More context is not unconditionally better — per Lost in the Middle, irrelevant repository context can dilute attention on the actually relevant parts."
+  ],
+  "related_techniques": [
+    "lost-in-the-middle",
+    "structured-cot-code-generation"
+  ],
+  "primary_source": {
+    "authors": "(local corpus, CMU)",
+    "year": 2025,
+    "title": "RECUBE: Evaluating Repository-Level Context Utilization in Code Generation",
+    "venue": "arXiv preprint",
+    "arxiv_id": null,
+    "url": null
+  },
+  "usage_templates": [
+    {
+      "template_name": "Context-utility ablation",
+      "template": "Generate a solution for {{coding_task}} under each of these context conditions: {{context_condition_list}} (e.g. no repo context, imports only, full-file context, full-repo context). Score each against the test suite and report whether more context improved, had no effect on, or hurt pass rate.",
+      "variables": [
+        {
+          "name": "coding_task",
+          "description": "The repository-embedded coding task",
+          "example": null
+        },
+        {
+          "name": "context_condition_list",
+          "description": "The different levels of repository context tested",
+          "example": null
+        }
+      ],
+      "template_id": "recube-repo-context--context-utility-ablation",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "code-generation",
+    "domain-specific",
+    "long-context",
+    "evaluation"
+  ],
+  "status": "corpus-present",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": "RECUBE.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

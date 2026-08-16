@@ -1,0 +1,70 @@
+{
+  "id": "algorithm-of-thoughts",
+  "name": "Algorithm of Thoughts (AoT)",
+  "category": "reasoning-elicitation",
+  "subcategory": "multi-path-reasoning",
+  "executive_summary": "Show the model in-context examples of algorithmic exploration (not just answers), so it internalizes backtracking and pruning from a single query, instead of needing an external multi-query tree-search loop.",
+  "description": "Targets the query-cost problem multi-query methods like Tree of Thoughts incur: those methods repeatedly halt, evaluate, and resume generation across many separate LLM calls, escalating cost. AoT instead encodes algorithmic exploration patterns (the kind of backtracking and pruning a search algorithm performs) directly into the in-context exemplars, exploiting the model's own recurrence dynamics so it can explore an idea space within a single or a few generations rather than needing an external control loop to orchestrate that exploration. Demonstrated competitive with multi-query tree-search methods on Game of 24 and 5x5 mini crosswords while using substantially fewer tokens and queries.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Search-like reasoning problems (constraint satisfaction, puzzles, combinatorial search) where Tree-of-Thoughts-style exploration is valuable but its multi-query cost is a binding constraint."
+  ],
+  "when_not_to_use": [
+    "Simple problems with no real branching search space — the algorithmic-exemplar overhead is unnecessary.",
+    "Problems where the exemplar author can't articulate a clear search/backtrack pattern to demonstrate in-context."
+  ],
+  "known_pitfalls": [
+    "Requires hand-authoring exemplars that actually demonstrate algorithmic exploration (not just a final answer), which is a harder exemplar-design task than writing a standard CoT chain."
+  ],
+  "related_techniques": [
+    "tree-of-thoughts",
+    "self-consistency"
+  ],
+  "primary_source": {
+    "authors": "Sel, Al-Tawaha, Khattar, Jia, Jin",
+    "year": 2023,
+    "title": "Algorithm of Thoughts: Enhancing Exploration of Ideas in Large Language Models",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2308.10379",
+    "url": "https://arxiv.org/abs/2308.10379"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Algorithmic-exploration exemplar",
+      "template": "Here is an example of solving a similar problem by exploring multiple paths, backtracking from dead ends, and pruning unpromising branches:\n{{worked_algorithmic_exemplar_with_backtracking}}\n\nNow solve this problem the same way, exploring paths and backtracking as needed within your response: {{target_problem}}",
+      "variables": [
+        {
+          "name": "worked_algorithmic_exemplar_with_backtracking",
+          "description": "A worked example explicitly showing exploration, backtracking, and pruning, not just a final answer",
+          "example": null
+        },
+        {
+          "name": "target_problem",
+          "description": "The problem to solve using the same algorithmic exploration pattern",
+          "example": null
+        }
+      ],
+      "template_id": "algorithm-of-thoughts--algorithmic-exploration-exemplar",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "search",
+    "single-call",
+    "efficiency"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "AoT"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "id": "constitutional-ai",
+  "name": "Constitutional AI (CAI)",
+  "category": "self-verification-refinement",
+  "subcategory": "alignment",
+  "executive_summary": "Have the model critique and revise its own outputs against a written 'constitution' of principles, then train on the revisions — self-critique against explicit rules rather than human preference labels.",
+  "description": "A two-stage process: a supervised stage where the model critiques and revises its own responses according to a list of natural-language principles, generating a self-improved training set; and a reinforcement-learning stage (RLAIF) where AI-generated preference judgments between response pairs, made according to the same constitution, replace human preference labels. The self-verification-refinement mechanism (critique against written principles, then revise) is the same conceptual move SALMON's instructable reward model makes at the reward-signal level — CAI is the earlier, foundational version of using an explicit constitution to steer self-critique.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "training-time",
+  "when_to_use": [
+    "Building a self-alignment or self-critique pipeline where a written set of principles already exists (or can be authored) and should govern the critique/revision process explicitly, rather than being left implicit."
+  ],
+  "when_not_to_use": [
+    "Inference-time-only prompting with no training loop — the RLAIF stage in particular requires a training pipeline, not just a prompt template."
+  ],
+  "known_pitfalls": [
+    "Output quality is bounded by how well-specified the constitution is; vague or conflicting principles produce vague or inconsistent critique-and-revise behavior."
+  ],
+  "related_techniques": [
+    "salmon",
+    "self-refine",
+    "chain-of-verification"
+  ],
+  "primary_source": {
+    "authors": "Bai, Kadavath, Kundu, Askell, Kernion, Jones, Chen, Goldie, Mirhoseini, McKinnon, et al.",
+    "year": 2022,
+    "title": "Constitutional AI: Harmlessness from AI Feedback",
+    "venue": "arXiv preprint (Anthropic)",
+    "arxiv_id": "2212.08073",
+    "url": "https://arxiv.org/abs/2212.08073"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Critique-and-revise against a written constitution",
+      "template": "Constitution (principles to critique against): {{constitution_principles}}\n\n# Critique\nResponse: {{draft_response}}\nIdentify ways this response violates any of the principles above.\n\n# Revise\nResponse: {{draft_response}}\nCritique: {{critique}}\nRewrite the response to address the critique while remaining helpful.\n\n# (Training-time only) AI preference labeling\nGiven two responses {{response_a}} and {{response_b}} to the same prompt, which better satisfies the constitution above? Use this judgment as a preference label instead of a human-labeled one.",
+      "variables": [
+        {
+          "name": "constitution_principles",
+          "description": "The explicit written set of principles guiding critique",
+          "example": null
+        },
+        {
+          "name": "draft_response",
+          "description": "The response being critiqued and revised",
+          "example": null
+        },
+        {
+          "name": "critique",
+          "description": "Output of the critique step",
+          "example": null
+        },
+        {
+          "name": "response_a",
+          "description": "First candidate response for AI preference labeling",
+          "example": null
+        },
+        {
+          "name": "response_b",
+          "description": "Second candidate response for AI preference labeling",
+          "example": null
+        }
+      ],
+      "template_id": "constitutional-ai--critique-and-revise-against-a-written-constitution",
+      "determinism": "training-time-not-applicable",
+      "reproducibility_note": "This template describes a training-time process (fine-tuning or policy training), not a single reproducible inference call; reproducibility depends on the training pipeline and data, not on prompt text alone."
+    }
+  ],
+  "tags": [
+    "alignment",
+    "training-time",
+    "self-critique",
+    "safety"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "CAI"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "id": "llmlingua-prompt-compression",
+  "name": "LLMLingua (Coarse-to-Fine Prompt Compression)",
+  "category": "structured-constrained-output",
+  "subcategory": "token-compression",
+  "executive_summary": "Compress a long prompt by up to 20x with little performance loss, using a budget controller and token-level iterative removal of low-information tokens — a general alternative to trimming content by hand.",
+  "description": "Targets the growing-prompt-length problem directly: as CoT and in-context-learning prompts get longer (sometimes tens of thousands of tokens), inference cost and latency grow with them. LLMLingua uses a small language model to estimate each token's information content, a budget controller to decide how aggressively to compress different parts of the prompt while preserving semantic integrity, and a token-level iterative algorithm that models dependence between tokens rather than dropping them independently. Distinct from Chain-of-Density (which compresses by rewriting/densifying content) — LLMLingua compresses by removing low-information tokens from an existing prompt, applicable to any prompt type, not specifically summaries.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Long prompts (extensive few-shot exemplars, long retrieved context, long conversation history) where inference cost/latency is a binding constraint and some compression can be tolerated."
+  ],
+  "when_not_to_use": [
+    "Short prompts already well within budget — compression overhead isn't worth it.",
+    "Prompts where every token is load-bearing and no semantic loss is acceptable (e.g. exact legal or medical text that must be preserved verbatim)."
+  ],
+  "known_pitfalls": [
+    "Aggressive compression ratios trade off against fidelity; the budget controller needs tuning per use case rather than a single universal compression ratio being safe everywhere."
+  ],
+  "related_techniques": [
+    "chain-of-density",
+    "lost-in-the-middle",
+    "making-slow-thinking-faster"
+  ],
+  "primary_source": {
+    "authors": "Jiang, Wu, Lin, Yang, Qiu",
+    "year": 2023,
+    "title": "LLMLingua: Compressing Prompts for Accelerated Inference of Large Language Models",
+    "venue": "EMNLP 2023",
+    "arxiv_id": "2310.05736",
+    "url": "https://arxiv.org/abs/2310.05736"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Budget-controlled iterative token compression",
+      "template": "Original prompt ({{original_token_count}} tokens): {{original_prompt}}\nTarget compression ratio: {{target_ratio}}\nUsing a small reference LM, estimate each token's information content. Allocate the token budget across prompt sections via the budget controller (preserve instruction and demonstration structure preferentially over filler). Iteratively remove low-information tokens, modeling dependence between adjacent removals rather than dropping tokens independently, until the target token count {{target_token_count}} is reached.",
+      "variables": [
+        {
+          "name": "original_prompt",
+          "description": "The full, uncompressed prompt",
+          "example": null
+        },
+        {
+          "name": "original_token_count",
+          "description": "Token count before compression",
+          "example": "8000"
+        },
+        {
+          "name": "target_ratio",
+          "description": "Desired compression ratio",
+          "example": "5x"
+        },
+        {
+          "name": "target_token_count",
+          "description": "Resulting token budget after compression",
+          "example": "2000"
+        }
+      ],
+      "template_id": "llmlingua-prompt-compression--budget-controlled-iterative-token-compression",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "efficiency",
+    "compression",
+    "token-budget"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "LLMLingua"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

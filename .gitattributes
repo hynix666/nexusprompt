@@ -1,0 +1,9 @@
+# Frozen sources are byte-exact inputs. Their SHA-256 is recorded in
+# sources/MANIFEST.json and checked by scripts/verify-sources.mjs, so any
+# line-ending conversion on checkout would change the bytes, change the hashes,
+# and fail verification on a fresh clone. Disable all text conversion here.
+sources/** -text
+
+# The superseded pipeline component kept at the repo root is a historical copy;
+# treat it the same way so it stays comparable to the frozen revision.
+SystemPromptBuilderPipeline.tsx -text

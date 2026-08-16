@@ -1,0 +1,70 @@
+{
+  "id": "chain-of-density",
+  "name": "Chain of Density Prompting",
+  "category": "structured-constrained-output",
+  "subcategory": "iterative-densification",
+  "executive_summary": "Iteratively densify a summary by repeatedly folding in missing salient entities without increasing its length, instead of writing one summary in a single pass.",
+  "description": "Generates an initial, entity-sparse summary, then runs several rounds of: identify 1-3 salient entities missing from the current summary, rewrite the summary to include them while fusing/compressing existing content so length stays roughly constant. Produces progressively denser summaries and gives explicit control over the density/readability tradeoff via the number of rounds.",
+  "verification_status": "judge-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Summarization tasks where information density is a priority and a fixed length budget applies."
+  ],
+  "when_not_to_use": [
+    "Length is not constrained, or maximal readability (vs. density) is the actual goal — very dense summaries can become harder to read."
+  ],
+  "known_pitfalls": [
+    "Beyond a task-dependent number of rounds, density gains trade off against readability; the paper explicitly does not claim denser is always better."
+  ],
+  "related_techniques": [
+    "truncproof-json-guardrail"
+  ],
+  "primary_source": {
+    "authors": "Adams, Fabbri, Ladhak, Lehman, Elhadad",
+    "year": 2023,
+    "title": "From Sparse to Dense: GPT-4 Summarization with Chain of Density Prompting",
+    "venue": "EMNLP 2023 NewSum Workshop",
+    "arxiv_id": "2309.04269",
+    "url": "https://arxiv.org/abs/2309.04269"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Iterative entity-densification",
+      "template": "Article: {{source_article}}\n\nGenerate an increasingly dense summary in {{num_rounds}} steps, each about {{target_length}} words:\nStep 1: Write a summary identifying 1-3 missing salient entities from the article that are absent from a first pass.\nStep 2..{{num_rounds}}: Rewrite the previous summary to fuse in the identified missing entities, while removing uninformative phrases to keep length constant. Identify 1-3 new missing entities each round.",
+      "variables": [
+        {
+          "name": "source_article",
+          "description": "The text being summarized",
+          "example": null
+        },
+        {
+          "name": "num_rounds",
+          "description": "How many densification rounds to run",
+          "example": "5"
+        },
+        {
+          "name": "target_length",
+          "description": "Roughly fixed target word count per round",
+          "example": "80"
+        }
+      ],
+      "template_id": "chain-of-density--iterative-entity-densification",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "summarization",
+    "structured-output",
+    "iterative"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

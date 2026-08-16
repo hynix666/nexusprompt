@@ -1,0 +1,86 @@
+{
+  "id": "progressive-hint-prompting",
+  "name": "Progressive-Hint Prompting (PHP)",
+  "category": "reasoning-elicitation",
+  "subcategory": "iterative-refinement",
+  "executive_summary": "Feed the model's own previous answer back in as a hint for the next attempt, repeating across automatic rounds until the answer stabilizes — using prior outputs to progressively converge toward the correct one.",
+  "description": "Notes that plain CoT and Self-Consistency don't fully exploit the answers a model already generated to guide subsequent responses — once an answer is produced, it's typically discarded rather than fed back. PHP automates multiple rounds of interaction where each round's prompt includes the previous round's answer as a hint, progressively refining toward the correct answer, and stops when the answer stabilizes across rounds. Orthogonal to CoT and Self-Consistency (composes with both): reported +4.2% on GSM8K with greedy decoding over Complex CoT, and a 46% reduction in sampled paths needed when combined with self-consistency, plus new state-of-the-art results on SVAMP, GSM8K, AQuA, and MATH when combined with GPT-4.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Multi-step reasoning/math tasks where iterating on a first-pass answer with the answer itself as context is likely to converge toward a more accurate one.",
+    "Combined with Self-Consistency, specifically to reduce the number of sampled paths needed for the same accuracy."
+  ],
+  "when_not_to_use": [
+    "Tasks with no natural 'hint the next attempt with the last answer' structure — open-ended generation without a stabilizing target."
+  ],
+  "known_pitfalls": [
+    "Needs a stopping rule (answer stability across rounds, or a round budget) to avoid unbounded iteration; if the model oscillates between two answers rather than converging, iteration can continue without benefit."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "self-consistency",
+    "self-refine"
+  ],
+  "primary_source": {
+    "authors": "Zheng, Liu, Xie, Li, Li",
+    "year": 2023,
+    "title": "Progressive-Hint Prompting Improves Reasoning in Large Language Models",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2304.09797",
+    "url": "https://arxiv.org/abs/2304.09797"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Iterate-with-previous-answer-as-hint",
+      "template": "# Round 1\n{{question}}\nLet's think step by step.\n(produces {{answer_round_1}})\n\n# Round r>1 (repeat, feeding the previous answer back as a hint)\n{{question}}\nHint: the answer is near {{previous_round_answer}}.\nLet's think step by step.\n(produces {{answer_round_r}})\n\n# Stop when {{answer_round_r}} == {{previous_round_answer}} (stabilized) or the round budget {{max_rounds}} is reached; return the stabilized answer.",
+      "variables": [
+        {
+          "name": "question",
+          "description": "The question being iteratively refined toward",
+          "example": null
+        },
+        {
+          "name": "answer_round_1",
+          "description": "First-round answer, with no hint",
+          "example": null
+        },
+        {
+          "name": "previous_round_answer",
+          "description": "The answer from the immediately preceding round, fed back as a hint",
+          "example": null
+        },
+        {
+          "name": "answer_round_r",
+          "description": "This round's answer",
+          "example": null
+        },
+        {
+          "name": "max_rounds",
+          "description": "Round budget cutoff if the answer never stabilizes",
+          "example": "5"
+        }
+      ],
+      "template_id": "progressive-hint-prompting--iterate-with-previous-answer-as-hint",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "This template intentionally samples multiple times or explores adaptively; outputs vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends on intermediate stochastic choices)."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "iterative",
+    "multi-call",
+    "self-hinting"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "PHP"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "id": "injecagent-agentic-ipi-benchmark",
+  "name": "InjecAgent: Indirect Prompt Injection Benchmark for Tool-Using Agents",
+  "category": "prompt-injection-defense",
+  "subcategory": "benchmarking",
+  "executive_summary": "1,054 test cases across 17 user tools and 62 attacker tools, measuring how often tool-using agents follow malicious instructions hidden in tool outputs — ReAct-prompted GPT-4 was fooled 24% of the time.",
+  "description": "Extends the indirect-prompt-injection threat model specifically to agentic, tool-using LLMs: malicious instructions are embedded in content an agent's own tools return (e.g. a webpage or email fetched mid-task), aiming to redirect the agent toward direct harm or private-data exfiltration. Evaluates 30 different LLM agents and finds the attack success rate roughly doubles when the injected instruction is reinforced with an explicit hacking-style prompt. The most directly applicable external benchmark for any agentic-tool-use technique in this catalog (ReAct, Plan-and-Solve, Meta-Prompting) that ingests tool output into its own reasoning loop.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Evaluating or red-teaming any agent design that consumes tool/API output (search results, email content, webpages) as part of its reasoning loop — this is exactly the ReAct/tool-use pattern in this catalog's agentic-tool-use category."
+  ],
+  "when_not_to_use": [
+    "Closed-book systems with no tool use or external content ingestion — the threat model doesn't apply."
+  ],
+  "known_pitfalls": [
+    "A benchmark score against InjecAgent's specific 17/62 tool set doesn't guarantee resistance to a novel tool or attacker-tool combination outside that set."
+  ],
+  "related_techniques": [
+    "indirect-prompt-injection",
+    "react",
+    "hackaprompt-taxonomy",
+    "formalized-injection-benchmark"
+  ],
+  "primary_source": {
+    "authors": "Zhan, Liang, Ying, Kang",
+    "year": 2024,
+    "title": "InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated Large Language Model Agents",
+    "venue": "Findings of ACL 2024",
+    "arxiv_id": "2403.02691",
+    "url": "https://arxiv.org/abs/2403.02691"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Agentic IPI vulnerability audit",
+      "template": "Agent under test uses tools: {{agent_tool_list}}\nFor each tool, construct a test case where the tool's returned content contains an embedded instruction: {{injected_instruction}}, aiming at either direct harm or private-data exfiltration.\nRun the agent end-to-end on task {{benign_task}} and record whether it executes the injected instruction, ignores it, or flags it as suspicious. Repeat with the injected instruction reinforced by an explicit instruction-override phrase to test the 'hacking prompt' escalation case.",
+      "variables": [
+        {
+          "name": "agent_tool_list",
+          "description": "Tools available to the agent under test",
+          "example": null
+        },
+        {
+          "name": "injected_instruction",
+          "description": "The malicious instruction embedded in tool-returned content",
+          "example": null
+        },
+        {
+          "name": "benign_task",
+          "description": "The legitimate task the agent believes it's performing",
+          "example": null
+        }
+      ],
+      "template_id": "injecagent-agentic-ipi-benchmark--agentic-ipi-vulnerability-audit",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "This template depends on an external system (retrieval index, tool, solver, or interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires that system's state to also be fixed."
+    }
+  ],
+  "tags": [
+    "security",
+    "benchmark",
+    "injection",
+    "agentic",
+    "red-teaming"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

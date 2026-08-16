@@ -1,0 +1,89 @@
+id: prompt-repetition
+name: Prompt Repetition
+category: example-selection-formatting
+subcategory: context-positioning
+executive_summary: Simply duplicate the entire prompt back-to-back so left-to-right attention can reach
+  information that only appeared later — improving accuracy on non-reasoning tasks for most models with
+  no added output length.
+description: 'Addresses the same causal-masking root cause as Lost in the Middle and Found-in-the-Middle
+  Calibration, but with the simplest possible mitigation: standard decoder-only LLMs process text left-to-right,
+  so a token early in the prompt (e.g. answer options listed before the passage they refer to) cannot
+  attend to content that appears after it in a single pass. Repeating the full prompt verbatim means every
+  token''s second occurrence can now attend to the entire first occurrence, approximating bidirectional
+  attention without any architecture change. Tested across 7 models (Gemini 2.0 Flash/Flash Lite, GPT-4o/4o-mini,
+  Claude 3 Haiku/3.7 Sonnet, DeepSeek V3) and 7 benchmarks (ARC-Challenge, OpenBookQA, GSM8K, MMLU-Pro,
+  MATH, plus two custom positional-sensitivity benchmarks) on non-reasoning generation: repetition won
+  47/70 model-benchmark combinations with 0 losses (statistically significant by McNemar''s test), including
+  gains up to 76% on some retrieval/lookup tasks, with no increase in output length and no added latency
+  for most models tested — the paper notes Anthropic''s Claude models as the exception to the latency-neutrality
+  claim. In reasoning-enabled mode the benefit is much smaller (reported as 5 wins vs. 22 ties in that
+  setting), consistent with the paper''s own observation that RL-trained reasoning models often already
+  learn to repeat parts of the request on their own.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Non-reasoning generation (direct answers, classification, retrieval/lookup from a provided passage,
+  multiple-choice) where cost and latency matter and a free, single-call formatting change is preferred
+  over more expensive techniques.
+- Cases resembling 'Lost in the Middle' symptoms — answer options or instructions appearing before the
+  content they depend on.
+when_not_to_use:
+- Reasoning-enabled generation (explicit chain-of-thought or 'thinking' modes) — reported benefit there
+  was much weaker (5 wins vs. 22 ties across the same test matrix), consistent with reasoning models often
+  already exhibiting similar re-reading behavior on their own.
+- Tasks where doubling the input token count meaningfully affects cost under a strict prompt-token budget,
+  even though output length is unaffected.
+- Deployments on Claude models specifically where added latency from the longer input hasn't been separately
+  verified — the paper notes Claude as the exception to its general latency-neutrality finding.
+known_pitfalls:
+- The underlying experiments were run against model versions current as of early-to-mid 2025 (Gemini 2.0,
+  GPT-4o family, Claude 3.x, DeepSeek V3) — later model generations released since are untested, so the
+  specific magnitude of reported gains (up to 76% on some tasks) should be treated as demonstrated on
+  that model generation, not guaranteed to hold identically on newer ones, even though the underlying
+  causal-masking mechanism the technique addresses is architecture-level and plausibly still applies.
+- The 'no added latency' finding has a noted exception for Anthropic's Claude models specifically — verify
+  latency impact empirically before assuming it's free on every provider.
+- This is a December 2025 preprint, not yet peer-reviewed at time of cataloging — the experimental design
+  (7 models, 70 combinations, McNemar significance testing) is solid, but independent replication by other
+  labs hadn't been found as of this entry's most recent check.
+related_techniques:
+- lost-in-the-middle
+- found-in-the-middle-calibration
+- thread-of-thought
+primary_source:
+  authors: Leviathan, Kalman, Matias
+  year: 2025
+  title: Prompt Repetition Improves Non-Reasoning LLMs
+  venue: arXiv preprint (Google Research)
+  arxiv_id: '2512.14982'
+  url: https://arxiv.org/abs/2512.14982
+usage_templates:
+- template_name: Duplicate the full prompt verbatim
+  template: |-
+    {{original_prompt}}
+    {{original_prompt}}
+  variables:
+  - name: original_prompt
+    description: The complete original prompt (instructions, context, question), repeated verbatim immediately
+      after itself with no separator needed
+    example: null
+  template_id: prompt-repetition--duplicate-the-full-prompt-verbatim
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reliability
+- long-context
+- positioning
+- single-call
+- low-cost
+- recent
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

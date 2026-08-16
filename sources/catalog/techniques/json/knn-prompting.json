@@ -1,0 +1,77 @@
+{
+  "id": "knn-prompting",
+  "name": "kNN Prompting",
+  "category": "example-selection-formatting",
+  "subcategory": "retrieval-based-example-selection",
+  "executive_summary": "Query the model once per training example to obtain distributed representations, then classify a test instance by nearest-neighbour lookup over those representations instead of stuffing demonstrations into the context.",
+  "description": "In-context learning cannot scale past the context window, and it needs calibration to counter position and label bias. kNN Prompting sidesteps both: the LLM's output distribution over each training instance becomes that instance's representation, and prediction is a nearest-neighbour vote among stored representations. Because the model's distribution is used to align test and training instances rather than to emit a label directly, no calibration step is required, and the method keeps improving as training data grows well beyond what would fit in a prompt.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "You have far more labelled examples than fit in the context window.",
+    "The task is classification and in-context learning is visibly miscalibrated across label choices or example orderings.",
+    "One-off indexing cost is acceptable in exchange for cheaper, steadier inference."
+  ],
+  "when_not_to_use": [
+    "The task is open-ended generation rather than classification.",
+    "You cannot afford one model call per training instance to build the datastore.",
+    "Labelled data is scarce enough that ordinary few-shot prompting already covers it."
+  ],
+  "known_pitfalls": [
+    "The datastore must be rebuilt when the underlying model changes; representations are model-specific.",
+    "Retrieval quality bounds accuracy -- a noisy or unbalanced datastore propagates straight into predictions.",
+    "Storage and lookup cost grow with the training set."
+  ],
+  "related_techniques": [
+    "few-shot-prompting",
+    "what-makes-good-in-context-examples",
+    "retrieval-augmented-generation"
+  ],
+  "primary_source": {
+    "authors": "Xu, Wang, Mao, Lyu, She, Zhang",
+    "year": 2023,
+    "title": "kNN Prompting: Beyond-Context Learning with Calibration-Free Nearest Neighbor Inference",
+    "venue": "ICLR 2023",
+    "arxiv_id": "2303.13824",
+    "url": "https://arxiv.org/abs/2303.13824"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Datastore probe prompt",
+      "template": "{{task_instruction}}\n\nInput: {{instance_text}}\nLabel:",
+      "variables": [
+        {
+          "name": "task_instruction",
+          "description": "The task framing, identical for every probe.",
+          "example": "Classify the sentiment of the review."
+        },
+        {
+          "name": "instance_text",
+          "description": "A training or test instance to encode.",
+          "example": "The plot dragged but the acting saved it."
+        }
+      ],
+      "template_id": "knn-prompting--datastore-probe",
+      "determinism": "requires-external-system",
+      "reproducibility_note": "The prompt itself is a single deterministic call, but the prediction depends on an external datastore of cached representations and a nearest-neighbour index."
+    }
+  ],
+  "tags": [
+    "example-selection",
+    "retrieval",
+    "classification",
+    "calibration-free"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "kNN Prompting",
+    "kNN-Prompting"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

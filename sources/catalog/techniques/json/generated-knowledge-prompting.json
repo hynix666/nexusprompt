@@ -1,0 +1,74 @@
+{
+  "id": "generated-knowledge-prompting",
+  "name": "Generated Knowledge Prompting",
+  "category": "reasoning-elicitation",
+  "subcategory": "context-generation",
+  "executive_summary": "Have the model first generate relevant background facts about the question, then answer conditioned on its own generated knowledge — a retrieval-free precursor to RAG.",
+  "description": "Stage one prompts the model to produce several pieces of background knowledge relevant to the question. Stage two feeds those generated knowledge statements alongside the question into a final answering prompt. Effective on commonsense-reasoning tasks where the model has relevant knowledge latently but doesn't reliably surface it unprompted.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Commonsense or fact-dependent reasoning where relevant knowledge is plausibly in the model's training data but not reliably surfaced by the question alone.",
+    "No external retrieval index is available (this is retrieval-free)."
+  ],
+  "when_not_to_use": [
+    "The needed facts genuinely aren't in the model's training data — generated knowledge will hallucinate rather than help; use retrieval-augmented-generation instead."
+  ],
+  "known_pitfalls": [
+    "Generated 'knowledge' can itself be wrong or fabricated, in which case it actively misleads the final answer rather than helping."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "retrieval-augmented-generation",
+    "analogical-prompting"
+  ],
+  "primary_source": {
+    "authors": "Liu, Wu, Lu, Welleck, West, Le Bras, Choi, Hajishirzi",
+    "year": 2022,
+    "title": "Generated Knowledge Prompting for Commonsense Reasoning",
+    "venue": "ACL 2022",
+    "arxiv_id": "2110.08387",
+    "url": "https://arxiv.org/abs/2110.08387"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Generate-then-answer",
+      "template": "# Step 1 — generate knowledge\nGenerate {{num_facts}} facts that are relevant background for answering: {{question}}\n\n# Step 2 — answer with knowledge\nBackground facts:\n{{generated_facts}}\n\nQuestion: {{question}}\nUsing the background facts where relevant, answer the question.",
+      "variables": [
+        {
+          "name": "question",
+          "description": "The target question",
+          "example": null
+        },
+        {
+          "name": "num_facts",
+          "description": "How many background facts to generate",
+          "example": "4"
+        },
+        {
+          "name": "generated_facts",
+          "description": "Output of step 1, fed into step 2",
+          "example": null
+        }
+      ],
+      "template_id": "generated-knowledge-prompting--generate-then-answer",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "commonsense",
+    "multi-call",
+    "context-generation"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

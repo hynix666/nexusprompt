@@ -1,0 +1,91 @@
+{
+  "id": "recomp",
+  "name": "RECOMP",
+  "category": "prompt-compression-context-engineering",
+  "subcategory": "trained-compression",
+  "executive_summary": "Trained extractive and abstractive compressor models specifically designed for prompt compression. Learns to compress retrieved documents into concise summaries that preserve query-relevant information.",
+  "description": "RECOMP trains dedicated compressor models (separate from the generator LLM) to compress retrieved documents. It supports two modes: (1) Extractive — selecting the most important sentences from retrieved text, and (2) Abstractive — generating novel summaries of retrieved text. Both modes are trained with a distillation objective that ensures the compressed text preserves the information needed to answer queries correctly.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "High-volume RAG systems where prompt compression is a bottleneck.",
+    "When you can afford to train a specialized compressor.",
+    "When retrieved documents are long and contain significant redundancy."
+  ],
+  "when_not_to_use": [
+    "When training data for the compressor is unavailable.",
+    "When the overhead of running a separate compressor model is unacceptable.",
+    "When retrieval quality is already high and documents are short."
+  ],
+  "known_pitfalls": [
+    "Compressor training requires labeled query-document-answer triples.",
+    "Extractive mode may miss cross-sentence information.",
+    "Abstractive mode may hallucinate during compression."
+  ],
+  "related_techniques": [
+    "llmlingua-prompt-compression",
+    "longllmlingua",
+    "selective-context"
+  ],
+  "primary_source": {
+    "authors": "Xu, Shi, Choi",
+    "year": 2023,
+    "title": "RECOMP: Improving Retrieval-Augmented LMs with Compression and Selective Augmentation",
+    "venue": "arXiv",
+    "arxiv_id": "2310.04408",
+    "url": "https://arxiv.org/abs/2310.04408"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Trained compressor for retrieved documents",
+      "template": "Query: {{query}}\nRetrieved Documents: {{documents}}\n\nStep 1: Pass documents through trained compressor.\nMode: {{compression_mode}}  [extractive / abstractive]\n\nStep 2: Compressor outputs concise representations.\nCompressed: {{compressed_documents}}\n\nStep 3: Use compressed documents as context for generation.\nAnswer: {{answer}}",
+      "variables": [
+        {
+          "name": "query",
+          "description": "The user query.",
+          "example": "What are the benefits of renewable energy?"
+        },
+        {
+          "name": "documents",
+          "description": "Retrieved documents to compress.",
+          "example": "Doc 1: Renewable energy sources include solar, wind, and hydroelectric power..."
+        },
+        {
+          "name": "compression_mode",
+          "description": "Extractive or abstractive compression.",
+          "example": "abstractive"
+        },
+        {
+          "name": "compressed_documents",
+          "description": "Compressed document representations.",
+          "example": "Renewable energy (solar, wind, hydro) reduces carbon emissions, creates jobs, and improves energy security."
+        },
+        {
+          "name": "answer",
+          "description": "Final answer generated from compressed context.",
+          "example": "Renewable energy reduces carbon emissions, creates jobs, and improves energy security."
+        }
+      ],
+      "template_id": "recomp--trained-compression",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "Trained compressor is deterministic at inference time. Compression quality depends on training data coverage."
+    }
+  ],
+  "tags": [
+    "compression",
+    "trained",
+    "extractive",
+    "abstractive"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "RECOMP"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,96 @@
+id: voyager-lifelong-learning-agent
+name: Voyager (Lifelong Learning Embodied Agent)
+category: agentic-tool-use
+subcategory: skill-library
+executive_summary: An embodied agent that continuously explores an environment, writes and stores reusable,
+  verified skills as code, composing learned skills to tackle harder tasks — no demonstrations or gradient
+  updates.
+description: 'Extends the library-of-reusable-components idea from ART and RECUBE-style approaches into
+  a fully autonomous, continuously-learning agent loop: an automatic curriculum proposes the next exploration
+  goal based on the agent''s current state and skill library, an iterative prompting mechanism generates
+  executable code to accomplish that goal (using environment feedback, execution errors, and self-verification
+  to refine the code across attempts), and successfully verified skills are added as reusable functions
+  to a growing library that later, more complex skills can call. Demonstrated in Minecraft, obtaining
+  3.3x more unique items, traveling 2.3x longer distances, and unlocking key tech-tree milestones up to
+  15.3x faster than prior state-of-the-art approaches, with skills the agent learned proving directly
+  transferable to solving new tasks from scratch.'
+verification_status: unverifiable-by-text
+cost_profile: agentic-loop
+when_to_use:
+- Open-ended environments where the agent needs to autonomously discover its own curriculum of increasingly
+  complex sub-goals and build genuinely reusable capabilities over a long horizon, rather than being given
+  a fixed task to solve once.
+when_not_to_use:
+- Bounded, single-shot tasks with a fixed known goal — the autonomous curriculum and skill-library machinery
+  is substantial overhead not needed for a one-off task ART or ReAct already handle well.
+known_pitfalls:
+- Skill library growth is only useful if skills are genuinely composable and correctly verified before
+  being stored — a poorly verified skill added to the library can propagate errors into everything built
+  on top of it later.
+related_techniques:
+- art-automatic-reasoning-tool-use
+- reflexion
+- generative-agents-memory-architecture
+primary_source:
+  authors: Wang, Xie, Jiang, Mandlekar, Xiao, Zhu, Fan, Anandkumar
+  year: 2023
+  title: 'Voyager: An Open-Ended Embodied Agent with Large Language Models'
+  venue: arXiv preprint
+  arxiv_id: '2305.16291'
+  url: https://arxiv.org/abs/2305.16291
+usage_templates:
+- template_name: Automatic curriculum + iterative skill synthesis + library growth
+  template: |-
+    # Automatic curriculum
+    Current agent state: {{agent_state}}
+    Current skill library: {{skill_library}}
+    Propose the next exploration goal that's achievable but pushes beyond current capabilities: {{next_goal}}
+
+    # Iterative skill synthesis (repeat with feedback until verified)
+    Goal: {{next_goal}}
+    Available skills to compose: {{skill_library}}
+    Write executable code to accomplish this goal, reusing library skills where applicable: {{generated_code}}
+    Execution feedback/errors: {{execution_feedback}}
+    Self-verify: did this achieve the goal? {{verification_result}}
+    If not verified, revise {{generated_code}} using the feedback and retry.
+
+    # Add to library (once verified)
+    Add the verified skill for '{{next_goal}}' to {{skill_library}} as a reusable, named function for future composition.
+  variables:
+  - name: agent_state
+    description: The agent's current state/inventory/capabilities in the environment
+    example: null
+  - name: skill_library
+    description: The growing library of previously verified, reusable skills
+    example: null
+  - name: next_goal
+    description: The proposed next exploration goal
+    example: null
+  - name: generated_code
+    description: Executable code generated to accomplish the current goal
+    example: null
+  - name: execution_feedback
+    description: Environment feedback or errors from running the generated code
+    example: null
+  - name: verification_result
+    description: Whether the goal was successfully verified as achieved
+    example: null
+  template_id: voyager-lifelong-learning-agent--automatic-curriculum-iterative-skill-synthesis-library-growth
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- agentic
+- lifelong-learning
+- skill-library
+- embodied
+- agentic-loop
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

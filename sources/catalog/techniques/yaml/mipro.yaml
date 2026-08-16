@@ -1,0 +1,75 @@
+id: mipro
+name: MIPRO
+category: automatic-prompt-optimization
+subcategory: bayesian-optimization
+executive_summary: Bayesian proposal of instructions and demonstrations for DSPy pipelines. Uses Bayesian
+  optimization to efficiently search the joint space of prompt instructions and few-shot examples, significantly
+  outperforming random search with fewer evaluations.
+description: MIPRO (Multiprompt Instruction Proposal Optimizer) is a DSPy-native optimizer that treats
+  prompt optimization as a structured search problem. It defines a proposal space over possible instructions
+  and demonstration sets, then uses Bayesian optimization to propose high-performing candidates.
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- You are using DSPy and want to optimize both instructions and few-shot examples jointly.
+- You have a validation set and can afford multiple evaluation iterations.
+- Random or grid search over prompts has proven too expensive or ineffective.
+when_not_to_use:
+- No validation set is available for evaluation.
+- Only a single prompt needs optimization.
+- Optimization budget is extremely limited.
+known_pitfalls:
+- Bayesian optimization can get stuck in local optima if the surrogate model is poorly calibrated.
+- Joint optimization of instructions and demos scales combinatorially.
+- Results are specific to the validation set.
+related_techniques:
+- dspy
+- automatic-prompt-engineer
+primary_source:
+  authors: Opsahl-Ong, Ryan, Purtell, Broman, Potts, Zaharia, Khattab
+  year: 2024
+  title: Optimizing Instructions and Demonstrations for Multi-Stage Language Model Programs
+  venue: arXiv
+  arxiv_id: '2406.11695'
+  url: https://arxiv.org/abs/2406.11695
+usage_templates:
+- template_name: DSPy pipeline with MIPRO optimization
+  template: |-
+    DSPy Pipeline: {{pipeline_description}}
+
+    Step 1: Define instruction and demonstration proposal space.
+    Step 2: Use Bayesian optimization to propose candidates.
+    Step 3: Evaluate on validation set.
+    Step 4: Update belief based on performance.
+    Step 5: Repeat until budget exhausted.
+
+    Optimized Prompt: {{optimized_prompt}}
+    Optimized Demonstrations: {{optimized_demos}}
+  variables:
+  - name: pipeline_description
+    description: The DSPy pipeline to optimize.
+    example: Chain-of-Thought QA with retrieval module
+  - name: optimized_prompt
+    description: The optimized instruction after MIPRO completes.
+    example: Answer the question step by step using only the provided context...
+  - name: optimized_demos
+    description: The selected few-shot examples after optimization.
+    example: '[Example 1: ...], [Example 2: ...]'
+  template_id: mipro--dspy-bayesian
+  determinism: stochastic-by-design
+  reproducibility_note: Bayesian optimization is stochastic in exploration. Fix random seed for reproducibility.
+    Final optimized prompt is deterministic once optimization completes.
+tags:
+- optimization
+- bayesian
+- dspy
+- instruction-tuning
+status: verified-external
+aliases:
+- Multiprompt Instruction Proposal Optimizer
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

@@ -1,0 +1,99 @@
+{
+  "id": "backward-self-verification",
+  "name": "Backward Self-Verification (Deductive Answer Scoring)",
+  "category": "self-verification-refinement",
+  "subcategory": "deductive-verification",
+  "executive_summary": "Treat a CoT conclusion as a known condition, then mask each original condition in turn and have the model re-derive it — the fraction correctly re-derived gives an interpretable confidence score for the candidate answer.",
+  "description": "A mechanistically distinct alternative to Chain-of-Verification and Self-Refine: rather than generating open-ended critique questions (CoVe) or free-form self-critique (Self-Refine), this method is deductive and structural. It takes the answer produced by CoT as one of the 'conditions' of the original problem, then for each of the problem's actual original conditions, masks it and asks the model to re-derive it using the conclusion plus the remaining conditions. If the re-derived condition matches the real one, that's evidence the conclusion is logically consistent with the problem; scoring across all conditions gives an explainable per-candidate verification score usable to select among multiple sampled candidates, similar in role to Self-Consistency's voting but based on logical consistency rather than answer frequency.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Arithmetic, commonsense, or logical reasoning tasks with clearly identifiable 'conditions' in the problem statement (numeric facts, stated relationships) that a conclusion should be logically consistent with.",
+    "Selecting among multiple CoT-sampled candidate answers when an interpretable, per-candidate consistency score is wanted rather than a black-box judge verdict."
+  ],
+  "when_not_to_use": [
+    "Open-ended or free-form tasks with no clearly decomposable 'conditions' to mask and re-derive (see universal-self-consistency or self-refine instead)."
+  ],
+  "known_pitfalls": [
+    "The method focuses verification on the conclusion's consistency with stated conditions, not on the correctness of the intermediate reasoning steps themselves — a conclusion can be condition-consistent while the reasoning that produced it was flawed."
+  ],
+  "related_techniques": [
+    "chain-of-verification",
+    "self-consistency",
+    "self-refine"
+  ],
+  "primary_source": {
+    "authors": "Weng, Zhu, Xia, Li, He, Liu, Sun, Liu, Zhao",
+    "year": 2023,
+    "title": "Large Language Models are Better Reasoners with Self-Verification",
+    "venue": "Findings of ACL: EMNLP 2023",
+    "arxiv_id": "2212.09561",
+    "url": "https://arxiv.org/abs/2212.09561"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Mask-and-rederive condition scoring",
+      "template": "Original problem conditions: {{condition_1}}, {{condition_2}}, ..., {{condition_n}}\nCandidate conclusion (from CoT): {{candidate_conclusion}}\n\n# Per condition, repeat:\nGiven the conclusion \"{{candidate_conclusion}}\" and all conditions except {{masked_condition}}, re-derive what {{masked_condition}} must be.\nRe-derived value: {{rederived_value}}. Matches original: {{match_yes_no}}.\n\n# Score\nVerification score = fraction of conditions correctly re-derived across all {{num_conditions}} conditions. If scoring multiple candidate conclusions, select the one with the highest verification score.",
+      "variables": [
+        {
+          "name": "condition_1",
+          "description": "One stated condition from the original problem",
+          "example": null
+        },
+        {
+          "name": "condition_2",
+          "description": "Another stated condition",
+          "example": null
+        },
+        {
+          "name": "condition_n",
+          "description": "The last stated condition",
+          "example": null
+        },
+        {
+          "name": "candidate_conclusion",
+          "description": "A CoT-derived candidate answer being verified",
+          "example": null
+        },
+        {
+          "name": "masked_condition",
+          "description": "Which condition is masked and re-derived this round",
+          "example": null
+        },
+        {
+          "name": "rederived_value",
+          "description": "What the model re-derives for the masked condition",
+          "example": null
+        },
+        {
+          "name": "match_yes_no",
+          "description": "Whether the re-derived value matches the real one",
+          "example": null
+        },
+        {
+          "name": "num_conditions",
+          "description": "Total number of conditions being checked",
+          "example": "3"
+        }
+      ],
+      "template_id": "backward-self-verification--mask-and-rederive-condition-scoring",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "verification",
+    "deductive",
+    "interpretable",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

@@ -1,0 +1,74 @@
+id: highlighted-chain-of-thought
+name: Highlighted Chain of Thought (HoT)
+category: reasoning-elicitation
+subcategory: evidence-anchored-reasoning
+executive_summary: Binds intermediate reasoning steps directly to source context via XML-style anchor
+  tags, making the facts a response rests on visible for verification.
+description: 'HoT operates in two stages: (1) reformulate input by wrapping key facts in XML evidence
+  tags, and (2) generate answers while citing evidence IDs. Improves accuracy over few-shot CoT across
+  arithmetic, QA, and logical reasoning.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Multi-hop retrieval tasks where grounding to source passages is critical.
+- High-stakes QA where hallucination must be minimized.
+- Long-context reasoning with multiple supporting documents.
+when_not_to_use:
+- Tasks without source passages to anchor to.
+- Models that struggle with strict XML formatting.
+- Latency-sensitive applications where XML parsing overhead matters.
+known_pitfalls:
+- Can increase acceptance of incorrect answers if evidence tags are present but misaligned.
+- Requires careful evidence ID management.
+- XML overhead increases prompt length modestly.
+related_techniques:
+- chain-of-thought
+- chain-of-verification
+- self-refine
+primary_source:
+  authors: Nguyen, Bolton, Taesiri, Bui, Nguyen
+  year: 2025
+  title: 'HoT: Highlighted Chain of Thought for Referencing Supporting Facts from Inputs'
+  venue: arXiv
+  arxiv_id: '2503.02003'
+  url: https://arxiv.org/abs/2503.02003
+usage_templates:
+- template_name: Evidence-anchored multi-hop reasoning
+  template: |-
+    Context:
+    <evidence id="1">{{source_fact_1}}</evidence>
+    <evidence id="2">{{source_fact_2}}</evidence>
+
+    Question: {{multi_hop_query}}
+
+    Instructions:
+    Solve step-by-step. Every factual assertion in your reasoning MUST cite its corresponding evidence ID using the format [ref: evidence id="N"].
+  variables:
+  - name: source_fact_1
+    description: First supporting fact from retrieved context.
+    example: Paris is the capital of France.
+  - name: source_fact_2
+    description: Second supporting fact from retrieved context.
+    example: The Eiffel Tower is located in Paris.
+  - name: multi_hop_query
+    description: The question requiring synthesis across multiple facts.
+    example: In which country can you find the Eiffel Tower?
+  template_id: highlighted-chain-of-thought--evidence-anchored
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: Single LLM call with structured output constraints. Evidence alignment can be
+    verified programmatically.
+tags:
+- reasoning
+- verification
+- xml
+- retrieval
+status: verified-external
+aliases:
+- HoT
+- Highlighted CoT
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

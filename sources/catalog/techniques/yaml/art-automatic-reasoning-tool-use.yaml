@@ -1,0 +1,101 @@
+id: art-automatic-reasoning-tool-use
+name: ART (Automatic Reasoning and Tool-use)
+category: agentic-tool-use
+subcategory: library-based-planning
+executive_summary: A frozen LLM generates a reasoning-plus-tool-use program by selecting relevant demonstrations
+  from a library of prior task programs, pausing generation for tool calls — humans can fix or extend
+  the library afterward.
+description: 'Predates and is frequently cited as a predecessor to ReWOO and modern agent frameworks:
+  rather than hand-crafting task-specific reasoning-plus-tool demonstrations (what ReAct''s prompt author
+  has to do per task), ART maintains a task library of prior programs and automatically selects the most
+  relevant ones as in-context demonstrations for a new, unseen task — no per-task manual engineering required.
+  At inference time, generation pauses whenever the model''s output invokes a tool, the tool runs, and
+  its result is spliced back in before generation resumes. Reports substantial improvement over few-shot
+  prompting and automatic CoT on unseen BigBench and MMLU tasks, matching hand-crafted CoT on most of
+  them, and is explicitly designed for extensibility: a human can correct an error in a task-specific
+  program or add a new tool to the library, and the paper demonstrates this human correction step drastically
+  improving performance on selected tasks with minimal intervention.'
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Building a reusable system that needs to generalize reasoning-plus-tool-use to many unseen task types
+  over time, where hand-crafting ReAct-style demonstrations per new task type isn't practical.
+- Deployments where a human-in-the-loop correction/extension workflow (fixing one task's program, adding
+  a new tool) is a realistic maintenance path.
+when_not_to_use:
+- A single, well-understood task type where hand-crafting one good ReAct or PAL prompt is simpler than
+  building and maintaining a task library.
+- No existing library of related task demonstrations to select from, and no plan to build one.
+known_pitfalls:
+- Demonstration-selection quality depends on the task library actually containing relevant precedents
+  for a new task; a library with poor coverage of the new task's structure won't automatically generate
+  a good program for it.
+related_techniques:
+- react
+- rewoo-reasoning-without-observation
+- pal-program-aided-language-models
+- decomposed-prompting
+primary_source:
+  authors: Paranjape, Lundberg, Singh, Hajishirzi, Zettlemoyer, Ribeiro
+  year: 2023
+  title: 'ART: Automatic Multi-step Reasoning and Tool-use for Large Language Models'
+  venue: arXiv preprint
+  arxiv_id: '2303.09014'
+  url: https://arxiv.org/abs/2303.09014
+usage_templates:
+- template_name: Library-selected demonstrations with pause-resume tool execution
+  template: |-
+    New task: {{new_task}}
+    From the task library {{task_library}}, select the {{num_demonstrations}} most relevant prior task programs as in-context demonstrations: {{selected_demonstrations}}
+
+    {{selected_demonstrations}}
+
+    Q1: {{new_task}}
+    #1: [{{tool_name}}] {{tool_query}}
+    (generation pauses here; tool executes and returns {{tool_result}}, which is spliced back in before generation resumes)
+    #2: ... continue until the task is solved.
+
+    # Human correction (optional, after the fact)
+    If task {{new_task}}'s generated program had an error, a human can correct it or add a missing tool to {{task_library}} for future use.
+  variables:
+  - name: new_task
+    description: The new, potentially unseen task to solve
+    example: null
+  - name: task_library
+    description: The library of prior task programs to select demonstrations from
+    example: null
+  - name: num_demonstrations
+    description: How many library demonstrations to select
+    example: '3'
+  - name: selected_demonstrations
+    description: The demonstrations selected as in-context examples
+    example: null
+  - name: tool_name
+    description: Which tool is invoked at this step
+    example: null
+  - name: tool_query
+    description: The query/arguments passed to the tool
+    example: null
+  - name: tool_result
+    description: The tool's returned result, spliced back into generation
+    example: null
+  template_id: art-automatic-reasoning-tool-use--library-selected-demonstrations-with-pause-resume-tool-execution
+  determinism: requires-external-system
+  reproducibility_note: This template depends on an external system (retrieval index, tool, solver, or
+    interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires
+    that system's state to also be fixed.
+tags:
+- agentic
+- tool-use
+- library-based
+- extensible
+- multi-call
+status: verified-external
+aliases:
+- ART
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

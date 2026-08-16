@@ -1,0 +1,85 @@
+{
+  "id": "ipad-inverse-prompt-detection",
+  "name": "IPAD (Inverse Prompt for AI Detection)",
+  "category": "prompt-inversion-analysis",
+  "subcategory": "ai-text-detection",
+  "executive_summary": "Detect AI-generated text by reconstructing the prompt that produced it, then checking two signals — does the prompt match the text, does regenerating from it reproduce similar text — instead of one opaque score.",
+  "description": "Applies prompt inversion to a different problem than RPE/SODA: not security auditing, but AI-generated-text detection with built-in interpretability. A four-step fine-tuned pipeline: (1) a Prompt Inverter predicts the most likely prompt P that could have generated an input text T; (2) a Prompt-Text Consistency Verifier (PTCV) scores whether T could plausibly follow from P; (3) a Regeneration Comparator (RC) regenerates text from P and scores its consistency with the original T; (4) the two scores are combined via a weighted ensemble against a tuned threshold for the final human-vs-AI classification. The interpretability payoff is direct: unlike a black-box classifier, IPAD's output includes the predicted prompt and the regenerated comparison text as concrete decision evidence a user can inspect. Reports 9.05% higher average recall in-distribution, 12.93% higher AUROC out-of-distribution, and 5.48% higher AUROC under adversarial attack versus prior detectors, plus a user study showing improved trust from the visible evidence.",
+  "verification_status": "unverifiable-by-text",
+  "cost_profile": "training-time",
+  "when_to_use": [
+    "Building an AI-generated-text detector where interpretable evidence (not just a probability score) matters for user trust — academic integrity tools, content moderation, journalism verification.",
+    "Detection needs to be robust to out-of-distribution text and adversarial attacks specifically, where the paper reports its largest margins over prior detectors."
+  ],
+  "when_not_to_use": [
+    "A lightweight, training-free detection signal is needed — IPAD requires fine-tuning three separate models (Prompt Inverter, PTCV, RC), a substantially heavier setup than perplexity-based or watermark-based detectors."
+  ],
+  "known_pitfalls": [
+    "Detection quality is bounded by the Prompt Inverter's own reconstruction accuracy — errors in step 1 propagate into both downstream consistency checks, since both are conditioned on the same predicted prompt."
+  ],
+  "related_techniques": [
+    "reverse-prompt-engineering-genetic-inversion",
+    "chain-of-verification"
+  ],
+  "primary_source": {
+    "authors": "Chen, Feng, Dang, Deng, He, Pu, Li, Li",
+    "year": 2025,
+    "title": "IPAD: Inverse Prompt for AI Detection - A Robust and Interpretable LLM-Generated Text Detector",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2502.15902",
+    "url": "https://arxiv.org/abs/2502.15902"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Invert-verify-regenerate-merge detection pipeline",
+      "template": "# Step 1 — Prompt Inverter (fine-tuned model f_inv)\nInput text: {{input_text}}\nPredicted prompt: {{predicted_prompt}} = f_inv({{input_text}})\n\n# Step 2 — Prompt-Text Consistency Verifier (fine-tuned model f_PTCV)\nCould {{input_text}} plausibly follow from {{predicted_prompt}}? p_PTCV = f_PTCV({{input_text}}, {{predicted_prompt}})\n\n# Step 3 — Regeneration Comparator (fine-tuned model f_RC)\nRegenerated text: {{regenerated_text}} = LLM({{predicted_prompt}})\nAre {{input_text}} and {{regenerated_text}} consistent with the same prompt? p_RC = f_RC({{input_text}}, {{regenerated_text}})\n\n# Step 4 — Merge\nCombined score = {{ensemble_weight}} * p_PTCV + (1 - {{ensemble_weight}}) * p_RC. Classify as AI-generated if combined score exceeds {{decision_threshold}}, else human-written. Present {{predicted_prompt}} and {{regenerated_text}} alongside the verdict as inspectable evidence.",
+      "variables": [
+        {
+          "name": "input_text",
+          "description": "The text being classified as human- or AI-written",
+          "example": null
+        },
+        {
+          "name": "predicted_prompt",
+          "description": "Output of the Prompt Inverter",
+          "example": null
+        },
+        {
+          "name": "regenerated_text",
+          "description": "Text regenerated from the predicted prompt, for comparison",
+          "example": null
+        },
+        {
+          "name": "ensemble_weight",
+          "description": "Weighting between the two distinguisher scores (paper's tuned value: 0.45)",
+          "example": "0.45"
+        },
+        {
+          "name": "decision_threshold",
+          "description": "Classification threshold on the combined score (paper's tuned value: 0.54)",
+          "example": "0.54"
+        }
+      ],
+      "template_id": "ipad-inverse-prompt-detection--invert-verify-regenerate-merge-detection-pipeline",
+      "determinism": "training-time-not-applicable",
+      "reproducibility_note": "This template describes a training-time process (fine-tuning or policy training), not a single reproducible inference call; reproducibility depends on the training pipeline and data, not on prompt text alone."
+    }
+  ],
+  "tags": [
+    "prompt-inversion",
+    "ai-text-detection",
+    "interpretability",
+    "training-time"
+  ],
+  "status": "corpus-present",
+  "aliases": [
+    "IPAD"
+  ],
+  "secondary_sources": [],
+  "corpus_file": "IPAD Inverse Prompt for AI Detection - A Robust and Interpretable LLM-Generated Text Detector.pdf",
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

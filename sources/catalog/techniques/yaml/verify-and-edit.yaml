@@ -1,0 +1,85 @@
+id: verify-and-edit
+name: Verify-and-Edit
+category: self-verification-refinement
+subcategory: post-hoc-correction
+executive_summary: Post-hoc verification pipeline that checks generated claims against external knowledge
+  and edits incorrect claims in-place. Addresses hallucination by retrofitting facts rather than regenerating
+  entire outputs.
+description: 'Verify-and-Edit operates in two stages: (1) Verification — reasoning chains whose answers
+  the model is uncertain about are checked against an external knowledge source (retrieval, database,
+  or search), and (2) Editing — claims flagged as incorrect are replaced with corrected versions while
+  preserving the overall structure and flow of the output. This is more efficient than full regeneration
+  because only incorrect parts are rewritten.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Long-form generation where specific facts need verification.
+- When full regeneration is too expensive or slow.
+- Domains with reliable external knowledge sources (Wikipedia, medical databases).
+when_not_to_use:
+- When no reliable external knowledge source exists.
+- Creative writing where factual correctness is not the goal.
+- When claims are so intertwined that editing one breaks coherence.
+known_pitfalls:
+- Verification source may be incomplete or outdated.
+- Editing may disrupt stylistic consistency of the original text.
+- Claim decomposition itself can be error-prone.
+related_techniques:
+- factscore
+- rarr
+- selfcheckgpt
+- chain-of-verification
+primary_source:
+  authors: Zhao, Li, Joty, Qin, Bing
+  year: 2023
+  title: 'Verify-and-Edit: A Knowledge-Enhanced Chain-of-Thought Framework'
+  venue: arXiv
+  arxiv_id: '2305.03268'
+  url: https://arxiv.org/abs/2305.03268
+usage_templates:
+- template_name: Claim verification and in-place editing
+  template: |-
+    Generated Text: {{generated_text}}
+
+    Step 1: Decompose into atomic claims.
+    Claims: {{claims}}
+
+    Step 2: Verify each claim against external knowledge.
+    Verification Results: {{verification_results}}
+
+    Step 3: Edit incorrect claims in-place.
+    Edited Text: {{edited_text}}
+
+    Preserve original structure and style while correcting facts.
+  variables:
+  - name: generated_text
+    description: The text to verify and edit.
+    example: The Eiffel Tower was built in 1887 and is located in London.
+  - name: claims
+    description: Decomposed atomic claims.
+    example: '["Eiffel Tower built in 1887", "Eiffel Tower located in London"]'
+  - name: verification_results
+    description: Per-claim verification.
+    example: '[Correct, Incorrect: actually in Paris]'
+  - name: edited_text
+    description: Text with incorrect claims corrected.
+    example: The Eiffel Tower was built in 1887 and is located in Paris.
+  template_id: verify-and-edit--claim-correction
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: Verification and editing should be deterministic. Results depend on external knowledge
+    source coverage and freshness.
+tags:
+- verification
+- correction
+- editing
+- post-hoc
+status: verified-external
+aliases:
+- Verify and Edit
+- Post-hoc Correction
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

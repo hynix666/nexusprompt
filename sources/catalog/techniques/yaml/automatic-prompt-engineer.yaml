@@ -1,0 +1,82 @@
+id: automatic-prompt-engineer
+name: Automatic Prompt Engineer (APE)
+category: automatic-prompt-optimization
+subcategory: instruction-search
+executive_summary: 'Treat the instruction text itself as a program to search over: generate candidate
+  instructions, score them by how well a second LLM performs when given each one, and keep the best.'
+description: 'Frames prompt optimization as black-box program synthesis: candidate instructions are proposed
+  (often by asking an LLM to infer an instruction from input/output demonstration pairs), each candidate
+  is scored by executing it against a scoring model on a held-out set, and an iterative search (e.g. Monte
+  Carlo) refines the best candidates further. Predates and is cited as a predecessor by later optimizer-style
+  techniques such as Promptbreeder and OPRO.'
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- A small set of input/output demonstration pairs exists and you want the instruction itself inferred/optimized
+  rather than hand-written.
+when_not_to_use:
+- No labeled demonstration pairs are available to score candidates against.
+known_pitfalls:
+- Search quality depends heavily on the proposal distribution for candidate instructions; poor initial
+  candidates limit how far refinement can go.
+related_techniques:
+- promptbreeder
+- opro
+- automatic-prompt-optimization-gradient-beam
+primary_source:
+  authors: Zhou, Muresanu, Han, Paster, Pitis, Chan, Ba
+  year: 2023
+  title: Large Language Models Are Human-Level Prompt Engineers
+  venue: ICLR 2023
+  arxiv_id: '2211.01910'
+  url: https://arxiv.org/abs/2211.01910
+usage_templates:
+- template_name: Propose-score-refine instruction search
+  template: |-
+    # Propose
+    Given these input/output pairs: {{demonstration_pairs}}
+    Infer an instruction that would produce each output from its input.
+
+    # Score
+    Instruction candidate: {{candidate_instruction}}
+    Run this instruction against {{held_out_pairs}} using {{scoring_model}} and measure {{score_function}}.
+
+    # Refine
+    Take the top-scoring candidates and generate paraphrases/variations of them; re-score; repeat for {{num_iterations}} rounds.
+  variables:
+  - name: demonstration_pairs
+    description: Input/output examples the instruction should explain
+    example: null
+  - name: candidate_instruction
+    description: One candidate instruction being scored
+    example: null
+  - name: held_out_pairs
+    description: Held-out pairs used for scoring, distinct from those used to propose candidates
+    example: null
+  - name: scoring_model
+    description: The model executing each candidate instruction during scoring
+    example: null
+  - name: score_function
+    description: Metric used to compare candidates
+    example: execution accuracy
+  - name: num_iterations
+    description: Refinement rounds
+    example: '3'
+  template_id: automatic-prompt-engineer--propose-score-refine-instruction-search
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- optimization
+- instruction-search
+- multi-call
+status: verified-external
+aliases:
+- APE
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

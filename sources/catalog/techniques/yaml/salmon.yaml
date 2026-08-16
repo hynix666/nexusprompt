@@ -1,0 +1,67 @@
+id: salmon
+name: SALMON (Self-Alignment with Instructable Reward Models)
+category: self-verification-refinement
+subcategory: training-time-alignment
+executive_summary: Align a model's behavior using a reward model that follows written principles, rather
+  than large volumes of hand-labeled human preference data.
+description: Trains a reward model that can be steered at inference time by natural-language principles,
+  then uses that instructable reward model to guide the target model's self-improvement — reducing reliance
+  on large human-preference-labeled datasets. A training-time technique rather than an inference-time
+  prompting technique, but directly relevant to any project building its own self-improvement or self-alignment
+  loop.
+verification_status: unverifiable-by-text
+cost_profile: training-time
+when_to_use:
+- Building a self-alignment pipeline where hand-labeled preference data is scarce but written principles/guardrails
+  already exist.
+when_not_to_use:
+- Inference-time-only prompting projects with no training loop.
+known_pitfalls:
+- Alignment quality is bounded by how well the reward model actually follows the given principles, which
+  is itself an empirical question.
+related_techniques:
+- self-refine
+- self-instruct
+primary_source:
+  authors: Sun, Xu, Fu, Gan, Huang, Ji, Xu, Tan, Hu, Lin, Weston, Kong
+  year: 2024
+  title: 'SALMON: Self-Alignment with Principle-Following Reward Models'
+  venue: ICLR 2024
+  arxiv_id: null
+  url: null
+usage_templates:
+- template_name: Principle-steered reward scoring
+  template: |-
+    You are a reward model. Score the response below against the following written principles:
+    {{principles_list}}
+
+    Prompt: {{original_prompt}}
+    Response: {{candidate_response}}
+    For each principle, note compliant / violates and why, then give an overall score.
+  variables:
+  - name: principles_list
+    description: The set of natural-language alignment principles
+    example: null
+  - name: original_prompt
+    description: The prompt the candidate responded to
+    example: null
+  - name: candidate_response
+    description: The response being scored
+    example: null
+  template_id: salmon--principle-steered-reward-scoring
+  determinism: training-time-not-applicable
+  reproducibility_note: This template describes a training-time process (fine-tuning or policy training),
+    not a single reproducible inference call; reproducibility depends on the training pipeline and data,
+    not on prompt text alone.
+tags:
+- alignment
+- training-time
+- reward-modeling
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: SELF-ALIGNMENT WITH INSTRUCTABLE REWARD MODELS.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

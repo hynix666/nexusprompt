@@ -1,0 +1,72 @@
+{
+  "id": "re-reading-re2",
+  "name": "Re-Reading (RE2)",
+  "category": "reasoning-elicitation",
+  "subcategory": "context-positioning",
+  "executive_summary": "Explicitly instruct the model to re-read the question before answering, giving the input a second pass at attention time — a lighter, instruction-only cousin of Prompt Repetition rather than duplicating the whole prompt.",
+  "description": "Shares Prompt Repetition's core insight (causal, left-to-right attention means a first pass can't fully leverage information that becomes clear only after processing the whole input) but implements it differently: instead of literally repeating the full prompt text, RE2 adds an explicit instruction telling the model to re-read the question, relying on the model's own learned behavior in response to that instruction rather than mechanically duplicating tokens. Plug-and-play and compatible with other reasoning-elicitation prompts (the paper reports it composing with CoT-style triggers). Reported improving performance across reasoning benchmarks when combined with both zero-shot and few-shot CoT prompting.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "As a cheap, single-instruction addition to an existing prompt (zero-shot or CoT) where re-processing the question might help, without the token overhead of literally repeating the entire prompt (see Prompt Repetition for the full-duplication alternative).",
+    "Composing with other reasoning-elicitation techniques, since it's designed to be plug-and-play."
+  ],
+  "when_not_to_use": [
+    "Cases where the empirically-stronger full-duplication approach (Prompt Repetition) is preferred and the extra input tokens are affordable."
+  ],
+  "known_pitfalls": [
+    "As an instruction rather than a mechanical duplication, its effectiveness depends on the model actually following the 're-read' instruction meaningfully rather than just acknowledging it superficially."
+  ],
+  "related_techniques": [
+    "prompt-repetition",
+    "chain-of-thought",
+    "zero-shot-cot"
+  ],
+  "primary_source": {
+    "authors": "Xu, Xu, Chen, Zhang, Wu, Zhao, Zheng",
+    "year": 2024,
+    "title": "Re-Reading Improves Reasoning in Large Language Models",
+    "venue": "EMNLP 2024",
+    "arxiv_id": "2309.06275",
+    "url": "https://arxiv.org/abs/2309.06275"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Re-read instruction",
+      "template": "{{question}}\nRead the question again: {{question}}\n{{optional_cot_trigger}}",
+      "variables": [
+        {
+          "name": "question",
+          "description": "The question, stated once and then referenced again by the re-read instruction",
+          "example": null
+        },
+        {
+          "name": "optional_cot_trigger",
+          "description": "An optional additional trigger (e.g. 'Let's think step by step') this composes with",
+          "example": "Let's think step by step."
+        }
+      ],
+      "template_id": "re-reading-re2--re-read-instruction",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "context-positioning",
+    "single-call",
+    "low-cost",
+    "plug-and-play"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "RE2"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

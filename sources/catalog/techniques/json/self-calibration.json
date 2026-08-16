@@ -1,0 +1,74 @@
+{
+  "id": "self-calibration",
+  "name": "Self-Calibration",
+  "category": "self-verification-refinement",
+  "subcategory": "confidence-estimation",
+  "executive_summary": "Ask the model to state a calibrated confidence estimate for its own answer, and find that models — especially larger ones — can produce confidence estimates that meaningfully track actual correctness.",
+  "description": "Distinct from other verification techniques in this catalog: rather than checking a claim's content against evidence or logic, Self-Calibration asks the model to introspect on its own likely correctness and produce a usable confidence signal. Demonstrated that models can be trained or prompted to predict 'P(True)' — the probability their stated answer is correct — with that self-reported probability empirically correlating with actual accuracy, and that performance improves further when the model can consider multiple of its own sampled answers before calibrating. Foundational to any technique in this catalog that needs a usable confidence score to act on (e.g. deciding whether to trust an answer, defer to a human, or trigger additional verification).",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Deployments needing a usable confidence signal to decide whether to trust, flag for review, or trigger further verification on a given answer.",
+    "As a cheap gate before spending more compute on heavier verification techniques (Chain-of-Verification, CRITIC) — only escalate low-confidence answers."
+  ],
+  "when_not_to_use": [
+    "Contexts where a stated confidence number would be over-trusted by an end user beyond what the calibration quality actually supports — verify calibration quality empirically for the specific model/task before relying on it."
+  ],
+  "known_pitfalls": [
+    "Calibration quality varies by model scale and task; a confidence estimate is only as trustworthy as the model's demonstrated (not assumed) calibration on that specific task type."
+  ],
+  "related_techniques": [
+    "chain-of-verification",
+    "self-consistency",
+    "universal-self-consistency"
+  ],
+  "primary_source": {
+    "authors": "Kadavath, Conerly, Askell, Henighan, Drain, Perez, Schiefer, Dodds, DasSarma, Tran-Johnson, et al.",
+    "year": 2022,
+    "title": "Language Models (Mostly) Know What They Know",
+    "venue": "arXiv preprint (Anthropic)",
+    "arxiv_id": "2207.05221",
+    "url": "https://arxiv.org/abs/2207.05221"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Self-reported P(True) confidence estimate",
+      "template": "Question: {{question}}\nProposed answer: {{proposed_answer}}\n\nIs the proposed answer:\n(A) True\n(B) False\n\nConsider other possible answers you might have given before responding. Give the probability that the proposed answer is correct as a number between 0 and 1: {{p_true_estimate}}",
+      "variables": [
+        {
+          "name": "question",
+          "description": "The original question",
+          "example": null
+        },
+        {
+          "name": "proposed_answer",
+          "description": "The answer whose correctness is being self-assessed",
+          "example": null
+        },
+        {
+          "name": "p_true_estimate",
+          "description": "The model's self-reported probability the answer is correct",
+          "example": null
+        }
+      ],
+      "template_id": "self-calibration--self-reported-p-true-confidence-estimate",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "verification",
+    "confidence-estimation",
+    "calibration",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

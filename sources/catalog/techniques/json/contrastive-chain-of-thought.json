@@ -1,0 +1,86 @@
+{
+  "id": "contrastive-chain-of-thought",
+  "name": "Contrastive Chain-of-Thought",
+  "category": "reasoning-elicitation",
+  "subcategory": "single-path-reasoning",
+  "executive_summary": "Show both valid AND invalid worked reasoning examples, so the model learns what mistakes to avoid, not just what correct reasoning looks like — plain CoT only ever demonstrates success.",
+  "description": "Motivated by a surprising prior finding: plain CoT's benefit barely drops even when the demonstrated reasoning is logically invalid, suggesting the model isn't learning as much from the demonstrations' correctness as assumed. Contrastive CoT addresses this directly by pairing each valid reasoning demonstration with an invalid one showing a specific, plausible mistake, with an automatic method for constructing the contrastive (invalid) demonstrations rather than requiring hand-authored ones.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Reasoning tasks with a known, common class of mistake worth explicitly demonstrating and warning against."
+  ],
+  "when_not_to_use": [
+    "Tasks with no clear 'common mistake' pattern to contrast against — constructing meaningful invalid demonstrations may not be straightforward."
+  ],
+  "known_pitfalls": [
+    "Poorly chosen invalid demonstrations (unrealistic or off-target mistakes) may fail to transfer to the actual errors the model tends to make."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "self-refine"
+  ],
+  "primary_source": {
+    "authors": "Chia, Chen, Tuan, Poria, Bing",
+    "year": 2023,
+    "title": "Contrastive Chain-of-Thought Prompting",
+    "venue": "arXiv preprint",
+    "arxiv_id": "2311.09277",
+    "url": "https://arxiv.org/abs/2311.09277"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Valid/invalid contrastive exemplar pair",
+      "template": "Q: {{example_question}}\nValid reasoning: {{correct_stepwise_reasoning}} So the answer is {{correct_answer}}.\nInvalid reasoning (a common mistake to avoid): {{flawed_stepwise_reasoning}} This is wrong because {{why_flawed}}.\n\nQ: {{target_question}}\nA:",
+      "variables": [
+        {
+          "name": "example_question",
+          "description": "The worked example's question",
+          "example": null
+        },
+        {
+          "name": "correct_stepwise_reasoning",
+          "description": "The valid reasoning chain",
+          "example": null
+        },
+        {
+          "name": "correct_answer",
+          "description": "The correct final answer",
+          "example": null
+        },
+        {
+          "name": "flawed_stepwise_reasoning",
+          "description": "A plausible but invalid reasoning chain",
+          "example": null
+        },
+        {
+          "name": "why_flawed",
+          "description": "Brief explanation of why the invalid chain is wrong",
+          "example": null
+        },
+        {
+          "name": "target_question",
+          "description": "The actual question to answer",
+          "example": null
+        }
+      ],
+      "template_id": "contrastive-chain-of-thought--valid-invalid-contrastive-exemplar-pair",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "few-shot",
+    "contrastive"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

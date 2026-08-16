@@ -1,0 +1,78 @@
+id: reflexion
+name: Reflexion
+category: self-verification-refinement
+subcategory: episodic-self-critique
+executive_summary: Extend self-critique across multiple task attempts by storing verbal reflections as
+  memory, so a later attempt can learn from an earlier failure instead of repeating it.
+description: After a failed attempt (on a task with an external or internal success signal), the model
+  generates a verbal 'reflection' on what went wrong, which is stored in an episodic memory buffer and
+  included as context in the next attempt. Unlike Self-Refine's single-episode loop, Reflexion persists
+  lessons across separate attempts at the same or similar tasks.
+verification_status: judge-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Tasks with multiple attempts and a success/failure signal (agent tasks, coding tasks with test execution,
+  game-playing).
+when_not_to_use:
+- Single-shot tasks with no natural retry structure.
+known_pitfalls:
+- Memory buffer can accumulate irrelevant or contradictory reflections over many episodes if not curated.
+related_techniques:
+- self-refine
+- react
+primary_source:
+  authors: Shinn, Cassano, Gopinath, Narasimhan, Yao
+  year: 2023
+  title: 'Reflexion: Language Agents with Verbal Reinforcement Learning'
+  venue: NeurIPS 2023
+  arxiv_id: '2303.11366'
+  url: https://arxiv.org/abs/2303.11366
+usage_templates:
+- template_name: Attempt-reflect-retry
+  template: |-
+    # Attempt
+    Past reflections on this task: {{memory_buffer}}
+    Task: {{task}}
+    Attempt the task, using past reflections to avoid repeating prior mistakes.
+
+    # Evaluate
+    Did this attempt succeed? {{success_signal}}
+
+    # Reflect (only if failed)
+    Attempt: {{attempt_output}}
+    Outcome: failed — {{failure_reason}}
+    Write a short, specific reflection on what to do differently next time. Append it to the memory buffer.
+  variables:
+  - name: task
+    description: The task being attempted
+    example: null
+  - name: memory_buffer
+    description: Accumulated reflections from prior failed attempts
+    example: null
+  - name: success_signal
+    description: External or self-assessed pass/fail result
+    example: null
+  - name: attempt_output
+    description: The output of the most recent attempt
+    example: null
+  - name: failure_reason
+    description: Why the attempt failed
+    example: null
+  template_id: reflexion--attempt-reflect-retry
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- verification
+- episodic-memory
+- agentic
+- iterative
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

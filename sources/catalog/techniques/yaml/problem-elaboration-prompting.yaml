@@ -1,0 +1,73 @@
+id: problem-elaboration-prompting
+name: Problem Elaboration Prompting (PEP)
+category: reasoning-elicitation
+subcategory: context-clarification
+executive_summary: Decompose and elaborate the problem's context before reasoning about it — accurate
+  recognition of what's being asked, not just better reasoning steps, is the fundamental bottleneck for
+  hard math problems.
+description: 'Argues that prompt-engineering effort has mostly focused on improving the reasoning process
+  (better prefixes, better exemplars) while neglecting a more basic failure mode: LLMs can mis-parse or
+  mis-recognize an ill-formed or distraction-heavy problem statement before reasoning even begins, which
+  misleads everything downstream regardless of reasoning quality. PEP inserts an explicit elaboration
+  stage — decomposing and clarifying the problem context — before the reasoning stage, improving context
+  modeling and parsing. Reports 9.93% and 8.80% gains on GSM8K with GPT-3.5 via greedy decoding and self-consistency
+  respectively, with particular strength on problems containing distracting/irrelevant information, and
+  composes cleanly with other prompting methods.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Mathematical or logical reasoning problems, especially ones with potential distractors or ambiguous
+  phrasing, where mis-parsing the question is a plausible failure mode distinct from mis-reasoning about
+  it.
+when_not_to_use:
+- Cleanly and unambiguously stated problems where context elaboration adds no new information.
+known_pitfalls:
+- The elaboration stage itself can introduce a subtly incorrect restatement, similar to the risk noted
+  for Rephrase-and-Respond.
+related_techniques:
+- chain-of-thought
+- self-consistency
+- rephrase-and-respond
+primary_source:
+  authors: Liao, Tian, Hu, He, Jin
+  year: 2024
+  title: 'Look Before You Leap: Problem Elaboration Prompting Improves Mathematical Reasoning in Large
+    Language Models'
+  venue: arXiv preprint
+  arxiv_id: '2402.15764'
+  url: https://arxiv.org/abs/2402.15764
+usage_templates:
+- template_name: Elaborate-then-reason
+  template: |-
+    Problem: {{problem}}
+    Before solving, elaborate on the problem context: identify all given quantities, relationships, and what is actually being asked, ignoring any irrelevant or distracting information. Elaboration: {{elaborated_context}}
+
+    Now solve the problem using the elaborated context: {{elaborated_context}}
+    Let's think step by step.
+  variables:
+  - name: problem
+    description: The original problem statement
+    example: null
+  - name: elaborated_context
+    description: The decomposed, clarified restatement of the problem
+    example: null
+  template_id: problem-elaboration-prompting--elaborate-then-reason
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reasoning
+- context-clarification
+- single-call
+- mathematical
+status: verified-external
+aliases:
+- PEP
+- Look Before You Leap
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

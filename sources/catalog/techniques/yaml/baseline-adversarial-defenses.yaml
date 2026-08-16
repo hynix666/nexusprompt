@@ -1,0 +1,71 @@
+id: baseline-adversarial-defenses
+name: 'Baseline Defenses: Perplexity Filtering, Paraphrasing, and Adversarial Training'
+category: prompt-injection-defense
+subcategory: detection-and-preprocessing
+executive_summary: Three simple, model-agnostic defenses — perplexity-based detection, input paraphrase/retokenization,
+  and adversarial training — evaluated as baselines against optimization-based jailbreaks.
+description: 'Systematically evaluates three defense families borrowed from the broader adversarial-ML
+  literature against LLM jailbreaks: detection via perplexity filtering (optimized adversarial suffixes
+  tend to be low-fluency, high-perplexity token sequences that stand out from natural text), input preprocessing
+  (paraphrasing or retokenizing the input to disrupt an attack''s precise token sequence before the model
+  sees it), and adversarial training (training directly against known attacks, at a documented quality/robustness
+  tradeoff cost). Perplexity filtering and paraphrasing performed better than the adversarial-ML literature
+  on other domains (e.g. vision) would predict, making them a comparatively cheap first line of defense
+  to consider alongside the structural/privilege-based defenses elsewhere in this category.'
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Adding a lightweight, model-agnostic filtering layer in front of a system, particularly against optimization-based
+  (GCG-style) attacks with distinctively low-fluency text.
+when_not_to_use:
+- Against fluency-constrained or hand-crafted attacks specifically designed to evade perplexity detection
+  — this family of defenses is not a complete solution on its own.
+known_pitfalls:
+- Adversarial training's robustness gains come with a documented, sometimes severe, generation-quality
+  cost — the paper found one training variant essentially useless because quality degraded far more than
+  robustness improved.
+related_techniques:
+- gcg-adversarial-suffix-attack
+- struq-structured-queries
+primary_source:
+  authors: Jain, Schwarzschild, Wen, Somepalli, Kirchenbauer, Chiang, Goldblum, Saha, Geiping, Goldstein
+  year: 2023
+  title: Baseline Defenses for Adversarial Attacks Against Aligned Language Models
+  venue: arXiv preprint
+  arxiv_id: '2309.00614'
+  url: https://arxiv.org/abs/2309.00614
+usage_templates:
+- template_name: Perplexity-filtered input gate
+  template: Compute the perplexity of the incoming input {{raw_input}} under a reference language model.
+    If perplexity exceeds {{perplexity_threshold}} (calibrated on natural-language traffic), flag for
+    review or reject rather than passing to the main model. Otherwise, optionally paraphrase {{raw_input}}
+    into {{paraphrased_input}} before further processing, to disrupt any precise adversarial token sequence
+    that survived the perplexity check.
+  variables:
+  - name: raw_input
+    description: The incoming, untrusted input
+    example: null
+  - name: perplexity_threshold
+    description: Cutoff above which input is flagged/rejected
+    example: '1000'
+  - name: paraphrased_input
+    description: The input after optional paraphrase/retokenize preprocessing
+    example: null
+  template_id: baseline-adversarial-defenses--perplexity-filtered-input-gate
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- security
+- detection
+- preprocessing
+- defense
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

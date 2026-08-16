@@ -1,0 +1,86 @@
+id: raptor-recursive-tree-retrieval
+name: RAPTOR (Recursive Abstractive Processing for Tree-Organized Retrieval)
+category: retrieval-augmentation
+subcategory: hierarchical-indexing
+executive_summary: Recursively embed, cluster, and summarize document chunks into a multi-level tree bottom-up,
+  then retrieve from it — integrating information across a whole document at multiple abstraction levels,
+  not just short chunks.
+description: 'Addresses a specific limitation of standard RAG: retrieving short, contiguous chunks limits
+  holistic understanding of a document''s overall context, which especially hurts multi-step reasoning
+  questions that need information spread across a whole document. RAPTOR builds an index-time tree by
+  recursively clustering and summarizing chunks bottom-up, producing summary nodes at multiple levels
+  of abstraction above the raw chunks. At query time, retrieval can pull from any level of the tree —
+  a specific detail from a leaf chunk, or a high-level summary from an internal node — rather than being
+  limited to one fixed granularity. Reports state-of-the-art results on multi-step reasoning QA, including
+  a 20-point absolute accuracy improvement on the QuALITY benchmark when combined with GPT-4.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Long-document question answering, especially questions requiring synthesis across multiple parts of
+  a document rather than a single localized fact.
+when_not_to_use:
+- Short documents or simple fact-lookup queries where flat chunk retrieval already suffices — the tree-construction
+  overhead isn't justified.
+known_pitfalls:
+- Tree construction is an upfront indexing cost proportional to document length and depth; index-time
+  cost trades against later query flexibility.
+related_techniques:
+- retrieval-augmented-generation
+- chain-of-density
+primary_source:
+  authors: Sarthi, Abdullah, Tuli, Khanna, Goldie, Manning
+  year: 2024
+  title: 'RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval'
+  venue: ICLR 2024
+  arxiv_id: '2401.18059'
+  url: https://arxiv.org/abs/2401.18059
+usage_templates:
+- template_name: Recursive cluster-summarize tree construction + multi-level retrieval
+  template: |-
+    # Index-time (once per document)
+    Chunk the document: {{raw_chunks}}
+    Cluster semantically similar chunks: {{chunk_clusters}}
+    Summarize each cluster into a parent node: {{cluster_summaries}}
+    Recurse: treat {{cluster_summaries}} as the new leaf level and repeat clustering/summarizing until a single root summary remains, forming a tree of depth {{tree_depth}}.
+
+    # Query-time
+    Query: {{query}}
+    Retrieve the top-{{k}} most relevant nodes from ANY level of the tree (leaf chunks or summary nodes), then answer using the retrieved nodes.
+  variables:
+  - name: raw_chunks
+    description: The document split into base-level chunks
+    example: null
+  - name: chunk_clusters
+    description: Semantically clustered groups of chunks at one tree level
+    example: null
+  - name: cluster_summaries
+    description: Summary node produced for each cluster
+    example: null
+  - name: tree_depth
+    description: How many levels of recursive summarization the tree has
+    example: '3'
+  - name: query
+    description: The user's query at retrieval time
+    example: null
+  - name: k
+    description: How many nodes to retrieve across all tree levels
+    example: '10'
+  template_id: raptor-recursive-tree-retrieval--recursive-cluster-summarize-tree-construction-multi-level-retrieval
+  determinism: requires-external-system
+  reproducibility_note: This template depends on an external system (retrieval index, tool, solver, or
+    interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires
+    that system's state to also be fixed.
+tags:
+- retrieval
+- hierarchical
+- long-document
+- multi-call
+status: verified-external
+aliases:
+- RAPTOR
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

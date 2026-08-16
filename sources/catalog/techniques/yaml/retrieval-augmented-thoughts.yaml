@@ -1,0 +1,88 @@
+id: retrieval-augmented-thoughts
+name: Retrieval-Augmented Thoughts (RAT)
+category: retrieval-augmentation
+subcategory: thought-revision
+executive_summary: Draft an initial zero-shot CoT, then revise each reasoning step one at a time using
+  information retrieved specifically for that step, instead of retrieving once up front like plain RAG.
+description: 'Distinct from both plain RAG (retrieve once, then generate) and Self-RAG (train the model
+  to decide when to retrieve): RAT starts with a complete initial zero-shot CoT draft — which may be flawed
+  — then goes back through it step by step, retrieving fresh information relevant to the task query, the
+  current step, and all prior (already-revised) steps, and revises that step accordingly. Targets long-horizon
+  generation tasks (extended code generation, multi-step planning, long-form creative writing) where a
+  single upfront retrieval can''t anticipate what will be needed many steps later. Reports substantial
+  relative improvements applying RAT to GPT-3.5, GPT-4, and CodeLLaMA-7B: roughly +13.6% on code generation
+  and +17% on mathematical reasoning tasks, with large reductions in hallucination.'
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Long-horizon generation tasks (extended reasoning, multi-step planning, long-form writing) where the
+  information needed at step 10 isn't knowable at step 1, so a single upfront retrieval (plain RAG) would
+  miss it.
+when_not_to_use:
+- Short, single-step tasks where one retrieval pass already covers everything needed — the per-step retrieval
+  overhead isn't justified.
+known_pitfalls:
+- Cost scales with the number of reasoning steps needing revision, since each gets its own retrieval call
+  — not a fixed, predictable cost like single-pass RAG.
+related_techniques:
+- retrieval-augmented-generation
+- self-rag
+- zero-shot-cot
+- chain-of-verification
+primary_source:
+  authors: Wang, Liu, Lin, Li, Ma, Liang
+  year: 2024
+  title: 'RAT: Retrieval Augmented Thoughts Elicit Context-Aware Reasoning in Long-Horizon Generation'
+  venue: arXiv preprint
+  arxiv_id: '2403.05313'
+  url: https://arxiv.org/abs/2403.05313
+usage_templates:
+- template_name: Draft-then-per-step-retrieve-and-revise
+  template: |-
+    # Step 0 — initial draft
+    {{task_prompt}}
+    Let's think step by step.
+    (produces initial thoughts T1, T2, ..., Tn, possibly flawed)
+
+    # Per-step revision (repeat for each thought Ti, in order)
+    Task: {{task_prompt}}
+    Revised thoughts so far: {{revised_thoughts_1_to_i_minus_1}}
+    Original (unrevised) next thought: {{original_thought_i}}
+    Retrieve information relevant to this specific step: {{retrieved_info_for_step_i}}
+    Revise thought {{step_index}} using the retrieved information and the already-revised prior thoughts.
+  variables:
+  - name: task_prompt
+    description: The overall long-horizon task
+    example: null
+  - name: revised_thoughts_1_to_i_minus_1
+    description: All previously revised thought steps, in order
+    example: null
+  - name: original_thought_i
+    description: The current step's thought from the original unrevised draft
+    example: null
+  - name: retrieved_info_for_step_i
+    description: Information retrieved specifically for revising this step
+    example: null
+  - name: step_index
+    description: Which step in the chain is being revised
+    example: '3'
+  template_id: retrieval-augmented-thoughts--draft-then-per-step-retrieve-and-revise
+  determinism: requires-external-system
+  reproducibility_note: This template depends on an external system (retrieval index, tool, solver, or
+    interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires
+    that system's state to also be fixed.
+tags:
+- retrieval
+- reasoning
+- long-horizon
+- hallucination-reduction
+- multi-call
+status: verified-external
+aliases:
+- RAT
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

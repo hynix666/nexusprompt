@@ -1,0 +1,91 @@
+{
+  "id": "selective-context",
+  "name": "Selective Context",
+  "category": "prompt-compression-context-engineering",
+  "subcategory": "self-information-compression",
+  "executive_summary": "Removes low self-information tokens from context to reduce length while preserving semantic content. Uses the LLM itself to score token importance and filters out redundant information.",
+  "description": "Selective Context compresses prompts by computing the self-information (surprisal) of each token given its context. Tokens with low self-information (highly predictable, redundant) are candidates for removal. The algorithm iteratively removes the lowest-information tokens until a target compression ratio is reached. Unlike random truncation, this preserves the most semantically important content.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Long contexts that exceed model limits or increase cost.",
+    "When you need semantic-aware compression rather than random truncation.",
+    "RAG systems where retrieved documents are verbose."
+  ],
+  "when_not_to_use": [
+    "When every token is potentially important (e.g., legal contracts).",
+    "When compression latency is unacceptable.",
+    "When the model used for scoring differs from the generation model (distribution mismatch)."
+  ],
+  "known_pitfalls": [
+    "Self-information scoring is computationally expensive.",
+    "May remove implicitly important context that the scorer undervalues.",
+    "Compression ratio must be tuned per task."
+  ],
+  "related_techniques": [
+    "llmlingua-prompt-compression",
+    "longllmlingua",
+    "recomp"
+  ],
+  "primary_source": {
+    "authors": "Li, Dong, Lin, Guerin",
+    "year": 2023,
+    "title": "Compressing Context to Enhance Inference Efficiency of Large Language Models",
+    "venue": "arXiv",
+    "arxiv_id": "2310.06201",
+    "url": "https://arxiv.org/abs/2310.06201"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Self-information token removal",
+      "template": "Context: {{context}}\nTarget Compression Ratio: {{ratio}}\n\nStep 1: Compute self-information for each token.\nToken Scores: {{token_scores}}\n\nStep 2: Iteratively remove lowest-information tokens.\nRemoved Tokens: {{removed_tokens}}\n\nStep 3: Verify compressed context preserves key semantics.\nCompressed Context: {{compressed_context}}",
+      "variables": [
+        {
+          "name": "context",
+          "description": "The long context to compress.",
+          "example": "Long document about climate change impacts on agriculture..."
+        },
+        {
+          "name": "ratio",
+          "description": "Target compression ratio (e.g., 0.5 = 50% reduction).",
+          "example": "0.5"
+        },
+        {
+          "name": "token_scores",
+          "description": "Self-information score per token.",
+          "example": "{\"the\": 0.1, \"climate\": 2.5, \"agriculture\": 3.1}"
+        },
+        {
+          "name": "removed_tokens",
+          "description": "Tokens removed as low-information.",
+          "example": "[\"the\", \"a\", \"is\", \"of\"]"
+        },
+        {
+          "name": "compressed_context",
+          "description": "The compressed text.",
+          "example": "Climate change impacts agriculture: temperature shifts, drought, crop yields..."
+        }
+      ],
+      "template_id": "selective-context--self-info",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "Self-information computation is deterministic at temperature=0. Token removal is deterministic based on scores."
+    }
+  ],
+  "tags": [
+    "compression",
+    "context",
+    "self-information",
+    "token-efficiency"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "Selective Context"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

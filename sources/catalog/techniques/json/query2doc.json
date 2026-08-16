@@ -1,0 +1,77 @@
+{
+  "id": "query2doc",
+  "name": "Query2doc",
+  "category": "retrieval-augmentation",
+  "subcategory": "query-expansion",
+  "executive_summary": "Few-shot prompt an LLM to write a pseudo-document answering the query, then append that pseudo-document to the query before retrieval.",
+  "description": "Short queries are poor retrieval keys: they under-specify intent and share few terms with relevant passages. Query2doc has the model generate a plausible answer document from parametric knowledge and concatenates it with the original query, widening lexical overlap for sparse retrievers and sharpening the embedding for dense ones. The pseudo-document does not need to be factually correct -- it needs to carry the vocabulary and framing of the documents that would answer the query. No retriever fine-tuning is involved.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Queries are short or ambiguous and recall is the binding constraint.",
+    "You run BM25 or another sparse retriever that depends on term overlap.",
+    "You cannot fine-tune the retriever but can afford one extra generation per query."
+  ],
+  "when_not_to_use": [
+    "Query latency budget does not allow a generation step before retrieval.",
+    "The corpus is in a domain the model knows nothing about, so the pseudo-document adds noise instead of vocabulary.",
+    "Queries are already long, well-specified documents."
+  ],
+  "known_pitfalls": [
+    "A hallucinated pseudo-document can drag retrieval toward the wrong topic; weighting the original query terms higher mitigates this.",
+    "Gains shrink for strong dense retrievers already trained in-domain.",
+    "Adds one model call to every query, which dominates cost at scale."
+  ],
+  "related_techniques": [
+    "hyde",
+    "retrieval-augmented-generation",
+    "few-shot-prompting"
+  ],
+  "primary_source": {
+    "authors": "Wang, Yang, Wei",
+    "year": 2023,
+    "title": "Query2doc: Query Expansion with Large Language Models",
+    "venue": "EMNLP 2023",
+    "arxiv_id": "2303.07678",
+    "url": "https://arxiv.org/abs/2303.07678"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Few-shot pseudo-document expansion",
+      "template": "Write a passage that answers the given query.\n\n{{few_shot_examples}}\n\nQuery: {{query}}\nPassage:",
+      "variables": [
+        {
+          "name": "few_shot_examples",
+          "description": "Four to eight query/passage exemplars from the domain.",
+          "example": "Query: how tall is Everest\nPassage: Mount Everest rises 8,849 m ..."
+        },
+        {
+          "name": "query",
+          "description": "The user query to expand.",
+          "example": "side effects of ibuprofen"
+        }
+      ],
+      "template_id": "query2doc--few-shot-expansion",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "One LLM call per query. The retrieval step that consumes the expanded query is external and deterministic given a fixed index."
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "query-expansion",
+    "sparse-retrieval",
+    "pseudo-document"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "query2doc",
+    "Query Expansion with LLMs"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

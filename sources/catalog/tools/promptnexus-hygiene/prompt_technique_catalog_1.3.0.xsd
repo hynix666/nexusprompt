@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PromptNexus prompt-technique catalog, schema 1.3.0.
+
+  1.3.0 adds <source_audit>: a per-record statement of what has been checked
+  about the record's prose and against what. It is mandatory, because a record
+  without it is indistinguishable to a reader from one that was verified.
+
+  Replaces prompt_technique_catalog_staging.xsd, whose techniqueType was
+  <xs:any processContents="lax"/>. That definition accepts a record with no
+  content at all, which is why its six detailed complexTypes (primarySourceType,
+  stringListType, aliasListType, tagListType, pitfallListType,
+  relatedTechniqueListType, usageTemplatesType) were unreachable and why a
+  "valid: true" result from it certified only well-formedness, unique @id and
+  the metadata block's types.
+
+  This schema enforces, structurally:
+    - the element sequence of a <technique>, with corpus_file and
+      secondary_sources optional and everything else required;
+    - the controlled vocabularies for status, verification_status, cost_profile
+      and determinism;
+    - slug form for technique ids, categories and template ids;
+    - agreement between technique/@id and technique/id;
+    - arXiv id format.
+
+  What XSD still cannot express, and what the release-gate validators must
+  therefore keep enforcing:
+    - related_techniques targets resolve to a record in this file;
+    - entry_count agrees with the number of records AND with the root attribute;
+    - declared categories match the categories in use;
+    - no two records share a name, arXiv id, title or template_id;
+    - template placeholders are declared in <variables>.
+  A green result here is a necessary condition for release, never a sufficient one.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <!-- ==================== primitive types ==================== -->
+
+  <xs:simpleType name="nonEmptyString">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:pattern value="\s*\S(.|\n|\r)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="slug">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[a-z0-9]+(-[a-z0-9]+)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="templateIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[a-z0-9]+(-[a-z0-9]+)*--[a-z0-9]+(-[a-z0-9]+)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="arxivIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="|\d{4}\.\d{4,5}(v\d+)?|[a-z\-]+(\.[A-Z]{2})?/\d{7}(v\d+)?"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="descriptionAuditType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="verified-against-abstract"/>
+      <xs:enumeration value="verified-against-paper"/>
+      <xs:enumeration value="unverified"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="pitfallsAuditType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="verified-against-paper"/>
+      <xs:enumeration value="unverified"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="sourceAuditType">
+    <xs:sequence>
+      <xs:element name="description" type="descriptionAuditType"/>
+      <xs:element name="pitfalls" type="pitfallsAuditType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="statusType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="corpus-present"/>
+      <xs:enumeration value="verified-external"/>
+      <xs:enumeration value="practitioner-guide"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="verificationStatusType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="verifier-checkable"/>
+      <xs:enumeration value="judge-checkable"/>
+      <xs:enumeration value="unverifiable-by-text"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="costProfileType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="single-call"/>
+      <xs:enumeration value="multi-call-fixed"/>
+      <xs:enumeration value="multi-call-adaptive"/>
+      <xs:enumeration value="agentic-loop"/>
+      <xs:enumeration value="training-time"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="determinismType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="deterministic-at-temperature-zero"/>
+      <xs:enumeration value="stochastic-by-design"/>
+      <xs:enumeration value="requires-external-system"/>
+      <xs:enumeration value="training-time-not-applicable"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- ==================== list containers ====================
+       An empty container carries empty="true"; an empty text leaf carries
+       nil="true". The marker is what distinguishes "known to be absent" from
+       "the serializer forgot", so it is declared rather than tolerated. -->
+
+  <xs:attribute name="empty" type="xs:boolean"/>
+  <xs:attribute name="nil" type="xs:boolean"/>
+
+  <xs:complexType name="markedArxivId">
+    <xs:simpleContent>
+      <xs:extension base="arxivIdType">
+        <xs:attribute ref="nil"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="markedString">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute ref="nil"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="itemListType">
+    <xs:sequence>
+      <xs:element name="item" type="nonEmptyString" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute ref="empty"/>
+  </xs:complexType>
+
+  <xs:complexType name="pitfallListType">
+    <xs:sequence>
+      <xs:element name="pitfall" type="nonEmptyString" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute ref="empty"/>
+  </xs:complexType>
+
+  <xs:complexType name="aliasListType">
+    <xs:sequence>
+      <xs:element name="alias" type="nonEmptyString" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute ref="empty"/>
+  </xs:complexType>
+
+  <xs:complexType name="tagListType">
+    <xs:sequence>
+      <xs:element name="tag" type="nonEmptyString" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute ref="empty"/>
+  </xs:complexType>
+
+  <xs:complexType name="relatedTechniqueListType">
+    <xs:sequence>
+      <xs:element name="technique_id" type="slug" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute ref="empty"/>
+  </xs:complexType>
+
+  <!-- ==================== sources ==================== -->
+
+  <xs:complexType name="sourceType">
+    <xs:sequence>
+      <xs:element name="authors" type="nonEmptyString"/>
+      <xs:element name="year" type="xs:gYear"/>
+      <xs:element name="title" type="nonEmptyString"/>
+      <xs:element name="venue" type="nonEmptyString"/>
+      <xs:element name="arxiv_id" type="markedArxivId"/>
+      <xs:element name="url" type="markedString"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="secondarySourcesType">
+    <xs:sequence>
+      <xs:element name="source" type="sourceType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ==================== templates ==================== -->
+
+  <xs:complexType name="variableType">
+    <xs:sequence>
+      <xs:element name="name" type="nonEmptyString"/>
+      <xs:element name="description" type="markedString"/>
+      <xs:element name="example" type="markedString"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="variablesType">
+    <xs:sequence>
+      <xs:element name="variable" type="variableType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute ref="empty"/>
+  </xs:complexType>
+
+  <xs:complexType name="templateType">
+    <xs:sequence>
+      <xs:element name="template_name" type="nonEmptyString"/>
+      <xs:element name="template" type="nonEmptyString"/>
+      <xs:element name="template_id" type="templateIdType"/>
+      <xs:element name="determinism" type="determinismType"/>
+      <xs:element name="reproducibility_note" type="markedString"/>
+      <xs:element name="variables" type="variablesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="usageTemplatesType">
+    <xs:sequence>
+      <xs:element name="template" type="templateType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ==================== technique ==================== -->
+
+  <xs:complexType name="techniqueType">
+    <xs:sequence>
+      <xs:element name="id" type="slug"/>
+      <xs:element name="name" type="nonEmptyString"/>
+      <xs:element name="category" type="slug"/>
+      <xs:element name="subcategory" type="nonEmptyString"/>
+      <xs:element name="executive_summary" type="nonEmptyString"/>
+      <xs:element name="description" type="nonEmptyString"/>
+      <xs:element name="verification_status" type="verificationStatusType"/>
+      <xs:element name="cost_profile" type="costProfileType"/>
+      <xs:element name="status" type="statusType"/>
+      <xs:element name="corpus_file" type="nonEmptyString" minOccurs="0"/>
+      <xs:element name="schema_version" type="nonEmptyString"/>
+      <xs:element name="aliases" type="aliasListType"/>
+      <xs:element name="when_to_use" type="itemListType"/>
+      <xs:element name="when_not_to_use" type="itemListType"/>
+      <xs:element name="known_pitfalls" type="pitfallListType"/>
+      <xs:element name="related_techniques" type="relatedTechniqueListType"/>
+      <xs:element name="tags" type="tagListType"/>
+      <xs:element name="primary_source" type="sourceType"/>
+      <xs:element name="secondary_sources" type="secondarySourcesType" minOccurs="0"/>
+      <xs:element name="usage_templates" type="usageTemplatesType"/>
+      <xs:element name="source_audit" type="sourceAuditType"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="slug" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="techniquesType">
+    <xs:sequence>
+      <xs:element name="technique" type="techniqueType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ==================== catalog ==================== -->
+
+  <xs:complexType name="categoriesType">
+    <xs:sequence>
+      <xs:element name="category" type="slug" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="catalogMetadataType">
+    <xs:sequence>
+      <xs:element name="catalog_name" type="nonEmptyString"/>
+      <xs:element name="schema_version" type="nonEmptyString"/>
+      <xs:element name="catalog_version" type="nonEmptyString"/>
+      <xs:element name="generated_at" type="nonEmptyString"/>
+      <xs:element name="entry_count" type="xs:positiveInteger"/>
+      <xs:element name="categories" type="categoriesType"/>
+      <xs:element name="source_note" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="PromptTechniqueCatalog">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="catalog_metadata" type="catalogMetadataType"/>
+        <xs:element name="techniques" type="techniquesType"/>
+      </xs:sequence>
+      <xs:attribute name="schema_version" type="nonEmptyString" use="required"/>
+      <xs:attribute name="catalog_version" type="nonEmptyString" use="required"/>
+      <xs:attribute name="generated_at" type="nonEmptyString" use="required"/>
+      <xs:attribute name="entry_count" type="xs:positiveInteger" use="required"/>
+    </xs:complexType>
+
+    <xs:unique name="uniqueTechniqueAttributeId">
+      <xs:selector xpath="techniques/technique"/>
+      <xs:field xpath="@id"/>
+    </xs:unique>
+    <xs:unique name="uniqueTechniqueElementId">
+      <xs:selector xpath="techniques/technique"/>
+      <xs:field xpath="id"/>
+    </xs:unique>
+    <xs:unique name="uniqueTechniqueName">
+      <xs:selector xpath="techniques/technique"/>
+      <xs:field xpath="name"/>
+    </xs:unique>
+    <xs:unique name="uniqueDeclaredCategory">
+      <xs:selector xpath="catalog_metadata/categories/category"/>
+      <xs:field xpath="."/>
+    </xs:unique>
+
+    <!-- technique/@id and technique/id must agree: the element id is declared
+         as a key and the attribute is declared as a reference to it. -->
+    <xs:key name="techniqueElementIdKey">
+      <xs:selector xpath="techniques/technique"/>
+      <xs:field xpath="id"/>
+    </xs:key>
+    <xs:keyref name="attributeIdMatchesElementId" refer="techniqueElementIdKey">
+      <xs:selector xpath="techniques/technique"/>
+      <xs:field xpath="@id"/>
+    </xs:keyref>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,76 @@
+{
+  "id": "flare",
+  "name": "FLARE (Forward-Looking Active REtrieval)",
+  "category": "retrieval-augmentation",
+  "subcategory": "active-retrieval",
+  "executive_summary": "Retrieves during generation when the model predicts low-confidence upcoming tokens. Adaptive retrieval that triggers only when needed, reducing unnecessary retrieval overhead.",
+  "description": "FLARE monitors the model's confidence during generation. If confidence drops below a threshold, the current sentence is used as a query to retrieve additional context, and generation continues with augmented information.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Long-form generation where not all content requires external knowledge.",
+    "When up-front retrieval retrieves too much irrelevant context.",
+    "Streaming generation scenarios where retrieval can be interleaved."
+  ],
+  "when_not_to_use": [
+    "Short-answer tasks where a single retrieval is sufficient.",
+    "When retrieval latency is too high for interleaved generation.",
+    "Models without confidence probability access.",
+    "Models without confidence probability access (black-box APIs may not expose token probs)."
+  ],
+  "known_pitfalls": [
+    "Threshold tuning is critical; too low misses retrieval needs, too high wastes calls.",
+    "Retrieval latency can stall generation pipeline.",
+    "May retrieve redundant information if the model oscillates around the threshold."
+  ],
+  "related_techniques": [
+    "self-rag",
+    "retrieval-augmented-generation",
+    "hyde",
+    "corrective-rag"
+  ],
+  "primary_source": {
+    "authors": "Jiang, Xu, Gao, Sun, Liu, Dwivedi-Yu, Yang, Callan, Neubig",
+    "year": 2023,
+    "title": "Active Retrieval Augmented Generation",
+    "venue": "arXiv",
+    "arxiv_id": "2305.06983",
+    "url": "https://arxiv.org/abs/2305.06983"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Confidence-triggered active retrieval",
+      "template": "Generate next sentence. If any token probability < {{threshold}}, treat the sentence as a query, retrieve relevant context, regenerate the sentence with retrieved context appended. Otherwise continue generation.",
+      "variables": [
+        {
+          "name": "threshold",
+          "description": "Confidence probability cutoff below which retrieval is triggered.",
+          "example": "0.7"
+        }
+      ],
+      "template_id": "flare--confidence-triggered",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "Adaptive number of retrieval calls depending on generation confidence. Requires access to token probabilities or explicit confidence estimation."
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "active",
+    "adaptive",
+    "long-form"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "FLARE",
+    "Forward-Looking Active Retrieval",
+    "flare-forward-looking-active-retrieval",
+    "FLARE (Forward-Looking Active REtrieval)"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

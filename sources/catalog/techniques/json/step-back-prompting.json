@@ -1,0 +1,72 @@
+{
+  "id": "step-back-prompting",
+  "name": "Step-Back Prompting",
+  "category": "reasoning-elicitation",
+  "subcategory": "abstraction-first",
+  "executive_summary": "Have the model first step back to derive a high-level concept or principle from the specific question, then use that abstraction to guide the actual reasoning — abstract before you solve, rather than solving directly.",
+  "description": "Targets a distinct failure mode from Problem Elaboration Prompting's context-clarification focus: rather than clarifying what a question is asking, Step-Back Prompting has the model first derive the general principle or first-principle concept underlying the specific instance (e.g. asking 'what physical law governs this?' before solving a specific physics problem), then reasons through the specific question guided by that abstraction. Tested with PaLM-2L, GPT-4, and Llama2-70B, with substantial gains on STEM, knowledge QA, and multi-hop reasoning — for example, +7% and +11% on MMLU Physics and Chemistry, +27% on TimeQA, +7% on MuSiQue for PaLM-2L.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-fixed",
+  "when_to_use": [
+    "Questions that are instances of a more general principle or concept (physics, chemistry, knowledge-QA, multi-hop reasoning) where identifying that principle first would make solving the specific instance easier."
+  ],
+  "when_not_to_use": [
+    "Questions with no useful higher-level abstraction to step back to — purely computational or lookup-style tasks."
+  ],
+  "known_pitfalls": [
+    "If the model derives the wrong abstraction (an incorrect or irrelevant general principle), the specific-instance reasoning that follows is misguided by a bad premise."
+  ],
+  "related_techniques": [
+    "problem-elaboration-prompting",
+    "chain-of-thought",
+    "self-discover"
+  ],
+  "primary_source": {
+    "authors": "Zheng, Mishra, Chen, Cheng, Chi, Le, Zhou",
+    "year": 2023,
+    "title": "Take a Step Back: Evoking Reasoning via Abstraction in Large Language Models",
+    "venue": "ICLR 2024",
+    "arxiv_id": "2310.06117",
+    "url": "https://arxiv.org/abs/2310.06117"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Abstract-then-reason",
+      "template": "Original question: {{specific_question}}\n\n# Step back\nWhat is the general concept or principle needed to answer this question? Step-back question: {{stepback_question}}\nPrinciple: {{derived_principle}}\n\n# Reason using the abstraction\nUsing the principle above ({{derived_principle}}), answer the original question: {{specific_question}}",
+      "variables": [
+        {
+          "name": "specific_question",
+          "description": "The original, specific-instance question",
+          "example": null
+        },
+        {
+          "name": "stepback_question",
+          "description": "The generated higher-level question abstracting away instance-specific details",
+          "example": null
+        },
+        {
+          "name": "derived_principle",
+          "description": "The general concept/principle the model derives",
+          "example": null
+        }
+      ],
+      "template_id": "step-back-prompting--abstract-then-reason",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "abstraction",
+    "multi-call"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

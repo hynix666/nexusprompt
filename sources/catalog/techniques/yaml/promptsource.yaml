@@ -1,0 +1,71 @@
+id: promptsource
+name: PromptSource (Prompt Templating Language + Repository)
+category: template-pattern-scaffolding
+subcategory: formal-templating
+executive_summary: A formal templating language for data-linked prompts, plus a community repository,
+  defining precisely what a 'prompt template' is as a reusable, parameterized artifact tied to a dataset
+  schema.
+description: Defines templates as jinja-style transformations from a dataset's fields into a prompt string
+  plus a corresponding target-output transformation, enabling a single template to be applied across every
+  row of a dataset. Published alongside a repository of thousands of community-contributed templates across
+  many datasets, making it the nearest formal specification in the literature for what a portable, dataset-linked
+  prompt template actually is.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Building a template that needs to be applied programmatically across every row of a structured dataset,
+  not just used once by hand.
+when_not_to_use:
+- A single hand-written prompt with no dataset-linked reuse requirement.
+known_pitfalls:
+- Template quality still varies a great deal across a large community-contributed repository; not every
+  published template is well-designed.
+related_techniques:
+- prompt-pattern-catalog
+primary_source:
+  authors: Bach, Sanh, Yong, Webson, Raffel, Nayak, Sharma, Kim, Bari, Fevry, Alyafeai, et al.
+  year: 2022
+  title: 'PromptSource: An Integrated Development Environment and Repository for Natural Language Prompts'
+  venue: ACL 2022 (Demo)
+  arxiv_id: '2202.01279'
+  url: https://arxiv.org/abs/2202.01279
+usage_templates:
+- template_name: Dataset-linked template definition
+  template: |-
+    # Template definition (applied per dataset row)
+    jinja_input: "{{input_field_expression}}"
+    jinja_target: "{{target_field_expression}}"
+    answer_choices: {{fixed_answer_choices_or_none}}
+
+    # Rendered example (row-specific values substituted)
+    {{rendered_prompt_for_one_row}}
+  variables:
+  - name: input_field_expression
+    description: Jinja-style expression pulling from dataset fields to build the prompt
+    example: '"Premise: {{premise}} Hypothesis: {{hypothesis}} True or False?"'
+  - name: target_field_expression
+    description: Corresponding expression producing the target output
+    example: null
+  - name: fixed_answer_choices_or_none
+    description: Fixed label set if this is a classification-style template
+    example: '["True", "False"]'
+  - name: rendered_prompt_for_one_row
+    description: The fully rendered prompt for a specific dataset row
+    example: null
+  template_id: promptsource--dataset-linked-template-definition
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- template
+- formal-spec
+- dataset-linked
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

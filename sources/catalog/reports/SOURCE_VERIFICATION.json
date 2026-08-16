@@ -1,0 +1,233 @@
+{
+  "_provenance": {
+    "source": "arXiv Atom API (https://export.arxiv.org/api/query)",
+    "queried_at": "2026-08-12",
+    "method": "Each record's arxiv_id was resolved against the live arXiv entry. Where the id returned an unrelated paper, the correct id was found by title search and accepted only on an exact title match. Author strings follow the catalog convention: full surname sequence, 'et al.' only past ten names. `year` and `venue` are excluded: in this catalog they describe the publication venue, not the arXiv posting.",
+    "record_count": 36,
+    "scope": "The 35 arXiv-backed records added by the v1.20.0 patch, plus structured-cot-code-generation from the existing baseline, which carried the only abbreviated author string outside the patch.",
+    "fields": [
+      "arxiv_id",
+      "authors",
+      "title",
+      "url"
+    ]
+  },
+  "records": {
+    "adaptive-graph-of-thoughts": {
+      "arxiv_id": "2502.05078",
+      "authors": "Pandey, Ghukasyan, Goktas, Radha",
+      "title": "Adaptive Graph of Thoughts: Test-Time Adaptive Reasoning Unifying Chain, Tree, and Graph Structures",
+      "url": "https://arxiv.org/abs/2502.05078"
+    },
+    "adaptive-rag": {
+      "arxiv_id": "2403.14403",
+      "authors": "Jeong, Baek, Cho, Hwang, Park",
+      "title": "Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity",
+      "url": "https://arxiv.org/abs/2403.14403"
+    },
+    "autogen": {
+      "arxiv_id": "2308.08155",
+      "authors": "Wu, Bansal, Zhang, Wu, Li, Zhu, Jiang, Zhang, Zhang, Liu, et al.",
+      "title": "AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation",
+      "url": "https://arxiv.org/abs/2308.08155"
+    },
+    "branch-solve-merge": {
+      "arxiv_id": "2310.15123",
+      "authors": "Saha, Levy, Celikyilmaz, Bansal, Weston, Li",
+      "title": "Branch-Solve-Merge Improves Large Language Model Evaluation and Generation",
+      "url": "https://arxiv.org/abs/2310.15123"
+    },
+    "buffer-of-thoughts": {
+      "arxiv_id": "2406.04271",
+      "authors": "Yang, Yu, Zhang, Cao, Xu, Zhang, Gonzalez, Cui",
+      "title": "Buffer of Thoughts: Thought-Augmented Reasoning with Large Language Models",
+      "url": "https://arxiv.org/abs/2406.04271"
+    },
+    "chain-of-code": {
+      "arxiv_id": "2312.04474",
+      "authors": "Li, Liang, Zeng, Chen, Hausman, Sadigh, Levine, Fei-Fei, Xia, Ichter",
+      "title": "Chain of Code: Reasoning with a Language Model-Augmented Code Emulator",
+      "url": "https://arxiv.org/abs/2312.04474"
+    },
+    "chain-of-draft": {
+      "arxiv_id": "2502.18600",
+      "authors": "Xu, Xie, Zhao, He",
+      "title": "Chain of Draft: Thinking Faster by Writing Less",
+      "url": "https://arxiv.org/abs/2502.18600"
+    },
+    "codet": {
+      "arxiv_id": "2207.10397",
+      "authors": "Chen, Zhang, Nguyen, Zan, Lin, Lou, Chen",
+      "title": "CodeT: Code Generation with Generated Tests",
+      "url": "https://arxiv.org/abs/2207.10397"
+    },
+    "confidence-informed-self-consistency": {
+      "arxiv_id": "2502.06233",
+      "authors": "Taubenfeld, Sheffer, Ofek, Feder, Goldstein, Gekhman, Yona",
+      "title": "Confidence Improves Self-Consistency in LLMs",
+      "url": "https://arxiv.org/abs/2502.06233"
+    },
+    "corrective-rag": {
+      "arxiv_id": "2401.15884",
+      "authors": "Yan, Gu, Zhu, Ling",
+      "title": "Corrective Retrieval Augmented Generation",
+      "url": "https://arxiv.org/abs/2401.15884"
+    },
+    "dera": {
+      "arxiv_id": "2303.17071",
+      "authors": "Nair, Schumacher, Tso, Kannan",
+      "title": "DERA: Enhancing Large Language Model Completions with Dialog-Enabled Resolving Agents",
+      "url": "https://arxiv.org/abs/2303.17071"
+    },
+    "evoprompt": {
+      "arxiv_id": "2309.08532",
+      "authors": "Guo, Wang, Guo, Li, Song, Tan, Liu, Bian, Yang",
+      "title": "EvoPrompt: Connecting LLMs with Evolutionary Algorithms Yields Powerful Prompt Optimizers",
+      "url": "https://arxiv.org/abs/2309.08532"
+    },
+    "factscore": {
+      "arxiv_id": "2305.14251",
+      "authors": "Min, Krishna, Lyu, Lewis, Yih, Koh, Iyyer, Zettlemoyer, Hajishirzi",
+      "title": "FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation",
+      "url": "https://arxiv.org/abs/2305.14251"
+    },
+    "flare": {
+      "arxiv_id": "2305.06983",
+      "authors": "Jiang, Xu, Gao, Sun, Liu, Dwivedi-Yu, Yang, Callan, Neubig",
+      "title": "Active Retrieval Augmented Generation",
+      "url": "https://arxiv.org/abs/2305.06983"
+    },
+    "frugalgpt": {
+      "arxiv_id": "2305.05176",
+      "authors": "Chen, Zaharia, Zou",
+      "title": "FrugalGPT: How to Use Large Language Models While Reducing Cost and Improving Performance",
+      "url": "https://arxiv.org/abs/2305.05176"
+    },
+    "graphrag": {
+      "arxiv_id": "2404.16130",
+      "authors": "Edge, Trinh, Cheng, Bradley, Chao, Mody, Truitt, Metropolitansky, Ness, Larson",
+      "title": "From Local to Global: A Graph RAG Approach to Query-Focused Summarization",
+      "url": "https://arxiv.org/abs/2404.16130"
+    },
+    "hierarchical-chain-of-thought": {
+      "arxiv_id": "2604.00130",
+      "authors": "Huang, Li, Nikpour, Omidi",
+      "title": "Hierarchical Chain-of-Thought: Enhancing LLM Reasoning Performance and Efficiency",
+      "url": "https://arxiv.org/abs/2604.00130"
+    },
+    "highlighted-chain-of-thought": {
+      "arxiv_id": "2503.02003",
+      "authors": "Nguyen, Bolton, Taesiri, Bui, Nguyen",
+      "title": "HoT: Highlighted Chain of Thought for Referencing Supporting Facts from Inputs",
+      "url": "https://arxiv.org/abs/2503.02003"
+    },
+    "hyde": {
+      "arxiv_id": "2212.10496",
+      "authors": "Gao, Ma, Lin, Callan",
+      "title": "Precise Zero-Shot Dense Retrieval without Relevance Labels",
+      "url": "https://arxiv.org/abs/2212.10496"
+    },
+    "llama-guard": {
+      "arxiv_id": "2312.06674",
+      "authors": "Inan, Upasani, Chi, Rungta, Iyer, Mao, Tontchev, Hu, Fuller, Testuggine, et al.",
+      "title": "Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations",
+      "url": "https://arxiv.org/abs/2312.06674"
+    },
+    "lmql": {
+      "arxiv_id": "2212.06094",
+      "authors": "Beurer-Kellner, Fischer, Vechev",
+      "title": "Prompting Is Programming: A Query Language for Large Language Models",
+      "url": "https://arxiv.org/abs/2212.06094"
+    },
+    "longllmlingua": {
+      "arxiv_id": "2310.06839",
+      "authors": "Jiang, Wu, Luo, Li, Lin, Yang, Qiu",
+      "title": "LongLLMLingua: Accelerating and Enhancing LLMs in Long Context Scenarios via Prompt Compression",
+      "url": "https://arxiv.org/abs/2310.06839"
+    },
+    "medprompt-framework": {
+      "arxiv_id": "2311.16452",
+      "authors": "Nori, Lee, Zhang, Carignan, Edgar, Fusi, King, Larson, Li, Liu, et al.",
+      "title": "Can Generalist Foundation Models Outcompete Special-Purpose Tuning? Case Study in Medicine",
+      "url": "https://arxiv.org/abs/2311.16452"
+    },
+    "mipro": {
+      "arxiv_id": "2406.11695",
+      "authors": "Opsahl-Ong, Ryan, Purtell, Broman, Potts, Zaharia, Khattab",
+      "title": "Optimizing Instructions and Demonstrations for Multi-Stage Language Model Programs",
+      "url": "https://arxiv.org/abs/2406.11695"
+    },
+    "nemo-guardrails": {
+      "arxiv_id": "2310.10501",
+      "authors": "Rebedea, Dinu, Sreedhar, Parisien, Cohen",
+      "title": "NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications with Programmable Rails",
+      "url": "https://arxiv.org/abs/2310.10501"
+    },
+    "rarr": {
+      "arxiv_id": "2210.08726",
+      "authors": "Gao, Dai, Pasupat, Chen, Chaganty, Fan, Zhao, Lao, Lee, Juan, et al.",
+      "title": "RARR: Researching and Revising What Language Models Say, Using Language Models",
+      "url": "https://arxiv.org/abs/2210.08726"
+    },
+    "recomp": {
+      "arxiv_id": "2310.04408",
+      "authors": "Xu, Shi, Choi",
+      "title": "RECOMP: Improving Retrieval-Augmented LMs with Compression and Selective Augmentation",
+      "url": "https://arxiv.org/abs/2310.04408"
+    },
+    "selective-context": {
+      "arxiv_id": "2310.06201",
+      "authors": "Li, Dong, Lin, Guerin",
+      "title": "Compressing Context to Enhance Inference Efficiency of Large Language Models",
+      "url": "https://arxiv.org/abs/2310.06201"
+    },
+    "selfcheckgpt": {
+      "arxiv_id": "2303.08896",
+      "authors": "Manakul, Liusie, Gales",
+      "title": "SelfCheckGPT: Zero-Resource Black-Box Hallucination Detection for Generative Large Language Models",
+      "url": "https://arxiv.org/abs/2303.08896"
+    },
+    "sglang": {
+      "arxiv_id": "2312.07104",
+      "authors": "Zheng, Yin, Xie, Sun, Huang, Yu, Cao, Kozyrakis, Stoica, Gonzalez, et al.",
+      "title": "SGLang: Efficient Execution of Structured Language Model Programs",
+      "url": "https://arxiv.org/abs/2312.07104"
+    },
+    "spotlighting-hines": {
+      "arxiv_id": "2403.14720",
+      "authors": "Hines, Lopez, Hall, Zarfati, Zunger, Kiciman",
+      "title": "Defending Against Indirect Prompt Injection Attacks With Spotlighting",
+      "url": "https://arxiv.org/abs/2403.14720"
+    },
+    "structured-cot-code-generation": {
+      "arxiv_id": "2305.06599",
+      "authors": "Li, Li, Li, Jin",
+      "title": "Structured Chain-of-Thought Prompting for Code Generation",
+      "url": "https://arxiv.org/abs/2305.06599"
+    },
+    "swe-agent": {
+      "arxiv_id": "2405.15793",
+      "authors": "Yang, Jimenez, Wettig, Lieret, Yao, Narasimhan, Press",
+      "title": "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering",
+      "url": "https://arxiv.org/abs/2405.15793"
+    },
+    "textgrad": {
+      "arxiv_id": "2406.07496",
+      "authors": "Yuksekgonul, Bianchi, Boen, Liu, Huang, Guestrin, Zou",
+      "title": "TextGrad: Automatic \"Differentiation\" via Text",
+      "url": "https://arxiv.org/abs/2406.07496"
+    },
+    "thought-propagation": {
+      "arxiv_id": "2310.03965",
+      "authors": "Yu, He, Ying",
+      "title": "Thought Propagation: An Analogical Approach to Complex Reasoning with Large Language Models",
+      "url": "https://arxiv.org/abs/2310.03965"
+    },
+    "verify-and-edit": {
+      "arxiv_id": "2305.03268",
+      "authors": "Zhao, Li, Joty, Qin, Bing",
+      "title": "Verify-and-Edit: A Knowledge-Enhanced Chain-of-Thought Framework",
+      "url": "https://arxiv.org/abs/2305.03268"
+    }
+  }
+}

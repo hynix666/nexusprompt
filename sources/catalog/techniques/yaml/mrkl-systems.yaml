@@ -1,0 +1,81 @@
+id: mrkl-systems
+name: MRKL Systems (Modular Reasoning, Knowledge and Language)
+category: agentic-tool-use
+subcategory: modular-architecture
+executive_summary: 'A foundational architecture predating ReAct and most agent frameworks: route a query
+  to the right combination of an LLM and external ''expert modules'' instead of one model doing it all.'
+description: Positioned as a discussion/position paper rather than a single benchmarked technique, MRKL
+  argues that expecting a single LLM to internalize all knowledge and all computational ability (e.g.
+  exact arithmetic) is the wrong architecture — instead, treat the LLM as a router/orchestrator among
+  a set of external 'expert' modules (which can themselves be neural or symbolic, e.g. a calculator, a
+  database query engine, another fine-tuned model), extensible by adding new experts over time. Frequently
+  cited as an early conceptual ancestor of the entire modern LLM-agent-with-tools paradigm (ReAct, ART,
+  ReWOO, and the many agent frameworks built since) — most of this catalog's `agentic-tool-use` category
+  can trace its lineage back to this proposal's core framing.
+verification_status: unverifiable-by-text
+cost_profile: multi-call-adaptive
+when_to_use:
+- Conceptual grounding for why routing to specialized external modules (rather than relying on one model
+  for everything) is the right architecture — useful when explaining or justifying an agent-with-tools
+  design to a stakeholder.
+- Designing a system meant to be extensible with new expert modules over time, since extensibility is
+  a first-class concern in the original proposal.
+when_not_to_use:
+- N/A for direct application — this is an architectural position/framework paper rather than a specific
+  technique with a single benchmarked prompting recipe; the later, more specific techniques it inspired
+  (ReAct, ART, ReWOO) are more directly applicable starting points.
+known_pitfalls:
+- Being a foundational/conceptual proposal rather than a specific benchmarked method, it doesn't itself
+  specify exact prompting mechanics — later papers (ReAct, ART) fill in the concrete implementation details.
+related_techniques:
+- react
+- art-automatic-reasoning-tool-use
+- rewoo-reasoning-without-observation
+primary_source:
+  authors: Karpas, Abend, Belinkov, Lenz, Lieber, Ratner, Shoham, Bata, Levine, Leyton-Brown, et al.
+  year: 2022
+  title: 'MRKL Systems: A Modular, Neuro-Symbolic Architecture that Combines Large Language Models, External
+    Knowledge Sources and Discrete Reasoning'
+  venue: arXiv preprint (AI21 Labs)
+  arxiv_id: '2205.00445'
+  url: https://arxiv.org/abs/2205.00445
+usage_templates:
+- template_name: Router-to-expert-modules architecture (conceptual)
+  template: |-
+    Query: {{query}}
+    Available expert modules: {{expert_module_list}}
+    Route this query to the most appropriate expert module(s) — this could be the LLM itself for open-ended language tasks, or a specific module ({{expert_module_example}}) for tasks that module handles better than the LLM alone (exact arithmetic, structured lookup, etc.).
+    Selected module(s): {{selected_modules}}
+    Combine each module's output into the final response to: {{query}}
+  variables:
+  - name: query
+    description: The incoming query to route
+    example: null
+  - name: expert_module_list
+    description: The set of available expert modules the system can route to
+    example: null
+  - name: expert_module_example
+    description: A specific example expert module, e.g. a calculator
+    example: calculator
+  - name: selected_modules
+    description: Which module(s) were selected for this query
+    example: null
+  template_id: mrkl-systems--router-to-expert-modules-architecture-conceptual
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- agentic
+- modular-architecture
+- foundational
+- neuro-symbolic
+status: verified-external
+aliases:
+- MRKL
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

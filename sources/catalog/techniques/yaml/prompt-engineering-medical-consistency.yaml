@@ -1,0 +1,62 @@
+id: prompt-engineering-medical-consistency
+name: Prompt Design for Output Consistency in Medical Applications
+category: domain-specific-application
+subcategory: healthcare
+executive_summary: An empirical study of how prompt design choices affect output consistency in medical/clinical
+  LLM applications, where inconsistent answers to the same clinical question are a safety concern in themselves.
+description: Studies prompt engineering's effect on output consistency specifically in a medical domain
+  context, where the same clinical question being answered differently across runs is itself a risk, independent
+  of whether any individual answer is correct. Findings from this domain-specific reliability study generalize
+  as a caution for any high-stakes deployment.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- High-stakes domains (medical, legal, financial) where consistency across repeated identical queries
+  is itself a safety/reliability requirement.
+when_not_to_use:
+- Low-stakes or creative domains where output variability is acceptable or even desirable.
+known_pitfalls:
+- Consistency and correctness are separate properties — a prompt can be highly consistent while consistently
+  wrong.
+related_techniques:
+- calibrate-before-use
+primary_source:
+  authors: (local corpus)
+  year: 2025
+  title: 'Prompt Engineering in Consistency: An Empirical Study in Medical Applications'
+  venue: npj Digital Medicine
+  arxiv_id: null
+  url: null
+usage_templates:
+- template_name: Consistency-audited clinical prompt
+  template: |-
+    Clinical question: {{clinical_question}}
+    Run this prompt {{num_repeats}} times at temperature {{temperature}}. Report the distribution of distinct answers produced. If answers vary meaningfully across runs, do not deploy this prompt as-is — the inconsistency itself is a defect to fix before considering accuracy.
+  variables:
+  - name: clinical_question
+    description: The clinical/medical question being asked
+    example: null
+  - name: num_repeats
+    description: How many times to repeat for the consistency audit
+    example: '20'
+  - name: temperature
+    description: Sampling temperature used during the audit
+    example: '0'
+  template_id: prompt-engineering-medical-consistency--consistency-audited-clinical-prompt
+  determinism: stochastic-by-design
+  reproducibility_note: This template intentionally samples multiple times or explores adaptively; outputs
+    vary run to run by design (explicit temperature>0 sampling, or multi-branch search whose path depends
+    on intermediate stochastic choices).
+tags:
+- healthcare
+- domain-specific
+- reliability
+- consistency
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: Prompt engineering in consistency.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

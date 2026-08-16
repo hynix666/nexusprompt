@@ -1,0 +1,89 @@
+{
+  "id": "self-ask",
+  "name": "Self-Ask",
+  "category": "reasoning-elicitation",
+  "subcategory": "decomposition",
+  "executive_summary": "The model explicitly asks itself follow-up questions before answering the main question, optionally routing each follow-up to an external search engine instead of answering from memory.",
+  "description": "Introduced alongside the 'compositionality gap' finding: as models get larger, single-hop factual recall improves faster than multi-hop compositional reasoning does, so the gap between 'knows both facts' and 'can compose them into the answer' does not shrink with scale alone. Self-Ask closes part of that gap by having the model decompose a compositional question into an explicit sequence of follow-up questions, each answered in turn (by the model itself, or by an external search engine) before the final answer is composed — a lightweight, single-prompt-template alternative to Least-to-Most's separate decomposition stage.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "Multi-hop compositional questions where the answer requires correctly combining multiple facts.",
+    "Cases where routing sub-questions to an external search engine (rather than the model's own memory) would reduce hallucination on the intermediate facts."
+  ],
+  "when_not_to_use": [
+    "Single-hop questions with no compositional structure — the follow-up scaffolding is pure overhead."
+  ],
+  "known_pitfalls": [
+    "The model must correctly recognize when a follow-up question is needed at all; under-decomposing collapses back to plain CoT's compositionality gap."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "least-to-most-prompting",
+    "react"
+  ],
+  "primary_source": {
+    "authors": "Press, Zhang, Min, Schmidt, Smith, Lewis",
+    "year": 2023,
+    "title": "Measuring and Narrowing the Compositionality Gap in Language Models",
+    "venue": "Findings of EMNLP 2023",
+    "arxiv_id": "2210.03350",
+    "url": "https://arxiv.org/abs/2210.03350"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Follow-up-question decomposition (optionally search-augmented)",
+      "template": "Question: {{compositional_question}}\nAre follow up questions needed here: Yes.\nFollow up: {{follow_up_question_1}}\nIntermediate answer: {{answer_to_follow_up_1}}\nFollow up: {{follow_up_question_2}}\nIntermediate answer: {{answer_to_follow_up_2}}\n... (repeat until no more follow-ups needed) ...\nSo the final answer is: {{final_answer}}",
+      "variables": [
+        {
+          "name": "compositional_question",
+          "description": "The original multi-hop question",
+          "example": null
+        },
+        {
+          "name": "follow_up_question_1",
+          "description": "First self-generated follow-up sub-question",
+          "example": null
+        },
+        {
+          "name": "answer_to_follow_up_1",
+          "description": "Answer to the first follow-up, from the model or an external search engine",
+          "example": null
+        },
+        {
+          "name": "follow_up_question_2",
+          "description": "Second follow-up, if needed",
+          "example": null
+        },
+        {
+          "name": "answer_to_follow_up_2",
+          "description": "Answer to the second follow-up",
+          "example": null
+        },
+        {
+          "name": "final_answer",
+          "description": "The composed final answer",
+          "example": null
+        }
+      ],
+      "template_id": "self-ask--follow-up-question-decomposition-optionally-search-augmented",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call (or a fixed sequence of them) with no external system dependency; running this template again at temperature 0 against the same model version should reproduce the same output."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "decomposition",
+    "multi-hop",
+    "single-call"
+  ],
+  "status": "verified-external",
+  "aliases": [],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "unverified",
+    "pitfalls": "unverified"
+  }
+}

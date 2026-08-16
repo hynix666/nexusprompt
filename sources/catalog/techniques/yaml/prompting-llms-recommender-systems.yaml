@@ -1,0 +1,66 @@
+id: prompting-llms-recommender-systems
+name: Comprehensive Framework for LLM-Prompted Recommendation
+category: domain-specific-application
+subcategory: recommendation
+executive_summary: A broad empirical survey and framework covering the space of prompting strategies specifically
+  applied to recommender systems.
+description: Surveys and empirically compares a range of prompting strategies for recommendation tasks
+  (rating prediction, ranking, explanation generation), providing a framework for choosing among them
+  by task type rather than a single proposed technique.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Selecting a prompting strategy for a specific recommendation sub-task (rating prediction vs. ranking
+  vs. explanation) and wanting empirically-grounded guidance.
+when_not_to_use:
+- N/A — survey/reference material.
+known_pitfalls:
+- As with any survey, coverage reflects the techniques known at time of publication.
+related_techniques:
+- comprehend-then-predict-recommendation
+- enhancing-zero-shot-recommendations
+primary_source:
+  authors: (local corpus)
+  year: 2024
+  title: 'Prompting Large Language Models for Recommender Systems: A Comprehensive Framework and Empirical
+    Analysis'
+  venue: arXiv preprint
+  arxiv_id: '2401.04997'
+  url: https://arxiv.org/abs/2401.04997
+usage_templates:
+- template_name: Task-type-matched recommendation prompt
+  template: |-
+    Sub-task: {{recommendation_subtask}} (rating-prediction | ranking | explanation)
+    User context: {{user_context}}
+    Candidates: {{candidate_items}}
+    {{subtask_specific_instruction}}
+  variables:
+  - name: recommendation_subtask
+    description: Which recommendation sub-task is being performed
+    example: null
+  - name: user_context
+    description: Relevant user history/preferences
+    example: null
+  - name: candidate_items
+    description: Items being rated/ranked/explained
+    example: null
+  - name: subtask_specific_instruction
+    description: Instruction text tailored to the chosen sub-task
+    example: null
+  template_id: prompting-llms-recommender-systems--task-type-matched-recommendation-prompt
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- recommendation
+- domain-specific
+- survey
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: Prompting LLMs for Recommender Systems.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

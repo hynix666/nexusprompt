@@ -1,0 +1,88 @@
+id: prompt-pattern-catalog
+name: Prompt Pattern Catalog (Design-Pattern Framing)
+category: template-pattern-scaffolding
+subcategory: pattern-catalog
+executive_summary: Document reusable prompt structures as software design patterns — each with a stated
+  problem, context, and solution — rather than as one-off examples.
+description: Applies the software-engineering design-pattern format (problem/context/solution/consequences)
+  to prompt engineering, cataloging patterns such as the 'Persona Pattern', 'Template Pattern', 'Recipe
+  Pattern', and others, with explicit guidance on composing multiple patterns in a single prompt. This
+  is the closest existing academic precedent to building and maintaining a structured, checkable technique
+  catalog.
+verification_status: verifier-checkable
+cost_profile: single-call
+when_to_use:
+- Designing or documenting a reusable library of prompt structures for a team or project, especially one
+  that wants patterns to be composable.
+when_not_to_use:
+- A single one-off prompt with no reuse or documentation need.
+known_pitfalls:
+- A catalog is only as useful as its currency — patterns catalogued against one prompting era can go stale
+  as model capabilities shift.
+related_techniques:
+- promptsource
+- rephrase-and-respond
+primary_source:
+  authors: White, Fu, Hays, Sandborn, Olea, Gilbert, Elnashar, Spencer-Smith, Schmidt
+  year: 2023
+  title: A Prompt Pattern Catalog to Enhance Prompt Engineering with ChatGPT
+  venue: PLoP 2023
+  arxiv_id: '2302.11382'
+  url: https://arxiv.org/abs/2302.11382
+usage_templates:
+- template_name: Pattern documentation format
+  template: |-
+    ### Pattern: {{pattern_name}}
+    **Intent:** {{one_sentence_intent}}
+    **Problem:** {{what_problem_this_solves}}
+    **Context:** {{when_this_applies}}
+    **Solution (template):**
+    {{prompt_template_text}}
+    **Consequences:** {{tradeoffs_and_side_effects}}
+    **Composes with:** {{other_pattern_names}}
+  variables:
+  - name: pattern_name
+    description: Short name for the pattern
+    example: Persona Pattern
+  - name: one_sentence_intent
+    description: What the pattern is for, in one line
+    example: null
+  - name: what_problem_this_solves
+    description: The problem this pattern addresses
+    example: null
+  - name: when_this_applies
+    description: Conditions under which to use it
+    example: null
+  - name: prompt_template_text
+    description: The literal reusable template
+    example: null
+  - name: tradeoffs_and_side_effects
+    description: Known consequences or costs of using it
+    example: null
+  - name: other_pattern_names
+    description: Other patterns this composes well with
+    example: null
+  template_id: prompt-pattern-catalog--pattern-documentation-format
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- template
+- pattern-catalog
+- documentation
+status: verified-external
+aliases: []
+secondary_sources:
+- authors: White, Hays, Fu, Spencer-Smith, Schmidt
+  year: 2023
+  title: ChatGPT Prompt Patterns for Improving Code Quality, Refactoring, Requirements Elicitation, and
+    Software Design
+  venue: arXiv preprint
+  arxiv_id: '2303.07839'
+  url: https://arxiv.org/abs/2303.07839
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: verified-against-abstract
+  pitfalls: unverified

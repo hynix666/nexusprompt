@@ -1,0 +1,84 @@
+id: dspy-assertions
+name: DSPy Assertions
+category: automatic-prompt-optimization
+subcategory: declarative-compilation
+executive_summary: Add a construct (LM Assertions) for hard computational constraints an LM pipeline must
+  satisfy, which DSPy's compiler can use to teach the pipeline the constraint and which can drive automatic
+  self-refinement.
+description: Extends DSPy (already in this catalog) specifically to the problem of enforcing constraints
+  — 'the output must be under N words,' 'the generated code must not import X' — which previously had
+  to be hand-enforced through ad hoc prompt engineering that mixed high-level program design with low-level
+  constraint-following. LM Assertions are declared as a first-class construct alongside DSPy modules;
+  the compiler can use them during optimization to make the compiled pipeline more likely to satisfy the
+  constraint by construction, and at inference time an assertion failure can trigger automatic self-refinement
+  (retry with the violation fed back as context) rather than silently shipping a constraint-violating
+  output.
+verification_status: verifier-checkable
+cost_profile: multi-call-adaptive
+when_to_use:
+- Building a DSPy pipeline (or a similar declarative multi-module LM program) with hard constraints on
+  output form or content that must be reliably satisfied, not just usually satisfied.
+when_not_to_use:
+- Simple single-call prompting with no compiled pipeline and no hard constraint to enforce — plain instruction
+  text is sufficient.
+known_pitfalls:
+- Assertion-triggered self-refinement adds inference-time cost and latency whenever a constraint is violated
+  and a retry is needed.
+related_techniques:
+- dspy
+- self-refine
+primary_source:
+  authors: Singhvi, Shetty, Tan, Potts, Sen, Zaharia, Khattab
+  year: 2024
+  title: 'DSPy Assertions: Computational Constraints for Self-Refining Language Model Pipelines'
+  venue: arXiv preprint
+  arxiv_id: '2312.13382'
+  url: https://arxiv.org/abs/2312.13382
+usage_templates:
+- template_name: Declared assertion with compile-time and inference-time enforcement (pseudocode)
+  template: |-
+    # Declare
+    module_output = {{dspy_module}}(input={{module_input}})
+    Assert({{constraint_predicate}}(module_output), "{{constraint_description}}")
+
+    # Compile-time: the DSPy compiler optimizes the pipeline to satisfy the assertion more often across the training set {{labeled_examples}}.
+
+    # Inference-time: on assertion failure, automatically retry with the violation fed back as context:
+    Previous output violated: {{constraint_description}}. Previous output: {{failed_output}}. Revise to satisfy the constraint.
+  variables:
+  - name: dspy_module
+    description: The DSPy module producing the output being constrained
+    example: null
+  - name: module_input
+    description: Input to the module
+    example: null
+  - name: constraint_predicate
+    description: The boolean check the output must satisfy
+    example: null
+  - name: constraint_description
+    description: Human-readable description of the constraint, used in retry feedback
+    example: null
+  - name: labeled_examples
+    description: Training examples used during compilation
+    example: null
+  - name: failed_output
+    description: The output that violated the assertion
+    example: null
+  template_id: dspy-assertions--declared-assertion-with-compile-time-and-inference-time-enforcement-pseudocode
+  determinism: requires-external-system
+  reproducibility_note: This template depends on an external system (retrieval index, tool, solver, or
+    interpreter) whose own behavior is outside the prompt's control; bit-for-bit reproducibility requires
+    that system's state to also be fixed.
+tags:
+- optimization
+- declarative
+- constraints
+- self-refinement
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

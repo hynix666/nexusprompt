@@ -1,0 +1,93 @@
+{
+  "id": "rarr",
+  "name": "RARR (Researching and Revising)",
+  "category": "self-verification-refinement",
+  "subcategory": "attribution-retrofitting",
+  "executive_summary": "Retrofits evidence citations onto existing text claims. Given a passage, RARR searches for supporting evidence and revises claims to align with retrieved facts, adding proper attribution.",
+  "description": "RARR takes a text passage and: (1) identifies claims that need evidence support, (2) searches for relevant evidence using web search or retrieval, (3) evaluates whether the evidence supports, contradicts, or is neutral to each claim, and (4) revises claims to align with evidence while adding citations. This is particularly useful for updating stale content or grounding unsourced claims.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "multi-call-adaptive",
+  "when_to_use": [
+    "Updating or fact-checking existing text passages.",
+    "When you need to add evidence citations to unsourced claims.",
+    "Content that may have become outdated since original generation."
+  ],
+  "when_not_to_use": [
+    "When no search/retrieval infrastructure is available.",
+    "Creative or opinion content where evidence is not applicable.",
+    "When claims are so vague that no specific evidence can be found."
+  ],
+  "known_pitfalls": [
+    "Search results may be biased or incomplete.",
+    "Revision may change the original meaning or tone.",
+    "Citation quality depends on source reliability."
+  ],
+  "related_techniques": [
+    "verify-and-edit",
+    "factscore",
+    "selfcheckgpt",
+    "chain-of-verification"
+  ],
+  "primary_source": {
+    "authors": "Gao, Dai, Pasupat, Chen, Chaganty, Fan, Zhao, Lao, Lee, Juan, et al.",
+    "year": 2022,
+    "title": "RARR: Researching and Revising What Language Models Say, Using Language Models",
+    "venue": "arXiv",
+    "arxiv_id": "2210.08726",
+    "url": "https://arxiv.org/abs/2210.08726"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Evidence search and claim revision",
+      "template": "Passage: {{passage}}\n\nStep 1: Identify claims requiring evidence.\nClaims: {{claims}}\n\nStep 2: Search for evidence per claim.\nEvidence: {{evidence}}\n\nStep 3: Evaluate support/contradiction/neutrality.\nEvaluation: {{evaluation}}\n\nStep 4: Revise claims and add citations.\nRevised Passage: {{revised_passage}}",
+      "variables": [
+        {
+          "name": "passage",
+          "description": "The text to fact-check and revise.",
+          "example": "The first iPhone was released in 2008 by Samsung."
+        },
+        {
+          "name": "claims",
+          "description": "Identified factual claims.",
+          "example": "[\"first iPhone released in 2008\", \"iPhone released by Samsung\"]"
+        },
+        {
+          "name": "evidence",
+          "description": "Retrieved evidence per claim.",
+          "example": "[\"iPhone released June 2007\", \"iPhone designed by Apple Inc.\"]"
+        },
+        {
+          "name": "evaluation",
+          "description": "Evidence evaluation per claim.",
+          "example": "[Contradicts: actually 2007], [Contradicts: actually Apple]"
+        },
+        {
+          "name": "revised_passage",
+          "description": "Revised text with corrections and citations.",
+          "example": "The first iPhone was released in 2007 by Apple Inc. [cite: Apple Press Release, 2007]"
+        }
+      ],
+      "template_id": "rarr--evidence-revision",
+      "determinism": "stochastic-by-design",
+      "reproducibility_note": "Search is non-deterministic (results vary over time). Evaluation and revision should be deterministic at temperature=0."
+    }
+  ],
+  "tags": [
+    "verification",
+    "attribution",
+    "citation",
+    "retrofitting"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "RARR",
+    "Researching and Revising"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}

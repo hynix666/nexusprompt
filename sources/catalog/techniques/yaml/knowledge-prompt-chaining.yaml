@@ -1,0 +1,66 @@
+id: knowledge-prompt-chaining
+name: Knowledge Prompt Chaining for Semantic Modeling
+category: agentic-tool-use
+subcategory: workflow-tooling
+executive_summary: Chain prompts specifically to extract structured semantic models (entities, relations,
+  schema) from unstructured text.
+description: 'Applies the general prompt-chaining pattern to the specific problem of pulling a structured
+  semantic model out of free text: one stage extracts candidate entities/relations, a later stage validates
+  and assembles them into a consistent schema. A domain-specific application of chaining rather than a
+  new chaining mechanism.'
+verification_status: verifier-checkable
+cost_profile: multi-call-fixed
+when_to_use:
+- Extracting structured knowledge graphs, entity-relation sets, or schemas from unstructured source text.
+when_not_to_use:
+- The target output isn't a structured semantic model — this is a narrow, domain-specific application.
+known_pitfalls:
+- Errors in early extraction stages propagate into the final assembled schema, same failure shape as any
+  sequential chain.
+related_techniques:
+- prompt-chaining
+- generated-knowledge-prompting
+primary_source:
+  authors: (local corpus)
+  year: 2025
+  title: Knowledge Prompt Chaining for Semantic Modeling
+  venue: arXiv preprint
+  arxiv_id: '2501.08540'
+  url: https://arxiv.org/abs/2501.08540
+usage_templates:
+- template_name: Extract-then-assemble semantic model
+  template: |-
+    # Extract
+    Text: {{source_text}}
+    List candidate entities and relations mentioned in this text.
+
+    # Assemble
+    Candidates: {{extracted_candidates}}
+    Assemble these into a consistent schema: resolve duplicate entities, normalize relation names, and output as {{target_schema_format}}.
+  variables:
+  - name: source_text
+    description: The unstructured input text
+    example: null
+  - name: extracted_candidates
+    description: Raw entity/relation candidates from the extract stage
+    example: null
+  - name: target_schema_format
+    description: Desired output format, e.g. JSON-LD, RDF triples
+    example: null
+  template_id: knowledge-prompt-chaining--extract-then-assemble-semantic-model
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- workflow
+- knowledge-extraction
+- domain-specific
+status: corpus-present
+aliases: []
+secondary_sources: []
+corpus_file: SEMANTIC.pdf
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

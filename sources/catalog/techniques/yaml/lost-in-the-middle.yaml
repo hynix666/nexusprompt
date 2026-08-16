@@ -1,0 +1,71 @@
+id: lost-in-the-middle
+name: Lost in the Middle (Context-Position Awareness)
+category: example-selection-formatting
+subcategory: context-positioning
+executive_summary: Models reliably attend most to information at the very start and very end of a long
+  context and underuse the middle — place the most important content there, not buried in the middle.
+description: 'An empirical finding rather than a prompting technique to ''apply'': across long-context
+  tasks, model performance on information placed in the middle of a long input is measurably worse than
+  the same information placed at the start or end (a U-shaped performance curve). Directly informs how
+  to place instructions, key facts, or retrieved passages within a long prompt.'
+verification_status: unverifiable-by-text
+cost_profile: single-call
+when_to_use:
+- Constructing any long-context prompt (long retrieved-passage sets, long documents, long few-shot blocks)
+  — place the most critical content near the start or end.
+when_not_to_use:
+- Short prompts well within a length where position effects haven't been shown to matter.
+known_pitfalls:
+- This is a positioning heuristic, not a fix for context that's simply too long or too irrelevant — it
+  doesn't substitute for good retrieval/filtering.
+related_techniques:
+- retrieval-augmented-generation
+- chain-of-density
+primary_source:
+  authors: Liu, Lin, Hewitt, Paranjape, Bevilacqua, Petroni, Liang
+  year: 2024
+  title: 'Lost in the Middle: How Language Models Use Long Contexts'
+  venue: TACL 2024
+  arxiv_id: '2307.03172'
+  url: https://arxiv.org/abs/2307.03172
+usage_templates:
+- template_name: Position-aware context assembly
+  template: |-
+    {{most_critical_instruction_or_fact}}
+
+    {{secondary_supporting_context}}
+
+    {{most_critical_instruction_or_fact_restated}}
+
+    Now respond to: {{task}}
+  variables:
+  - name: most_critical_instruction_or_fact
+    description: The single most important piece of context, placed first
+    example: null
+  - name: secondary_supporting_context
+    description: Lower-priority supporting material, placed in the middle
+    example: null
+  - name: most_critical_instruction_or_fact_restated
+    description: Repeat the critical content near the end too, exploiting the end-of-context attention
+      bump
+    example: null
+  - name: task
+    description: The actual task instruction
+    example: null
+  template_id: lost-in-the-middle--position-aware-context-assembly
+  determinism: deterministic-at-temperature-zero
+  reproducibility_note: A single LLM call (or a fixed sequence of them) with no external system dependency;
+    running this template again at temperature 0 against the same model version should reproduce the same
+    output.
+tags:
+- reliability
+- long-context
+- positioning
+status: verified-external
+aliases: []
+secondary_sources: []
+corpus_file: null
+schema_version: 1.3.0
+source_audit:
+  description: unverified
+  pitfalls: unverified

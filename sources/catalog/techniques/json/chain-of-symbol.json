@@ -1,0 +1,83 @@
+{
+  "id": "chain-of-symbol",
+  "name": "Chain-of-Symbol (CoS) Prompting",
+  "category": "reasoning-elicitation",
+  "subcategory": "symbolic-intermediate-representation",
+  "executive_summary": "Replace the natural-language description of a spatial environment in the reasoning chain with condensed symbols, so the model reasons over a compact symbolic state instead of prose.",
+  "description": "Chain-of-Thought describes intermediate state in natural language, which is verbose and, for spatial or relational problems, ambiguous. CoS keeps the chained-reasoning structure but represents the environment with a fixed symbolic vocabulary -- objects, positions and relations rendered as tokens rather than sentences. On planning tasks that require tracking a virtual spatial layout, this both shortens the prompt and removes the paraphrase noise that causes the model to lose track of the state. The gain is largest where the state is structured and the prose encoding of it is redundant.",
+  "verification_status": "verifier-checkable",
+  "cost_profile": "single-call",
+  "when_to_use": [
+    "The task carries a structured state -- spatial layout, graph, board position -- that prose re-describes at every step.",
+    "Prompt length is a constraint and the natural-language state encoding dominates the token budget.",
+    "Chain-of-Thought traces show the model losing track of relations between entities across steps."
+  ],
+  "when_not_to_use": [
+    "The task state is genuinely narrative and has no compact symbolic form.",
+    "The reasoning trace must be read by a human who does not know the symbol vocabulary.",
+    "The model is small enough that it cannot hold an ad-hoc symbol convention consistently across a long chain."
+  ],
+  "known_pitfalls": [
+    "The symbol vocabulary has to be defined in the prompt and used consistently; a drifting convention is worse than prose.",
+    "Gains are concentrated in spatial and relational tasks and do not transfer automatically to arithmetic or commonsense reasoning.",
+    "Compressed traces are harder to audit when the answer is wrong."
+  ],
+  "related_techniques": [
+    "chain-of-thought",
+    "chain-of-code",
+    "chain-of-draft",
+    "plan-and-solve-prompting"
+  ],
+  "primary_source": {
+    "authors": "Hu, Lu, Zhang, Song, Lam, Zhang",
+    "year": 2023,
+    "title": "Chain-of-Symbol Prompting Elicits Planning in Large Langauge Models",
+    "venue": "arXiv",
+    "arxiv_id": "2305.10276",
+    "url": "https://arxiv.org/abs/2305.10276"
+  },
+  "usage_templates": [
+    {
+      "template_name": "Symbolic state chain",
+      "template": "Represent the environment using only these symbols: {{symbol_legend}}\n\nEnvironment:\n{{environment_description}}\n\nTask: {{task_question}}\n\nThink step by step. At each step, restate the environment in symbolic form only -- no prose descriptions of positions. Give the final answer on the last line.",
+      "variables": [
+        {
+          "name": "symbol_legend",
+          "description": "The symbol vocabulary and what each token denotes.",
+          "example": "/ = on top of, | = beside, # = blocked cell"
+        },
+        {
+          "name": "environment_description",
+          "description": "The initial state, in prose or already symbolic.",
+          "example": "Brick A is on brick B; brick C is beside brick B."
+        },
+        {
+          "name": "task_question",
+          "description": "The planning or reasoning question to answer.",
+          "example": "In what order can the bricks be removed?"
+        }
+      ],
+      "template_id": "chain-of-symbol--symbolic-state-chain",
+      "determinism": "deterministic-at-temperature-zero",
+      "reproducibility_note": "A single LLM call with a fixed symbol legend. Output varies with the legend chosen; fix the legend to reproduce."
+    }
+  ],
+  "tags": [
+    "reasoning",
+    "spatial",
+    "symbolic",
+    "token-efficiency"
+  ],
+  "status": "verified-external",
+  "aliases": [
+    "CoS",
+    "Chain of Symbol"
+  ],
+  "secondary_sources": [],
+  "corpus_file": null,
+  "schema_version": "1.3.0",
+  "source_audit": {
+    "description": "verified-against-abstract",
+    "pitfalls": "unverified"
+  }
+}
