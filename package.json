@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test:app": "vitest run --project application",
     "lint:sources": "node scripts/verify-sources.mjs",
-    "cli": "tsx shells/cli/src/index.ts"
+    "cli": "tsx shells/cli/src/index.ts",
+    "differential": "tsx scripts/differential.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",
