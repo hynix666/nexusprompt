@@ -177,7 +177,7 @@ describe("acceptance: provider reachable", () => {
 
     expect(outcome.demo_mode).toBe(false);
     expect(outcome.output.text).toContain("SYSTEM PROMPT");
-    expect(outcome.output.text).not.toContain(DEMO_MARKER);
+    expect(outcome.output.text).not.toContain("⟦WORKFLOW DEMO — no model⟧");
 
     const bundle = await store.getRun("run-1");
     expect(bundle[0].status).toBe("SUCCEEDED");

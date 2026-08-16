@@ -63,7 +63,7 @@ describe("reduce — classified outcome in, next state out", () => {
   it("a classified failure maps to a labelled placeholder", () => {
     const state = reduce({ brief: "x" }, failure);
     expect(state.demo_mode).toBe(true);
-    expect(state.output.text).toContain(DEMO_MARKER);
+    expect(state.output.text).toContain("⟦WORKFLOW DEMO — no model⟧"); // literal: see acceptance.test.ts
     expect(state.output.text).toContain("UNAVAILABLE");
     expect(state.output.text).toContain("No compiled prompt was produced");
   });
@@ -76,7 +76,7 @@ describe("reduce — classified outcome in, next state out", () => {
     const state = reduce({ brief: "x" }, success);
     expect(state.demo_mode).toBe(false);
     expect(state.output.text).toBe(success.content);
-    expect(state.output.text).not.toContain(DEMO_MARKER);
+    expect(state.output.text).not.toContain("⟦WORKFLOW DEMO — no model⟧");
   });
 
   it("runs every registered gate over the output", () => {
