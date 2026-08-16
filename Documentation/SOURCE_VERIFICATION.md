@@ -40,6 +40,20 @@ Each archive was extracted read-only to a scratch directory and inspected direct
 
 `files_4.zip` supersedes its counterparts: its `prompt_lint.py` (31 KB), `PromptNexus.jsx` (175.3 KB), and `fixtures.json` (16 KB) are all later revisions than the copies inside `Prompt-Nexus.zip` and `filesZ.zip`. **Port from `files_4.zip`.**
 
+## Re-verification, 16 August 2026 (post-freeze)
+
+Three files supplied from `%TEMP%` — `fixtures.json`, `prompt_lint.py`, `PromptNexus.jsx` — checked against the frozen copies. **All three byte-identical** (SHA-256). Their later mtimes are extraction timestamps, not new content. The freeze holds, and the question was settled by one hash comparison rather than by re-reading 227 KB.
+
+Reading them in full rather than by pattern match added three things:
+
+**The corrected gate severities are independently confirmed.** The severity table in `GATES_REFERENCE.md` was rebuilt from the linter's emission sites. The fixture corpus — written by the source's own authors, and not consulted when those corrections were made — asserts an expected `(gate, severity)` pair per case. **All fifteen match**, including `GUARDRAIL_GAP`'s conditional `WARN` below the safety tier and `FAIL` at it, which appears in the corpus as two separate cases. Two independent sources, same answer.
+
+**The corpus is a regression history.** Eleven of the forty cases carry a `regression:` field naming a defect that actually shipped — lexicographic sorting of `S10` before `S2`, `if token_budget:` skipping a budget of exactly `0`, a `100%` regex that required a literal space, `GUARDED` missing from both the ceiling table and the argparse choices, a dot-all fence regex that broke the CommonMark length rule, and `telescope` satisfying the `scope` guardrail clause through unanchored substring matching. That last one is described in the corpus as *"a false-clean on a safety gate."* These cases are not illustrative; each one exists so a specific bug cannot return. **Port them before porting the gates.**
+
+**Fifteen of sixteen gates have fixture coverage.** `ADVERSARIAL_RESILIENCE` has none — it is opt-in and needs `adversarial/corpus.json` at runtime, so it cannot be exercised by the standard corpus. Worth knowing before treating fixture pass as full gate coverage.
+
+The corpus also documents a limit in the testing strategy that `DEVELOPMENT_AND_TESTING.md` previously did not record: **parity between two implementations cannot detect a defect they share.** Three of the eleven regressions were invisible to the parity harness for exactly that reason and were found by a differential oracle against an independent implementation. That section now says so.
+
 ## Verified true
 
 | Claim | Evidence |

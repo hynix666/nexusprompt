@@ -27,6 +27,8 @@ Verdicts below are **read from the emission sites** in `prompt_lint.py`, not fro
 
 Two gates carry conditional severity — `GUARDRAIL_GAP` (tier-dependent) and `ADVERSARIAL_RESILIENCE` (banded by score). Both must be ported as conditionals; flattening either to a single verdict silently changes behavior. The remaining gates emit one severity unconditionally.
 
+**Confirmed against the fixture corpus.** Every severity above matches the expected `(gate, severity)` pair asserted in `sources/v5/fixtures.json`, which was written independently of this table — `GUARDRAIL_GAP` appears there as two cases, one `WARN` below the safety tier and one `FAIL` at it. Fifteen of the sixteen gates have fixture coverage; `ADVERSARIAL_RESILIENCE` has none, because it is opt-in and needs the adversarial corpus at runtime. Do not read a green fixture run as full gate coverage.
+
 **No gate reads catalog data.** An earlier revision of this document described two catalog-linked gates resolving `technique_id`s through `catalog/tools/gate-extensions/`. That directory does not exist, and neither do the gates — the technique catalog and the gate set are independent in every source. If a technique-marker gate is wanted, it is new work with a new ADR, not a port.
 
 ## Gate governance
