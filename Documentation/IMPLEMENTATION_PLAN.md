@@ -115,9 +115,11 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 - Every citation is internally consistent — 159 arXiv ids, none malformed, none reused for a different paper, no year contradicting its own preprint date, no missing author/year/title. `npm run check:citations` keeps that true.
 - Exactly **four** of the 172 citations have been checked against the actual paper, and all four agree. The other 168 have not.
-- The record set's *coverage* is unexamined. *The Prompt Report* (arXiv 2406.06608) is a systematic survey of prompt-engineering techniques and is the natural external instrument for asking whether 172 is the right set — comparing its taxonomy against the catalog is unstarted.
+- **Coverage has now been measured** against *The Prompt Report* (arXiv 2406.06608v6). Of 57 techniques recovered from its taxonomy, 34 have a catalog record and **23 do not** — and the gap is concentrated rather than general: **8 of the survey's 10 ensembling techniques are missing** (COSP, DENSE, DiVeRSe, Max Mutual Information, Meta-CoT, MoRE, USP, Prompt Paraphrasing), plus five few-shot exemplar/instruction-selection methods. The catalog is *wider* than the survey elsewhere, so this is a specific hole, not thinness.
 
 **Exit gate:** all 172 records validate against the JSON Schema *and* the XSD; a record missing `primary_source` fails; `check:citations` passes; the count is asserted, not stated.
+
+**Decide explicitly whether to close the ensembling gap in this phase or record it as scope.** Importing 172 records and shipping a catalog that silently omits most of a category is the kind of quiet incompleteness `CAPABILITY_MATRIX.md` exists to prevent. Either add the eight records or state the omission where a user of the catalog will see it.
 
 ### Phase 5 — Second adapters
 

@@ -58,6 +58,44 @@ The load-bearing check is that an arXiv id encodes `YYMM`, so a record whose `ye
 
 This does **not** mean the citations are correct — an internally consistent citation can still point at the wrong paper, and confirming that needs the papers themselves. It means no record contradicts itself.
 
+## Verified: catalog coverage against The Prompt Report
+
+*The Prompt Report: A Systematic Survey of Prompt Engineering Techniques* (arXiv 2406.06608v6, Schulhoff et al., 80 pages) was read — not merely identified. Its abstract claims **58 text-based LLM prompting techniques**, enumerated in Figure 2.2 across six categories. This is the only external instrument in the corpus capable of asking whether the catalog's 172 records are the *right* 172.
+
+**57 of the 58 were recovered** from Figure 2.2 by text extraction. The missing one is a node the figure's layout did not survive extraction intact; the count is reported as 57 rather than rounded up to the paper's 58.
+
+Each of the 57 was adjudicated against the catalog by id, name, alias, and then by full-text search of every record.
+
+| Category | In the survey | Has a catalog record | Missing |
+|---|---|---|---|
+| Zero-Shot | 9 | 7 | 2 |
+| Few-Shot / ICL | 9 | 3 | 6 |
+| Thought Generation | 14 | 10 | 4 |
+| **Ensembling** | **10** | **2** | **8** |
+| Self-Criticism | 6 | 5 | 1 |
+| Decomposition | 9 | 7 | 2 |
+| **Total** | **57** | **34** | **23** |
+
+### The gap is concentrated, not general
+
+**Ensembling is the hole.** Of ten ensembling techniques the survey identifies, the catalog has two — `self-consistency` and `universal-self-consistency`. Absent: COSP, DENSE (Demonstration Ensembling), DiVeRSe, Max Mutual Information, Meta-CoT, MoRE, USP, and Prompt Paraphrasing. A catalog built to advise on prompt construction that omits eight of ten ways to ensemble prompts has a shape worth knowing about before Phase 4 imports it.
+
+Second cluster: few-shot **exemplar and instruction selection** — SG-ICL, Vote-K, Prompt Mining, Exemplar Generation, and Instruction Selection have no record, though `knn-prompting` and `fantastically-ordered-prompts` do cover KNN selection and exemplar ordering.
+
+The remaining absences are scattered: Style Prompting, SimToM, Tab-CoT, Memory-of-Thought, Uncertainty-Routed CoT, AutoDiCoT, ReverseCoT, Recursion-of-Thought, Metacognitive Prompting.
+
+**The survey is not a superset.** The catalog's 172 records run far wider than the survey's 58 — jailbreak and injection defence, RAG, agents, structured output, evaluation. The finding is a specific missing cluster, not general thinness.
+
+### Corrections made while adjudicating
+
+Both directions of matcher error appeared, and both were caught by cross-checking rather than by inspection:
+
+- Matching on normalised equality alone reported 22 covered. It missed `emotionprompt` for "Emotion Prompting" and `least-to-most-prompting` for "Least-to-Most" — suffix differences.
+- Adding containment introduced a **false negative**: my rule required both strings to be ≥5 characters, so "KNN" (3) could never match `knn-prompting`. Full-text search over every record is what found it. "Exemplar Ordering" was recovered the same way, via `fantastically-ordered-prompts`.
+- Five full-text hits were substring artifacts and are *not* coverage: "dense " inside `chain-of-density`, "usp" inside unrelated words, "paraphras" in records about adversarial defence, and "style prompt" mentioned in prose by two records that are about something else.
+
+Two judgements are marked rather than counted as certain: **Self-Verification** is treated as covered by `backward-self-verification`, and **Few-Shot CoT** as subsumed by `chain-of-thought`, since Wei et al.'s original technique is few-shot CoT.
+
 ## Filed by title only — contents not read
 
 The following connections are **filing decisions, not findings**. Only page-1 headers were extracted; no paper's argument, method, or result was read. They record where a future reader should look, and nothing about whether the paper supports anything this project does.
@@ -75,6 +113,7 @@ The following connections are **filing decisions, not findings**. Only page-1 he
 ## What this corpus does not establish
 
 - **Not that any technique works.** No paper's results were read.
-- **Not that the catalog is complete.** *The Prompt Report* is the obvious instrument for that and has not been used; comparing its taxonomy against the 172 records is unstarted work, listed under Phase 4.
+- **Not that the catalog is complete.** The coverage check above uses one survey. It found 23 named absences, but a technique absent from *The Prompt Report* and absent from the catalog is invisible to both.
+- **Not that the coverage table is mechanically re-checkable.** It compares against a PDF that is not in this repository, so no script in `npm run verify` can re-derive it. It is a point-in-time finding with its method recorded, which is the most this repository's conventions can offer for a claim about an external document.
 - **Not that the 168 unmatched citations are real.** Four were checked. The rest need either the papers or a network lookup, and this project does no network verification.
 - **Nothing about the three image-only PDFs.** They have no extractable text; their identity rests on their filenames alone, which the "On Meta-Prompting" false positive above should discourage anyone from trusting.
