@@ -2,21 +2,24 @@
 
 Two corpora of prompt-engineering papers were read against this project, both added 17 August 2026:
 
-| Archive | Files | Distinct | With an arXiv id |
+| Corpus | Files | Distinct | With an arXiv id |
 |---|---|---|---|
 | `Prompt Survey.zip` (108 MB) | 44 | 43 — one exact duplicate | 39 |
-| `Prompt.zip` (271 MB) | 123 | 123 — no duplicates | 113 (112 distinct ids) |
-| **Combined** | 167 | | **149 distinct arXiv ids** |
+| `Prompt.zip` (271 MB) | 123 | 123 — no duplicates | 113 |
+| `PDF/` (1.49 GB, four collections) | 528 | 508 — 20 duplicates | 490 |
+| **Combined** | 695 | **673** | **486 distinct arXiv ids** |
+
+`PDF/` splits into `PROMPT` (364), `RAG` (127), `Memory` (25) and `PoC` (12). None of its files is image-only — every one yielded page-1 text. It is `.gitignore`d for the reason given below.
 
 This page records what was **verified**, what was **filed by title only**, and what the corpora do **not** establish.
 
 It follows the convention of [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md): a claim gets recorded here only with the method that produced it.
 
-## The corpus is not frozen into `sources/`
+## The corpora are not frozen into `sources/`
 
-`sources/` holds prior artifacts this project ports from, hash-pinned so a port can be checked against the exact revision it came from. These are third-party published papers: nothing is ported from them, their canonical location is arXiv, and committing 108 MB of PDFs would multiply the repository's size more than twentyfold for no verifiable gain.
+`sources/` holds prior artifacts this project ports from, hash-pinned so a port can be checked against the exact revision it came from. These are third-party published papers: nothing is ported from them, their canonical location is arXiv, and the three corpora together are **1.87 GB against a 6 MB tracked repository** — roughly 300 times its size, permanently in history.
 
-The SHA-256 prefixes below are recorded instead, so any later claim can be re-checked against the exact file. `npm run verify:sources` still tracks 420 files, unchanged.
+SHA-256 is recorded for every file instead, so any claim here can be re-checked against the exact bytes. `*.zip` and `PDF/` are `.gitignore`d; `npm run verify:sources` still tracks 420 files, unchanged.
 
 ## Verified: how the corpus was identified
 
@@ -191,6 +194,48 @@ Both directions of matcher error appeared, and both were caught by cross-checkin
 - Five full-text hits were substring artifacts and are *not* coverage: "dense " inside `chain-of-density`, "usp" inside unrelated words, "paraphras" in records about adversarial defence, and "style prompt" mentioned in prose by two records that are about something else.
 
 Two judgements are marked rather than counted as certain: **Self-Verification** is treated as covered by `backward-self-verification`, and **Few-Shot CoT** as subsumed by `chain-of-thought`, since Wei et al.'s original technique is few-shot CoT.
+
+## Verified: the 15 remaining gaps cannot be closed from this corpus
+
+The obvious hope for a 673-paper corpus is that it contains the primary sources for the fifteen techniques the catalog still lacks. **It does not — not one of them.**
+
+Two independent keyword passes were run over every paper's filename and page-1 header, and every hit was read rather than counted. All of them are different papers:
+
+| Gap technique | What the search matched | Verdict |
+|---|---|---|
+| SimToM | *Think Twice Before Trusting **Self-Detection*** | different paper; matched on "think twice" |
+| ReverseCoT | *Reason from Future: Reverse Thought Chain* | different paper |
+| Metacognitive Prompting | *MIRROR* (a benchmark), *CoT2-Meta* | neither is the technique's source |
+| Memory-of-Thought | *eMoT: evolving Memory-of-Thought* | a successor, not the original |
+| SG-ICL | *Think Before You Prune: Selective **Self-Generated** Calibration* | different paper |
+| Recursion-of-Thought | *…Guarded (Co-)**recursi**on* — a RAG theory paper | different paper |
+
+Vote-K, Prompt Mining, Instruction Selection, Tab-CoT, Style Prompting, Uncertainty-Routed CoT, AutoDiCoT, Exemplar Generation and Exemplar Selection returned nothing at all.
+
+The reason is a date skew: the corpus is heavily 2025–2026, and the gap techniques are 2022–2023 originals. **A larger corpus is not automatically a more useful one**, and 1.49 GB that closes zero gaps is the demonstration.
+
+## Verified: what the corpus does enable
+
+**96 of the catalog's 167 arXiv-cited records are now physically held**, up from 39. That matters for the one audit still outstanding: every record's `known_pitfalls` and `when_not_to_use` are `unverified` against the source paper — the frozen catalog's own `source_note` says so plainly — and checking them needs the papers, not metadata.
+
+| Category | Held / cited |
+|---|---|
+| reasoning-elicitation | 28 / 46 |
+| agentic-tool-use | 13 / 21 |
+| prompt-injection-defense | 13 / 21 |
+| structured-constrained-output | 8 / 11 |
+| automatic-prompt-optimization | 7 / 15 |
+| retrieval-augmentation | 6 / 11 |
+| example-selection-formatting | 5 / 13 |
+| self-verification-refinement | 4 / 14 |
+| everything else | 12 / 15 |
+
+**390 corpus papers are cited nowhere in the catalog** — 248 from `PROMPT`, 94 from `RAG`, 20 from `Memory`, 9 from `PoC`. Two of those numbers are a coverage signal rather than noise:
+
+- **`RAG`: 127 papers, 94 uncited, against a catalog holding 11 `retrieval-augmentation` records.** The catalog treats retrieval as one category among twelve; the corpus treats it as a field.
+- **`Memory`: 25 papers, 20 uncited, and the catalog has no memory category at all.** Long-term memory in LLM systems is absent from the taxonomy, not merely thin.
+
+Neither is a defect — the catalog is a *prompting-technique* catalog and both areas sit at its edge. But if the platform is to advise on retrieval or memory, this says the catalog is not currently the place that knowledge lives. That is a scope decision, not a gap to fill quietly.
 
 ## Filed by title only — contents not read
 
