@@ -1,6 +1,14 @@
 # Literature Corpus — what was checked, and what it establishes
 
-A 44-file corpus of prompt-engineering papers (`Prompt Survey.zip`, 108 MB, added 17 August 2026) was read against this project. This page records what was **verified**, what was **filed by title only**, and what the corpus does **not** establish.
+Two corpora of prompt-engineering papers were read against this project, both added 17 August 2026:
+
+| Archive | Files | Distinct | With an arXiv id |
+|---|---|---|---|
+| `Prompt Survey.zip` (108 MB) | 44 | 43 — one exact duplicate | 39 |
+| `Prompt.zip` (271 MB) | 123 | 123 — no duplicates | 113 (112 distinct ids) |
+| **Combined** | 167 | | **149 distinct arXiv ids** |
+
+This page records what was **verified**, what was **filed by title only**, and what the corpora do **not** establish.
 
 It follows the convention of [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md): a claim gets recorded here only with the method that produced it.
 
@@ -38,9 +46,9 @@ Matched on exact arXiv id, then the catalog's claimed title was compared against
 | 2503.02003 | `highlighted-chain-of-thought` | yes |
 | 2411.15100 | `xgrammar-structured-generation-engine` | yes |
 
-These are the first four of the catalog's 172 citations ever checked against the actual paper. **The other 168 remain unverified against their sources** — nothing in this corpus covers them.
+These were the first four of the catalog's 172 citations ever checked against an actual paper. The second corpus raised that to 39 — see the verification section below.
 
-The remaining 35 identified papers are cited nowhere in the catalog, primary or secondary.
+The remaining 35 identified papers in this first corpus are cited nowhere in the catalog, primary or secondary.
 
 ## Verified: the catalog's citations are internally consistent
 
@@ -57,6 +65,48 @@ The load-bearing check is that an arXiv id encodes `YYMM`, so a record whose `ye
 **Zero problems across all 172.** That is worth stating plainly because it runs against this repository's grain: `SOURCE_VERIFICATION.md` records ten wrong claims in the prose documentation, and the reflex here is to expect the data to be as unreliable. It is not. The catalog's citation metadata is the most disciplined artifact in the project.
 
 This does **not** mean the citations are correct — an internally consistent citation can still point at the wrong paper, and confirming that needs the papers themselves. It means no record contradicts itself.
+
+## Verified: 39 catalog citations checked against the actual papers — two are wrong
+
+The second corpus overlaps the catalog heavily. Matching on exact arXiv id, **39 of the 159 arXiv-cited records are held**, and each claimed title was compared against the text on the paper's own first page.
+
+| Outcome | Count |
+|---|---|
+| Title on the paper matches the catalog | **37** |
+| Title does **not** match | **2** |
+| Paper not held by either corpus | 120 |
+
+### The two defects
+
+**`chain-of-symbol` — wrong title, and demonstrably hand-typed.**
+
+```
+catalog : Chain-of-Symbol Prompting Elicits Planning in Large Langauge Models
+paper   : Chain-of-Symbol Prompting for Spatial Reasoning in Large Language Models
+          arXiv:2305.10276v7, published at COLM 2024
+```
+
+Two things are wrong. The subtitle is from an obsolete version — v1 was *"…Elicits Planning…"* and the paper was retitled — so the record cites a title that no longer exists. And `Langauge` is misspelled, which no copy-paste from the source could produce.
+
+**`prompt-matcher-schema-matching` — a title the paper never had.**
+
+```
+catalog : Prompt-Matcher: Uncertainty-Guided Schema Matching with LLM Prompting
+paper   : Prompt-Matcher: Leveraging Large Models to Reduce Uncertainty in Schema Matching Results
+          arXiv:2408.14507v3
+```
+
+Same identifier, same subject, a title that is a plausible paraphrase rather than the paper's own.
+
+### Why `check:citations` could not have caught either
+
+Both records pass every internal check, and correctly so: their `year`, `arxiv_id`, `url`, and `title` are mutually consistent. Nothing about a record can reveal that its title does not match the paper, because the paper is not in the record.
+
+This is the same structure as [ADR-0007](./0007-permanent-differential-oracle.md)'s argument for the differential oracle. Internal consistency is a check that two things agree with each other; it is structurally blind to both being wrong together. Catching that needs an external oracle — there, an independently written linter; here, the papers themselves.
+
+**The measured citation accuracy is 37 of 39, on the quarter of the arXiv-cited catalog that can currently be checked.** The other 120 are unexamined, and at this rate roughly six more defects should be expected among them. That is an estimate, not a finding.
+
+Five further records were flagged by the automated pass and cleared on inspection — `instance-adaptive-zero-shot-cot`, `pair-black-box-jailbreak`, `reverse-prompt-engineering-genetic-inversion`, `gcg-adversarial-suffix-attack`, and `smoothllm-randomized-smoothing-defense`. All five are correct; the flags came from titles wrapping across lines in the extracted text, and from `SMOOTHLLM` being typeset in small caps.
 
 ## Verified: catalog coverage against The Prompt Report
 
@@ -115,5 +165,6 @@ The following connections are **filing decisions, not findings**. Only page-1 he
 - **Not that any technique works.** No paper's results were read.
 - **Not that the catalog is complete.** The coverage check above uses one survey. It found 23 named absences, but a technique absent from *The Prompt Report* and absent from the catalog is invisible to both.
 - **Not that the coverage table is mechanically re-checkable.** It compares against a PDF that is not in this repository, so no script in `npm run verify` can re-derive it. It is a point-in-time finding with its method recorded, which is the most this repository's conventions can offer for a claim about an external document.
-- **Not that the 168 unmatched citations are real.** Four were checked. The rest need either the papers or a network lookup, and this project does no network verification.
+- **Not that the 120 unchecked citations are real.** 39 were checked and two were wrong. The rest need either the papers or a network lookup, and this project does no network verification.
+- **Not that the 37 confirmed titles are the right *papers* for their techniques.** A citation can name the correct paper and still be the wrong source for the claim a record makes. Reading 172 papers against 172 descriptions is a different exercise and has not been done.
 - **Nothing about the three image-only PDFs.** They have no extractable text; their identity rests on their filenames alone, which the "On Meta-Prompting" false positive above should discourage anyone from trusting.

@@ -114,7 +114,7 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 **What is already known about the data**, from the literature review recorded in [`LITERATURE_CORPUS.md`](./LITERATURE_CORPUS.md):
 
 - Every citation is internally consistent — 159 arXiv ids, none malformed, none reused for a different paper, no year contradicting its own preprint date, no missing author/year/title. `npm run check:citations` keeps that true.
-- Exactly **four** of the 172 citations have been checked against the actual paper, and all four agree. The other 168 have not.
+- **39** of the 172 citations have now been checked against the actual paper. **37 agree; two do not** — `chain-of-symbol` cites an obsolete title containing a spelling error, and `prompt-matcher-schema-matching` cites a title the paper never had. Both need correcting during import; `sources/` is hash-frozen, so the fix belongs in the import step with the discrepancy recorded. 120 citations remain unchecked.
 - **Coverage has now been measured** against *The Prompt Report* (arXiv 2406.06608v6). Of 57 techniques recovered from its taxonomy, 34 have a catalog record and **23 do not** — and the gap is concentrated rather than general: **8 of the survey's 10 ensembling techniques are missing** (COSP, DENSE, DiVeRSe, Max Mutual Information, Meta-CoT, MoRE, USP, Prompt Paraphrasing), plus five few-shot exemplar/instruction-selection methods. The catalog is *wider* than the survey elsewhere, so this is a specific hole, not thinness.
 
 **Exit gate:** all 172 records validate against the JSON Schema *and* the XSD; a record missing `primary_source` fails; `check:citations` passes; the count is asserted, not stated.
@@ -170,6 +170,7 @@ Four documents cite "Phase 5" meaning the capability-matrix generator, from a nu
 | R7 | Stage templates are taken from the stale nine-stage copy on disk | Medium — the stale copy is the one in the repo | High — two stages silently missing | Phase 3 begins by extracting and freezing the eleven-stage component | Open, flagged |
 | R8 | No git remote; work exists only on this machine | Certain today | Severe — total loss on disk failure | None currently | **Open. Highest unaddressed operational risk in the project.** |
 | R9 | A guard's *scope* is quietly narrower than its name, so it passes without checking what everyone assumes it checks | High — happened three times | High — false confidence is worse than a known gap | Probe coverage, not just correctness: plant a defect in each place the guard is believed to cover and confirm it fires there | Open as a practice. Instances so far: the purity harness never blocked the filesystem; `typecheck` covered a third of the code; the cross-shell rule missed relative imports. All three passed continuously while incomplete |
+| R10 | Catalog records are wrong in ways no internal check can see — a citation whose fields agree with each other but not with the paper | Measured: **2 defects in 39 records checked** | Medium — the catalog's authority rests on its citations | An external oracle. `check:citations` proves internal consistency and is structurally blind to this, exactly as parity is blind to a shared defect ([ADR-0007](./0007-permanent-differential-oracle.md)) | Open. 120 of 159 arXiv-cited records are still unchecked against their papers |
 
 ---
 
