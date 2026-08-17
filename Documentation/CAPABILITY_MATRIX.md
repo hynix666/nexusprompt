@@ -2,7 +2,9 @@
 
 > # ⚠️ Illustrative target-state matrix — not a capability assertion
 >
-> **Nothing on this page is evidence that a capability exists or passes tests.** The generator (`pnpm run docs:matrix`) does not exist yet; it is Phase 5 work. Until it does, this file shows the *expected shape* of the generated output and must not be cited as a feature reference, a release artifact, or proof of implementation status.
+> **Nothing on this page is evidence that a capability exists or passes tests.** The generator (`npm run docs:matrix`) does not exist yet; it is **Phase 7 — Release truth** in [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md), which is blocked on there being a git remote. Until the generator exists, this file shows the *expected shape* of the generated output and must not be cited as a feature reference, a release artifact, or proof of implementation status.
+>
+> *(Earlier revisions called this "Phase 5 work", from a numbering that predated the plan. The plan owns phase numbers now.)*
 >
 > Once the generator exists, this file becomes generated output — do not hand-edit it.
 

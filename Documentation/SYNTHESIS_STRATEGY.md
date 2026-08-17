@@ -156,6 +156,8 @@ Ordered by what unblocks what, with an exit gate that can fail. No phase is comp
 
 | # | Phase | Exit gate |
 |---|---|---|
+> **Superseded by [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md).** The skeleton below was written before any code existed and split into phases that the vertical slice went on to cut through all at once — phases 1–5 here are one phase there. The plan owns phase numbers and exit gates; this table is kept as the reasoning that produced them. The property analysis above is not superseded.
+
 | 0 | **Freeze and verify sources** ✅ *done* | `verify-sources` passes; corrupting a byte fails it |
 | 1 | **Contracts** — schemas, fixtures, generated bindings | Every fixture validates; a malformed one fails; a non-TS validator agrees |
 | 2 | **Core: gates + registry + purity harness** | 16 gates via registry; all 40 fixtures pass; injected effect fails the suite |

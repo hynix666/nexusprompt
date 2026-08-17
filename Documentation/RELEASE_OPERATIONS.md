@@ -42,7 +42,7 @@ Generated (not hand-maintained) from the contracts plus registrations. CI fails 
 
 This is what prevents the failure mode seen in the source artifacts, where a README described a state the codebase no longer matched.
 
-**The generator is Phase 5 work and does not exist yet.** Until it does, `CAPABILITY_MATRIX.md` is labeled illustrative and must not be published as the user-facing feature reference or cited in a release note — doing so would reproduce exactly the drift it is meant to catch.
+**The generator is Phase 7 work ([`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md)) and does not exist yet.** Until it does, `CAPABILITY_MATRIX.md` is labeled illustrative and must not be published as the user-facing feature reference or cited in a release note — doing so would reproduce exactly the drift it is meant to catch.
 
 ## Staged rollout
 

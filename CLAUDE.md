@@ -64,7 +64,9 @@ Consequences worth knowing before proposing changes:
 
 Treat these as open questions, not as things to quietly fix or invent answers for:
 
-1. **`IMPLEMENTATION_PLAN.md` does not exist.** Roughly six documents were written against it. Direct citations have been made self-contained, but the plan itself — phases, exit gates, risk register — is unwritten. It was being designed when this file was created: solo execution, phases derived fresh from the dependency graph, port-and-verify rather than greenfield.
+1. **Phase 2 is blocked on the divergence allowlist.** `Documentation/IMPLEMENTATION_PLAN.md` now exists, and its numbers are verified by `npm run check:plan` inside `npm run verify`. The plan's own top finding: porting the remaining fourteen gates should not start until ADR-0007's divergence allowlist does, because fourteen ports will hit a case where the frozen linter is wrong and today the only green-build options are to reproduce the defect or delete the oracle.
+
+   Also open and larger than it looks: **there is no git remote.** All work exists on one machine, and it is why Phase 7 (CI, release truth) is blocked rather than merely undone.
 2. **The "nineteen target properties" are fifteen.** Searched for across every archive including the v5 framework document; no enumeration of nineteen exists. The count is corrected in `ARCHITECTURE.md`. Do not invent four to make the arithmetic work.
 3. **`storage-db` revision persistence is new work, not a port.** The inherited Drizzle schema (MySQL) has `users` and `promptAssets` and no revisions table. The revision schema needs designing and should land as a reviewed migration before either storage adapter is built.
 4. **Neither scaffolding generator exists.** `scripts/new-gate.ts` and `scripts/new-technique.py` were never written. Build them or write gate/technique files by hand — but don't tell contributors to use them.

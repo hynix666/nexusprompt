@@ -111,7 +111,7 @@ This is why the harness prints the failing input and both verdicts rather than a
 **To revisit**
 - The divergence-allowlist mechanism, before the first gate that intentionally differs — see action items.
 - The oracle's identity. If an independent implementation ever exists, prefer it; the frozen linter is the cheapest available oracle, not the best conceivable one.
-- Runtime. One process spawn per case per gate; at 16 gates and a large corpus this will need batching.
+- Runtime. One process spawn per case — *not* per case per gate, as this ADR originally said. Only a much larger corpus would need batching; see action item 3.
 
 ## Alternatives considered
 
@@ -131,7 +131,7 @@ Covered in the options table above. Worth restating one rejection: **parity is r
 
 1. [x] ~~Add the oracle to the CI pipeline~~ — added to `npm run verify`, positioned last. There is no CI service to add it to; that remains open and is now stated plainly in `DEVELOPMENT_AND_TESTING.md` rather than implied to exist.
 2. [ ] **Add a divergence allowlist** — a file of `{gate, case, reason, adr}` entries for deliberate differences from the source, where an entry without a stated reason fails. Needed before the first intentionally-improved gate port. Still open, and now has a concrete first candidate: `CLAIM_DISCIPLINE` flags `guarantee-free` because a hyphen is a word boundary. The source shares the false positive, so the port is correct to keep it — but that is the shape of the case this mechanism is for.
-3. [ ] Batch the runner, or accept the runtime, once the ported gate set exceeds ~6. Measured: 440 cases × 2 gates = 21s at one process spawn per case.
+3. [x] ~~Batch the runner once the ported gate set exceeds ~6.~~ **Withdrawn — the cost model was wrong.** `compare()` spawns Python once per *case* and then tallies every shared gate from that one run, so runtime is O(cases) and does not grow as gates are ported. Measured: 440 cases = 21 s at two gates, and sixteen gates will cost the same. What does scale is the corpus, so if `--n` grows past a few thousand this returns as a real concern; the gate count never made it one. Recorded rather than deleted, because "batch it before gate 6" was about to become received wisdom.
 4. [x] Re-run the injection drill whenever the harness itself changes — done for this change. The gate-set pin was verified by unregistering a gate and confirming the oracle now refuses; the two implementations' agreement was re-confirmed at n=400.
 5. [x] Record in `DEVELOPMENT_AND_TESTING.md` that the oracle is permanent, so it is not read as migration scaffolding by someone tidying up.
 

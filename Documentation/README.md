@@ -26,7 +26,8 @@ Every count and file name above has been checked against the source artifacts �
 - [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md) — every claim about the prior artifacts, checked against them
 - [`CATALOG.md`](./CATALOG.md) — the technique catalog
 - [`OBSERVABILITY.md`](./OBSERVABILITY.md) — tracing and the event spine
-- [`CAPABILITY_MATRIX.md`](./CAPABILITY_MATRIX.md) — **illustrative only**; the generator is Phase 5 work and does not exist yet
+- [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) — phases, entry conditions, exit gates, risk register. Its numbers are verified by `npm run check:plan`
+- [`CAPABILITY_MATRIX.md`](./CAPABILITY_MATRIX.md) — **illustrative only**; the generator is Phase 7 work and does not exist yet
 - [`GLOSSARY.md`](./GLOSSARY.md)
 
 ## Architecture decision records
@@ -79,8 +80,8 @@ Verified by: `npm run verify` (boundaries → typecheck → source freeze → 11
 
 Two caveats matter when reading it:
 
-- **`IMPLEMENTATION_PLAN.md` is not published.** Several documents were written against it and cited it for phase numbering, exit gates, and the risk register. Those inline citations have been made self-contained, but the plan itself is unwritten, so any phase number appearing in this set is a label rather than a milestone anyone has defined.
-- **`CAPABILITY_MATRIX.md` asserts nothing.** Its generator is Phase 5 work. The file shows the expected shape of generated output and is explicitly not a capability claim.
+- **`IMPLEMENTATION_PLAN.md` now exists**, and phase numbers in this set refer to it. Documents written against the old numbering cited "Phase 5" for the capability-matrix generator; that work is **Phase 7 — Release truth**, and the citations have been updated. Two review documents keep the old numbering deliberately, because they are records of an assessment made at a point in time.
+- **`CAPABILITY_MATRIX.md` asserts nothing.** Its generator is Phase 7 work. The file shows the expected shape of generated output and is explicitly not a capability claim.
 - **Ten claims about the source artifacts were wrong** and have been corrected against the archives. The gate count, the security-assertion count, the `TechniqueRecord` shape, the database engine, and both scaffolding generators were all inaccurate; `storage-db`'s revision persistence turns out to be new work rather than a port. [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md) is the evidence, and it is worth reading before trusting any remaining count in this set.
 - **The nineteen target properties are fifteen.** Searched for and not found in any archive; the count has been corrected rather than padded.
 
