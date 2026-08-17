@@ -94,6 +94,16 @@ Each is one module, one registry line, one `scripts/ported-gates.json` entry, a 
 
 **Cost note.** The oracle spawns Python once per *case*, not per gate, so its runtime does not grow as gates are added — 440 cases takes 21 s at two gates and will take about 21 s at sixteen. ADR-0007's action item 3 assumed otherwise; that item is being corrected rather than carried.
 
+### Phase 2b — The evaluation subsystem
+
+**Entry condition: none.** This phase is not blocked by the divergence allowlist, the gate port, or anything else, and it is the one that makes every other phase's output measurable. [ADR-0008](./0008-evaluation-first-environment.md) is the design and the evidence.
+
+**Why it moved ahead of the stage port.** Four measured results say prompt improvements are not monotonic and their sign depends on the model — a constrained prompt that beat CoT on one model generation lost on the next; appended generic rules cut a RAG suite from 26/30 to 9/30. Building ten more stages before anything can measure them raises the rate of unverifiable change.
+
+**Scope.** The contract set first (`Configuration`, `EvalCase`/`EvalSuite`, `EvalRun`, `JudgeVerdict`, and `ExecutionProvenance` extended with decoding parameters, judge identity and budget), as its own reviewed schema PR per ADR-0002. Then Pipeline B at its minimum: one suite, deterministic detectors only, no judge, no perturbation — and it must be able to fail. Then detector-recall equalization, before a second suite exists rather than after.
+
+**Exit gate:** a candidate configuration is compared against a baseline over a suite, the comparison carries a significance result and detector-recall evidence, and a deliberately worse prompt is measured as worse. The last clause is the one that matters: a harness that has never reported a regression has not been shown to detect one.
+
 ### Phase 3 — The remaining ten stages
 
 **Entry condition:** Phase 2 complete. The `lint` stage needs the full gate set to mean anything.

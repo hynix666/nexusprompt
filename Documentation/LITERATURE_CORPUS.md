@@ -6,10 +6,12 @@ Two corpora of prompt-engineering papers were read against this project, both ad
 |---|---|---|---|
 | `Prompt Survey.zip` (108 MB) | 44 | 43 — one exact duplicate | 39 |
 | `Prompt.zip` (271 MB) | 123 | 123 — no duplicates | 113 |
-| `PDF/` (1.49 GB, four collections) | 528 | 508 — 20 duplicates | 490 |
-| **Combined** | 695 | **673** | **486 distinct arXiv ids** |
+| `PDF/` (four collections plus a root drop) | 572 | 543 — 29 duplicates | 530 |
+| **Combined** | 739 | **709** | **496 distinct arXiv ids** |
 
-`PDF/` splits into `PROMPT` (364), `RAG` (127), `Memory` (25) and `PoC` (12). None of its files is image-only — every one yielded page-1 text. It is `.gitignore`d for the reason given below.
+`PDF/` splits into `PROMPT` (364), `RAG` (134), `Memory` (25), `PoC` (12) and 37 files at its root. None of its files is image-only — every one yielded page-1 text. It is `.gitignore`d for the reason given below.
+
+The corpus grew by 44 files mid-analysis — **35 of them new by content**, the rest duplicates of papers already present. Statistics elsewhere on this page computed against the earlier 528-file snapshot are unaffected, and that was checked rather than assumed: of the 35, **none is cited by the catalog and none supplies one of the fifteen missing techniques**. What they did supply is four measurements that changed the architecture, recorded below.
 
 This page records what was **verified**, what was **filed by title only**, and what the corpora do **not** establish.
 
@@ -236,6 +238,20 @@ The reason is a date skew: the corpus is heavily 2025–2026, and the gap techni
 - **`Memory`: 25 papers, 20 uncited, and the catalog has no memory category at all.** Long-term memory in LLM systems is absent from the taxonomy, not merely thin.
 
 Neither is a defect — the catalog is a *prompting-technique* catalog and both areas sit at its edge. But if the platform is to advise on retrieval or memory, this says the catalog is not currently the place that knowledge lives. That is a scope decision, not a gap to fill quietly.
+
+## Verified: four results that changed the architecture
+
+Five papers were read in depth rather than identified. Four of them carry measurements that [ADR-0008](./0008-evaluation-first-environment.md) is built on, and they are recorded here because each contradicts something a reasonable engineer would otherwise assume.
+
+**Prompt improvements are not monotonic, and their sign depends on the model.** *The Prompting Inversion* evaluates a constrained rule-based prompt against standard CoT on GSM8K across three model generations: it wins on gpt-4o (97% vs 93%) and **loses on gpt-5** (94.00% vs 96.36%). The authors name the mechanism a "guardrail-to-handcuff" transition — constraints that prevent common-sense errors in mid-tier models induce hyper-literalism in stronger ones, producing rejection of reasonable inference and over-constrained incomplete answers. The conclusion is that optimal strategy must co-evolve with model capability, and that **more capable models want simpler prompts**.
+
+**Generic prompt improvements can be severely negative.** *When Generic Prompt Improvements Hurt* measures five prompt conditions over 30-case suites on two local models. Stronger output-contract prompts improved strict extraction for both — but appending generic rules to the user prompt cut Qwen 2.5's RAG citation/content-compliance from **26/30 to 9/30**. Its framing is the one adopted in ADR-0008: a prompt change is a regression risk and belongs in a task-specific suite before deployment.
+
+**A detector's sensitivity changes with the configuration it measures.** The *Cross-Provider Architectural Ablation* (6,912 API calls, three providers, two model generations, twelve configurations) reports that enforcing JSON output appeared to raise hallucination by 10.1 pp and 15.1 pp — and shows the gap is **largely a detection-format artifact**, because structured fields make out-of-inventory mentions easier to find. Under a recall-equalized detector the conclusion reverses. Its headline result is also worth keeping: grounding plus vocabulary constraints plus enforced JSON took non-compliance from 69–80% down to 4–13%, but **per-provider directions diverge** even where the cross-provider average is stable.
+
+**A single comparison run is not a result.** The *block-regularized 5×2 cross-validated McNemar's test* exists because the conventional test's hold-out split "usually produces a highly varied estimation of the error rates", giving it low power. Repeated cross-validated comparison is the fix. It pairs with *Toward Epistemic Stability*'s practitioner protocol of 100 trials per condition.
+
+Together these are why ADR-0008 makes measurement the primary subsystem rather than a testing concern, equalizes detectors before comparing, and requires a significance test before a difference counts as a finding.
 
 ## Filed by title only — contents not read
 
