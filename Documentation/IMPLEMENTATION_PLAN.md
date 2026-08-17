@@ -22,7 +22,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "ci": { "configured": false },
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
-    "differential", "cli", "check:plan"
+    "differential", "cli", "check:plan", "check:citations"
   ],
   "planned_commands": [
     "verify:gates", "adversarial", "trace:view", "docs:matrix", "verify:hash",
@@ -111,7 +111,13 @@ Each stage is a `decide`/`reduce` pair with no callback, per ADR-0005. `cost_est
 
 Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `TechniqueRecord` shape wrong, and importing the real records is what proves the correction.
 
-**Exit gate:** all 172 records validate against the JSON Schema *and* the XSD; a record missing `primary_source` fails; the count is asserted, not stated.
+**What is already known about the data**, from the literature review recorded in [`LITERATURE_CORPUS.md`](./LITERATURE_CORPUS.md):
+
+- Every citation is internally consistent — 159 arXiv ids, none malformed, none reused for a different paper, no year contradicting its own preprint date, no missing author/year/title. `npm run check:citations` keeps that true.
+- Exactly **four** of the 172 citations have been checked against the actual paper, and all four agree. The other 168 have not.
+- The record set's *coverage* is unexamined. *The Prompt Report* (arXiv 2406.06608) is a systematic survey of prompt-engineering techniques and is the natural external instrument for asking whether 172 is the right set — comparing its taxonomy against the catalog is unstarted.
+
+**Exit gate:** all 172 records validate against the JSON Schema *and* the XSD; a record missing `primary_source` fails; `check:citations` passes; the count is asserted, not stated.
 
 ### Phase 5 — Second adapters
 

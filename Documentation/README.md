@@ -24,6 +24,7 @@ Every count and file name above has been checked against the source artifacts �
 **Reference:**
 - [`GATES_REFERENCE.md`](./GATES_REFERENCE.md) — all 16 lint gates, each named with verdict semantics
 - [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md) — every claim about the prior artifacts, checked against them
+- [`LITERATURE_CORPUS.md`](./LITERATURE_CORPUS.md) — a 44-paper prompt-engineering corpus read against the project: what was verified, what was filed by title only, and what it does not establish
 - [`CATALOG.md`](./CATALOG.md) — the technique catalog
 - [`OBSERVABILITY.md`](./OBSERVABILITY.md) — tracing and the event spine
 - [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) — phases, entry conditions, exit gates, risk register. Its numbers are verified by `npm run check:plan`

@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { checkPlan } from "../scripts/check-plan.mjs";
 import { checkBoundaries } from "../scripts/check-boundaries.mjs";
 import { verifySources } from "../scripts/verify-sources.mjs";
+import { checkCitations } from "../scripts/check-citations.mjs";
 
 /**
  * Must-fire cases for the three checker scripts.
@@ -334,5 +335,100 @@ describe("verify-sources", () => {
     const r = verifySources(root);
     expect(r.ok).toBe(false);
     expect(r.fatal).toMatch(/manifest not found/);
+  });
+});
+
+/* ── check-citations ──────────────────────────────────────────────────────── */
+
+const goodRecord = (over: Record<string, unknown> = {}) => ({
+  id: "chain-of-thought",
+  primary_source: {
+    authors: "Wei, Wang, Zhou",
+    year: 2022,
+    title: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+    venue: "NeurIPS 2022",
+    arxiv_id: "2201.11903",
+    url: "https://arxiv.org/abs/2201.11903",
+  },
+  ...over,
+});
+
+function makeCatalogRepo(techniques: unknown[]): string {
+  const root = mkroot("pnx-cite-");
+  write(root, "sources/catalog/data/prompt_technique_catalog.json", JSON.stringify({ techniques }));
+  return root;
+}
+
+const PINNED_NOW = new Date("2026-08-17T00:00:00Z");
+
+describe("check-citations", () => {
+  it("passes on a catalog whose citations agree with themselves", () => {
+    const r = checkCitations(makeCatalogRepo([goodRecord()]), PINNED_NOW);
+    expect(r.problems).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("passes on the real 172-record catalog", () => {
+    const r = checkCitations(process.cwd(), PINNED_NOW);
+    expect(r.problems.map((p: { kind: string; technique: string }) => `${p.kind} ${p.technique}`)).toEqual([]);
+    expect(r.records).toBe(172);
+  });
+
+  it("allows a record that cites a venue rather than a preprint", () => {
+    // 13 real records do this — a book, an OpenAI report, a practitioner guide.
+    // Treating a missing arXiv id as an error would fire on every one of them.
+    const r = checkCitations(makeCatalogRepo([
+      goodRecord({ primary_source: { authors: "Radford et al.", year: 2019, title: "Language Models are Unsupervised Multitask Learners", venue: "OpenAI (technical report)" } }),
+    ]), PINNED_NOW);
+    expect(r.ok).toBe(true);
+    expect(r.withArxiv).toBe(0);
+  });
+
+  const badCitations: Array<[string, unknown, string]> = [
+    ["a year that precedes its own preprint",
+      goodRecord({ primary_source: { authors: "A", year: 2021, title: "T", arxiv_id: "2201.11903" } }),
+      "year-precedes-preprint"],
+    ["a malformed arXiv id",
+      goodRecord({ primary_source: { authors: "A", year: 2022, title: "T", arxiv_id: "arXiv-2201" } }),
+      "malformed-arxiv-id"],
+    ["an impossible month in the arXiv id",
+      goodRecord({ primary_source: { authors: "A", year: 2022, title: "T", arxiv_id: "2213.11903" } }),
+      "malformed-arxiv-id"],
+    ["a url pointing at a different paper",
+      goodRecord({ primary_source: { authors: "A", year: 2022, title: "T", arxiv_id: "2201.11903", url: "https://arxiv.org/abs/9999.00000" } }),
+      "url-does-not-match-id"],
+    ["a record with no primary source at all",
+      { id: "orphan" },
+      "missing-primary-source"],
+    ["a citation with no title",
+      goodRecord({ primary_source: { authors: "A", year: 2022, arxiv_id: "2201.11903" } }),
+      "missing-field"],
+    ["an arXiv id dated in the future",
+      goodRecord({ primary_source: { authors: "A", year: 2030, title: "T", arxiv_id: "3001.00001" } }),
+      "future-arxiv-id"],
+  ];
+
+  it.each(badCitations)("rejects %s", (_label, record, kind) => {
+    const r = checkCitations(makeCatalogRepo([record]), PINNED_NOW);
+    expect(r.ok).toBe(false);
+    expect(r.problems.map((p: { kind: string }) => p.kind)).toContain(kind);
+  });
+
+  it("rejects one arXiv id reused for two different papers", () => {
+    const r = checkCitations(makeCatalogRepo([
+      goodRecord({ id: "a" }),
+      goodRecord({ id: "b", primary_source: { authors: "X", year: 2022, title: "A Completely Different Paper", arxiv_id: "2201.11903" } }),
+    ]), PINNED_NOW);
+    expect(r.ok).toBe(false);
+    expect(r.problems.map((p: { kind: string }) => p.kind)).toContain("same-id-different-title");
+  });
+
+  it("allows the same paper cited twice under the same title", () => {
+    const r = checkCitations(makeCatalogRepo([goodRecord({ id: "a" }), goodRecord({ id: "b" })]), PINNED_NOW);
+    expect(r.ok).toBe(true);
+  });
+
+  it("refuses when the catalog is absent", () => {
+    expect(checkCitations(mkroot("pnx-nocat-"), PINNED_NOW).fatalCode).toBe(2);
   });
 });

@@ -10,9 +10,10 @@
     "shells/*"
   ],
   "scripts": {
-    "verify": "npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:plan && npm run test && npm run differential",
+    "verify": "npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:plan && npm run check:citations && npm run test && npm run differential",
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "check:plan": "node scripts/check-plan.mjs",
+    "check:citations": "node scripts/check-citations.mjs",
     "verify:sources": "node scripts/verify-sources.mjs",
     "test": "vitest run",
     "test:core": "vitest run --project core",
