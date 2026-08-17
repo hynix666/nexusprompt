@@ -4,7 +4,17 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Ajv, type ValidateFunction } from "ajv";
-import addFormats from "ajv-formats";
+import addFormatsImport from "ajv-formats";
+
+/**
+ * `ajv-formats` is CommonJS with a default export. Under `module: nodenext` the
+ * default import types as the module namespace, while at runtime the interop hands
+ * back the callable — so the types and the execution disagree and only the types are
+ * wrong. One cast at one call site, rather than loosening the compiler for the repo.
+ *
+ * This surfaced only when `tsconfig.json` was widened to actually include `test/`.
+ */
+const addFormats = addFormatsImport as unknown as (ajv: Ajv) => Ajv;
 import { Orchestrator } from "../application/src/orchestrator.js";
 import { LocalRevisionStore } from "../adapters/storage-local/src/index.js";
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";

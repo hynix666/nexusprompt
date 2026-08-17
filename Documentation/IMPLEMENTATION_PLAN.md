@@ -65,9 +65,14 @@ Extract, hash, and pin the prior artifacts so every later claim about "the sourc
 
 One gate pair, one stage, both adapters at slice depth, the CLI, the differential oracle, the boundary checker, and the contract conformance suite.
 
-**Exit gate:** `npm run verify` — boundaries, typecheck, source freeze, tests, oracle. *Passing. 26 planted defects were probed against it; 26 caught, 0 survived.*
+**Exit gate:** `npm run verify` — boundaries, typecheck, source freeze, plan check, tests, oracle. *Passing. 26 planted defects were probed against it; 26 caught, 0 survived.*
 
 What Phase 1 established that the rest of the plan leans on: Core purity holds under instrumentation, `decide → invoke → reduce` survives contact with a real provider failure, the oracle catches defects the test suite cannot see, and the boundary rule is enforceable.
+
+**Hardening the verification itself** was folded into this phase after two guards turned out to be narrower than their names, both found by probing coverage rather than correctness:
+
+- `npm run typecheck` covered only `core` and `contracts`. The Application layer, both adapters, the CLI, the whole test suite, and the differential oracle were never typechecked — about two thirds of the TypeScript, inside a command `verify` depends on. A type error was planted in seven locations; five were unchecked. `tsconfig.json` now includes every source directory, and all seven are caught.
+- The cross-shell import rule only fired when the specifier text literally contained `shells/`, so a sibling shell reached the ordinary way — `../../toolkit/src/index.js` — passed. Specifiers are now resolved to repo-relative paths before any rule inspects them, which fixes the same latent weakness for every other rule at once. Found by the first test written against the checker.
 
 ### Phase 2 — The remaining fourteen gates
 
@@ -156,6 +161,7 @@ Four documents cite "Phase 5" meaning the capability-matrix generator, from a nu
 | R6 | `storage-db` revision persistence is treated as a port when it is new design | Medium | Medium — a migration written under time pressure | Named as new work; schema lands as a reviewed migration first | Open, flagged |
 | R7 | Stage templates are taken from the stale nine-stage copy on disk | Medium — the stale copy is the one in the repo | High — two stages silently missing | Phase 3 begins by extracting and freezing the eleven-stage component | Open, flagged |
 | R8 | No git remote; work exists only on this machine | Certain today | Severe — total loss on disk failure | None currently | **Open. Highest unaddressed operational risk in the project.** |
+| R9 | A guard's *scope* is quietly narrower than its name, so it passes without checking what everyone assumes it checks | High — happened three times | High — false confidence is worse than a known gap | Probe coverage, not just correctness: plant a defect in each place the guard is believed to cover and confirm it fires there | Open as a practice. Instances so far: the purity harness never blocked the filesystem; `typecheck` covered a third of the code; the cross-shell rule missed relative imports. All three passed continuously while incomplete |
 
 ---
 
@@ -164,7 +170,5 @@ Four documents cite "Phase 5" meaning the capability-matrix generator, from a nu
 - **Effort estimates.** Solo execution with no fixed schedule; a date here would be invention, and invented numbers are what this repository is recovering from.
 - **The nineteen target properties.** There are fifteen in `ARCHITECTURE.md` and twenty-one in `SYNTHESIS_STRATEGY.md`, tracked there rather than duplicated here. Duplicating them is how the counts diverged in the first place.
 - **Prose accuracy.** `check:plan` verifies numbers and command names. It cannot tell you a phase description has quietly stopped matching the work.
-- **Tests for the checkers themselves.** `check-plan.mjs`, `check-boundaries.mjs`, and `verify-sources.mjs` are each proven by mutation — 16 planted defects for the plan checker, all tripping it, with a no-op control staying green — but those probes were run by hand and are not in the vitest suite. So the three scripts have a must-not-fire case running on every `npm run verify` and no must-fire case in the repository. *Closing condition:* make each script importable with an injectable root, then give it the planted-defect pairs the rest of the suite has.
-
-  This gap has already cost something. `check-plan.mjs` shipped anchored on `plan-status\n` and worked only because the file happened to have LF endings when it was written; the first `git checkout` re-materialised it with CRLF and the checker exited 2 on a plan that was entirely correct. A checker whose verdict depends on which branch you last switched from is worse than none, because it fails loudly for the wrong reason. Fixed by normalising line endings on read, and now probed in both directions — but an in-suite test would have caught it before the merge rather than during it.
+- **Prose in the phase descriptions.** Closed for the checkers themselves — `test/checkers.test.ts` now gives all three planted-defect pairs against fixture trees — but nothing checks that a phase's *description* still matches the work.
 - **Anything past Phase 7.** Multi-tenancy, hosted deployment, and the technique-authoring workflow appear in the documentation set as target state and have no phase here, because their dependencies are not yet real enough to sequence.

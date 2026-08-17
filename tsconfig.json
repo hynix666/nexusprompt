@@ -5,8 +5,36 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "noEmit": true,
+    // ajv-formats is CJS with `export =`; without interop its default import is not
+    // callable under NodeNext. Vitest's transform already does this at runtime, so
+    // this makes the typechecker agree with what actually executes.
+    "esModuleInterop": true,
+    // The three checker scripts are plain .mjs and the suite imports them. Inferring
+    // their types from the source beats hand-written .d.mts files, which are one more
+    // thing that can silently stop matching. checkJs stays off: these are scripts, and
+    // turning it on would be a separate piece of work with its own error list.
+    "allowJs": true,
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["core/**/*.ts", "contracts/**/*.ts", "scripts/**/*.mjs"]
+  // Every TypeScript file in the repo. The previous list named only core, contracts
+  // and scripts/*.mjs, so `npm run typecheck` silently skipped the Application layer,
+  // both adapters, the CLI, the whole test suite, and the differential oracle —
+  // roughly two thirds of the TypeScript, inside a command named `typecheck` that
+  // `npm run verify` depends on. Probed by planting a type error in each location:
+  // five of seven were unchecked.
+  //
+  // `sources/**` is excluded deliberately: it is frozen prior art, not this project's
+  // code, and it must never be edited to satisfy a compiler here.
+  "include": [
+    "contracts/**/*.ts",
+    "core/**/*.ts",
+    "application/**/*.ts",
+    "adapters/**/*.ts",
+    "shells/**/*.ts",
+    "test/**/*.ts",
+    "scripts/**/*.ts",
+    "scripts/**/*.mjs"
+  ],
+  "exclude": ["node_modules", "sources", "**/node_modules"]
 }

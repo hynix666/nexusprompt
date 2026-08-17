@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * The import-boundary rule.
  *
@@ -29,9 +28,8 @@
 
 import { readFileSync } from "node:fs";
 import { readdirSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
-
-const ROOT = process.cwd();
+import { join, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 
 /** Node builtins that perform an effect. `node:crypto` is deliberately absent — a
  *  digest is deterministic, which is the sense of "pure" that matters here. */
@@ -106,26 +104,48 @@ const RULES = [
   },
 ];
 
+/**
+ * Resolve a relative specifier to a repo-relative path before any rule inspects it.
+ *
+ * Without this the rules only fire when the layer name happens to appear in the
+ * specifier text, which is true for `../../../adapters/x` and false for a sibling
+ * reached by `../`. A test found the hole: `shells/cli/src/index.ts` importing
+ * `"../../toolkit/src/index.js"` is a cross-shell import with no "shells" in the
+ * string, and the check passed it. Bare specifiers (`node:fs`, packages) have no
+ * leading dot and pass through untouched.
+ */
+function resolveSpec(file, spec) {
+  if (!spec.startsWith(".")) return spec;
+  const segments = `${file.split("/").slice(0, -1).join("/")}/${spec}`.split("/");
+  const out = [];
+  for (const s of segments) {
+    if (s === "." || s === "") continue;
+    if (s === "..") out.pop();
+    else out.push(s);
+  }
+  return out.join("/");
+}
+
 /** Cross-shell imports are their own rule: shells/<a> may not import shells/<b>. */
-function crossShell(file, spec) {
-  const m = file.match(/^shells[\\/]([^\\/]+)[\\/]/);
-  if (!m) return null;
-  const other = spec.match(/shells\/([^/]+)\//);
-  if (other && other[1] !== m[1]) {
-    return `Shell "${m[1]}" imports shell "${other[1]}". Cross-shell reuse goes through a shared presentation package (ADR-0006).`;
+function crossShell(file, resolved) {
+  const mine = file.match(/^shells\/([^/]+)\//);
+  if (!mine) return null;
+  const other = resolved.match(/(?:^|\/)shells\/([^/]+)\//);
+  if (other && other[1] !== mine[1]) {
+    return `Shell "${mine[1]}" imports shell "${other[1]}". Cross-shell reuse goes through a shared presentation package (ADR-0006).`;
   }
   return null;
 }
 
-function walk(dir, out = []) {
+function walk(root, dir, out = []) {
   let entries;
-  try { entries = readdirSync(join(ROOT, dir)); } catch { return out; }
+  try { entries = readdirSync(join(root, dir)); } catch { return out; }
   for (const e of entries) {
     const rel = `${dir}/${e}`;
-    const abs = join(ROOT, rel);
+    const abs = join(root, rel);
     if (statSync(abs).isDirectory()) {
       if (e === "node_modules" || e === "test") continue;
-      walk(rel, out);
+      walk(root, rel, out);
     } else if (e.endsWith(".ts") || e.endsWith(".mjs") || e.endsWith(".js")) {
       out.push(rel);
     }
@@ -141,44 +161,66 @@ function specifiers(source) {
   return out.filter(Boolean);
 }
 
-const violations = [];
-let filesChecked = 0;
-let importsChecked = 0;
+/**
+ * Exported so the suite can plant a violation in a fixture tree and watch this
+ * fail. The three checker scripts previously had a must-not-fire case running in
+ * `npm run verify` and no must-fire case anywhere, which is how a CRLF bug shipped
+ * in `check-plan.mjs` and surfaced only during a merge.
+ */
+export function checkBoundaries(root = process.cwd()) {
+  const violations = [];
+  let filesChecked = 0;
+  let importsChecked = 0;
 
-for (const rule of RULES) {
-  for (const file of walk(rule.dir)) {
-    const norm = file.split(sep).join("/");
-    filesChecked++;
-    const source = readFileSync(join(ROOT, file), "utf8");
-    for (const spec of specifiers(source)) {
-      importsChecked++;
-      const cross = crossShell(norm, spec);
-      if (cross) violations.push({ file: norm, spec, why: cross });
-      for (const f of rule.forbid) {
-        if (!f.test(spec)) continue;
-        const reason = rule.exempt[norm];
-        if (reason) continue;
-        violations.push({ file: norm, spec, why: f.why });
+  for (const rule of RULES) {
+    for (const file of walk(root, rule.dir)) {
+      const norm = file.split(sep).join("/");
+      filesChecked++;
+      const source = readFileSync(join(root, file), "utf8");
+      for (const spec of specifiers(source)) {
+        importsChecked++;
+        const resolved = resolveSpec(norm, spec);
+        const cross = crossShell(norm, resolved);
+        if (cross) violations.push({ file: norm, spec, resolved, why: cross });
+        for (const f of rule.forbid) {
+          if (!f.test(resolved)) continue;
+          if (rule.exempt[norm]) continue;
+          violations.push({ file: norm, spec, resolved, why: f.why });
+        }
       }
     }
   }
+
+  return {
+    ok: violations.length === 0,
+    violations,
+    filesChecked,
+    importsChecked,
+    exemptions: RULES.flatMap((r) => Object.entries(r.exempt)),
+  };
 }
 
-const exemptions = RULES.flatMap((r) => Object.entries(r.exempt));
+function main() {
+  const { ok, violations, filesChecked, importsChecked, exemptions } = checkBoundaries();
 
-if (violations.length === 0) {
-  console.log(`lint:boundaries — OK. ${filesChecked} files, ${importsChecked} imports, 0 violations.`);
-  if (exemptions.length) {
-    console.log(`  ${exemptions.length} recorded exemption(s):`);
-    for (const [f, why] of exemptions) console.log(`    ${f}\n      ${why}`);
+  if (ok) {
+    console.log(`lint:boundaries — OK. ${filesChecked} files, ${importsChecked} imports, 0 violations.`);
+    if (exemptions.length) {
+      console.log(`  ${exemptions.length} recorded exemption(s):`);
+      for (const [f, why] of exemptions) console.log(`    ${f}\n      ${why}`);
+    }
+    return 0;
   }
-  process.exit(0);
+
+  console.error(`lint:boundaries — ${violations.length} violation(s):\n`);
+  for (const v of violations) {
+    console.error(`  ${v.file}`);
+    console.error(`    imports "${v.spec}"${v.resolved && v.resolved !== v.spec ? `  → ${v.resolved}` : ""}`);
+    console.error(`    ${v.why}\n`);
+  }
+  return 1;
 }
 
-console.error(`lint:boundaries — ${violations.length} violation(s):\n`);
-for (const v of violations) {
-  console.error(`  ${v.file}`);
-  console.error(`    imports "${v.spec}"`);
-  console.error(`    ${v.why}\n`);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.exit(main());
 }
-process.exit(1);

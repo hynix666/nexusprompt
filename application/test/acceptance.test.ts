@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import Ajv from "ajv";
+import { Ajv } from "ajv";
 import { readFileSync } from "node:fs";
 import { Orchestrator } from "../src/orchestrator.js";
 import { LocalRevisionStore } from "../../adapters/storage-local/src/index.js";
@@ -236,7 +236,7 @@ describe("PipelineOutcome conforms to its schema", () => {
   it("rejects an outcome missing demo_mode — the schema can fail", async () => {
     const { orchestrator, command, root } = await harness(new LiveProvider("x"));
     const outcome = await orchestrator.run(command);
-    const { demo_mode, ...withoutFlag } = outcome as Record<string, unknown> & { demo_mode: boolean };
+    const { demo_mode, ...withoutFlag } = outcome as unknown as Record<string, unknown> & { demo_mode: boolean };
     expect(validate(withoutFlag)).toBe(false);
     await rm(root, { recursive: true, force: true });
   });
