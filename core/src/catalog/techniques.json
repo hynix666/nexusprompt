@@ -13868,7 +13868,7 @@
             }
           ],
           "template_id": "demonstration-ensembling--subset-and-aggregate",
-          "determinism": "deterministic-given-partition",
+          "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 once the partition is fixed; the partition itself must be recorded to reproduce a run."
         }
       ],
@@ -13886,7 +13886,7 @@
       "corpus_file": null,
       "schema_version": "1.3.0",
       "source_audit": {
-        "description": "abstract-verified",
+        "description": "verified-against-abstract",
         "pitfalls": "unverified"
       }
     },
@@ -13945,7 +13945,7 @@
             }
           ],
           "template_id": "mixture-of-reasoning-experts--agreement-selection",
-          "determinism": "deterministic-given-expert-set",
+          "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 for a fixed expert set; changing the expert prompts changes the answer distribution."
         }
       ],
@@ -13963,7 +13963,7 @@
       "corpus_file": null,
       "schema_version": "1.3.0",
       "source_audit": {
-        "description": "abstract-verified",
+        "description": "verified-against-abstract",
         "pitfalls": "unverified"
       }
     },
@@ -14051,7 +14051,7 @@
       "corpus_file": null,
       "schema_version": "1.3.0",
       "source_audit": {
-        "description": "abstract-verified",
+        "description": "verified-against-abstract",
         "pitfalls": "unverified"
       }
     },
@@ -14129,7 +14129,7 @@
       "corpus_file": null,
       "schema_version": "1.3.0",
       "source_audit": {
-        "description": "abstract-verified",
+        "description": "verified-against-abstract",
         "pitfalls": "unverified"
       }
     },
@@ -14208,7 +14208,7 @@
       "corpus_file": null,
       "schema_version": "1.3.0",
       "source_audit": {
-        "description": "abstract-verified",
+        "description": "verified-against-abstract",
         "pitfalls": "unverified"
       }
     },
@@ -14297,7 +14297,7 @@
       "corpus_file": null,
       "schema_version": "1.3.0",
       "source_audit": {
-        "description": "abstract-verified",
+        "description": "verified-against-abstract",
         "pitfalls": "unverified"
       }
     },
@@ -14385,7 +14385,7 @@
       "corpus_file": null,
       "schema_version": "1.3.0",
       "source_audit": {
-        "description": "abstract-verified",
+        "description": "verified-against-abstract",
         "pitfalls": "unverified"
       }
     },
@@ -14440,7 +14440,7 @@
             }
           ],
           "template_id": "prompt-paraphrasing--paraphrase-ensemble",
-          "determinism": "deterministic-given-paraphrases",
+          "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 once the paraphrase set is fixed; record the paraphrases to reproduce a run."
         }
       ],
@@ -14458,7 +14458,7 @@
       "corpus_file": null,
       "schema_version": "1.3.0",
       "source_audit": {
-        "description": "abstract-verified",
+        "description": "verified-against-abstract",
         "pitfalls": "unverified"
       }
     }

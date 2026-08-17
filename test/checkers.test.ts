@@ -7,6 +7,7 @@ import { checkPlan } from "../scripts/check-plan.mjs";
 import { checkBoundaries } from "../scripts/check-boundaries.mjs";
 import { verifySources } from "../scripts/verify-sources.mjs";
 import { checkCitations } from "../scripts/check-citations.mjs";
+import { checkXsd, buildXml, validateAgainstXsd } from "../scripts/check-xsd.mjs";
 
 /**
  * Must-fire cases for the three checker scripts.
@@ -449,6 +450,86 @@ describe("check-citations", () => {
     const r = checkCitations(makeCatalogRepo([arxivVenueNoId]), PINNED_NOW);
     expect(r.ok).toBe(false);
     expect(r.problems.map((p: { kind: string }) => p.kind)).toContain("arxiv-venue-without-id");
+  });
+});
+
+/* ── check-xsd ────────────────────────────────────────────────────────────── */
+
+describe("check-xsd", () => {
+  /**
+   * The frozen XSD had never been run. Reading it caught two controlled vocabularies
+   * the JSON Schema had typed as free strings — which is exactly why the XSD is worth
+   * running rather than assumed redundant with the JSON contract.
+   */
+  const TINY_XSD = `<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:simpleType name="mood">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="calm"/>
+      <xs:enumeration value="loud"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="root">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="first" type="xs:string"/>
+        <xs:element name="second" type="mood"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>`;
+
+  it("accepts a conforming document", () => {
+    const r = validateAgainstXsd(`<root><first>a</first><second>calm</second></root>`, TINY_XSD);
+    expect(r.valid).toBe(true);
+  });
+
+  it("rejects a value outside a controlled vocabulary", () => {
+    const r = validateAgainstXsd(`<root><first>a</first><second>whatever</second></root>`, TINY_XSD);
+    expect(r.valid).toBe(false);
+    expect(r.errors.length).toBeGreaterThan(0);
+  });
+
+  it("rejects elements out of sequence", () => {
+    const r = validateAgainstXsd(`<root><second>calm</second><first>a</first></root>`, TINY_XSD);
+    expect(r.valid).toBe(false);
+  });
+
+  it("rejects a missing required element", () => {
+    const r = validateAgainstXsd(`<root><first>a</first></root>`, TINY_XSD);
+    expect(r.valid).toBe(false);
+  });
+
+  it("validates both the frozen and the imported catalog in the real repository", () => {
+    const r = checkXsd(process.cwd());
+    expect(r.fatal).toBeNull();
+    // Narrowed by the assertion above: the fatal path returns no results at all.
+    const results = r.results!;
+    expect(results.frozen.errors).toEqual([]);
+    expect(results.imported.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("generates XML deterministically", () => {
+    // No clock is read: generated_at is carried from the frozen metadata, so the
+    // output is byte-identical run to run, like the JSON import.
+    expect(buildXml(process.cwd())).toBe(buildXml(process.cwd()));
+  });
+
+  it("emits elements in the XSD's sequence, not the JSON's key order", () => {
+    const xml = buildXml(process.cwd());
+    const first = xml.slice(xml.indexOf("<technique "), xml.indexOf("</technique>"));
+    const order = [...first.matchAll(/^ {6}<([a-z_]+)[ >/]/gm)].map((m) => m[1]);
+    expect(order.slice(0, 9)).toEqual([
+      "id", "name", "category", "subcategory", "executive_summary",
+      "description", "verification_status", "cost_profile", "status",
+    ]);
+  });
+
+  it("marks a null as nil rather than emitting an empty element", () => {
+    const xml = buildXml(process.cwd());
+    expect(xml).toContain('<arxiv_id nil="true"/>');
+    expect(xml).toContain('empty="true"');
   });
 });
 

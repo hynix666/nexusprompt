@@ -144,7 +144,7 @@ describe("the ensembling coverage gap, closed at import", () => {
     // say something different on purpose, and the difference should not be normalised.
     for (const [id] of added) {
       const r = getTechnique(id)!;
-      expect(r.source_audit.description).toBe("abstract-verified");
+      expect(r.source_audit.description).toBe("verified-against-abstract");
       expect(r.source_audit.pitfalls).toBe("unverified");
     }
   });

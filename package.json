@@ -10,13 +10,14 @@
     "shells/*"
   ],
   "scripts": {
-    "verify": "npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:plan && npm run check:citations && npm run check:catalog && npm run test && npm run differential",
+    "verify": "npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run test && npm run differential",
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "check:plan": "node scripts/check-plan.mjs",
     "check:citations": "node scripts/check-citations.mjs",
     "check:citations:online": "node scripts/check-citations-online.mjs",
     "import:catalog": "node scripts/import-catalog.mjs",
     "check:catalog": "node scripts/import-catalog.mjs --check",
+    "check:xsd": "node scripts/check-xsd.mjs",
     "verify:sources": "node scripts/verify-sources.mjs",
     "test": "vitest run",
     "test:core": "vitest run --project core",
@@ -31,6 +32,7 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "fast-check": "^4.3.0",
+    "libxml2-wasm": "^0.7.1",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

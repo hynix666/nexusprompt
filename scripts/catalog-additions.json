@@ -14,10 +14,17 @@
     "recorded as given. Where arXiv states no venue, `venue` says 'arXiv preprint'",
     "rather than inferring one from the survey's citation key.",
     "",
-    "source_audit.description is 'abstract-verified' for these eight rather than the",
-    "corpus-wide 'unverified': each description was written from the paper's abstract",
-    "and the survey's account of it. Pitfalls were not checked against the papers, so",
-    "they stay 'unverified'. The distinction is the point — do not normalise it away."
+    "source_audit.description is 'verified-against-abstract' for these eight rather",
+    "than the corpus-wide 'unverified': each description was written from the paper's",
+    "abstract and the survey's account of it. Pitfalls were not checked against the",
+    "papers, so they stay 'unverified'. The distinction is the point — do not",
+    "normalise it away.",
+    "",
+    "That value, and every `determinism` value below, comes from the frozen XSD's",
+    "controlled vocabularies. The first draft of this file invented 'abstract-verified'",
+    "and three 'deterministic-given-…' values that exist in no schema. They validated",
+    "against the JSON Schema, which typed those fields as free strings, and were caught",
+    "only when the XSD was read. The JSON Schema now carries the same enumerations."
   ],
   "added_on": "2026-08-17",
   "closes": "ensembling coverage gap, The Prompt Report §2.2.4",
@@ -62,7 +69,7 @@
             { "name": "test_input", "description": "The query being answered", "example": null }
           ],
           "template_id": "demonstration-ensembling--subset-and-aggregate",
-          "determinism": "deterministic-given-partition",
+          "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 once the partition is fixed; the partition itself must be recorded to reproduce a run."
         }
       ],
@@ -72,7 +79,7 @@
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "abstract-verified", "pitfalls": "unverified" }
+      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
     },
     {
       "id": "mixture-of-reasoning-experts",
@@ -113,7 +120,7 @@
             { "name": "abstain_threshold", "description": "Agreement score below which the system declines to answer", "example": "0.5" }
           ],
           "template_id": "mixture-of-reasoning-experts--agreement-selection",
-          "determinism": "deterministic-given-expert-set",
+          "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 for a fixed expert set; changing the expert prompts changes the answer distribution."
         }
       ],
@@ -123,7 +130,7 @@
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "abstract-verified", "pitfalls": "unverified" }
+      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
     },
     {
       "id": "diverse-step-aware-verifier",
@@ -177,7 +184,7 @@
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "abstract-verified", "pitfalls": "unverified" }
+      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
     },
     {
       "id": "max-mutual-information-template-selection",
@@ -229,7 +236,7 @@
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "abstract-verified", "pitfalls": "unverified" }
+      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
     },
     {
       "id": "meta-reasoning-over-chains",
@@ -281,7 +288,7 @@
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "abstract-verified", "pitfalls": "unverified" }
+      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
     },
     {
       "id": "consistency-based-self-adaptive-prompting",
@@ -335,7 +342,7 @@
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "abstract-verified", "pitfalls": "unverified" }
+      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
     },
     {
       "id": "universal-self-adaptive-prompting",
@@ -389,7 +396,7 @@
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "abstract-verified", "pitfalls": "unverified" }
+      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
     },
     {
       "id": "prompt-paraphrasing",
@@ -430,7 +437,7 @@
             { "name": "base_prompt", "description": "The original prompt to paraphrase", "example": null }
           ],
           "template_id": "prompt-paraphrasing--paraphrase-ensemble",
-          "determinism": "deterministic-given-paraphrases",
+          "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 once the paraphrase set is fixed; record the paraphrases to reproduce a run."
         }
       ],
@@ -440,7 +447,7 @@
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "abstract-verified", "pitfalls": "unverified" }
+      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
     }
   ]
 }

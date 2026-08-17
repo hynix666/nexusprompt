@@ -23,7 +23,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
-    "import:catalog", "check:catalog"
+    "import:catalog", "check:catalog", "check:xsd"
   ],
   "planned_commands": [
     "verify:gates", "adversarial", "trace:view", "docs:matrix", "verify:hash",
@@ -44,7 +44,7 @@ core/stages █▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
 shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
-catalog     ██████████████████▒▒       180 records + registry; XSD validation open, 15 scattered gaps
+catalog     ███████████████████▒       180 records + registry, JSON contract and XSD both enforced; 15 gaps
 release     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       no CI, no matrix generator, no build hash
 ```
 
@@ -124,7 +124,11 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 **Still open in this phase:**
 
-- **XSD validation.** Records validate against the JSON Schema only. The frozen `prompt_technique_catalog_1.3.0.xsd` is unused; validating against it needs an XML toolchain decision.
+- ~~**XSD validation.**~~ **Done.** `npm run check:xsd` validates both the frozen XML export and XML generated from the imported 180 records against the frozen `prompt_technique_catalog_1.3.0.xsd`, using a WebAssembly build of libxml2 — no system `xmllint`, no Java, no native compilation, so `verify` stays offline and portable.
+
+  Running it was not redundant with the JSON contract. The XSD carries **controlled vocabularies the JSON Schema had typed as free strings**, and the eight records added for ensembling had invented values in two of them: a `source_audit.description` of `abstract-verified` where the vocabulary is `verified-against-abstract`, and three `determinism` values of the form `deterministic-given-…` that exist in no schema. Both are fixed, and `contracts/technique-record.schema.json` now carries the same enumerations so the offline check catches this class too.
+
+  The XSD's own header lists five constraints it cannot express — reference resolution, count agreement, category agreement, cross-record uniqueness of name/id/title/template_id, and template placeholder declaration. `import:catalog` and `check:citations` carry those. A green XSD result is necessary, not sufficient, and the command says so.
 - ~~**The ensembling coverage gap.**~~ **Closed.** All eight missing techniques now have records, added at the import boundary through `scripts/catalog-additions.json` — 172 frozen records plus 8, giving 180. Every citation was resolved against arXiv's own metadata, and the additions are held to the same contract as the frozen records, with no id allowed to collide with one. Coverage against The Prompt Report's taxonomy went from 34 of 57 to 42 of 57; ensembling is 10 of 10. Fifteen scattered absences remain, but no category is now missing most of itself.
 - **Three records naming `arXiv preprint` with no identifier**, excused in `scripts/catalog-known-defects.json`. Unlike the titles these cannot be corrected from evidence — the identifier is simply absent and no index resolved it.
 
