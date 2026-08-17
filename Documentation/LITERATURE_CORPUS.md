@@ -115,6 +115,8 @@ The remaining eight are real:
 
 Three dropped a leading clause, three dropped or altered words, and two are paraphrases. **Measured accuracy: 151 of 159 defensible, 8 wrong — a 5% error rate**, now a count rather than an extrapolation.
 
+**All eight are now corrected at the import boundary.** `sources/` stays frozen — it is the record of what was inherited, defects included — so the fixes live in `scripts/catalog-corrections.json`, each carrying its `from`, `to`, reason, and arXiv evidence, and are applied by `npm run import:catalog`. The import refuses if a frozen value no longer matches the `from` it expects, so a stale correction cannot apply silently. The two adjudicated non-defects, and `chain-of-symbol`, are deliberately left alone and pinned by test so a later reader does not "fix" them.
+
 ### Why no offline check could have found these
 
 Every one of the eight passes `check:citations`, correctly: `year`, `arxiv_id`, `url`, and `title` are mutually consistent. Nothing inside a record can reveal that its title does not match the paper, because the paper is not in the record.

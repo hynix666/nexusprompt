@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/technique-record/1.3.0",
+  "title": "TechniqueRecord",
+  "description": "One prompting technique in the catalog. Field list and enums derived from the 172 frozen records rather than from prior documentation, which described a different shape. Every field below is present on all 172.",
+  "type": "object",
+  "required": [
+    "id", "name", "category", "subcategory", "executive_summary", "description",
+    "verification_status", "cost_profile", "when_to_use", "when_not_to_use",
+    "known_pitfalls", "related_techniques", "primary_source", "usage_templates",
+    "tags", "status", "aliases", "secondary_sources", "corpus_file",
+    "schema_version", "source_audit"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "category": {
+      "enum": [
+        "reasoning-elicitation", "self-verification-refinement", "agentic-tool-use",
+        "automatic-prompt-optimization", "retrieval-augmentation",
+        "structured-constrained-output", "example-selection-formatting",
+        "template-pattern-scaffolding", "prompt-injection-defense",
+        "domain-specific-application", "prompt-inversion-analysis",
+        "prompt-compression-context-engineering"
+      ]
+    },
+    "subcategory": { "type": "string" },
+    "executive_summary": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "verification_status": {
+      "description": "How a claim about this technique could be checked. Deterministic gates gate; judged gates advise.",
+      "enum": ["verifier-checkable", "judge-checkable", "unverifiable-by-text"]
+    },
+    "cost_profile": {
+      "enum": ["single-call", "multi-call-fixed", "multi-call-adaptive", "agentic-loop", "training-time"]
+    },
+    "status": { "enum": ["corpus-present", "verified-external", "practitioner-guide"] },
+    "when_to_use": { "type": "array", "items": { "type": "string" } },
+    "when_not_to_use": { "type": "array", "items": { "type": "string" } },
+    "known_pitfalls": { "type": "array", "items": { "type": "string" } },
+    "related_techniques": { "type": "array", "items": { "type": "string" } },
+    "usage_templates": { "type": "array", "items": { "type": "object" } },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "aliases": { "type": "array", "items": { "type": "string" } },
+    "corpus_file": { "type": ["string", "null"] },
+    "schema_version": { "type": "string" },
+    "source_audit": {
+      "type": "object",
+      "required": ["description", "pitfalls"],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string" },
+        "pitfalls": { "type": "string" }
+      }
+    },
+    "primary_source": {
+      "description": "CONTRIBUTING.md makes this non-negotiable: a technique record ships with a primary_source. arxiv_id and url are nullable because 13 records cite a venue, a technical report, or a practitioner guide with no preprint. `pattern` is ignored for a null, so the format is still enforced whenever an id is present.",
+      "$ref": "#/definitions/source"
+    },
+    "secondary_sources": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/source" }
+    }
+  },
+  "definitions": {
+    "source": {
+      "type": "object",
+      "required": ["authors", "year", "title", "venue", "arxiv_id", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "authors": { "type": "string", "minLength": 1 },
+        "year": { "type": "integer", "minimum": 1950 },
+        "title": { "type": "string", "minLength": 1 },
+        "venue": { "type": "string", "minLength": 1 },
+        "arxiv_id": { "type": ["string", "null"], "pattern": "^\\d{4}\\.\\d{4,5}$" },
+        "url": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

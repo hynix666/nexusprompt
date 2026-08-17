@@ -19,6 +19,7 @@ import { Orchestrator } from "../application/src/orchestrator.js";
 import { LocalRevisionStore } from "../adapters/storage-local/src/index.js";
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
 import { runGates } from "../core/src/gates/registry.js";
+import { listTechniques } from "../core/src/catalog/registry.js";
 import type {
   GenerationRequest,
   ObservabilityEvent,
@@ -67,6 +68,7 @@ const validators: Record<string, ValidateFunction> = {
   "provider-failure": ajv.compile(load("provider-failure")),
   "revision-entry": ajv.compile(load("revision-entry")),
   "observability-event": ajv.compile(load("observability-event")),
+  "technique-record": ajv.compile(load("technique-record")),
 };
 
 const report = (v: ValidateFunction, value: unknown) => {
@@ -239,6 +241,55 @@ describe("observability-event", () => {
     // The sink rejects rather than truncates, so a payload that grew a `prompt`
     // field must fail the contract rather than be quietly accepted.
     expect(validators["observability-event"]({ ...events[0], prompt: "the body" })).toBe(false);
+  });
+});
+
+describe("technique-record", () => {
+  // Ajv types a validator as a type guard (`data is T`), which narrows the record to
+  // `never` in the failure branch. Nothing here wants the narrowing — only the boolean.
+  const validateTechnique = validators["technique-record"] as unknown as (d: unknown) => boolean;
+
+  it("validates all 172 imported records, not a sample", () => {
+    const records = listTechniques();
+    expect(records.length).toBe(172);
+    const failed = records.filter((r) => !validateTechnique(r)).map((r) => r.id);
+    if (failed.length) console.error(validators["technique-record"].errors);
+    expect(failed).toEqual([]);
+  });
+
+  it("rejects an unknown category", () => {
+    const [first] = listTechniques();
+    expect(validators["technique-record"]({ ...first, category: "vibes" })).toBe(false);
+  });
+
+  it("rejects a record with no primary_source", () => {
+    const { primary_source, ...withoutSource } = listTechniques()[0];
+    expect(validators["technique-record"](withoutSource)).toBe(false);
+  });
+
+  it("rejects a record carrying an undeclared field — the contract is closed", () => {
+    // Found by probe: loosening `additionalProperties` to true changed no emitted
+    // bytes, so `check:catalog` passed and no test objected. The closed-ness of the
+    // contract had nothing asserting it.
+    const [first] = listTechniques();
+    expect(validateTechnique({ ...first, invented_field: "x" })).toBe(false);
+  });
+
+  it("rejects an undeclared field inside primary_source", () => {
+    const [first] = listTechniques();
+    expect(validateTechnique({
+      ...first,
+      primary_source: { ...first.primary_source, scraped_from: "somewhere" },
+    })).toBe(false);
+  });
+
+  it("rejects a malformed arXiv id while still allowing null", () => {
+    const [first] = listTechniques();
+    const bad = { ...first, primary_source: { ...first.primary_source, arxiv_id: "not-an-id" } };
+    expect(validators["technique-record"](bad)).toBe(false);
+
+    const nulled = { ...first, primary_source: { ...first.primary_source, arxiv_id: null } };
+    expect(validators["technique-record"](nulled)).toBe(true);
   });
 });
 

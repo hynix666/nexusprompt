@@ -173,6 +173,70 @@ export interface RevisionStore {
   markStale(run_id: string, from_stage_id: StageId): Promise<void>;
 }
 
+/* ── Technique catalog ────────────────────────────────────────────────────── */
+
+/**
+ * Shape derived from the 172 frozen records, not from prior documentation — which
+ * described a different one. `arxiv_id` and `url` are nullable because thirteen
+ * records cite a venue, a technical report, or a practitioner guide.
+ */
+export interface TechniqueSource {
+  authors: string;
+  year: number;
+  title: string;
+  venue: string;
+  arxiv_id: string | null;
+  url: string | null;
+}
+
+export type TechniqueCategory =
+  | "reasoning-elicitation"
+  | "self-verification-refinement"
+  | "agentic-tool-use"
+  | "automatic-prompt-optimization"
+  | "retrieval-augmentation"
+  | "structured-constrained-output"
+  | "example-selection-formatting"
+  | "template-pattern-scaffolding"
+  | "prompt-injection-defense"
+  | "domain-specific-application"
+  | "prompt-inversion-analysis"
+  | "prompt-compression-context-engineering";
+
+/** How a claim about a technique could be checked. Deterministic gates gate; judged gates advise. */
+export type VerificationStatus = "verifier-checkable" | "judge-checkable" | "unverifiable-by-text";
+
+export type CostProfile =
+  | "single-call"
+  | "multi-call-fixed"
+  | "multi-call-adaptive"
+  | "agentic-loop"
+  | "training-time";
+
+export interface TechniqueRecord {
+  id: string;
+  name: string;
+  category: TechniqueCategory;
+  subcategory: string;
+  executive_summary: string;
+  description: string;
+  verification_status: VerificationStatus;
+  cost_profile: CostProfile;
+  status: "corpus-present" | "verified-external" | "practitioner-guide";
+  when_to_use: string[];
+  when_not_to_use: string[];
+  known_pitfalls: string[];
+  related_techniques: string[];
+  primary_source: TechniqueSource;
+  secondary_sources: TechniqueSource[];
+  usage_templates: Array<Record<string, unknown>>;
+  tags: string[];
+  aliases: string[];
+  corpus_file: string | null;
+  schema_version: string;
+  source_audit: { description: string; pitfalls: string };
+}
+
 /* ── Observability ────────────────────────────────────────────────────────── */
 
 export type EventType =

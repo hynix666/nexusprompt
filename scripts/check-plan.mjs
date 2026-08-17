@@ -116,12 +116,20 @@ export function checkPlan(root = process.cwd()) {
   claim("catalog.records_available", declared.catalog.records_available, available,
     `derived from ${catalogSource}`);
 
-  const importedCatalog = existsSync(at("core/src/catalog"))
-    ? readdirSync(at("core/src/catalog")).filter((f) => f.endsWith(".json")).length
-    : 0;
-  claim("catalog.records_imported", declared.catalog.records_imported,
-    importedCatalog === 0 ? 0 : available,
-    "core/src/catalog does not exist yet; the plan must not claim records are imported");
+  // Count the records actually imported, rather than inferring "all of them" from the
+  // presence of a file. The earlier version did the latter, which would have reported
+  // 172 for a partial import.
+  let importedCatalog = 0;
+  const importedPath = at("core/src/catalog/techniques.json");
+  if (existsSync(importedPath)) {
+    try {
+      importedCatalog = (JSON.parse(readText(importedPath)).techniques ?? []).length;
+    } catch {
+      importedCatalog = -1; // unreadable — never silently equal to the declared number
+    }
+  }
+  claim("catalog.records_imported", declared.catalog.records_imported, importedCatalog,
+    "count of techniques in core/src/catalog/techniques.json — run `npm run import:catalog`");
 
   claim("sources.frozen_files", declared.sources.frozen_files,
     JSON.parse(readText(at("sources/MANIFEST.json"))).files.length,

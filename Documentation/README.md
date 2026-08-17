@@ -70,11 +70,11 @@ A vertical slice — one stage end to end — plus the machinery that checks it.
 |---|---|---|
 | Lint gates | 2 (`SECRET_LEAK_SCAN`, `CLAIM_DISCIPLINE`) | 16 |
 | Pipeline stages | 1 (`compile`) | 11 |
-| Contracts | 5 schemas, each validated against a real produced value | full inventory in `CONTRACTS.md` |
+| Contracts | 6 schemas, each validated against a real produced value | full inventory in `CONTRACTS.md` |
 | Provider adapters | `local-proxy` | + `hosted-server` |
 | Storage adapters | `storage-local` (run bundles) | + `storage-db` |
 | Shells | `cli` | + `pipeline-ui`, `toolkit-ui` |
-| Technique catalog | none | 172 records |
+| Technique catalog | 172 records imported behind a pure registry, 8 citation titles corrected at the import boundary | + XSD validation, ensembling coverage gap |
 | CI | none — `npm run verify` runs locally | full pipeline |
 
 Verified by: `npm run verify` (boundaries → typecheck → source freeze → 111 tests → differential oracle against the frozen linter).

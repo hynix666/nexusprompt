@@ -1,0 +1,93 @@
+{
+  "_comment": [
+    "Corrections applied to the frozen catalog during import.",
+    "",
+    "sources/ is hash-pinned and must never be edited: it is the record of what was",
+    "inherited, defects included. So a defect found in it is fixed HERE, at the import",
+    "boundary, where the change is a reviewable diff with its evidence attached.",
+    "",
+    "Every entry below was produced by `npm run check:citations:online`, which reads",
+    "arXiv's own metadata. arXiv — not the PDF — is the authority for what a preprint",
+    "is called: an earlier audit compared against PDFs and reported a correction that",
+    "was not needed, because a paper can be retitled for camera-ready while its record",
+    "is not. See Documentation/LITERATURE_CORPUS.md.",
+    "",
+    "`from` is matched exactly before `to` is written. If the frozen value ever stops",
+    "matching, the import refuses rather than silently applying a stale correction.",
+    "",
+    "Deliberately NOT corrected, and why:",
+    "  knn-prompting      arXiv renders '$k$NN Prompting'; the catalog stripped the",
+    "                     LaTeX. A rendering difference, not an error.",
+    "  skeleton-of-thought  the catalog cites the paper's original title, which matches",
+    "                     its stated venue of ICLR 2024. arXiv now shows the retitled",
+    "                     version. Stale, but correct for the venue cited."
+  ],
+  "checked_with": "npm run check:citations:online",
+  "checked_on": "2026-08-17",
+  "corrections": [
+    {
+      "technique": "grammar-constrained-decoding-efficiency",
+      "field": "primary_source.title",
+      "from": "Structural Equivalence and Efficiency in Grammar-Constrained LLM Decoding",
+      "to": "Attention Meets Reachability: Structural Equivalence and Efficiency in Grammar-Constrained LLM Decoding",
+      "reason": "leading clause dropped",
+      "evidence": "arXiv 2603.05540v1 metadata"
+    },
+    {
+      "technique": "reliable-constrained-diffusion-decoding",
+      "field": "primary_source.title",
+      "from": "Reliable Constrained Decoding for Diffusion LLMs under Context-Free Grammars",
+      "to": "Lookahead-then-Verify: Reliable Constrained Decoding for Diffusion LLMs under Context-Free Grammars",
+      "reason": "leading clause dropped",
+      "evidence": "arXiv 2602.00612v2 metadata"
+    },
+    {
+      "technique": "modularization-of-thought-code-gen",
+      "field": "primary_source.title",
+      "from": "Modularization-of-Thought for Code Generation",
+      "to": "MoT: Modularization-of-Thought Prompting for Effective Code Generation",
+      "reason": "leading clause dropped and wording altered",
+      "evidence": "arXiv 2503.12483v2 metadata"
+    },
+    {
+      "technique": "adaptive-weighted-rejection-sampling",
+      "field": "primary_source.title",
+      "from": "Fast Controlled Generation with Adaptive Weighted Rejection Sampling",
+      "to": "Fast Controlled Generation from Language Models with Adaptive Weighted Rejection Sampling",
+      "reason": "words dropped",
+      "evidence": "arXiv 2504.05410v2 metadata"
+    },
+    {
+      "technique": "hackaprompt-taxonomy",
+      "field": "primary_source.title",
+      "from": "Ignore This Title and HackAPrompt: Exposing Systemic Vulnerabilities of LLMs Through a Global Prompt Hacking Competition",
+      "to": "Ignore This Title and HackAPrompt: Exposing Systemic Vulnerabilities of LLMs through a Global Scale Prompt Hacking Competition",
+      "reason": "word dropped ('Scale')",
+      "evidence": "arXiv 2311.16119v3 metadata"
+    },
+    {
+      "technique": "prompt-matcher-schema-matching",
+      "field": "primary_source.title",
+      "from": "Prompt-Matcher: Uncertainty-Guided Schema Matching with LLM Prompting",
+      "to": "Prompt-Matcher: Leveraging Large Models to Reduce Uncertainty in Schema Matching Results",
+      "reason": "paraphrase, not the paper's title",
+      "evidence": "arXiv 2408.14507v3 metadata"
+    },
+    {
+      "technique": "prompting-llms-recommender-systems",
+      "field": "primary_source.title",
+      "from": "Prompting Large Language Models for Recommender Systems: A Comprehensive Framework and Empirical Analysis",
+      "to": "Tapping the Potential of Large Language Models as Recommender Systems: A Comprehensive Framework and Empirical Analysis",
+      "reason": "paraphrase, not the paper's title",
+      "evidence": "arXiv 2401.04997v2 metadata"
+    },
+    {
+      "technique": "soda-search-based-inversion",
+      "field": "primary_source.title",
+      "from": "GPT, But Backwards: Search-Based Language Model Inversion",
+      "to": "GPT, But Backwards: Exactly Inverting Language Model Outputs",
+      "reason": "paraphrase, not the paper's title",
+      "evidence": "arXiv 2507.01693v2 metadata"
+    }
+  ]
+}

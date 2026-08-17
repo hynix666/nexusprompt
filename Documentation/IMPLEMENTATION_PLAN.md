@@ -14,15 +14,16 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 {
   "gates": { "ported": 2, "source_total": 16 },
   "stages": { "built": 1, "target": 11 },
-  "contracts": { "schemas": 5 },
+  "contracts": { "schemas": 6 },
   "adapters": ["provider-local-proxy", "storage-local"],
   "shells": ["cli"],
-  "catalog": { "records_imported": 0, "records_available": 172 },
+  "catalog": { "records_imported": 172, "records_available": 172 },
   "sources": { "frozen_files": 420 },
   "ci": { "configured": false },
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
-    "differential", "cli", "check:plan", "check:citations", "check:citations:online"
+    "differential", "cli", "check:plan", "check:citations", "check:citations:online",
+    "import:catalog", "check:catalog"
   ],
   "planned_commands": [
     "verify:gates", "adversarial", "trace:view", "docs:matrix", "verify:hash",
@@ -43,7 +44,7 @@ core/stages █▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
 shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
-catalog     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       0 of 172 records imported
+catalog     ████████████████▒▒▒▒       172 imported + registry; XSD validation and coverage gap open
 release     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       no CI, no matrix generator, no build hash
 ```
 
@@ -103,7 +104,7 @@ Each stage is a `decide`/`reduce` pair with no callback, per ADR-0005. `cost_est
 
 **Exit gate:** an eleven-stage run persists and reloads intact as one bundle; every stage's `decide` returns a `GenerationRequest` and its `reduce` accepts a classified outcome; the purity harness stays green; `npm run verify` passes.
 
-### Phase 4 — Catalog import
+### Phase 4 — Catalog import — *mostly done*
 
 **Entry condition:** none beyond Phase 1. **This phase is independent and can be pulled forward at any point** — nothing depends on it until Phase 6's toolkit surface, and it is the cheapest phase in the plan.
 
@@ -117,9 +118,15 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 - **39** **all 159** arXiv-cited records have been checked against arXiv's own metadata. Every identifier resolves — none is fabricated or dead. 149 titles match exactly; of the 10 that differ, one is cosmetic LaTeX, one is a stale-but-defensible original title, and **eight are wrong** and must be corrected during import. A further three records name `arXiv preprint` as their venue with no identifier, recorded in `scripts/catalog-known-defects.json`. `sources/` is hash-frozen, so every fix belongs in the import step.
 - **Coverage has now been measured** against *The Prompt Report* (arXiv 2406.06608v6). Of 57 techniques recovered from its taxonomy, 34 have a catalog record and **23 do not** — and the gap is concentrated rather than general: **8 of the survey's 10 ensembling techniques are missing** (COSP, DENSE, DiVeRSe, Max Mutual Information, Meta-CoT, MoRE, USP, Prompt Paraphrasing), plus five few-shot exemplar/instruction-selection methods. The catalog is *wider* than the survey elsewhere, so this is a specific hole, not thinness.
 
-**Exit gate:** all 172 records validate against the JSON Schema *and* the XSD; a record missing `primary_source` fails; `check:citations` passes; the count is asserted, not stated.
+**Done.** `npm run import:catalog` reads the frozen source, applies `scripts/catalog-corrections.json`, validates every record against `contracts/technique-record.schema.json`, and writes `core/src/catalog/techniques.json`. `core/src/catalog/registry.ts` exposes it as a pure registry — the data arrives as a module import, which is resolution rather than I/O, so Core keeps its purity. `npm run check:catalog` runs in `verify` and fails if the committed file is not what the source plus corrections currently produce.
 
-**Decide explicitly whether to close the ensembling gap in this phase or record it as scope.** Importing 172 records and shipping a catalog that silently omits most of a category is the kind of quiet incompleteness `CAPABILITY_MATRIX.md` exists to prevent. Either add the eight records or state the omission where a user of the catalog will see it.
+**The eight wrong titles are fixed here, not in `sources/`.** The frozen tree is the record of what was inherited, defects included, and editing it would break the freeze. Each correction states its `from`, `to`, reason, and arXiv evidence, and the import **refuses** if the frozen value no longer matches `from` — a stale correction cannot apply silently. The three adjudicated non-defects are deliberately untouched and pinned by test.
+
+**Still open in this phase:**
+
+- **XSD validation.** Records validate against the JSON Schema only. The frozen `prompt_technique_catalog_1.3.0.xsd` is unused; validating against it needs an XML toolchain decision.
+- **The ensembling coverage gap.** Eight of the survey's ten ensembling techniques have no record. Decide explicitly: add them, or state the omission where a catalog user will see it. Importing 172 records that silently omit most of a category is the quiet incompleteness `CAPABILITY_MATRIX.md` exists to prevent.
+- **Three records naming `arXiv preprint` with no identifier**, excused in `scripts/catalog-known-defects.json`. Unlike the titles these cannot be corrected from evidence — the identifier is simply absent and no index resolved it.
 
 ### Phase 5 — Second adapters
 
@@ -170,7 +177,7 @@ Four documents cite "Phase 5" meaning the capability-matrix generator, from a nu
 | R7 | Stage templates are taken from the stale nine-stage copy on disk | Medium — the stale copy is the one in the repo | High — two stages silently missing | Phase 3 begins by extracting and freezing the eleven-stage component | Open, flagged |
 | R8 | No git remote; work exists only on this machine | Certain today | Severe — total loss on disk failure | None currently | **Open. Highest unaddressed operational risk in the project.** |
 | R9 | A guard's *scope* is quietly narrower than its name, so it passes without checking what everyone assumes it checks | High — happened three times | High — false confidence is worse than a known gap | Probe coverage, not just correctness: plant a defect in each place the guard is believed to cover and confirm it fires there | Open as a practice. Instances so far: the purity harness never blocked the filesystem; `typecheck` covered a third of the code; the cross-shell rule missed relative imports. All three passed continuously while incomplete |
-| R10 | Catalog records are wrong in ways no internal check can see — a citation whose fields agree with each other but not with the source | Measured: **8 wrong titles in 159**, a 5% error rate | Medium — the catalog's authority rests on its citations | An external oracle. `check:citations` proves internal consistency and is structurally blind to this, exactly as parity is blind to a shared defect ([ADR-0007](./0007-permanent-differential-oracle.md)) | **Measured for arXiv, closed pending the Phase 4 fix.** 12 non-arXiv citations remain unverified; no index resolved them |
+| R10 | Catalog records are wrong in ways no internal check can see — a citation whose fields agree with each other but not with the source | Measured: **8 wrong titles in 159**, a 5% error rate | Medium — the catalog's authority rests on its citations | An external oracle. `check:citations` proves internal consistency and is structurally blind to this, exactly as parity is blind to a shared defect ([ADR-0007](./0007-permanent-differential-oracle.md)) | **Closed for arXiv.** All eight corrected at import with evidence; `check:catalog` keeps the emitted data honest. 12 non-arXiv citations remain unverified — no index resolved them |
 
 ---
 
