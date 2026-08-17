@@ -19,6 +19,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const CATALOG = "sources/catalog/data/prompt_technique_catalog.json";
+const DEFECTS = "scripts/catalog-known-defects.json";
 const ARXIV = /^\d{4}\.\d{4,5}$/;
 
 /**
@@ -52,7 +53,15 @@ export function checkCitations(root = process.cwd(), now = new Date()) {
     for (const field of ["authors", "year", "title"]) {
       if (!s[field]) flag("missing-field", r.id, `primary_source.${field} is empty`);
     }
-    if (!s.arxiv_id) continue; // a book, a venue-only paper, or a practitioner guide
+    if (!s.arxiv_id) {
+      // A record that names arXiv as its venue and then supplies no identifier is
+      // contradicting itself. Found while checking the non-arXiv citations against
+      // Crossref: three records do exactly this, and no earlier check looked.
+      if (/arxiv/i.test(String(s.venue ?? ""))) {
+        flag("arxiv-venue-without-id", r.id, `venue is "${s.venue}" but there is no arxiv_id`);
+      }
+      continue; // a book, a venue-only paper, or a practitioner guide
+    }
 
     withArxiv++;
     const id = String(s.arxiv_id).trim();
@@ -78,11 +87,48 @@ export function checkCitations(root = process.cwd(), now = new Date()) {
     if (!prior) seenArxiv.set(id, { technique: r.id, title: s.title });
   }
 
+  /**
+   * Defects in the frozen data that cannot be fixed in place are excused by
+   * `catalog-known-defects.json` — but only on terms that stop the file becoming a
+   * dumping ground: an entry with no reason fails, and an entry that no longer
+   * matches a live problem fails as stale.
+   */
+  let known = [];
+  try {
+    known = JSON.parse(readFileSync(join(root, DEFECTS), "utf8")).defects ?? [];
+  } catch {
+    known = [];
+  }
+
+  const key = (kind, technique) => `${kind}::${technique}`;
+  const excused = new Map(known.map((d) => [key(d.kind, d.technique), d]));
+  const matchedKeys = new Set();
+
+  const live = [];
+  for (const p of problems) {
+    const k = key(p.kind, p.technique);
+    if (excused.has(k)) { matchedKeys.add(k); continue; }
+    live.push(p);
+  }
+
+  for (const d of known) {
+    const k = key(d.kind, d.technique);
+    if (!d.reason || !String(d.reason).trim()) {
+      live.push({ kind: "allowlist-entry-without-reason", technique: d.technique,
+        detail: `${DEFECTS} excuses ${d.kind} with no stated reason` });
+    }
+    if (!matchedKeys.has(k)) {
+      live.push({ kind: "stale-allowlist-entry", technique: d.technique,
+        detail: `${DEFECTS} excuses ${d.kind}, but that problem no longer occurs — delete the entry` });
+    }
+  }
+
   return {
-    ok: problems.length === 0,
+    ok: live.length === 0,
     fatalCode: null,
     fatal: null,
-    problems,
+    problems: live,
+    excused: matchedKeys.size,
     records: techniques.length,
     withArxiv,
     distinctArxiv: seenArxiv.size,
@@ -101,6 +147,9 @@ function main() {
     console.log(`check:citations — OK. ${r.records} technique records, every citation internally consistent.`);
     console.log(`  ${r.withArxiv} cite an arXiv preprint (${r.distinctArxiv} distinct ids, none reused for a different paper);`);
     console.log(`  ${r.records - r.withArxiv} cite a venue, report, or practitioner guide instead.`);
+    if (r.excused) {
+      console.log(`  ${r.excused} known defect(s) excused by ${DEFECTS}, each with a reason and a fix point.`);
+    }
     return 0;
   }
 

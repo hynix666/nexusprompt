@@ -66,47 +66,70 @@ The load-bearing check is that an arXiv id encodes `YYMM`, so a record whose `ye
 
 This does **not** mean the citations are correct — an internally consistent citation can still point at the wrong paper, and confirming that needs the papers themselves. It means no record contradicts itself.
 
-## Verified: 39 catalog citations checked against the actual papers — two are wrong
+## Verified: all 159 arXiv citations, against arXiv itself
 
-The second corpus overlaps the catalog heavily. Matching on exact arXiv id, **39 of the 159 arXiv-cited records are held**, and each claimed title was compared against the text on the paper's own first page.
+Every arXiv-cited record was checked against arXiv's own metadata via `export.arxiv.org/api/query`, batched forty at a time with the requested three-second pause.
 
 | Outcome | Count |
 |---|---|
-| Title on the paper matches the catalog | **37** |
-| Title does **not** match | **2** |
-| Paper not held by either corpus | 120 |
+| Identifier resolves on arXiv | **159 of 159** |
+| Title matches arXiv exactly | **149** |
+| Title differs | 10 |
+| `year` earlier than the arXiv submission | 0 |
 
-### The two defects
+**Every identifier in the catalog is real.** Not one of the 159 is fabricated, mistyped into a different paper, or dead.
 
-**`chain-of-symbol` — wrong title, and demonstrably hand-typed.**
+### A correction to the previous entry in this ledger
 
-```
-catalog : Chain-of-Symbol Prompting Elicits Planning in Large Langauge Models
-paper   : Chain-of-Symbol Prompting for Spatial Reasoning in Large Language Models
-          arXiv:2305.10276v7, published at COLM 2024
-```
-
-Two things are wrong. The subtitle is from an obsolete version — v1 was *"…Elicits Planning…"* and the paper was retitled — so the record cites a title that no longer exists. And `Langauge` is misspelled, which no copy-paste from the source could produce.
-
-**`prompt-matcher-schema-matching` — a title the paper never had.**
+An earlier pass compared citations against the **PDFs** and reported `chain-of-symbol` as a defect, reasoning that its misspelled `Langauge` "no copy-paste from the source could produce". That was wrong, and the reasoning was backwards.
 
 ```
-catalog : Prompt-Matcher: Uncertainty-Guided Schema Matching with LLM Prompting
-paper   : Prompt-Matcher: Leveraging Large Models to Reduce Uncertainty in Schema Matching Results
-          arXiv:2408.14507v3
+catalog       : Chain-of-Symbol Prompting Elicits Planning in Large Langauge Models
+arXiv metadata: Chain-of-Symbol Prompting Elicits Planning in Large Langauge Models   ← identical
+PDF of v7     : Chain-of-Symbol Prompting for Spatial Reasoning in Large Language Models
 ```
 
-Same identifier, same subject, a title that is a plausible paraphrase rather than the paper's own.
+arXiv's record still carries the original title, typo included; the authors retitled the camera-ready PDF for COLM 2024 without updating the metadata. **The catalog copied arXiv faithfully — the typo is evidence of copy-paste, not of hand-typing.** The record is correct against the authority for what a preprint is called.
 
-### Why `check:citations` could not have caught either
+The lesson is about instrument choice, not about the catalog: a PDF is not the authority for its own citation, because a paper can be retitled while its record is not.
 
-Both records pass every internal check, and correctly so: their `year`, `arxiv_id`, `url`, and `title` are mutually consistent. Nothing about a record can reveal that its title does not match the paper, because the paper is not in the record.
+### The eight genuine title errors
 
-This is the same structure as [ADR-0007](./0007-permanent-differential-oracle.md)'s argument for the differential oracle. Internal consistency is a check that two things agree with each other; it is structurally blind to both being wrong together. Catching that needs an external oracle — there, an independently written linter; here, the papers themselves.
+Of the ten differences, one is cosmetic and one is stale-but-defensible:
 
-**The measured citation accuracy is 37 of 39, on the quarter of the arXiv-cited catalog that can currently be checked.** The other 120 are unexamined, and at this rate roughly six more defects should be expected among them. That is an estimate, not a finding.
+- `knn-prompting` — arXiv renders `$k$NN Prompting`; the catalog stripped the LaTeX. Not a defect.
+- `skeleton-of-thought` — the catalog's *"Large Language Models Can Do Parallel Decoding"* is the original title, matching its stated venue of ICLR 2024; arXiv now shows *"Prompting LLMs for Efficient Parallel Generation"*. Stale, not wrong.
 
-Five further records were flagged by the automated pass and cleared on inspection — `instance-adaptive-zero-shot-cot`, `pair-black-box-jailbreak`, `reverse-prompt-engineering-genetic-inversion`, `gcg-adversarial-suffix-attack`, and `smoothllm-randomized-smoothing-defense`. All five are correct; the flags came from titles wrapping across lines in the extracted text, and from `SMOOTHLLM` being typeset in small caps.
+The remaining eight are real:
+
+| Technique | Catalog says | arXiv says |
+|---|---|---|
+| `prompt-matcher-schema-matching` | Prompt-Matcher: **Uncertainty-Guided Schema Matching with LLM Prompting** | Prompt-Matcher: **Leveraging Large Models to Reduce Uncertainty in Schema Matching Results** |
+| `prompting-llms-recommender-systems` | **Prompting Large Language Models for** Recommender Systems… | **Tapping the Potential of Large Language Models as** Recommender Systems… |
+| `soda-search-based-inversion` | GPT, But Backwards: **Search-Based Language Model Inversion** | GPT, But Backwards: **Exactly Inverting Language Model Outputs** |
+| `modularization-of-thought-code-gen` | Modularization-of-Thought for Code Generation | **MoT:** Modularization-of-Thought **Prompting for Effective** Code Generation |
+| `grammar-constrained-decoding-efficiency` | Structural Equivalence and Efficiency… | **Attention Meets Reachability:** Structural Equivalence and Efficiency… |
+| `reliable-constrained-diffusion-decoding` | Reliable Constrained Decoding for Diffusion LLMs… | **Lookahead-then-Verify:** Reliable Constrained Decoding… |
+| `adaptive-weighted-rejection-sampling` | Fast Controlled Generation **with** Adaptive… | Fast Controlled Generation **from Language Models with** Adaptive… |
+| `hackaprompt-taxonomy` | …Through a Global **Prompt Hacking Competition** | …through a Global **Scale** Prompt Hacking Competition |
+
+Three dropped a leading clause, three dropped or altered words, and two are paraphrases. **Measured accuracy: 151 of 159 defensible, 8 wrong — a 5% error rate**, now a count rather than an extrapolation.
+
+### Why no offline check could have found these
+
+Every one of the eight passes `check:citations`, correctly: `year`, `arxiv_id`, `url`, and `title` are mutually consistent. Nothing inside a record can reveal that its title does not match the paper, because the paper is not in the record.
+
+This is [ADR-0007](./0007-permanent-differential-oracle.md)'s argument in a second setting. Internal consistency checks that two things agree with each other and is structurally blind to both being wrong together; catching that needs an external oracle. There it was an independently written linter. Here it is arXiv.
+
+### The 13 non-arXiv citations
+
+Semantic Scholar rate-limited every request (HTTP 429, unkeyed endpoint). Crossref resolved exactly one:
+
+- `prompt-chaining` → *PromptChainer*, CHI 2022 Extended Abstracts, **doi:10.1145/3491101.3519729** ✓
+
+The other twelve did not resolve, and most legitimately cannot: two are practitioner guides, one a *Towards Data Science* post, one an OpenAI technical report. **They remain unverified — not disproven.**
+
+That pass did surface something offline-checkable: **three records name `arXiv preprint` as their venue while supplying no `arxiv_id`**, which is a record contradicting itself. `check:citations` now catches that class, and because `sources/` is hash-frozen and the data cannot be corrected in place, the three are recorded in `scripts/catalog-known-defects.json` — an allowlist on the same terms as ADR-0007's: an entry without a reason fails, and an entry whose defect no longer occurs fails as stale, so the excuse cannot outlive the problem.
 
 ## Verified: catalog coverage against The Prompt Report
 
@@ -165,6 +188,7 @@ The following connections are **filing decisions, not findings**. Only page-1 he
 - **Not that any technique works.** No paper's results were read.
 - **Not that the catalog is complete.** The coverage check above uses one survey. It found 23 named absences, but a technique absent from *The Prompt Report* and absent from the catalog is invisible to both.
 - **Not that the coverage table is mechanically re-checkable.** It compares against a PDF that is not in this repository, so no script in `npm run verify` can re-derive it. It is a point-in-time finding with its method recorded, which is the most this repository's conventions can offer for a claim about an external document.
-- **Not that the 120 unchecked citations are real.** 39 were checked and two were wrong. The rest need either the papers or a network lookup, and this project does no network verification.
-- **Not that the 37 confirmed titles are the right *papers* for their techniques.** A citation can name the correct paper and still be the wrong source for the claim a record makes. Reading 172 papers against 172 descriptions is a different exercise and has not been done.
+- **Not that the 151 defensible citations are the right *papers* for their techniques.** A citation can name the correct paper and still be the wrong source for the claim the record makes. Reading 172 papers against 172 descriptions is a different exercise and has not been done.
+- **Nothing about the 12 unresolved non-arXiv citations.** Unverified is not disproven.
+- **Not a standing guarantee.** The arXiv check ran once, over the network. `npm run verify` stays offline by design, so nothing re-runs it; if arXiv metadata changes, this page silently ages. The script is kept so it can be re-run deliberately.
 - **Nothing about the three image-only PDFs.** They have no extractable text; their identity rests on their filenames alone, which the "On Meta-Prompting" false positive above should discourage anyone from trusting.

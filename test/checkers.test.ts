@@ -353,11 +353,18 @@ const goodRecord = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-function makeCatalogRepo(techniques: unknown[]): string {
+function makeCatalogRepo(techniques: unknown[], defects?: unknown[]): string {
   const root = mkroot("pnx-cite-");
   write(root, "sources/catalog/data/prompt_technique_catalog.json", JSON.stringify({ techniques }));
+  if (defects) write(root, "scripts/catalog-known-defects.json", JSON.stringify({ defects }));
   return root;
 }
+
+/** A record that contradicts itself: names arXiv as the venue, supplies no id. */
+const arxivVenueNoId = {
+  id: "orphan-preprint",
+  primary_source: { authors: "A", year: 2025, title: "T", venue: "arXiv preprint" },
+};
 
 const PINNED_NOW = new Date("2026-08-17T00:00:00Z");
 
@@ -430,5 +437,65 @@ describe("check-citations", () => {
 
   it("refuses when the catalog is absent", () => {
     expect(checkCitations(mkroot("pnx-nocat-"), PINNED_NOW).fatalCode).toBe(2);
+  });
+
+  it("rejects a venue naming arXiv with no identifier supplied", () => {
+    const r = checkCitations(makeCatalogRepo([arxivVenueNoId]), PINNED_NOW);
+    expect(r.ok).toBe(false);
+    expect(r.problems.map((p: { kind: string }) => p.kind)).toContain("arxiv-venue-without-id");
+  });
+});
+
+/* ── the known-defects allowlist ──────────────────────────────────────────── */
+
+describe("check-citations known-defects allowlist", () => {
+  /**
+   * `sources/` is hash-frozen, so a defect in the catalog data cannot be fixed in
+   * place. The allowlist excuses it — on terms that stop it becoming a place problems
+   * go to be forgotten. These are the terms.
+   */
+  const entry = (over: Record<string, unknown> = {}) => ({
+    technique: "orphan-preprint",
+    kind: "arxiv-venue-without-id",
+    reason: "frozen data; corrected at import",
+    fix_at: "phase-4-import",
+    ...over,
+  });
+
+  it("excuses a recorded defect instead of failing forever", () => {
+    const r = checkCitations(makeCatalogRepo([arxivVenueNoId], [entry()]), PINNED_NOW);
+    expect(r.ok).toBe(true);
+    expect(r.excused).toBe(1);
+  });
+
+  it("still fails on a defect that is NOT recorded", () => {
+    const other = { ...arxivVenueNoId, id: "another-orphan" };
+    const r = checkCitations(makeCatalogRepo([arxivVenueNoId, other], [entry()]), PINNED_NOW);
+    expect(r.ok).toBe(false);
+    expect(r.problems.map((p: { technique: string }) => p.technique)).toContain("another-orphan");
+  });
+
+  it("rejects an entry that states no reason", () => {
+    const r = checkCitations(makeCatalogRepo([arxivVenueNoId], [entry({ reason: "" })]), PINNED_NOW);
+    expect(r.ok).toBe(false);
+    expect(r.problems.map((p: { kind: string }) => p.kind)).toContain("allowlist-entry-without-reason");
+  });
+
+  it("rejects an entry whose defect no longer occurs", () => {
+    // The rule that keeps the allowlist honest: once the data is fixed, the excuse
+    // must go too, or the next real defect of that kind is silently excused.
+    const r = checkCitations(makeCatalogRepo([goodRecord()], [entry()]), PINNED_NOW);
+    expect(r.ok).toBe(false);
+    expect(r.problems.map((p: { kind: string }) => p.kind)).toContain("stale-allowlist-entry");
+  });
+
+  it("the real allowlist has a reason and a fix point on every entry", () => {
+    const real = JSON.parse(readFileSync("scripts/catalog-known-defects.json", "utf8"));
+    expect(real.defects.length).toBeGreaterThan(0);
+    for (const d of real.defects) {
+      expect(d.reason?.length ?? 0).toBeGreaterThan(20);
+      expect(d.fix_at).toBeTruthy();
+      expect(d.found).toBeTruthy();
+    }
   });
 });

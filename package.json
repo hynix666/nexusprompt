@@ -14,6 +14,7 @@
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "check:plan": "node scripts/check-plan.mjs",
     "check:citations": "node scripts/check-citations.mjs",
+    "check:citations:online": "node scripts/check-citations-online.mjs",
     "verify:sources": "node scripts/verify-sources.mjs",
     "test": "vitest run",
     "test:core": "vitest run --project core",

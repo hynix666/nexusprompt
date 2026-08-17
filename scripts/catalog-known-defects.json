@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "Defects in the FROZEN catalog data that cannot be fixed in place.",
+    "",
+    "sources/ is hash-pinned by MANIFEST.json; editing a record there would break",
+    "verify:sources and destroy the property that makes the freeze worth having. So a",
+    "known defect is recorded here instead, and check:citations treats it as expected",
+    "rather than failing the build forever. A guard that is permanently red gets",
+    "ignored, which is worse than no guard.",
+    "",
+    "Two rules keep this from becoming a place where problems go to be forgotten:",
+    "an entry without a reason fails, and an entry that no longer matches a real",
+    "problem fails as stale. The allowlist cannot outlive the defect it excuses.",
+    "",
+    "Every entry must be fixed during the Phase 4 catalog import, where records are",
+    "read out of sources/ and into the project's own contract."
+  ],
+  "defects": [
+    {
+      "technique": "comparative-prompting-code-gen",
+      "kind": "arxiv-venue-without-id",
+      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied; Crossref finds a paper of this title, so the id is missing rather than the venue being wrong",
+      "found": "2026-08-17",
+      "fix_at": "phase-4-import"
+    },
+    {
+      "technique": "recube-repo-context",
+      "kind": "arxiv-venue-without-id",
+      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied; not resolvable by Crossref under this title either",
+      "found": "2026-08-17",
+      "fix_at": "phase-4-import"
+    },
+    {
+      "technique": "comprehend-then-predict-recommendation",
+      "kind": "arxiv-venue-without-id",
+      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied; Crossref's closest hit expands 'LLMs' to 'Large Language Models', suggesting the record abbreviated a real title",
+      "found": "2026-08-17",
+      "fix_at": "phase-4-import"
+    }
+  ]
+}
