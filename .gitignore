@@ -2,3 +2,10 @@ node_modules/
 dist/
 *.zip
 .promptnexus/
+
+# Literature corpora. Third-party published papers, read against the project but
+# never ported from — their canonical home is arXiv, and PDF/ alone is 906 MB
+# against a 6 MB tracked repository. Documentation/LITERATURE_CORPUS.md records
+# what was checked and the SHA-256 of each file checked, which is what makes a
+# finding re-verifiable; the bytes themselves are not evidence of anything.
+PDF/
