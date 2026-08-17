@@ -23,9 +23,21 @@ const LINTER = "sources/v5/prompt_lint.py";
 
 /* ── read the declared status ─────────────────────────────────────────────── */
 
+/**
+ * Normalise line endings before any regex touches the text.
+ *
+ * This is not defensive garnish. The first version anchored on `plan-status\n` and
+ * passed on the branch it was written on, then exited 2 the moment `git checkout`
+ * re-materialised the file with CRLF — the working tree is Windows and only
+ * `sources/**` is pinned to LF by `.gitattributes`. A checker that depends on which
+ * branch you last switched from is worse than no checker, because it fails loudly
+ * for the wrong reason and trains you to ignore it.
+ */
+const readText = (path) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
+
 let plan;
 try {
-  plan = readFileSync(PLAN, "utf8");
+  plan = readText(PLAN);
 } catch {
   console.error(`check:plan: cannot read ${PLAN}. The plan is the thing being checked.`);
   process.exit(2);
@@ -70,7 +82,7 @@ claim("gates.ported", declared.gates.ported, ported.ported.length,
   "update the plan, or scripts/ported-gates.json if a gate was added");
 
 const sourceGateIds = new Set(
-  [...readFileSync(LINTER, "utf8").matchAll(/"gate":\s*"([A-Z_]+)"/g)].map((m) => m[1]),
+  [...readText(LINTER).matchAll(/"gate":\s*"([A-Z_]+)"/g)].map((m) => m[1]),
 );
 claim("gates.source_total", declared.gates.source_total, sourceGateIds.size,
   `derived from distinct gate ids emitted by ${LINTER}`);
@@ -83,7 +95,7 @@ claim("stages.built", declared.stages.built, stageFiles,
   "count of core/src/stages/*.ts");
 
 // Stage target: the STAGE_IDS tuple in the contract is the authority.
-const stageIds = readFileSync("contracts/index.ts", "utf8")
+const stageIds = readText("contracts/index.ts")
   .match(/export const STAGE_IDS = \[([\s\S]*?)\] as const;/)?.[1]
   .match(/"[a-z_]+"/g) ?? [];
 claim("stages.target", declared.stages.target, stageIds.length,
