@@ -17,7 +17,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "contracts": { "schemas": 6 },
   "adapters": ["provider-local-proxy", "storage-local"],
   "shells": ["cli"],
-  "catalog": { "records_imported": 172, "records_available": 172 },
+  "catalog": { "records_imported": 180, "records_available": 172, "records_added": 8 },
   "sources": { "frozen_files": 420 },
   "ci": { "configured": false },
   "commands": [
@@ -44,7 +44,7 @@ core/stages █▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
 shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
-catalog     ████████████████▒▒▒▒       172 imported + registry; XSD validation and coverage gap open
+catalog     ██████████████████▒▒       180 records + registry; XSD validation open, 15 scattered gaps
 release     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       no CI, no matrix generator, no build hash
 ```
 
@@ -125,7 +125,7 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 **Still open in this phase:**
 
 - **XSD validation.** Records validate against the JSON Schema only. The frozen `prompt_technique_catalog_1.3.0.xsd` is unused; validating against it needs an XML toolchain decision.
-- **The ensembling coverage gap.** Eight of the survey's ten ensembling techniques have no record. Decide explicitly: add them, or state the omission where a catalog user will see it. Importing 172 records that silently omit most of a category is the quiet incompleteness `CAPABILITY_MATRIX.md` exists to prevent.
+- ~~**The ensembling coverage gap.**~~ **Closed.** All eight missing techniques now have records, added at the import boundary through `scripts/catalog-additions.json` — 172 frozen records plus 8, giving 180. Every citation was resolved against arXiv's own metadata, and the additions are held to the same contract as the frozen records, with no id allowed to collide with one. Coverage against The Prompt Report's taxonomy went from 34 of 57 to 42 of 57; ensembling is 10 of 10. Fifteen scattered absences remain, but no category is now missing most of itself.
 - **Three records naming `arXiv preprint` with no identifier**, excused in `scripts/catalog-known-defects.json`. Unlike the titles these cannot be corrected from evidence — the identifier is simply absent and no index resolved it.
 
 ### Phase 5 — Second adapters

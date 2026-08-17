@@ -249,9 +249,9 @@ describe("technique-record", () => {
   // `never` in the failure branch. Nothing here wants the narrowing — only the boolean.
   const validateTechnique = validators["technique-record"] as unknown as (d: unknown) => boolean;
 
-  it("validates all 172 imported records, not a sample", () => {
+  it("validates every imported record, not a sample", () => {
     const records = listTechniques();
-    expect(records.length).toBe(172);
+    expect(records.length).toBe(180); // 172 frozen + 8 added at import
     const failed = records.filter((r) => !validateTechnique(r)).map((r) => r.id);
     if (failed.length) console.error(validators["technique-record"].errors);
     expect(failed).toEqual([]);

@@ -54,6 +54,7 @@ interface Truth {
   adapters: string[];
   shells: string[];
   catalog: number;
+  catalogAdded: number;
   frozen: number;
   ci: boolean;
   commands: string[];
@@ -70,6 +71,7 @@ const DEFAULT: Truth = {
   adapters: ["provider-x"],
   shells: ["cli"],
   catalog: 5,
+  catalogAdded: 2,
   frozen: 2,
   ci: false,
   commands: ["verify", "check:plan"],
@@ -98,6 +100,9 @@ function makePlanRepo(overrides: Partial<Truth> = {}): { root: string; truth: Tr
   write(root, "sources/catalog/data/prompt_technique_catalog.json", JSON.stringify({
     techniques: Array.from({ length: t.catalog }, (_, i) => ({ id: `T${i}` })),
   }));
+  write(root, "scripts/catalog-additions.json", JSON.stringify({
+    records: Array.from({ length: t.catalogAdded }, (_, i) => ({ id: `A${i}` })),
+  }));
 
   write(root, "contracts/index.ts",
     `export const STAGE_IDS = [\n${t.stageTarget.map((s) => `  "${s}",`).join("\n")}\n] as const;\n`);
@@ -113,7 +118,7 @@ function makePlanRepo(overrides: Partial<Truth> = {}): { root: string; truth: Tr
     contracts: { schemas: t.schemas.length },
     adapters: [...t.adapters],
     shells: [...t.shells],
-    catalog: { records_imported: 0, records_available: t.catalog },
+    catalog: { records_imported: 0, records_available: t.catalog, records_added: t.catalogAdded },
     sources: { frozen_files: t.frozen },
     ci: { configured: t.ci },
     commands: [...t.commands],
@@ -186,6 +191,7 @@ describe("check-plan", () => {
     ["a shell that does not exist", (s) => { s.shells.push("pipeline-ui"); }],
     ["wrong catalog size", (s) => { s.catalog.records_available = 999; }],
     ["catalog claimed as imported", (s) => { s.catalog.records_imported = 5; }],
+    ["wrong count of records added at import", (s) => { s.catalog.records_added = 99; }],
     ["wrong frozen file count", (s) => { s.sources.frozen_files = 41; }],
     ["CI claimed as configured", (s) => { s.ci.configured = true; }],
     ["a command that is not built", (s) => { s.commands.push("verify:gates"); }],

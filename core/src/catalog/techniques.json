@@ -5,6 +5,8 @@
     "source_sha256": "005e2e6401ed4c8dd7915ab6da9023e9169e3386481ee952fd1449d94b027b96",
     "corrections": "scripts/catalog-corrections.json",
     "corrections_applied": 8,
+    "additions": "scripts/catalog-additions.json",
+    "records_added": 8,
     "contract": "contracts/technique-record.schema.json"
   },
   "techniques": [
@@ -13807,6 +13809,656 @@
       "schema_version": "1.3.0",
       "source_audit": {
         "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "demonstration-ensembling",
+      "name": "Demonstration Ensembling (DENSE)",
+      "category": "example-selection-formatting",
+      "subcategory": "prompt-ensembling",
+      "executive_summary": "Instead of concatenating all exemplars into one long few-shot prompt, build several prompts each holding a distinct subset of exemplars, then aggregate their outputs.",
+      "description": "Standard in-context learning concatenates every demonstration into a single prompt followed by the test input. That wastes context on long demonstration sets and makes the result sensitive to how the examples happen to be ordered. DENSE instead partitions the demonstrations across several smaller prompts, queries the model once per subset, and aggregates the resulting predictions into a final answer. Because no single ordering or subset determines the outcome, the ensemble is less exposed to the exemplar-order sensitivity that single-prompt ICL suffers from.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "You have more demonstrations than comfortably fit in one prompt, or more than the model attends to reliably.",
+        "Few-shot accuracy is visibly sensitive to which exemplars you include or the order you put them in."
+      ],
+      "when_not_to_use": [
+        "A handful of exemplars that fit comfortably in a single prompt — the extra calls buy nothing.",
+        "Latency-critical paths, since cost scales with the number of subsets."
+      ],
+      "known_pitfalls": [
+        "Aggregation needs outputs that can actually be combined; free-form generations do not vote cleanly.",
+        "Partitioning strategy is a real hyperparameter — arbitrary subsets can be worse than a well-chosen single prompt."
+      ],
+      "related_techniques": [
+        "few-shot-prompting",
+        "self-consistency",
+        "fantastically-ordered-prompts"
+      ],
+      "primary_source": {
+        "authors": "Khalifa, Logeswaran, Lee, Lee, Wang",
+        "year": 2023,
+        "title": "Exploring Demonstration Ensembling for In-context Learning",
+        "venue": "ME-FoMo Workshop, ICLR 2023",
+        "arxiv_id": "2308.08780",
+        "url": "https://arxiv.org/abs/2308.08780"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Subset-and-aggregate",
+          "template": "# For each of {{num_subsets}} disjoint exemplar subsets S_i:\n{{exemplar_subset}}\n\nInput: {{test_input}}\nOutput:\n\n# Then aggregate the {{num_subsets}} outputs into a final answer.",
+          "variables": [
+            {
+              "name": "num_subsets",
+              "description": "How many demonstration subsets to build",
+              "example": "4"
+            },
+            {
+              "name": "exemplar_subset",
+              "description": "The demonstrations assigned to this subset",
+              "example": null
+            },
+            {
+              "name": "test_input",
+              "description": "The query being answered",
+              "example": null
+            }
+          ],
+          "template_id": "demonstration-ensembling--subset-and-aggregate",
+          "determinism": "deterministic-given-partition",
+          "reproducibility_note": "Deterministic at temperature 0 once the partition is fixed; the partition itself must be recorded to reproduce a run."
+        }
+      ],
+      "tags": [
+        "ensembling",
+        "in-context-learning",
+        "multi-call",
+        "exemplars"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "DENSE"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "abstract-verified",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "mixture-of-reasoning-experts",
+      "name": "Mixture of Reasoning Experts (MoRE)",
+      "category": "reasoning-elicitation",
+      "subcategory": "prompt-ensembling",
+      "executive_summary": "Build several specialised 'experts' out of one model by prompting it differently per reasoning type, then pick the best answer by agreement score.",
+      "description": "A single model prompted one way generalises poorly across question types that need different reasoning. MoRE constructs a set of experts from the same underlying model by varying the prompt per reasoning type — retrieval-augmented prompts for factual questions, chain-of-thought for multi-hop and mathematical ones, generated-knowledge prompting for commonsense — and then selects among their answers using an agreement score rather than a plain majority vote. The selector doubles as a calibration signal: disagreement across experts is itself informative about when to abstain.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "A workload mixing question types that reward different reasoning styles.",
+        "You want an abstention or confidence signal derived from cross-expert disagreement."
+      ],
+      "when_not_to_use": [
+        "A homogeneous task where one prompting style is known to dominate — the extra experts add cost and no coverage."
+      ],
+      "known_pitfalls": [
+        "The expert set has to actually be diverse; near-identical prompts agree with each other without adding information.",
+        "The agreement scorer becomes a component with its own failure modes, not a neutral tally."
+      ],
+      "related_techniques": [
+        "self-consistency",
+        "chain-of-thought",
+        "retrieval-augmented-generation"
+      ],
+      "primary_source": {
+        "authors": "Si, Shi, Zhao, Zettlemoyer, Boyd-Graber",
+        "year": 2023,
+        "title": "Getting MoRE out of Mixture of Language Model Reasoning Experts",
+        "venue": "Findings of EMNLP 2023",
+        "arxiv_id": "2305.14628",
+        "url": "https://arxiv.org/abs/2305.14628"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Specialised experts with agreement selection",
+          "template": "# Query the model once per expert prompt:\n{{expert_prompts}}\n\nQuestion: {{question}}\n\n# Then score agreement across expert answers and return the highest-scoring one.\n# If agreement falls below {{abstain_threshold}}, abstain rather than answer.",
+          "variables": [
+            {
+              "name": "expert_prompts",
+              "description": "One prompt per reasoning type (factual, multi-hop, commonsense, …)",
+              "example": null
+            },
+            {
+              "name": "question",
+              "description": "The question to answer",
+              "example": null
+            },
+            {
+              "name": "abstain_threshold",
+              "description": "Agreement score below which the system declines to answer",
+              "example": "0.5"
+            }
+          ],
+          "template_id": "mixture-of-reasoning-experts--agreement-selection",
+          "determinism": "deterministic-given-expert-set",
+          "reproducibility_note": "Deterministic at temperature 0 for a fixed expert set; changing the expert prompts changes the answer distribution."
+        }
+      ],
+      "tags": [
+        "ensembling",
+        "reasoning",
+        "multi-call",
+        "calibration"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "MoRE"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "abstract-verified",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "diverse-step-aware-verifier",
+      "name": "DiVeRSe",
+      "category": "reasoning-elicitation",
+      "subcategory": "multi-path-reasoning",
+      "executive_summary": "Generate several different prompts for one problem, sample multiple reasoning paths from each, then score paths step by step rather than voting only on the final answer.",
+      "description": "Self-Consistency treats a reasoning chain as a black box and votes on its endpoint, so a chain that reaches the right answer through faulty steps counts the same as a sound one. DiVeRSe widens the sampling — multiple diverse prompts, each producing multiple reasoning paths — and then replaces the majority vote with a verifier that scores paths using their individual steps. Aggregating step-aware scores rather than final-answer counts lets partially-correct reasoning be discounted instead of silently rewarded.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "Arithmetic and multi-step reasoning where a wrong path can coincidentally reach a plausible answer.",
+        "You can afford both diverse prompts and multiple samples per prompt."
+      ],
+      "when_not_to_use": [
+        "Single-step tasks with no intermediate reasoning for a verifier to score.",
+        "Budgets that will not stretch past plain Self-Consistency, which is the cheaper baseline to beat."
+      ],
+      "known_pitfalls": [
+        "Requires a step-level verifier; without one this degenerates to more expensive Self-Consistency.",
+        "Cost is multiplicative — prompts times samples — and grows faster than it first appears."
+      ],
+      "related_techniques": [
+        "self-consistency",
+        "chain-of-thought",
+        "backward-self-verification"
+      ],
+      "primary_source": {
+        "authors": "Li, Lin, Zhang, Fu, Chen, Lou, Chen",
+        "year": 2022,
+        "title": "Making Large Language Models Better Reasoners with Step-Aware Verifier",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2206.02336",
+        "url": "https://arxiv.org/abs/2206.02336"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Diverse prompts, step-scored paths",
+          "template": "# For each of {{num_prompts}} diverse prompts, sample {{paths_per_prompt}} reasoning paths at temperature {{temperature}}:\n{{prompt_variant}}\n\nProblem: {{problem}}\n\n# Then score each path step by step with the verifier and return the best-scoring answer.",
+          "variables": [
+            {
+              "name": "num_prompts",
+              "description": "How many distinct prompt formulations to use",
+              "example": "5"
+            },
+            {
+              "name": "paths_per_prompt",
+              "description": "Reasoning paths sampled per prompt",
+              "example": "20"
+            },
+            {
+              "name": "temperature",
+              "description": "Sampling temperature (nonzero, for path diversity)",
+              "example": "0.7"
+            },
+            {
+              "name": "prompt_variant",
+              "description": "One of the diverse prompt formulations",
+              "example": null
+            },
+            {
+              "name": "problem",
+              "description": "The problem to solve",
+              "example": null
+            }
+          ],
+          "template_id": "diverse-step-aware-verifier--diverse-prompts-step-scored",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "Samples at temperature > 0 by design; outputs vary run to run."
+        }
+      ],
+      "tags": [
+        "ensembling",
+        "reasoning",
+        "multi-call",
+        "verifier"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "DiVeRSe"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "abstract-verified",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "max-mutual-information-template-selection",
+      "name": "Max Mutual Information Template Selection",
+      "category": "automatic-prompt-optimization",
+      "subcategory": "instruction-search",
+      "executive_summary": "Choose among candidate prompt templates by maximising mutual information between the prompt and the model's outputs — no labelled data required.",
+      "description": "Most prompt-selection methods need labelled examples, model parameters, or both. This one needs neither: generate candidate templates varying in style and exemplars, then select the template whose outputs carry the most mutual information with the prompt. The intuition is that an uninformative template produces outputs largely independent of what was asked, so mutual information separates templates that are actually steering the model from templates that are not. Because the criterion is unsupervised, it applies where no ground-truth labels exist.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "Selecting between candidate prompt templates with no labelled validation set available.",
+        "Black-box settings where model parameters and gradients are inaccessible."
+      ],
+      "when_not_to_use": [
+        "A labelled validation set exists — direct accuracy measurement is a more faithful selector.",
+        "Only one template is under consideration; there is nothing to select between."
+      ],
+      "known_pitfalls": [
+        "Mutual information is a proxy for informativeness, not for correctness: a confidently wrong template can score well.",
+        "Estimating the quantity requires enough samples per candidate that the selection itself becomes the dominant cost."
+      ],
+      "related_techniques": [
+        "automatic-prompt-engineer",
+        "prompt-paraphrasing"
+      ],
+      "primary_source": {
+        "authors": "Sorensen, Robinson, Rytting, Shaw, Rogers, Delorey, Khalil, Fulda, Wingate",
+        "year": 2022,
+        "title": "An Information-theoretic Approach to Prompt Engineering Without Ground Truth Labels",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2203.11364",
+        "url": "https://arxiv.org/abs/2203.11364"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Unsupervised template selection",
+          "template": "# For each candidate template T_i in {{candidate_templates}}:\n#   sample {{samples_per_template}} outputs over {{input_pool}}\n#   estimate mutual information between prompt and output\n# Select the template maximising estimated mutual information.",
+          "variables": [
+            {
+              "name": "candidate_templates",
+              "description": "The prompt templates under consideration",
+              "example": null
+            },
+            {
+              "name": "samples_per_template",
+              "description": "Outputs sampled per candidate for the estimate",
+              "example": "20"
+            },
+            {
+              "name": "input_pool",
+              "description": "Unlabelled inputs used for the estimate",
+              "example": null
+            }
+          ],
+          "template_id": "max-mutual-information-template-selection--unsupervised-selection",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "The estimate depends on sampled outputs; fix the seed and input pool to reproduce a selection."
+        }
+      ],
+      "tags": [
+        "ensembling",
+        "prompt-selection",
+        "unsupervised",
+        "information-theory"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "Max Mutual Information Method",
+        "MI template selection"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "abstract-verified",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "meta-reasoning-over-chains",
+      "name": "Meta-Reasoning over Multiple Chains of Thought (Meta-CoT)",
+      "category": "reasoning-elicitation",
+      "subcategory": "meta-reasoning",
+      "executive_summary": "Sample several reasoning chains, then put all the chains into one prompt and reason over them to produce the answer — instead of discarding the intermediate steps and voting on endpoints.",
+      "description": "Multi-hop question answering usually samples several chains of thought and aggregates by voting over final answers, which throws away the intermediate reasoning entirely. Meta-CoT keeps it: it generates multiple chains — not necessarily each ending in a final answer — then inserts all of them into a single prompt and has the model reason across them to produce one answer. Because the model sees the chains side by side, it can reconcile them rather than count them, which is what makes the method applicable when chains are partial or when their endpoints are not directly comparable.",
+      "verification_status": "judge-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "Multi-hop question answering where intermediate steps carry information the final answer does not.",
+        "Chains that are partial, or whose endpoints cannot be compared for an exact-match vote."
+      ],
+      "when_not_to_use": [
+        "Short single-hop questions where sampled answers vote cleanly and the extra aggregation call is waste.",
+        "Chain sets long enough that concatenating them exceeds the context window."
+      ],
+      "known_pitfalls": [
+        "The aggregation step is itself a model call and can introduce errors absent from every input chain.",
+        "Total context grows with the number of chains, so the method runs into context limits sooner than voting does."
+      ],
+      "related_techniques": [
+        "self-consistency",
+        "universal-self-consistency",
+        "chain-of-thought"
+      ],
+      "primary_source": {
+        "authors": "Yoran, Wolfson, Bogin, Katz, Deutch, Berant",
+        "year": 2023,
+        "title": "Answering Questions by Meta-Reasoning over Multiple Chains of Thought",
+        "venue": "EMNLP 2023",
+        "arxiv_id": "2304.13007",
+        "url": "https://arxiv.org/abs/2304.13007"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Chains into one meta-prompt",
+          "template": "Below are {{num_chains}} independent reasoning chains for the same question.\n\nQuestion: {{question}}\n\n{{chains}}\n\nReason over these chains together. Where they disagree, say which is better supported and why. Then give a single final answer.",
+          "variables": [
+            {
+              "name": "num_chains",
+              "description": "How many chains were sampled",
+              "example": "5"
+            },
+            {
+              "name": "question",
+              "description": "The original question",
+              "example": null
+            },
+            {
+              "name": "chains",
+              "description": "The sampled reasoning chains, concatenated",
+              "example": null
+            }
+          ],
+          "template_id": "meta-reasoning-over-chains--meta-prompt",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "Chain sampling uses temperature > 0; the aggregation call is deterministic at temperature 0 given fixed chains."
+        }
+      ],
+      "tags": [
+        "ensembling",
+        "reasoning",
+        "multi-hop",
+        "multi-call"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "Meta-CoT",
+        "Meta-Reasoning over Multiple CoTs"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "abstract-verified",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "consistency-based-self-adaptive-prompting",
+      "name": "Consistency-based Self-adaptive Prompting (COSP)",
+      "category": "example-selection-formatting",
+      "subcategory": "exemplar-selection",
+      "executive_summary": "Build a few-shot CoT prompt with no labelled data: run Zero-Shot CoT with Self-Consistency, keep the outputs the model agreed with itself on, and use those as exemplars.",
+      "description": "Few-shot prompting outperforms zero-shot but needs handcrafted exemplars, which are exactly what is unavailable in a new domain. COSP manufactures them. It runs Zero-Shot CoT with Self-Consistency over a pool of unlabelled examples, treats self-agreement across sampled chains as a proxy for correctness, selects the high-agreement subset as exemplars, and then performs Self-Consistency again with that assembled few-shot prompt. The result closes part of the gap to few-shot performance without any human labels — at the cost of two sampling rounds.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-adaptive",
+      "when_to_use": [
+        "A new task with unlabelled examples available but no handwritten exemplars.",
+        "Zero-shot performance is materially below what few-shot would give."
+      ],
+      "when_not_to_use": [
+        "Good exemplars already exist — use them directly rather than rediscovering worse ones.",
+        "Budgets that cannot absorb two rounds of self-consistency sampling."
+      ],
+      "known_pitfalls": [
+        "Self-agreement is a proxy for correctness, not a measure of it: a confidently wrong pattern gets selected as an exemplar and then reinforced.",
+        "The exemplars are model-specific artefacts; they should not be assumed transferable to another model."
+      ],
+      "related_techniques": [
+        "zero-shot-cot",
+        "self-consistency",
+        "universal-self-adaptive-prompting",
+        "auto-cot"
+      ],
+      "primary_source": {
+        "authors": "Wan, Sun, Dai, Arik, Pfister",
+        "year": 2023,
+        "title": "Better Zero-Shot Reasoning with Self-Adaptive Prompting",
+        "venue": "Findings of ACL 2023",
+        "arxiv_id": "2305.14106",
+        "url": "https://arxiv.org/abs/2305.14106"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Self-selected exemplars",
+          "template": "# Stage 1 — over {{unlabelled_pool}}, run Zero-Shot CoT with Self-Consistency at k={{k}}.\n# Stage 2 — keep the {{num_exemplars}} examples with the highest self-agreement as exemplars.\n# Stage 3 — build a few-shot CoT prompt from them and run Self-Consistency again:\n{{selected_exemplars}}\n\nQ: {{question}}\nA: Let's think step by step.",
+          "variables": [
+            {
+              "name": "unlabelled_pool",
+              "description": "Unlabelled examples to draw exemplars from",
+              "example": null
+            },
+            {
+              "name": "k",
+              "description": "Samples per example in the agreement stage",
+              "example": "10"
+            },
+            {
+              "name": "num_exemplars",
+              "description": "How many high-agreement examples to keep",
+              "example": "4"
+            },
+            {
+              "name": "selected_exemplars",
+              "description": "The chosen exemplars with their generated chains",
+              "example": null
+            },
+            {
+              "name": "question",
+              "description": "The question to answer",
+              "example": null
+            }
+          ],
+          "template_id": "consistency-based-self-adaptive-prompting--self-selected-exemplars",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "Both stages sample at temperature > 0; the selected exemplar set must be recorded to reproduce a run."
+        }
+      ],
+      "tags": [
+        "ensembling",
+        "zero-shot",
+        "exemplars",
+        "multi-call"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "COSP"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "abstract-verified",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "universal-self-adaptive-prompting",
+      "name": "Universal Self-Adaptive Prompting (USP)",
+      "category": "example-selection-formatting",
+      "subcategory": "exemplar-selection",
+      "executive_summary": "COSP generalised beyond tasks with votable answers: select exemplars from unlabelled data with a task-type-aware scoring function, and drop the self-consistency requirement.",
+      "description": "COSP depends on self-consistency to score candidate exemplars, which confines it to tasks whose answers can be compared for agreement. USP removes that constraint so the approach applies to classification, short-form and long-form generation alike: it uses unlabelled data to generate candidate exemplars and a more elaborate, task-type-aware scoring function to select among them, without running self-consistency at all. The aim is a single zero-shot method that works across task types rather than one tuned to answer-comparable reasoning problems.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-adaptive",
+      "when_to_use": [
+        "Zero-shot settings spanning task types — classification, short-form and long-form generation — where one method is wanted for all of them.",
+        "Tasks whose outputs cannot be compared for agreement, which rules COSP out."
+      ],
+      "when_not_to_use": [
+        "A single answer-comparable reasoning task, where COSP's simpler self-consistency scoring is adequate.",
+        "Labelled exemplars are already available."
+      ],
+      "known_pitfalls": [
+        "The scoring function is task-type-dependent, so the method carries a configuration decision that COSP does not.",
+        "Selected exemplars remain model- and pool-specific artefacts, not portable assets."
+      ],
+      "related_techniques": [
+        "consistency-based-self-adaptive-prompting",
+        "zero-shot-prompting",
+        "self-consistency"
+      ],
+      "primary_source": {
+        "authors": "Wan, Sun, Nakhost, Dai, Eisenschlos, Arik, Pfister",
+        "year": 2023,
+        "title": "Universal Self-Adaptive Prompting",
+        "venue": "EMNLP 2023",
+        "arxiv_id": "2305.14926",
+        "url": "https://arxiv.org/abs/2305.14926"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Task-aware exemplar selection",
+          "template": "# Stage 1 — generate candidate outputs over {{unlabelled_pool}} for task type {{task_type}}.\n# Stage 2 — score candidates with the scoring function for that task type; keep the top {{num_exemplars}}.\n# Stage 3 — prompt with the selected exemplars:\n{{selected_exemplars}}\n\nInput: {{input}}\nOutput:",
+          "variables": [
+            {
+              "name": "unlabelled_pool",
+              "description": "Unlabelled examples to draw exemplars from",
+              "example": null
+            },
+            {
+              "name": "task_type",
+              "description": "Classification, short-form generation, or long-form generation",
+              "example": "long-form generation"
+            },
+            {
+              "name": "num_exemplars",
+              "description": "How many exemplars to keep",
+              "example": "4"
+            },
+            {
+              "name": "selected_exemplars",
+              "description": "The chosen exemplars",
+              "example": null
+            },
+            {
+              "name": "input",
+              "description": "The query being answered",
+              "example": null
+            }
+          ],
+          "template_id": "universal-self-adaptive-prompting--task-aware-selection",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "Candidate generation samples from the model; record the selected exemplar set to reproduce a run."
+        }
+      ],
+      "tags": [
+        "ensembling",
+        "zero-shot",
+        "exemplars",
+        "task-general"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "USP"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "abstract-verified",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "prompt-paraphrasing",
+      "name": "Prompt Paraphrasing",
+      "category": "automatic-prompt-optimization",
+      "subcategory": "prompt-ensembling",
+      "executive_summary": "Reword a prompt without changing its meaning to produce a family of variants, then ensemble over them — a data-augmentation move applied to prompts.",
+      "description": "A manually written prompt is quite possibly sub-optimal: asking the same thing a different way can retrieve knowledge the original phrasing does not. Prompt Paraphrasing generates meaning-preserving rewordings of a prompt — through back-translation or mining — and uses the family as an ensemble rather than trusting any single phrasing. It originates in work probing what language models know, where the variance between paraphrases of one question showed that a single prompt underestimates the model's knowledge; the same mechanism serves as a general source of ensemble members.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "Results appear sensitive to phrasing and you want a variance estimate rather than one sample of it.",
+        "Generating ensemble members cheaply when no other source of diversity is available."
+      ],
+      "when_not_to_use": [
+        "Prompts whose exact wording is load-bearing — a schema, a format contract, or a delimiter convention that paraphrasing would break.",
+        "Single-call budgets."
+      ],
+      "known_pitfalls": [
+        "'Meaning-preserving' is an assumption, not a guarantee: a paraphrase can quietly change the task.",
+        "Paraphrases generated by the same model can share its blind spots, so the ensemble is less diverse than it looks."
+      ],
+      "related_techniques": [
+        "max-mutual-information-template-selection",
+        "self-consistency",
+        "promptrobust-perturbation-benchmark"
+      ],
+      "primary_source": {
+        "authors": "Jiang, Xu, Araki, Neubig",
+        "year": 2020,
+        "title": "How Can We Know What Language Models Know?",
+        "venue": "TACL 2020",
+        "arxiv_id": "1911.12543",
+        "url": "https://arxiv.org/abs/1911.12543"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Paraphrase ensemble",
+          "template": "# Generate {{num_paraphrases}} meaning-preserving rewordings of the base prompt:\n{{base_prompt}}\n\n# Query the model once per paraphrase, then aggregate the answers.\n# Report the spread across paraphrases alongside the aggregate.",
+          "variables": [
+            {
+              "name": "num_paraphrases",
+              "description": "How many rewordings to generate",
+              "example": "5"
+            },
+            {
+              "name": "base_prompt",
+              "description": "The original prompt to paraphrase",
+              "example": null
+            }
+          ],
+          "template_id": "prompt-paraphrasing--paraphrase-ensemble",
+          "determinism": "deterministic-given-paraphrases",
+          "reproducibility_note": "Deterministic at temperature 0 once the paraphrase set is fixed; record the paraphrases to reproduce a run."
+        }
+      ],
+      "tags": [
+        "ensembling",
+        "prompt-variants",
+        "robustness",
+        "multi-call"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "Paraphrase ensembling"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "abstract-verified",
         "pitfalls": "unverified"
       }
     }

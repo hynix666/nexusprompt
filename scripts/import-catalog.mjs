@@ -32,6 +32,7 @@ import { Ajv } from "ajv";
 
 const SOURCE = "sources/catalog/data/prompt_technique_catalog.json";
 const CORRECTIONS = "scripts/catalog-corrections.json";
+const ADDITIONS = "scripts/catalog-additions.json";
 const SCHEMA = "contracts/technique-record.schema.json";
 const OUT = "core/src/catalog/techniques.json";
 
@@ -81,12 +82,41 @@ export function importCatalog(root = process.cwd()) {
     else applied++;
   }
 
+  /**
+   * Additions close gaps the inherited catalog has. They are held to the same bar as
+   * everything else: same contract, no id that collides with a frozen record, and no
+   * silent overwrite — a collision is a refusal, because a record that shadows a
+   * frozen one is indistinguishable from a correction that forgot to say so.
+   */
+  const additions = JSON.parse(readFileSync(at(ADDITIONS), "utf8"));
+  let added = 0;
+  for (const rec of additions.records ?? []) {
+    if (byId.has(rec.id)) {
+      problems.push(`${rec.id}: addition collides with a record already in the frozen catalog`);
+      continue;
+    }
+    if (outById.has(rec.id)) {
+      problems.push(`${rec.id}: addition declared twice`);
+      continue;
+    }
+    out.push(rec);
+    outById.set(rec.id, rec);
+    added++;
+  }
+
   const ajv = new Ajv({ strict: false, allErrors: true });
   const validate = ajv.compile(schema);
   for (const r of out) {
     if (!validate(r)) {
       const first = (validate.errors ?? [])[0];
       problems.push(`${r.id}: fails ${SCHEMA} — ${first?.instancePath || "(root)"} ${first?.message}`);
+    }
+  }
+
+  // Every `related_techniques` reference must resolve, or the graph has dangling edges.
+  for (const r of out) {
+    for (const ref of r.related_techniques ?? []) {
+      if (!outById.has(ref)) problems.push(`${r.id}: related_techniques names "${ref}", which is not a record`);
     }
   }
 
@@ -97,12 +127,14 @@ export function importCatalog(root = process.cwd()) {
       source_sha256: createHash("sha256").update(raw, "utf8").digest("hex"),
       corrections: CORRECTIONS,
       corrections_applied: applied,
+      additions: ADDITIONS,
+      records_added: added,
       contract: SCHEMA,
     },
     techniques: out,
   };
 
-  return { ok: problems.length === 0, problems, applied, count: out.length, payload };
+  return { ok: problems.length === 0, problems, applied, added, count: out.length, payload };
 }
 
 function main() {
@@ -125,14 +157,15 @@ function main() {
       console.error(`  Run \`npm run import:catalog\` and commit the result.`);
       return 1;
     }
-    console.log(`import:catalog --check — OK. ${r.count} records, ${r.applied} corrections applied, output current.`);
+    console.log(`import:catalog --check — OK. ${r.count} records (${r.applied} corrected, ${r.added} added), output current.`);
     return 0;
   }
 
   mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, rendered);
   console.log(`import:catalog — wrote ${OUT}`);
-  console.log(`  ${r.count} records · ${r.applied} corrections applied · all validate against ${SCHEMA}`);
+  console.log(`  ${r.count} records · ${r.applied} corrections applied · ${r.added} records added`);
+  console.log(`  all validate against ${SCHEMA}; every related_techniques reference resolves`);
   return 0;
 }
 

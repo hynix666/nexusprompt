@@ -131,6 +131,17 @@ export function checkPlan(root = process.cwd()) {
   claim("catalog.records_imported", declared.catalog.records_imported, importedCatalog,
     "count of techniques in core/src/catalog/techniques.json — run `npm run import:catalog`");
 
+  // Records added at import beyond what the frozen source holds. Declared separately so
+  // "180 records" can never be mistaken for "the frozen catalog has 180".
+  let addedRecords = 0;
+  try {
+    addedRecords = (JSON.parse(readText(at("scripts/catalog-additions.json"))).records ?? []).length;
+  } catch {
+    addedRecords = -1;
+  }
+  claim("catalog.records_added", declared.catalog.records_added, addedRecords,
+    "count of records in scripts/catalog-additions.json");
+
   claim("sources.frozen_files", declared.sources.frozen_files,
     JSON.parse(readText(at("sources/MANIFEST.json"))).files.length,
     "entries in sources/MANIFEST.json");

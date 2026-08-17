@@ -141,23 +141,40 @@ That pass did surface something offline-checkable: **three records name `arXiv p
 
 Each of the 57 was adjudicated against the catalog by id, name, alias, and then by full-text search of every record.
 
-| Category | In the survey | Has a catalog record | Missing |
+| Category | In the survey | Had a record | Has one now |
 |---|---|---|---|
-| Zero-Shot | 9 | 7 | 2 |
-| Few-Shot / ICL | 9 | 3 | 6 |
-| Thought Generation | 14 | 10 | 4 |
-| **Ensembling** | **10** | **2** | **8** |
-| Self-Criticism | 6 | 5 | 1 |
-| Decomposition | 9 | 7 | 2 |
-| **Total** | **57** | **34** | **23** |
+| Zero-Shot | 9 | 7 | 7 |
+| Few-Shot / ICL | 9 | 3 | 3 |
+| Thought Generation | 14 | 10 | 10 |
+| **Ensembling** | **10** | **2** | **10** |
+| Self-Criticism | 6 | 5 | 5 |
+| Decomposition | 9 | 7 | 7 |
+| **Total** | **57** | **34** | **42** |
 
-### The gap is concentrated, not general
+### The gap was concentrated, and is now closed
 
-**Ensembling is the hole.** Of ten ensembling techniques the survey identifies, the catalog has two — `self-consistency` and `universal-self-consistency`. Absent: COSP, DENSE (Demonstration Ensembling), DiVeRSe, Max Mutual Information, Meta-CoT, MoRE, USP, and Prompt Paraphrasing. A catalog built to advise on prompt construction that omits eight of ten ways to ensemble prompts has a shape worth knowing about before Phase 4 imports it.
+**Ensembling was the hole.** Of ten ensembling techniques the survey identifies, the catalog had two — `self-consistency` and `universal-self-consistency`. A catalog built to advise on prompt construction that omitted eight of ten ways to ensemble prompts had a shape worth knowing about.
+
+**All eight now have records**, added at the import boundary via `scripts/catalog-additions.json`, taking the catalog from 172 to 180. Each citation was resolved against arXiv's own metadata rather than written from memory: the author-year attributions were read out of the survey's §2.2.4, searched on arXiv, and the returned title, authors, date and venue comment recorded as given.
+
+| Technique | Record | arXiv | Venue as arXiv states it |
+|---|---|---|---|
+| COSP | `consistency-based-self-adaptive-prompting` | 2305.14106 | Findings of ACL 2023 |
+| DENSE | `demonstration-ensembling` | 2308.08780 | ME-FoMo Workshop, ICLR 2023 |
+| DiVeRSe | `diverse-step-aware-verifier` | 2206.02336 | *arXiv states none* |
+| Max Mutual Information | `max-mutual-information-template-selection` | 2203.11364 | *arXiv states none* |
+| Meta-CoT | `meta-reasoning-over-chains` | 2304.13007 | EMNLP 2023 |
+| MoRE | `mixture-of-reasoning-experts` | 2305.14628 | Findings of EMNLP 2023 |
+| USP | `universal-self-adaptive-prompting` | 2305.14926 | EMNLP 2023 |
+| Prompt Paraphrasing | `prompt-paraphrasing` | 1911.12543 | TACL 2020 |
+
+Two of the eight carry `venue: "arXiv preprint"` because arXiv records no venue for them. The survey's citation keys imply conference publications, but a citation key is not evidence, and inferring a venue from one is how the eight wrong titles got there in the first place.
+
+**These records say so about themselves.** Their `source_audit.description` is `abstract-verified` rather than the catalog-wide `unverified`: each description was written from the paper's abstract and the survey's account of it. `pitfalls` stays `unverified`, because the pitfalls were not checked against the papers. A test pins that distinction so it does not get normalised away.
 
 Second cluster: few-shot **exemplar and instruction selection** — SG-ICL, Vote-K, Prompt Mining, Exemplar Generation, and Instruction Selection have no record, though `knn-prompting` and `fantastically-ordered-prompts` do cover KNN selection and exemplar ordering.
 
-The remaining absences are scattered: Style Prompting, SimToM, Tab-CoT, Memory-of-Thought, Uncertainty-Routed CoT, AutoDiCoT, ReverseCoT, Recursion-of-Thought, Metacognitive Prompting.
+**Fifteen absences remain**, and they are scattered rather than clustered: five few-shot exemplar and instruction-selection methods (SG-ICL, Vote-K, Prompt Mining, Exemplar Generation, Instruction Selection), plus Style Prompting, SimToM, Tab-CoT, Memory-of-Thought, Uncertainty-Routed CoT, AutoDiCoT, ReverseCoT, Recursion-of-Thought, and Metacognitive Prompting. No single category is now missing most of itself, which was the property that made ensembling worth fixing first.
 
 **The survey is not a superset.** The catalog's 172 records run far wider than the survey's 58 — jailbreak and injection defence, RAG, agents, structured output, evaluation. The finding is a specific missing cluster, not general thinness.
 
