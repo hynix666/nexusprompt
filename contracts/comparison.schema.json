@@ -18,16 +18,34 @@
     "delta": { "type": ["number", "null"] },
     "protocol": {
       "type": "object",
-      "required": ["test", "trials", "alpha"],
+      "required": ["test", "trials", "alpha", "comparisons_in_family"],
       "additionalProperties": false,
       "properties": {
         "test": {
-          "type": "string",
-          "description": "Named per suite type and recorded, not improvised per comparison. Paired binary outcomes and graded or free-form metrics need different tests, and the choice is part of the result."
+          "description": "Named per suite type and recorded, not improvised per comparison. Consensus practice for paired binary outcomes on a shared prompt set is McNemar on the discordant pairs, or 5x2 cross-validation with a modified paired t-test; graded and free-form metrics use a paired bootstrap over resamples of the prompt set. Different outcome types need different tests, and the choice is part of the result.",
+          "enum": ["mcnemar", "paired-bootstrap", "5x2cv-paired-t", "none"]
         },
         "trials": { "type": "integer", "minimum": 1 },
-        "alpha": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
-        "p_value": { "type": ["number", "null"] }
+        "alpha": {
+          "description": "Significance threshold AFTER any multiplicity correction. Record the corrected value, not the nominal one.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "comparisons_in_family": {
+          "description": "How many comparisons this one belongs to. This is not bookkeeping: an optimizer generates comparisons by construction, so a search over 100 candidates at a nominal 0.05 expects roughly five spurious winners. Uncorrected, the optimizer manufactures improvement out of multiplicity alone — a Goodhart channel distinct from a writable evaluator or an undersized anchor.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "correction": { "enum": ["none", "bonferroni", "holm", "benjamini-hochberg"] },
+        "p_value": { "type": ["number", "null"] },
+        "confidence_interval": {
+          "type": ["array", "null"],
+          "description": "Lower and upper bound at 1-alpha, for bootstrap protocols where an interval is more informative than a threshold verdict.",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        }
       }
     },
     "detectors_equalized": {

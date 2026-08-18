@@ -267,6 +267,77 @@ Five papers were read in depth rather than identified. Four of them carry measur
 
 Together these are why ADR-0008 makes measurement the primary subsystem rather than a testing concern, equalizes detectors before comparing, and requires a significance test before a difference counts as a finding.
 
+## Verified: a systematic search closed the 15 remaining gaps
+
+Run 18 August 2026 as five ordered steps, each with a stated success criterion. arXiv's
+API was used wherever an exact key existed, because a title query that matches at
+Jaccard 1.00 settles a question that web search only gestures at.
+
+**Step 1 — the fifteen missing techniques. All fifteen resolved, every match exact.**
+
+They reduce to thirteen distinct papers: three papers each cover a parent/child pair in
+the survey's taxonomy, and AutoDiCoT has no external source because it is introduced in
+The Prompt Report's own case study. `scripts/catalog-gap-sources.json` carries the full
+table with authors, venues and dates as arXiv states them.
+
+| Technique | arXiv | Venue as arXiv states it |
+|---|---|---|
+| Style Prompting | 2302.09185 | EACL 2023 |
+| SimToM | 2311.10227 | *none stated* |
+| SG-ICL / Exemplar Generation | 2206.08082 | NAACL 2022 Workshop |
+| Vote-K / Exemplar Selection | 2209.01975 | *none stated* |
+| Instruction Selection | 2205.10782 | *none stated* |
+| Tab-CoT | 2305.17812 | Findings of ACL 2023 |
+| Memory-of-Thought | 2305.05181 | EMNLP 2023 |
+| Uncertainty-Routed CoT | 2312.11805 | Gemini model report |
+| RCoT | 2305.11499 | *none stated* |
+| Recursion-of-Thought | 2306.06891 | Findings of ACL 2023 |
+| Metacognitive Prompting | 2308.05342 | NAACL 2024 |
+| Prompt Mining | 1911.12543 | TACL 2020 — already cited |
+| AutoDiCoT | 2406.06608 | the survey itself, §6.2.3.3 |
+
+The earlier finding that the 673-paper corpus contained none of these stands, and is
+now explained rather than merely reported: these are 2022–2023 originals and the corpus
+skews 2025–2026. **More reading would not have found them; a targeted lookup did.**
+
+**Step 2 — the three records naming arXiv with no identifier. One resolved, two are
+worse than recorded.**
+
+`recube-repo-context` is arXiv 2603.25770, exact title match; the id is simply missing.
+The other two return nothing across three query forms each, so they are not missing
+identifiers but **wrong venues** — records claiming a preprint that does not exist under
+that title. `scripts/catalog-known-defects.json` now says so.
+
+**Step 3 — evaluation suites.** Current practice sizes a local iteration set at
+**200–500 examples** built from real production failures rather than synthetic ones.
+Against the ≈3,400-item anchor requirement, that independently confirms the two-tier
+split rather than contradicting it: the numbers describe different jobs. One constraint
+was missing from the design — **benchmark contamination**. Public suites decay as models
+train on them, which is why contamination-resistant designs (monthly refresh, submission-
+date filtering, private holdouts) exist, and why a public score should always be paired
+with an internal set the model has not seen. That is a second contamination channel,
+distinct from the scorer-mediated one, and the anchor must be private to survive it.
+
+**Step 4 — judge validation.** Three protocols: agreement against human labels by
+Cohen's κ, consistency by test-retest, and a bias audit presenting pairs in both
+orderings. κ ≥ 0.60 is the working floor and ≥ 0.85 the bar where a wrong verdict costs
+something, so the threshold is a per-rubric declaration rather than a constant. The
+contract requirement that was missing here: pin the judge model id, **version the rubric,
+hash the prompt template, and re-calibrate on every change to any of them**.
+`judge-verdict.schema.json` now carries `rubric_hash`, and `agreement` now requires a
+declared `threshold` beside the value.
+
+**Step 5 — significance.** Consensus for paired binary outcomes on a shared prompt set
+is McNemar on the discordant pairs, χ² = (b−c)²/(b+c), or 5×2 cross-validation with a
+modified paired t-test; graded and free-form metrics use a paired bootstrap over
+resamples. The finding that changes the design is **multiplicity**: with ten models,
+forty-five pairwise comparisons need α corrected to 0.05/45 ≈ 0.0011. An optimizer
+generates comparisons by construction, so a search over a hundred candidates at a
+nominal 0.05 expects about five spurious winners. That is a Goodhart channel distinct
+from a writable evaluator and from an undersized anchor, and nothing in the design
+addressed it. `comparison.schema.json` now requires `comparisons_in_family` and records
+the correction applied.
+
 ## Filed by title only — contents not read
 
 The following connections are **filing decisions, not findings**. Only page-1 headers were extracted; no paper's argument, method, or result was read. They record where a future reader should look, and nothing about whether the paper supports anything this project does.

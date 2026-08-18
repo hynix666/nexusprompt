@@ -15,6 +15,11 @@
       "minLength": 1
     },
     "rubric_id": { "type": "string", "minLength": 1 },
+    "rubric_hash": {
+      "description": "Hash of the rubric and judge prompt template as sent. Current production guidance is explicit that a judge contract is (pinned model id, versioned rubric, hashed template) and that re-calibration against human labels is required on every change to any of them. Without the hash, a silently edited rubric is indistinguishable from a model that changed its mind.",
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "runs": {
       "description": "Count of independent gradings. Single-run verdicts without variance present noise as a property of the system. Setting temperature to 0 does not make grading deterministic: borderline items still flip under forced greedy decoding, and newer frontier models have deprecated the parameter outright.",
       "type": "integer",
@@ -33,12 +38,19 @@
     "agreement": {
       "type": ["object", "null"],
       "description": "Chance-corrected agreement against a reference. Exact match is not admissible: it does not correct for chance and overstates discriminative ability by 33-41 percentage points against Cohen's kappa on the same data.",
-      "required": ["metric", "value"],
+      "required": ["metric", "value", "threshold"],
       "additionalProperties": false,
       "properties": {
         "metric": { "enum": ["cohens-kappa", "krippendorff-alpha", "scotts-pi"] },
         "value": { "type": "number", "minimum": -1, "maximum": 1 },
-        "reference": { "type": "string" },
+        "threshold": {
+          "description": "The agreement this rubric requires, declared per rubric rather than globally. Practice puts the floor near 0.60 and raises it to 0.85 or above where a wrong verdict carries real cost. Recording the threshold beside the value is what makes an agreement number readable without knowing the domain.",
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "reference": { "type": "string", "description": "The human-annotated set agreement was measured against." },
+        "measured_at": { "type": ["string", "null"], "description": "Re-calibration is required whenever the judge model, rubric, or template changes; a stale calibration is not evidence about the judge now running." },
         "benchmark": {
           "type": "string",
           "description": "Named, because judge rankings shift by up to 14 positions across benchmarks. Validation on one benchmark does not transfer to another."

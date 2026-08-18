@@ -1,0 +1,138 @@
+{
+  "_comment": [
+    "Resolved primary sources for the fifteen techniques The Prompt Report lists that",
+    "the catalog lacks. This file is the output of a search, not a set of records: the",
+    "hard part of writing a technique record is establishing its citation, and that is",
+    "done here so the authoring step is mechanical.",
+    "",
+    "Every entry was resolved against arXiv's own metadata by exact title query and",
+    "matched at Jaccard 1.00 — an exact title match, not a similarity guess. Author",
+    "lists and venue comments are recorded as arXiv states them; where arXiv states no",
+    "venue, `venue` says 'arXiv preprint' rather than inferring one from the survey's",
+    "citation key. That inference is how eight wrong titles entered the frozen catalog.",
+    "",
+    "Fifteen gap techniques resolve to thirteen distinct papers: three papers each cover",
+    "a parent/child pair in the survey's taxonomy, and AutoDiCoT has no external source",
+    "because it originates in The Prompt Report's own case study.",
+    "",
+    "prompt-mining shares arXiv 1911.12543 with the already-present prompt-paraphrasing",
+    "record. That is correct — the survey cites one paper for both techniques — and",
+    "check:citations permits a shared id provided the titles agree.",
+    "",
+    "Nothing here is a catalog record yet. Adding them is the follow-on, and each will",
+    "need the same treatment the ensembling eight got: a description written from the",
+    "paper's abstract, source_audit.description of verified-against-abstract, and",
+    "pitfalls left unverified until the papers are read."
+  ],
+  "resolved_on": "2026-08-18",
+  "resolved_with": "export.arxiv.org/api/query, exact title match",
+  "sources": [
+    {
+      "techniques": ["style-prompting"],
+      "arxiv_id": "2302.09185",
+      "title": "Bounding the Capabilities of Large Language Models in Open Text Generation with Prompt Constraints",
+      "authors": "Lu, Zhang, Zhang, +2",
+      "venue": "EACL 2023",
+      "published": "2023-02-17"
+    },
+    {
+      "techniques": ["simtom"],
+      "arxiv_id": "2311.10227",
+      "title": "Think Twice: Perspective-Taking Improves Large Language Models' Theory-of-Mind Capabilities",
+      "authors": "Wilf, Lee, Liang, +1",
+      "venue": "arXiv preprint",
+      "published": "2023-11-16"
+    },
+    {
+      "techniques": ["sg-icl", "exemplar-generation"],
+      "arxiv_id": "2206.08082",
+      "title": "Self-Generated In-Context Learning: Leveraging Auto-regressive Language Models as a Demonstration Generator",
+      "authors": "Kim, Cho, Kim, +3",
+      "venue": "NAACL 2022 Workshop on Large-scale Pre-trained Language Models",
+      "published": "2022-06-16"
+    },
+    {
+      "techniques": ["vote-k", "exemplar-selection"],
+      "arxiv_id": "2209.01975",
+      "title": "Selective Annotation Makes Language Models Better Few-Shot Learners",
+      "authors": "Su, Kasai, Wu, +8",
+      "venue": "arXiv preprint",
+      "published": "2022-09-05"
+    },
+    {
+      "techniques": ["instruction-selection"],
+      "arxiv_id": "2205.10782",
+      "title": "Instruction Induction: From Few Examples to Natural Language Task Descriptions",
+      "authors": "Honovich, Shaham, Bowman, +1",
+      "venue": "arXiv preprint",
+      "published": "2022-05-22"
+    },
+    {
+      "techniques": ["tab-cot"],
+      "arxiv_id": "2305.17812",
+      "title": "Tab-CoT: Zero-shot Tabular Chain of Thought",
+      "authors": "Jin, Lu",
+      "venue": "Findings of ACL 2023",
+      "published": "2023-05-28"
+    },
+    {
+      "techniques": ["memory-of-thought"],
+      "arxiv_id": "2305.05181",
+      "title": "MoT: Memory-of-Thought Enables ChatGPT to Self-Improve",
+      "authors": "Li, Qiu",
+      "venue": "EMNLP 2023",
+      "published": "2023-05-09"
+    },
+    {
+      "techniques": ["uncertainty-routed-cot"],
+      "arxiv_id": "2312.11805",
+      "title": "Gemini: A Family of Highly Capable Multimodal Models",
+      "authors": "Gemini Team, Anil, Borgeaud, +1348",
+      "venue": "arXiv preprint",
+      "published": "2023-12-19",
+      "note": "The technique is described inside a model report rather than a paper of its own. Cite the report; do not invent a narrower source."
+    },
+    {
+      "techniques": ["reverse-cot"],
+      "arxiv_id": "2305.11499",
+      "title": "RCOT: Detecting and Rectifying Factual Inconsistency in Reasoning by Reversing Chain-of-Thought",
+      "authors": "Xue, Wang, Wang, +3",
+      "venue": "arXiv preprint",
+      "published": "2023-05-19"
+    },
+    {
+      "techniques": ["recursion-of-thought"],
+      "arxiv_id": "2306.06891",
+      "title": "Recursion of Thought: A Divide-and-Conquer Approach to Multi-Context Reasoning with Language Models",
+      "authors": "Lee, Kim",
+      "venue": "Findings of ACL 2023 (short)",
+      "published": "2023-06-12"
+    },
+    {
+      "techniques": ["metacognitive-prompting"],
+      "arxiv_id": "2308.05342",
+      "title": "Metacognitive Prompting Improves Understanding in Large Language Models",
+      "authors": "Wang, Zhao",
+      "venue": "NAACL 2024",
+      "published": "2023-08-10"
+    },
+    {
+      "techniques": ["prompt-mining"],
+      "arxiv_id": "1911.12543",
+      "title": "How Can We Know What Language Models Know?",
+      "authors": "Jiang, Xu, Araki, Neubig",
+      "venue": "TACL 2020",
+      "published": "2019-11-28",
+      "note": "Already cited by prompt-paraphrasing. The survey cites this one paper for both techniques, which is why the shared id is correct rather than a duplicate."
+    },
+    {
+      "techniques": ["autodicot"],
+      "arxiv_id": "2406.06608",
+      "title": "The Prompt Report: A Systematic Survey of Prompt Engineering Techniques",
+      "authors": "Schulhoff, Ilie, Balepur, +30",
+      "venue": "arXiv preprint",
+      "published": "2024-06-06",
+      "note": "No external source exists: AutoDiCoT is introduced in the survey's own case study, section 6.2.3.3. The survey is the primary source."
+    }
+  ]
+}

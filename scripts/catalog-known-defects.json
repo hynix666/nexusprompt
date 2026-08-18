@@ -19,21 +19,21 @@
     {
       "technique": "comparative-prompting-code-gen",
       "kind": "arxiv-venue-without-id",
-      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied; Crossref finds a paper of this title, so the id is missing rather than the venue being wrong",
+      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied, and the paper is NOT on arXiv: three query forms (exact title, title fragment, full-text conjunction) all returned nothing. This is a wrong venue rather than a missing id, and the correct venue is unknown.",
       "found": "2026-08-17",
       "fix_at": "phase-4-import"
     },
     {
       "technique": "recube-repo-context",
       "kind": "arxiv-venue-without-id",
-      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied; not resolvable by Crossref under this title either",
+      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied. RESOLVED by search: the paper is arXiv 2603.25770, 'ReCUBE: Evaluating Repository-Level Context Utilization in Code Generation', exact title match. The id is missing, not wrong; supply it at import.",
       "found": "2026-08-17",
       "fix_at": "phase-4-import"
     },
     {
       "technique": "comprehend-then-predict-recommendation",
       "kind": "arxiv-venue-without-id",
-      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied; Crossref's closest hit expands 'LLMs' to 'Large Language Models', suggesting the record abbreviated a real title",
+      "reason": "venue says 'arXiv preprint' but no arxiv_id is supplied, and the paper is NOT on arXiv under any of three query forms. Crossref's nearest hit expands 'LLMs' to 'Large Language Models', so a paper of this title plausibly exists elsewhere; the venue claim is wrong either way.",
       "found": "2026-08-17",
       "fix_at": "phase-4-import"
     }
