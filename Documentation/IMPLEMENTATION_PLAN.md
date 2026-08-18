@@ -12,7 +12,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 
 ```json plan-status
 {
-  "gates": { "ported": 15, "source_total": 16 },
+  "gates": { "ported": 16, "source_total": 16 },
   "stages": { "built": 1, "target": 11 },
   "contracts": { "schemas": 13 },
   "adapters": ["provider-local-proxy", "storage-local"],
@@ -39,7 +39,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
 ```
                         built          target
 contracts   ████████████████████       13 schemas — 11 validated against real values, 2 awaiting a judge and a promotion path
-core/gates  ███████████████████▒       15 of 16 — ADVERSARIAL_RESILIENCE needs an injected corpus
+core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages █▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 11
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
@@ -75,17 +75,21 @@ What Phase 1 established that the rest of the plan leans on: Core purity holds u
 - `npm run typecheck` covered only `core` and `contracts`. The Application layer, both adapters, the CLI, the whole test suite, and the differential oracle were never typechecked — about two thirds of the TypeScript, inside a command `verify` depends on. A type error was planted in seven locations; five were unchecked. `tsconfig.json` now includes every source directory, and all seven are caught.
 - The cross-shell import rule only fired when the specifier text literally contained `shells/`, so a sibling shell reached the ordinary way — `../../toolkit/src/index.js` — passed. Specifiers are now resolved to repo-relative paths before any rule inspects them, which fixes the same latent weakness for every other rule at once. Found by the first test written against the checker.
 
-### Phase 2 — The remaining fourteen gates
+### Phase 2 — The remaining fourteen gates ✅ complete
 
 **Entry condition — met, 18 August 2026.** The divergence allowlist ([ADR-0007](./0007-permanent-differential-oracle.md), action item 2) exists: `scripts/divergence-allowlist.json`, enforced by the oracle. A port that deliberately fixes a source defect now has a third option besides reproducing the defect and deleting the check — it declares the difference, with a reason and an ADR, and the oracle reports it as declared rather than going quiet.
 
-It ships with **zero entries**, which is still correct after the port: all fifteen ported gates are faithful to the source. The mechanism was drilled against a real candidate divergence instead — 11 states, 11 correct, including the two that matter most: a stale entry left behind after the divergence is removed **fails**, and an exact-input entry **refuses** to excuse a divergence that is systematic. An allowlist that fails open is worse than none, because it launders disagreement into silence.
+It ships with **zero entries**, which is still correct after the port: all sixteen ported gates are faithful to the source. The mechanism was drilled against a real candidate divergence instead — 11 states, 11 correct, including the two that matter most: a stale entry left behind after the divergence is removed **fails**, and an exact-input entry **refuses** to excuse a divergence that is systematic. An allowlist that fails open is worse than none, because it launders disagreement into silence.
 
-**Thirteen gates ported, 18 August 2026 — 15 of 16.** `npm run differential` compares them against the frozen linter over 2,400 verdicts on the default corpus and 8,100 at `--n 500 --seed 7`, with zero disagreements and an empty allowlist. Every hazard this section named was handled: the arithmetic trio uses `floor(x*100+0.5)/100` and `max(1, len//4)` with no tokenizer; the citation pair was ported in one module and its interaction tested, including the self-declaring-citation case that silenced both gates in the source.
+**Fourteen gates ported, 18 August 2026 — 16 of 16.** `npm run differential` compares them against the frozen linter over 2,720 verdicts on the default corpus, with zero disagreements and an empty allowlist. Every hazard this section named was handled: the arithmetic trio uses `floor(x*100+0.5)/100` and `max(1, len//4)` with no tokenizer; the citation pair was ported in one module and its interaction tested, including the self-declaring-citation case that silenced both gates in the source.
 
 **The port also found a guard narrower than its name — the fifth instance of R9.** `tsVerdicts` passed only `includeFences` to `runGates`, because that was the sole option the TS side understood. Every option-gated gate was therefore handed defaults and compared against a Python run that *had* the flag. The harness looked like it exercised armed behaviour and never had. It surfaced the moment gates that read the other options existed: seven fixtures failed at once, all in the same direction. Fixing it took the comparison from 320 verdicts to 2,400.
 
-**One gate is deferred, not forgotten.** `ADVERSARIAL_RESILIENCE` calls `_score_adversarial`, which reads an external corpus file. **Core performs no I/O**, so this cannot be a pure Core gate in the shape the source has. Porting it needs the corpus injected — the Application layer loads it and passes it in, or the gate takes a scorer parameter. That is the explicit decision this section always said the gate required, and it is a design choice rather than a translation, so it is not being made in passing.
+**`ADVERSARIAL_RESILIENCE` took the corpus-injection decision this section reserved.** Its Python original bridges to a scorer module by absolute path, and that scorer opens `corpus.json` itself — file I/O inside a gate, which ADR-0001 forbids in Core. So the port takes the corpus as an option and the composition root supplies it; the gate stays a pure function of `(text, corpus)`.
+
+What made that comparable rather than merely defensible is a property of the frozen tree. The linter looks for its scorer beside itself, at `sources/v5/adversarial/scorer.py` — and the scorer actually lives at `sources/v5/promptnexus-v5/adversarial/scorer.py`. **The linter the oracle runs can never locate it.** Armed, it has exactly one reachable verdict: `WARN, cannot score`. The port mirrors that state when no corpus is injected, so both sides agree on the armed branch and the oracle compares it for real.
+
+The scoring path is the one the oracle **structurally cannot** check, because no configuration makes the frozen linter score. It is covered by unit tests injecting the frozen corpus — including that an undefended surface fails all its cases at once rather than averaging away, and that an empty corpus reads as unscoreable rather than as a perfect 0/0. That limit is recorded here rather than left for someone to assume the oracle covers it.
 
 One faithful-but-questionable behaviour is now recorded rather than discovered: the safety-tier clause stem is `sanitiz`, and the source's own comment claims it covers "sanitization / sanitisation" — but `\bsanitiz` cannot match the British spelling, so a prompt written in British English fails a safety gate for an orthographic reason. The port reproduces it and pins it in a test. It is a candidate for the divergence allowlist, which is now the mechanism for exactly this.
 
@@ -100,7 +104,9 @@ Each is one module, one registry line, one `scripts/ported-gates.json` entry, a 
 | `SOURCE_LEDGER_MISSING`, `ORPHAN_CLAIMS` | The pair that shipped the self-declaring-citation defect, where a citation inside an empty ledger section silenced *both*. Port them together and test the interaction, not each alone. |
 | `ADVERSARIAL_RESILIENCE` | Depends on `adversarial/scorer.py`, a second frozen artifact. Decide explicitly whether the port calls it, reimplements it, or defers the gate. |
 
-**Exit gate — 15 of 16.** `npm run differential` compares fifteen gates with zero disagreements and an empty allowlist; `scripts/ported-gates.json` lists all fifteen. **Not met in full:** the gate requires 16 of 16, and `ADVERSARIAL_RESILIENCE` is outstanding pending the corpus-injection decision above. Stated as short rather than redefined — an exit gate that moves to meet the work is not an exit gate.
+**Exit gate — met.** `npm run differential` compares **16 of 16** gates with zero disagreements outside the allowlist, and `scripts/ported-gates.json` lists all sixteen. The allowlist is empty, so every entry in it trivially states a reason and cites an ADR.
+
+Read with the limit above attached: 16 of 16 means every gate is *compared*, not that every gate's every branch is. `ADVERSARIAL_RESILIENCE`'s scoring path has no oracle coverage available to it, by a property of the frozen tree rather than by choice.
 
 **Cost note.** The oracle spawns Python once per *case*, not per gate, so its runtime does not grow as gates are added — 440 cases takes 21 s at two gates and will take about 21 s at sixteen. ADR-0007's action item 3 assumed otherwise; that item is being corrected rather than carried.
 

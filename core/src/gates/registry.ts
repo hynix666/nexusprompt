@@ -35,6 +35,9 @@ import {
   tokenBudget, qutmCeiling, contextLimit,
   TOKEN_BUDGET_GATE_ID, QUTM_GATE_ID, CONTEXT_LIMIT_GATE_ID, GATE_VERSION as BUDGET_V,
 } from "./budget.js";
+import {
+  adversarialResilience, GATE_ID as ADVERSARIAL_ID, GATE_VERSION as ADVERSARIAL_V,
+} from "./adversarial-resilience.js";
 
 export type { GateOptions } from "./lint-primitives.js";
 import type { GateOptions } from "./lint-primitives.js";
@@ -66,6 +69,7 @@ const GATES: readonly Gate[] = Object.freeze([
   { id: TOKEN_BUDGET_GATE_ID, version: BUDGET_V, run: (t, o) => tokenBudget(t, o) },
   { id: QUTM_GATE_ID, version: BUDGET_V, run: (t, o) => qutmCeiling(t, o) },
   { id: CONTEXT_LIMIT_GATE_ID, version: BUDGET_V, run: (t, o) => contextLimit(t, o) },
+  { id: ADVERSARIAL_ID, version: ADVERSARIAL_V, run: (t, o) => adversarialResilience(t, o) },
 ]);
 
 /** Every registered gate, in stable order. */

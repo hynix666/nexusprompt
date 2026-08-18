@@ -121,6 +121,7 @@ interface CaseOptions {
   stakes?: string;
   naiveTokens?: number;
   provider?: string;
+  adversarial?: boolean;
 }
 
 function toCliArgs(o: CaseOptions): string[] {
@@ -133,6 +134,7 @@ function toCliArgs(o: CaseOptions): string[] {
   if (o.stakes) a.push("--stakes", o.stakes);
   if (o.naiveTokens !== undefined) a.push("--naive-tokens", String(o.naiveTokens));
   if (o.provider) a.push("--provider", o.provider);
+  if (o.adversarial) a.push("--adversarial");
   return a;
 }
 
@@ -332,6 +334,10 @@ function generateOptions(rand: () => number): CaseOptions {
     if (rand() < 0.6) o.naiveTokens = pick(rand, [0, 1, 200, 400]);
   }
   if (rand() < 0.2) o.provider = pick(rand, ["anthropic", "openai", "google", "ollama"]);
+  // Armed, both sides report "cannot score" — the frozen linter because it cannot locate
+  // its scorer, the port because no corpus is injected here. That branch IS comparable and
+  // is the only one that is: no reachable configuration makes the frozen linter score.
+  if (rand() < 0.2) o.adversarial = true;
   return o;
 }
 

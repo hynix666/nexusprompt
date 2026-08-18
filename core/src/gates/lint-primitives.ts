@@ -19,6 +19,14 @@ export interface GateOptions {
   stakes?: string;
   naiveTokens?: number;
   provider?: string;
+  adversarial?: boolean;
+  /**
+   * Injected, never read. Core performs no I/O, so the composition root supplies the
+   * corpus. Armed without one, the gate reports that it could not score — which is also
+   * the only thing the frozen linter can do, since it cannot locate its own scorer.
+   */
+  adversarialCorpus?: { defense_signals: Record<string, unknown>; cases: Array<{ id: string; surface: string }> };
+  adversarialFloor?: number;
 }
 
 export const sha256 = (text: string): string =>
