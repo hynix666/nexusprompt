@@ -1,15 +1,29 @@
 # Literature Corpus — what was checked, and what it establishes
 
-Two corpora of prompt-engineering papers were read against this project, both added 17 August 2026:
+Three corpora of prompt-engineering papers were read against this project, added 17–18 August 2026. `PDF/` grew across several passes and was re-scanned each time; the totals below are current as of the last scan, and the per-section statistics elsewhere on this page state the snapshot they were computed against.
 
 | Corpus | Files | Distinct | With an arXiv id |
 |---|---|---|---|
 | `Prompt Survey.zip` (108 MB) | 44 | 43 — one exact duplicate | 39 |
 | `Prompt.zip` (271 MB) | 123 | 123 — no duplicates | 113 |
-| `PDF/` (four collections plus a root drop) | 572 | 543 — 29 duplicates | 530 |
-| **Combined** | 739 | **709** | **496 distinct arXiv ids** |
+| `PDF/` (five collections plus a root drop) | 661 | — | — |
+| **Combined** | 828 | **599 distinct by SHA-256** | **550 distinct arXiv ids** |
 
-`PDF/` splits into `PROMPT` (364), `RAG` (134), `Memory` (25), `PoC` (12) and 37 files at its root. None of its files is image-only — every one yielded page-1 text. It is `.gitignore`d for the reason given below.
+`PDF/` splits into `PROMPT`, `RAG`, `Memory`, `PoC`, `pipeline` and files at its root, and has grown across several passes — 661 PDFs at last count. None is image-only; every one yielded page-1 text. It is `.gitignore`d for the reason given below.
+
+### `PDF/pipeline/` — the one collection that changed the design
+
+Added last, and unlike the others it is not a technique corpus: 89 PDFs on pipelines, orchestration, failure attribution and judge reliability, **plus three CSV evidence tables with per-row source attribution and two formal drafts**. 57 of the 89 were new by hash; 32 were already held under another collection.
+
+It is recorded separately because it is the only corpus so far that **changed the architecture rather than confirming it** — see sections 4 and 4a of [`PROMPT_ENGINEERING_ENVIRONMENT.md`](./PROMPT_ENGINEERING_ENVIRONMENT.md). Three findings did the work:
+
+| Finding | Detail | Consequence |
+|---|---|---|
+| Chain depth is a cliff, not a decay | GPT-4o Mini: **100% at 4 steps, 0% at 5**. All seven models tested: **0% at 11–12 steps** | An 11-stage pipeline is viable only *because* each boundary carries a schema, a gate set and a persisted revision. Depth without per-stage validation is where the cliff lives |
+| Architecture ranking inverts with load | Reflexive self-correction best at 1k docs/day (F1 0.943), **worst at 100k** (0.871) — correction loops truncated by queuing timeouts | Architecture is a Configuration parameter to be measured, not a decision made once |
+| Held-out sets leak through the scorer | Sample disjointness is insufficient; the guarantee needs *both* H ⊥ O and s ⊥ O | `EvalRun` must carry scorer provenance, not only dataset version |
+
+The two drafts also supply a **sizing requirement that no anchored-evaluation proposal elsewhere in the corpus states**: resolving a 2-percentage-point difference at 95% one-sided confidence needs ≈ 3,400 anchor items. That is in direct tension with ADR-0008's "golden set small enough to run offline in seconds", and the resolution — a small smoke set that gates every change, a large anchor that alone may certify a promotion — is recorded in the design doc.
 
 The corpus grew by 44 files mid-analysis — **35 of them new by content**, the rest duplicates of papers already present. Statistics elsewhere on this page computed against the earlier 528-file snapshot are unaffected, and that was checked rather than assumed: of the 35, **none is cited by the catalog and none supplies one of the fifteen missing techniques**. What they did supply is four measurements that changed the architecture, recorded below.
 
@@ -218,7 +232,7 @@ The reason is a date skew: the corpus is heavily 2025–2026, and the gap techni
 
 ## Verified: what the corpus does enable
 
-**96 of the catalog's 167 arXiv-cited records are now physically held**, up from 39. That matters for the one audit still outstanding: every record's `known_pitfalls` and `when_not_to_use` are `unverified` against the source paper — the frozen catalog's own `source_note` says so plainly — and checking them needs the papers, not metadata.
+**96 of the catalog's 167 arXiv-cited records are physically held**, up from 39; 550 distinct arXiv ids are held in total. The `pipeline` collection added none of them, being orthogonal to the catalog's citations by construction — it is about system structure rather than prompting techniques. That matters for the one audit still outstanding: every record's `known_pitfalls` and `when_not_to_use` are `unverified` against the source paper — the frozen catalog's own `source_note` says so plainly — and checking them needs the papers, not metadata.
 
 | Category | Held / cited |
 |---|---|

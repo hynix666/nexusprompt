@@ -2,12 +2,15 @@
 
 **Status: design, not built.** A companion to [ADR-0008](./0008-evaluation-first-environment.md), which owns the decision that evaluation is the primary subsystem and specifies the evaluation, authoring and release pipelines, the contract changes, and the scalability logic.
 
-This page deliberately does **not** restate any of that. It covers four things the ADR leaves open, each drawn from infrastructure papers in the corpus rather than from the prompting literature:
+This page deliberately does **not** restate any of that. It covers five things the ADR leaves open, drawn from the infrastructure and pipeline literature rather than the prompting literature:
 
 1. where extension points fall, and why that is what "scalable" means here
 2. routing, which the ADR lists only under *to revisit*
 3. the optimization loop that sits above the authoring pipeline
-4. how a system that modifies itself keeps its guardrails authoritative
+4. how a self-modifying system keeps evaluative authority — including **one correction to an action item in ADR-0008**
+5. pipeline depth as a first-order variable, with the measured reliability data
+
+Sections 4 and 4a draw on material in `PDF/pipeline/` that is not in the earlier corpora: two formal drafts on harness-optimizer composition, and three evidence tables with per-row source attribution.
 
 ---
 
@@ -80,19 +83,61 @@ Four constraints keep this from becoming random search with a large bill:
 
 ---
 
-## 4. Self-modification, lineages, and keeping guardrails authoritative
+## 4. Self-modification: three invariants, and one correction to make now
 
-Once an optimizer can change the scaffold, the system modifies itself, and two failure modes appear that no amount of evaluation quality prevents.
+Once an optimizer can change the scaffold, the system modifies itself. [Ouroboros](https://arxiv.org/abs/2608.08311) gives the operational shape — a harness whose "tools, context assembly, prompts and core implementation improve through **reviewed commits** that become the runtime for later work", with benchmark campaigns on frozen seeds while live evolution proceeds on a separate lineage.
 
-[Ouroboros](https://arxiv.org/abs/2608.08311) is the corpus's most direct treatment — a coding-agent harness whose "tools, context assembly, prompts and core implementation improve through **reviewed commits** that become the runtime for later work". Three of its operating rules generalise beyond self-modifying agents:
+Two drafts in `PDF/pipeline/` — *The Self-Improving Layer Is Not Exempt* and *When the Bottom Layer Moves* — give the formal account, and they are more demanding than the operational one. They state three invariants and prove that every reported failure class in this literature follows from violating one of them. Their setup matters: harness effects range 13–42 pp at fixed backbone, but backbone upgrades within a fixed harness move performance comparably, and **scaffold complexity does not predict effectiveness**.
 
-**Reviewed commits as the evolution mechanism.** Changes become the runtime only after review. This repository already works this way, and the discipline is what makes an optimizer's output safe to adopt: a proposed Configuration is a diff, with an `EvalRun` attached as its justification.
+**Invariant I — disjoint ownership.** For distinct optimizers, write surfaces are disjoint, and producer–consumer relationships go through explicit versioned contracts rather than shared mutable state. The accompanying proposition shows that if this fails, some schedule produces a configuration *neither optimizer ever observed* — and that **file-level locking is the wrong primitive**, because it serialises the write but not the read–compute–write cycle. This is the layer-and-contract discipline ADR-0001 and ADR-0005 already impose, restated as a concurrency requirement.
 
-**Separate lineages for measuring and for changing.** Ouroboros runs *"benchmark campaigns … [with] frozen seeds, while [live evolution continues] on a separate lineage."* Generalised: **the configuration you measure against must be frozen and separate from the one you are changing.** A baseline that drifts with the working branch is not a baseline — which is why ADR-0008 makes baselines immutable, and why the optimizer must not be able to promote its own candidate.
+**Invariant II — the conservative join.** Evidence counts toward attribution only when valid on **both** a structural clock and an evaluator clock; where they disagree the record is quarantined, never reinterpreted. Keying on one clock alone admits stale evidence *without raising an error*, which is why the defect is invisible to systems tracking a single counter. Two consequences worth having:
 
-**Guardrails must remain authoritative under evolutionary pressure.** This is the sharpest of the three. When a search is running over prompts, the gates *constrain* the search — so they must not be reachable *by* it. An optimizer that can weaken a gate will learn to satisfy the measurement instead of the goal, and will do so faster than a reviewer notices.
+- **α · ν ≤ λ / |U|** — attribution depth times structural change rate is bounded by throughput per unit. Frequent restructuring and deep per-unit attribution are jointly unattainable at fixed throughput. This turns "budget your structural change" into a computable constraint with three observable terms.
+- Quarantining *more* units does not lengthen the recovery window, because quarantined units recover in parallel. Conservatism here is cheap, which is the opposite of the usual intuition.
 
-Concretely, three properties follow: the gate registry and its `ported-gates.json` pin are outside the optimizer's search space; a proposal that changes a guard is a separate reviewed change, never part of a candidate Configuration; and the differential oracle ([ADR-0007](./0007-permanent-differential-oracle.md)) keeps checking the gates against an implementation the optimizer cannot touch.
+**Invariant III — anchored evaluative authority.** The "grades" relation must be well-founded with a unique minimal element, and that anchor must not be writable by any optimizer. The converse is the sharp result: **a cycle in the grades relation does not merely risk reward hacking, it constructs it** — given only that the search can find higher-scoring evaluators, which is the capability the search exists to have.
+
+### The correction
+
+An earlier version of this section said the gates "constrain the search, so they must not be reachable by it". That is Invariant III, and it is **necessary but not sufficient**. Two results say so directly, and both change what ADR-0008 must specify:
+
+**An anchor must be sized, or it certifies nothing.** Well-foundedness is satisfied vacuously by an uninformative anchor. Resolving a true gap Δ at one-sided confidence 1−ε needs
+
+> n₀ ≳ z<sub>ε</sub>² / (2 Δ<sub>target</sub>²)
+
+which for ε = 0.05 and a 2-percentage-point target is **≈ 3,400 anchor items**. Below that, two evaluators differing by less than the resolution are indistinguishable, the tie-break retains the incumbent, and no improvement is ever certified.
+
+This is in direct tension with ADR-0008's action item 3, *"a golden set small enough to run offline in seconds"* — and both are right, for different jobs. The resolution is **two sets, named differently**: a small fast **smoke set** that gates every change, and a large **anchor** that alone may certify a promotion. Conflating them yields either a suite nobody runs or a promotion nobody can justify.
+
+**Contamination flows through the scorer.** Sample disjointness of a held-out set is *insufficient*. If the scorer was selected using the optimization set, the promotion decision carries information about that set even when the items are disjoint. The guarantee requires **both** H ⊥ O **and** s ⊥ O. ADR-0008's `EvalRun` therefore needs the scorer's provenance, not only the dataset's — a scorer tuned on the optimization set invalidates the held-out claim silently.
+
+**And anchoring is selection, not containment.** *When the Bottom Layer Moves* reports that increasing anchor precision *increases* the accumulated specification gap: sweeping anchor size 25 → 3,200 raised true utility by 20% while raising the gap by 709% and driving the generalization ratio from 0.572 to 0.173. An anchor constrains which candidate is promoted; it places no bound on how far the promoted candidate's measured utility diverges from its real one. Plan for detection — a Goodhart alarm on the generalization ratio — not for prevention by anchoring alone.
+
+### What follows for this repository
+
+The gate registry and its `ported-gates.json` pin sit outside any optimizer's write surface; a change to a guard is a separate reviewed commit, never part of a candidate Configuration; and the differential oracle ([ADR-0007](./0007-permanent-differential-oracle.md)) keeps checking gates against an implementation the optimizer cannot reach. That last one is Invariant III with an anchor that is, by construction, not writable — which is the property the frozen Python linter had all along.
+
+---
+
+## 4a. Pipeline depth is a first-order design variable
+
+`PDF/pipeline/` includes three evidence tables with per-row source attribution. The reliability table is the most consequential thing in this corpus for an eleven-stage pipeline.
+
+**Compounding is exponential, and the constants are unforgiving.** At 99% per-step success: 10 steps → 90.4%, 100 steps → 36.6%, 1,000 steps → 0.004%. At a more realistic 85% per-step: 5 steps → 44%, 10 steps → ~20%, 20 steps → effectively 0%. The cited source uses this to argue for *architectural* rather than model-quality solutions, which is the right reading.
+
+**Measured behaviour is worse than the smooth model — it is a cliff.** In a seven-model comparison on stepwise algebraic reasoning, GPT-4o Mini scored **100% at 4 steps and 0% at 5**. The most resilient models tested stayed non-zero to 9 steps. **At 11–12 steps, all seven models scored 0%.**
+
+The honest reading matters here. That measurement is of an *unvalidated reasoning chain*, not of a pipeline of separate calls with typed contracts and validation between stages — which is precisely what this architecture is. The finding does not condemn an eleven-stage pipeline; it says that **depth without per-stage validation is where the cliff lives**, and it quantifies how little depth is available without it. Each stage boundary in this design carries a schema, a gate set, and a persisted revision. That is the mitigation, and it is now worth stating as its purpose rather than as a side effect.
+
+**Architecture ranking inverts with load.** In a four-way comparison on financial document processing, a reflexive self-correcting architecture was best at 1,000 documents/day (F1 0.943) and **worst at 100,000** (0.871), falling below hierarchical, parallel and sequential — because queuing-induced timeouts truncate the correction loops. The reported mitigation is specific: hierarchical supervision with semantic caching, confidence-gated model routing and escalation-on-failure retry recovered ~89% of the reflexive gain at ~1.15× sequential cost.
+
+This is the same inversion pattern ADR-0008 documents for prompts across model generations, now for *architecture across throughput*. It means the architecture choice is a Configuration parameter to be measured, not a decision to be made once — and it is another argument for the routing seam in §2, since confidence-gated routing is one of the three components in that mitigation.
+
+**Two further rules from the pattern table**, both cheap:
+
+- **Bounded loops.** The recorded hazard for verification loops is "unbounded retry without a termination rule"; the mitigation is an explicit iteration cap. Agentic-RAG rows put the practical hop cap at 2–3 before latency dominates. Any `Retry` in §3.1 needs a cap in the contract, not in a comment.
+- **Inspectable intermediates are an audit requirement.** Comparing cascaded and unified speech-to-speech voice pipelines, the row for the unified architecture records that "loss of an inspectable intermediate transcript makes independent per-stage grading and compliance auditing impossible." Per-stage revisions are not overhead; they are what makes per-stage grading possible at all.
 
 ---
 
