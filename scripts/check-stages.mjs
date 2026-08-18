@@ -139,8 +139,18 @@ export function checkStages(root = process.cwd()) {
   const matched = new Set();
 
   const byStageId = new Map(frozenStages.map((s) => [toStageId(s.name), s]));
+  /**
+   * Files that DECLARE a stage, not files in the directory.
+   *
+   * `stage-kit.ts` is shared plumbing every stage imports, and counting files reported it
+   * as a seventh stage when six existed. check:plan had the identical bug — a count of
+   * files is not a count of stages the moment the directory holds anything else, and it
+   * inflates in the direction that flatters progress.
+   */
   const ported = existsSync(at(STAGE_DIR))
-    ? readdirSync(at(STAGE_DIR)).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+    ? readdirSync(at(STAGE_DIR))
+        .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+        .filter((f) => /export const STAGE_ID = "[a-z_]+"/.test(readText(at(join(STAGE_DIR, f)))))
     : [];
 
   for (const file of ported) {

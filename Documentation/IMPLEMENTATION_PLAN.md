@@ -13,7 +13,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 ```json plan-status
 {
   "gates": { "ported": 16, "source_total": 16 },
-  "stages": { "built": 3, "target": 11 },
+  "stages": { "built": 6, "target": 11 },
   "contracts": { "schemas": 13 },
   "adapters": ["provider-local-proxy", "storage-local"],
   "shells": ["cli"],
@@ -40,7 +40,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
                         built          target
 contracts   ████████████████████       13 schemas — 11 validated against real values, 2 awaiting a judge and a promotion path
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
-core/stages █████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       3 of 11 — deconstruct, calibrate, compile
+core/stages ███████████▒▒▒▒▒▒▒▒▒       6 of 11 — the six generating stages; s7-s11 remain
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
 shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
@@ -161,7 +161,7 @@ This matters more here than it did for gates: **stages have no differential orac
 
 Each stage is a `decide`/`reduce` pair with no callback, per ADR-0005. `cost_estimate` and `tone_check` are the two the inherited `docs/` tree never mentions; they have no prior documentation to port from and need their contracts written fresh. Note also that **not every stage runs at every depth** — `DEPTH_PLAN` runs six of eleven at `TINY` and seven at `MINIMAL` — so an eleven-stage run is the `STANDARD`/`COMPREHENSIVE` path, not the only path.
 
-**Built so far — 3 of 11:** `deconstruct` (s1), `calibrate` (s2), `compile` (s3), plus `stage-kit.ts` for what all eleven need identically. Both new templates are verbatim, and `compile`'s deviation entry is **gone**: `deconstruct` and `calibrate` now supply `{previous}` and `{calibration}`, `{blueprint}` was always a constant, so frozen s3 fits. Deleting it was not optional — once the template matched, the stale rule failed the build until the entry went, which is the ratchet running in the direction it was built for.
+**Built so far — 6 of 11:** `deconstruct` (s1), `calibrate` (s2), `compile` (s3), `harden` (s4), `critique` (s5), `refine` (s6), plus `stage-kit.ts` for what all eleven need identically. Every template is verbatim. The five remaining are the ones whose frozen templates are EMPTY — `lint` and `cost_estimate` are deterministic and make no provider call, `critic` is a fixed temperature-0 verification call, `preview` uses the finished prompt as a system message, and `tone_check` has a real template but runs only at STANDARD depth and above. Both new templates are verbatim, and `compile`'s deviation entry is **gone**: `deconstruct` and `calibrate` now supply `{previous}` and `{calibration}`, `{blueprint}` was always a constant, so frozen s3 fits. Deleting it was not optional — once the template matched, the stale rule failed the build until the entry went, which is the ratchet running in the direction it was built for.
 
 **A latent defect in the frozen component, found by porting its own invariant.** The source's `fill()` refuses to send a template with an unresolved `{slot}`, using `/\{[a-zA-Z][^}]*\}/`. That pattern matches `{VARIABLE_1}` *inside* `{{VARIABLE_1}}` — and `BLUEPRINT` is full of doubled braces, so interpolating the blueprint into s3 makes the guard throw. **The frozen compile stage cannot render.** Verified by running the source's exact `fill()` against its own s3 and blueprint: `{VARIABLE_1}, {VARIABLE_2}` unresolved, every time.
 

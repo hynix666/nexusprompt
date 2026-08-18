@@ -4,6 +4,9 @@ import { fillTemplate, buildRequest, BLUEPRINT, NO_CALIBRATION, DEMO_MARKER } fr
 import * as deconstruct from "../src/stages/deconstruct.js";
 import * as calibrate from "../src/stages/calibrate.js";
 import * as compile from "../src/stages/compile.js";
+import * as harden from "../src/stages/harden.js";
+import * as critique from "../src/stages/critique.js";
+import * as refine from "../src/stages/refine.js";
 import type { ProviderFailure, GenerationResult } from "../../contracts/index.js";
 
 /**
@@ -111,6 +114,74 @@ describe("calibrate", () => {
     expect(state.demo_mode).toBe(true);
     expect(state.calibration).toContain(DEMO_MARKER);
     expect(state.calibration).not.toMatch(/HIGH-TEMPERATURE|LOW-TEMPERATURE/);
+  });
+});
+
+describe("harden", () => {
+  it("threads the compiled prompt and keeps the {{...}} example intact", () => {
+    const p = harden.decide({ prompt: "THE PROMPT" }, "run").messages[0].content;
+    expect(p).toContain("THE PROMPT");
+    expect(p).toContain("GUARDRAILING");
+    expect(p).toContain("({{...}})"); // clause 1's description of the prompt's own syntax
+  });
+
+  it("does NOT pass the prompt through when hardening failed", () => {
+    // Returning the un-hardened prompt would make a failed injection indistinguishable
+    // from a successful one that needed no changes. The input does still appear, but only
+    // inside the placeholder's fenced echo — quoted as data, never returned as the result.
+    const state = harden.reduce({ prompt: "ORIGINAL" }, failure);
+    expect(state.demo_mode).toBe(true);
+    expect(state.prompt.startsWith(DEMO_MARKER)).toBe(true);
+
+    const echoAt = state.prompt.indexOf("Input received:");
+    expect(echoAt).toBeGreaterThan(0);
+    expect(state.prompt.slice(0, echoAt)).not.toContain("ORIGINAL"); // not the returned prompt
+    expect(state.prompt.slice(echoAt)).toContain("ORIGINAL");        // quoted, and fenced
+    expect(state.prompt.slice(echoAt)).toContain("```");
+  });
+});
+
+describe("critique and refine — coupled through an exact sentence", () => {
+  it("the sentinel the template promises is the constant refine tests for", () => {
+    // Two stages coupled by a literal string. If the template's wording and the constant
+    // drift apart, refine silently stops skipping and the coupling breaks in prose.
+    const p = critique.decide({ prompt: "x" }, "run").messages[0].content;
+    expect(p).toContain(`return exactly: "${critique.PASS_SENTINEL}"`);
+  });
+
+  it("recognises a clean critique exactly, not loosely", () => {
+    expect(critique.isClean(critique.PASS_SENTINEL)).toBe(true);
+    expect(critique.isClean(`  ${critique.PASS_SENTINEL}  `)).toBe(true); // trimmed
+    expect(critique.isClean("PASS")).toBe(false);
+    expect(critique.isClean(`${critique.PASS_SENTINEL} But also G1 failed.`)).toBe(false);
+  });
+
+  it("a degraded critique never reads as clean", () => {
+    /**
+     * The dangerous collision. If a failed critique produced the pass sentinel, refine
+     * would take the "nothing failed, return unchanged" branch and the pipeline would
+     * report a prompt as reviewed-and-clean that no reviewer ever saw.
+     */
+    const state = critique.reduce({ prompt: "x" }, failure);
+    expect(state.demo_mode).toBe(true);
+    expect(critique.isClean(state.critique)).toBe(false);
+    expect(refine.shouldSkip({ prompt: "x", critique: state.critique })).toBe(false);
+  });
+
+  it("refine skips on a clean critique and runs otherwise", () => {
+    expect(refine.shouldSkip({ prompt: "p", critique: critique.PASS_SENTINEL })).toBe(true);
+    expect(refine.shouldSkip({ prompt: "p", critique: "1. G1 unfilled bracket" })).toBe(false);
+  });
+
+  it("the skip path degrades nothing, because nothing was invoked", () => {
+    const skipped = refine.reduceSkipped({ prompt: "UNCHANGED", critique: critique.PASS_SENTINEL });
+    expect(skipped).toEqual({ prompt: "UNCHANGED", demo_mode: false, skipped: true });
+  });
+
+  it("refine threads both the prompt and the critique", () => {
+    const p = refine.decide({ prompt: "THE PROMPT", critique: "1. G1 failed" }, "run").messages[0].content;
+    expect(p).toContain("THE PROMPT");
+    expect(p).toContain("1. G1 failed");
   });
 });
 
