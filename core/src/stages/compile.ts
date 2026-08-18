@@ -15,11 +15,16 @@
  * That is what makes demo mode testable without a provider: the same classified
  * failure always produces the same placeholder, and the test asserts it directly.
  *
- * Prompt template ported from sources/pipeline/SystemPromptBuilderPipeline.tsx
- * (DEFAULT_STAGES, s3 "Compile").
+ * Template ported VERBATIM from sources/pipeline/SystemPromptBuilderPipeline.tsx
+ * (DEFAULT_STAGES, s3 "Compile"), and `npm run check:stages` now compares it byte-for-byte.
+ *
+ * It was NOT verbatim before. The vertical slice ran this stage with no pipeline around it,
+ * so `{calibration}` and `{blueprint}` had no producers and a self-contained template was
+ * used instead — while the comment here claimed the frozen s3 had been ported. Defensible
+ * at the time, unrecorded, and caught by check:stages on its first run. Now that
+ * `deconstruct` and `calibrate` exist, the real template fits and the deviation is gone.
  */
 
-import { createHash } from "node:crypto";
 import type {
   GenerationRequest,
   GenerationResult,
@@ -27,24 +32,36 @@ import type {
   GateResult,
 } from "../../../contracts/index.js";
 import { runGates } from "../gates/registry.js";
+import { fillTemplate, buildRequest, demoPlaceholder, DEMO_MARKER } from "./stage-kit.js";
 
 export const STAGE_ID = "compile" as const;
 
-/** The marker. Not a string literal scattered through the codebase — one definition. */
-export const DEMO_MARKER = "⟦WORKFLOW DEMO — no model⟧";
+export { DEMO_MARKER };
 
-const TEMPLATE = `STEP 3 — COMPILATION.
+const TEMPLATE = `STEP 2 — SCAFFOLDING. Compile the system prompt using the blueprint below. Every bracketed placeholder MUST be replaced with content specific to the target domain — an unfilled [Description] in your output is a failed compile, not a draft.
 
 SPEC:
 {previous}
 
-Compile the specification above into a complete system prompt. Emit the prompt itself and nothing else: no preamble, no commentary on your choices, no trailing summary.
+CALIBRATION (obey its compilation consequences):
+{calibration}
 
-Include, in this order: role and objective; scope boundaries; the named edge cases and how to handle each; output format; and the runtime variables the prompt expects, each declared before use.`;
+OUTPUT BLUEPRINT — follow this structure exactly, filling every bracket:
+{blueprint}
+
+Requirements:
+- Section 3 Step 4 (Self-Check) must contain concrete, checkable conditions derived from the spec's Named Edge Cases — at least one check per edge case.
+- Section 2 must include behavior for missing required intake (ask a targeted question vs. proceed with flagged assumption) — never "fabricate defaults silently".
+- Section 5 must include a worked example if the output schema is non-trivial.
+
+Output ONLY the compiled system prompt in the blueprint structure.`;
 
 export interface CompileInput {
   brief: string;
+  /** The spec from `deconstruct`. Falls back to the brief. */
   previous?: string;
+  /** The profile from `calibrate`. Absent substitutes the source's documented default. */
+  calibration?: string;
 }
 
 /** What Core decided should happen. The Application executes it; Core does not. */
@@ -67,20 +84,12 @@ export interface ReducedState {
  * input produces the same request, which the determinism tests rely on.
  */
 export function decide(input: CompileInput, run_id: string): GenerationRequest {
-  const prompt = TEMPLATE.replace("{previous}", input.previous ?? input.brief);
-  const request_id = createHash("sha256")
-    .update(`${run_id}:${STAGE_ID}:${prompt}`, "utf8")
-    .digest("hex")
-    .slice(0, 32);
-
-  return {
-    request_id,
-    run_id,
-    messages: [{ role: "user", content: prompt }],
-    model_policy: { preferred_models: ["claude-opus-5"], allow_fallback: true },
-    generation_options: { max_tokens: 8000, effort: "medium" },
-    idempotency_key: request_id,
-  };
+  const prompt = fillTemplate(TEMPLATE, {
+    previous: input.previous,
+    brief: input.brief,
+    calibration: input.calibration,
+  });
+  return buildRequest(run_id, STAGE_ID, prompt);
 }
 
 /**
@@ -96,7 +105,7 @@ export function reduce(
   const isFailure = "category" in outcome;
 
   const text = isFailure
-    ? demoPlaceholder(input, outcome as ProviderFailure)
+    ? demoPlaceholder(STAGE_ID, input.previous ?? input.brief, outcome as ProviderFailure)
     : (outcome as GenerationResult).content;
 
   return {
@@ -104,43 +113,4 @@ export function reduce(
     gate_results: runGates(text),
     demo_mode: isFailure,
   };
-}
-
-/**
- * The honesty guarantee, as a pure function.
- *
- * It states what was attempted, why it did not happen, and what the reader is
- * looking at — and it deliberately contains no compiled prompt. Producing
- * plausible output here would be indistinguishable from the real thing, which is
- * the entire failure this mechanism exists to prevent.
- *
- * The text is also written to pass CLAIM_DISCIPLINE: no guarantee, no claim of
- * accuracy. The acceptance test asserts exactly that.
- */
-function demoPlaceholder(input: CompileInput, failure: ProviderFailure): string {
-  return [
-    DEMO_MARKER,
-    "",
-    `Stage "${STAGE_ID}" did not run against a model.`,
-    `Provider: ${failure.provider_id} · category: ${failure.category} · reason: ${failure.reason_code}`,
-    `Detail: ${failure.safe_message}`,
-    "",
-    "No compiled prompt was produced. The text you are reading is a placeholder,",
-    "not model output, and nothing below it was generated.",
-    "",
-    // The echo is fenced deliberately. Gates strip fenced spans before auditing,
-    // which is exactly the distinction needed here: quoted input is data, not a
-    // claim this placeholder is making. Without the fence, a brief containing
-    // "100% accurate" makes CLAIM_DISCIPLINE warn about the *input's* overclaim
-    // as though the demo output had asserted it — observed while running the CLI.
-    "Input received:",
-    "```",
-    truncate(input.previous ?? input.brief, 160),
-    "```",
-  ].join("\n");
-}
-
-function truncate(s: string, n: number): string {
-  const flat = s.replace(/\s+/g, " ").trim();
-  return flat.length <= n ? flat : `${flat.slice(0, n - 1)}…`;
 }

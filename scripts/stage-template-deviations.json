@@ -20,13 +20,20 @@
     "    far from both the source and the text that was reviewed. A probe demonstrated it:",
     "    the compile template was rewritten wholesale and the checker stayed green."
   ],
-  "deviations": [
-    {
-      "stage": "compile",
-      "reason": "The vertical slice ran one stage with no pipeline around it. Frozen s3 threads {calibration} from the calibrate stage and {blueprint} from deconstruct, and neither existed — so a faithful port would have interpolated two permanently empty slots and instructed the model to fill a blueprint it was never given. The slice used a self-contained template instead. This was NOT recorded at the time: compile.ts still carries a comment claiming the template was ported from s3, which check:stages caught on its first run.",
-      "fix_point": "Phase 3 — once deconstruct and calibrate exist and can supply {blueprint} and {calibration}, port frozen s3 verbatim, delete this entry, and correct the provenance comment in compile.ts.",
-      "ported_sha256": "53c37f37c99b411f56b42b34d3b59e342c9e1a0ce5c582db0dd93ee533208b85",
-      "recorded_on": "2026-08-18"
-    }
-  ]
+  "_history": [
+    "2026-08-18 — `compile` was recorded here and removed the same day.",
+    "",
+    "Recorded because the vertical slice ran one stage with no pipeline around it: frozen",
+    "s3 threads {calibration} from calibrate and {blueprint} from a constant, and calibrate",
+    "did not exist, so a faithful port would have instructed a model to obey a permanently",
+    "empty calibration block. The slice used a self-contained template instead — reasonable,",
+    "and never written down, while compile.ts carried a comment claiming s3 had been ported.",
+    "check:stages caught it on its first run.",
+    "",
+    "Removed because deconstruct and calibrate now exist, s3 was ported verbatim, and the",
+    "stale rule then failed the build until this entry went. That is the ratchet working in",
+    "the direction it was built for: fixing the deviation FORCED the ledger to be updated,",
+    "rather than leaving a record of a weakness that no longer exists."
+  ],
+  "deviations": []
 }

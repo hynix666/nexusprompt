@@ -37,7 +37,9 @@ describe("decide — pure, deterministic", () => {
     const req = decide({ brief: "a support bot" }, "run-1");
     expect(req.run_id).toBe("run-1");
     expect(req.messages).toHaveLength(1);
-    expect(req.messages[0].content).toContain("STEP 3 — COMPILATION");
+    // The frozen s3 opening. It was "STEP 3 — COMPILATION" while the template was a
+    // paraphrase; the port is now verbatim and check:stages compares it to the source.
+    expect(req.messages[0].content).toContain("STEP 2 — SCAFFOLDING");
   });
 
   it("derives request_id from the input, not from randomness", () => {
@@ -65,7 +67,8 @@ describe("reduce — classified outcome in, next state out", () => {
     expect(state.demo_mode).toBe(true);
     expect(state.output.text).toContain("⟦WORKFLOW DEMO — no model⟧"); // literal: see acceptance.test.ts
     expect(state.output.text).toContain("UNAVAILABLE");
-    expect(state.output.text).toContain("No compiled prompt was produced");
+    // Wording is stage-generic now that eleven stages share one placeholder.
+    expect(state.output.text).toContain("No output was produced");
   });
 
   it("the mapping is deterministic — same failure, identical bytes", () => {

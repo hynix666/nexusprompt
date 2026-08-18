@@ -109,7 +109,9 @@ function makePlanRepo(overrides: Partial<Truth> = {}): { root: string; truth: Tr
   write(root, "contracts/index.ts",
     `export const STAGE_IDS = [\n${t.stageTarget.map((s) => `  "${s}",`).join("\n")}\n] as const;\n`);
   for (const s of t.schemas) write(root, `contracts/${s}.schema.json`, "{}");
-  for (const s of t.stages) write(root, `core/src/stages/${s}.ts`, "export const x = 1;\n");
+  // A stage module is one that DECLARES a stage. check:plan counts the declaration, not
+  // the file, so shared plumbing like stage-kit.ts is not miscounted as a stage.
+  for (const s of t.stages) write(root, `core/src/stages/${s}.ts`, `export const STAGE_ID = "${s}";\n`);
   for (const a of t.adapters) write(root, `adapters/${a}/package.json`, "{}");
   for (const s of t.shells) write(root, `shells/${s}/package.json`, "{}");
   if (t.ci) write(root, ".github/workflows/ci.yml", "on: push\n");

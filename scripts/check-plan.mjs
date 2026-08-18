@@ -88,11 +88,22 @@ export function checkPlan(root = process.cwd()) {
   claim("gates.source_total", declared.gates.source_total, sourceGateIds.size,
     `derived from distinct gate ids emitted by ${LINTER}`);
 
-  // Stages built: one module per stage under core/src/stages.
+  /**
+   * Stages built: modules that DECLARE a stage, not files in the directory.
+   *
+   * Counting `*.ts` counted `stage-kit.ts` — shared plumbing every stage imports — as a
+   * stage, and reported 4 built when 3 were. A count of files is not a count of stages the
+   * moment the directory holds anything but stages, and it silently inflates in the
+   * direction that flatters progress.
+   */
   const stageFiles = existsSync(at("core/src/stages"))
-    ? readdirSync(at("core/src/stages")).filter((f) => f.endsWith(".ts")).length
+    ? readdirSync(at("core/src/stages"))
+        .filter((f) => f.endsWith(".ts"))
+        .filter((f) => /export const STAGE_ID = "[a-z_]+"/.test(readText(at(join("core/src/stages", f)))))
+        .length
     : 0;
-  claim("stages.built", declared.stages.built, stageFiles, "count of core/src/stages/*.ts");
+  claim("stages.built", declared.stages.built, stageFiles,
+    "count of core/src/stages/*.ts declaring a STAGE_ID");
 
   // Stage target: the STAGE_IDS tuple in the contract is the authority.
   const stageIds = readText(at("contracts/index.ts"))

@@ -104,7 +104,8 @@ describe("acceptance: provider unreachable", () => {
 
     expect(outcome.demo_mode).toBe(true);
     expect(outcome.output.text).toContain(DEMO_MARKER);
-    expect(outcome.output.text).toContain("No compiled prompt was produced");
+    // Stage-generic since eleven stages share one placeholder in stage-kit.ts.
+    expect(outcome.output.text).toContain("No output was produced");
     expect(events.some((e) => e.event_type === "DEGRADE")).toBe(true);
 
     await rm(root, { recursive: true, force: true });
