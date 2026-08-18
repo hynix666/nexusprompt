@@ -8,7 +8,7 @@ Every count and file name above has been checked against the source artifacts �
 
 **New contributors**, in order:
 1. [`ARCHITECTURE.md`](./ARCHITECTURE.md) — the layer model, effect ownership, and why it exists
-1a. [`PROMPT_ENGINEERING_ENVIRONMENT.md`](./PROMPT_ENGINEERING_ENVIRONMENT.md) — **design, not built**: the five pipelines, the Evidence plane, the seams, and what the literature and this repo's own mutation data say to build first
+1a. [`PROMPT_ENGINEERING_ENVIRONMENT.md`](./PROMPT_ENGINEERING_ENVIRONMENT.md) — **design, not built**: a companion to ADR-0008 covering extension seams, routing, the optimization loop, and what keeps guardrails authoritative when the system optimises itself
 2. [`CONTRACTS.md`](./CONTRACTS.md) — the schemas everything else depends on
 3. [`DEVELOPMENT_AND_TESTING.md`](./DEVELOPMENT_AND_TESTING.md) — local setup, test strategy
 4. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — how a change gets from idea to merged
@@ -43,7 +43,6 @@ Every count and file name above has been checked against the source artifacts �
 | [0005](./0005-application-orchestration-boundary.md) | Application/Orchestration boundary and Composition Root; pure Core | Accepted — amends 0001 |
 | [0006](./0006-shell-composition-and-shared-ui.md) | Shared presentation packages; `CI-bot` removed from the Shell inventory | Accepted — amends 0004 |
 | [0007](./0007-permanent-differential-oracle.md) | The differential oracle is permanent, not migration scaffolding | Accepted |
-| [0008](./0008-evaluation-as-the-primary-subsystem.md) | Evaluation is a first-class plane; the attributable run is the unit of work | Accepted — extends 0005, 0007 |
 | [0008](./0008-evaluation-first-environment.md) | Evaluation is the primary subsystem; the versioned artifact is a Configuration, not a prompt | Accepted — extends 0005 and 0007 |
 
 An amended ADR stays in force except where its amendment supersedes it; the amendment states which parts. Where an ADR and `ARCHITECTURE.md` disagree on current shape, `ARCHITECTURE.md` is authoritative.

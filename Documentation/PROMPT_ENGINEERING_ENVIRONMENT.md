@@ -1,213 +1,130 @@
-# The Prompt Engineering Environment — architecture and pipelines
+# Extension seams, routing, and the optimization loop
 
-**Status: design, not built.** Nothing on this page is implemented except where it says so. It is written target-state like the rest of this set, and the same warning applies: check before believing. What *is* built is listed in [`README.md`](./README.md)'s status table and verified by `npm run check:plan`.
+**Status: design, not built.** A companion to [ADR-0008](./0008-evaluation-first-environment.md), which owns the decision that evaluation is the primary subsystem and specifies the evaluation, authoring and release pipelines, the contract changes, and the scalability logic.
 
-This document answers one question: what does a prompt engineering environment need in order to be *reliable in production*, as opposed to capable in a demo. It is grounded in three kinds of evidence, and says which is which throughout — measured in this repository, read from the literature corpus, or checked against current practice.
+This page deliberately does **not** restate any of that. It covers four things the ADR leaves open, each drawn from infrastructure papers in the corpus rather than from the prompting literature:
 
----
-
-## 1. The problem the architecture exists to solve
-
-> *"Agent scores on long-horizon benchmarks are products of the base model, the execution harness, the environment, and the grader."*
-> — Ouroboros (arXiv 2608.08311)
-
-This is the whole difficulty in one sentence. A prompt's measured quality is a function of **four** things, and a change in any one moves the number. If the four are not pinned and recorded together, an improvement is indistinguishable from a model update, a harness edit, a dataset shift, or a different judge.
-
-The security literature reaches the same conclusion from the other end. [SoK: Systematizing LLM Prompt Security](https://arxiv.org/abs/2510.15476) reports that prior work "often uses incompatible threat models, access assumptions, cost budgets, datasets, and success criteria", which "can obscure whether progress comes from a stronger method, a weaker target, a different judging rule, or a larger query budget." Its remedy is to make every experiment an explicit tuple of *(model, attack, defense, dataset, judger)* with threat, access and cost as declared metadata.
-
-**Design consequence — the load-bearing one.** The unit of work in this environment is not a prompt. It is an **attributable run**: a prompt *plus* the full configuration under which it was measured. Everything below follows from taking that seriously.
-
-The existing `ExecutionProvenance` contract is the right primitive and is **incomplete**. It carries `core_build_hash`, `contract_versions`, `provider_model_fingerprint` and `config_fingerprint`. It is missing decoding parameters, the grader's identity, the dataset version, and the cost budget — four of the things that most change a result.
+1. where extension points fall, and why that is what "scalable" means here
+2. routing, which the ADR lists only under *to revisit*
+3. the optimization loop that sits above the authoring pipeline
+4. how a system that modifies itself keeps its guardrails authoritative
 
 ---
 
-## 2. Layer model
+## 1. Seams — scalability as the cost of the two-hundredth addition
 
-The five-layer stack in [`ARCHITECTURE.md`](./ARCHITECTURE.md) is unchanged and remains the dependency backbone. This design adds **one plane** and no layers.
+Throughput is not the scaling problem in this system. The scaling problem is **what it costs to add the next gate, scorer, technique, judge, or provider** — and the failure mode is well-evidenced: of the seventeen prototypes surveyed in `SOURCE_VERIFICATION.md`, none had a registry, and not one grew past its author's original set. **The hardcoded list is the ceiling.**
 
-```
-    Shells ──────────────────────────────────────────────┐
-    Application / Orchestration  (owns all live effects)  │  Observability spine
-    Contracts   (versioned schemas, sole interface)       │  (exists)
-    Core        (pure: gates, catalog, stages, scoring)   │
-    Adapters    (provider, storage, grader, index)        │  Evidence plane
-    Composition Root                                      │  (new)
-```
+The design rule is that each extension point requires implementing the minimum that cannot be defaulted, and nothing else:
 
-**Why a plane and not a layer.** Evaluation is not something the pipeline calls; it is something that *observes* the pipeline and outlives any single run. It needs to reach every layer — the gate verdicts in Core, the provider fingerprint in Adapters, the stage decisions in Application — without any of them depending on it. That is the same shape as the observability spine, and for the same reason.
+| Extension | Author implements | Registration | Status |
+|---|---|---|---|
+| Gate | one pure function | one registry line + `ported-gates.json` entry | **built** |
+| Technique | one record | import boundary, contract-validated | **built** |
+| Provider | `generate` + `healthCheck` | composition root | **built** |
+| Detector / scorer | `score(candidate, expectation, config) → Score` | one registry line | to build |
+| Judge | `grade(candidate, rubric) → JudgeVerdict` behind the port | composition root | to build |
+| Perturbation | `perturb(case, seed) → case` | one registry line | to build |
+| Router | a routing method **and** a loss function | one registry line | to build |
 
-The Evidence plane holds four record types, all immutable once written: **datasets**, **runs**, **scores**, and **baselines**. A run is never edited; a re-run is a new run. This is the freeze discipline already used for `sources/`, applied to measurements.
+The router row is copied deliberately. [LLMRouter](https://arxiv.org/abs/2608.06867) reports that adding a router to its library requires "implementing only a routing method and a loss function", with more than sixteen routers built on that seam. That is the shape to aim for everywhere: a two-function interface with the registry supplying everything else.
 
-### Where scoring lives
-
-Deterministic scoring is Core — it is a pure function of *(candidate, reference, config)* and must stay so. Judge-based scoring is an **adapter behind a port**, exactly like a provider, because it performs a live effect. The Application layer decides which to invoke, and Core reduces the classified result. `decide → invoke → reduce` applies unchanged.
-
-This distinction is not cosmetic. It is what lets the deterministic half of the eval suite run offline, in milliseconds, with no budget — which is the difference between a suite people run and a suite people skip.
+**The registry is also where the contract is enforced.** `import:catalog` already refuses an addition that collides with a frozen id, omits a required field, or names a `related_techniques` target that does not resolve — the last of which caught a real error in hand-written data on its first run. A seam without a validating registry is just a convention.
 
 ---
 
-## 3. The five pipelines
+## 2. Routing — a component with a decision rule, not a configuration constant
 
-### 3.1 Authoring — *partially built*
+No single model is optimal across all queries and budgets, so model selection is a decision the system makes repeatedly, and a decision made repeatedly deserves a contract.
 
-The eleven-stage pipeline. Built: one stage (`compile`), end to end, with demo-mode honesty. Each stage is a `decide`/`reduce` pair; Core returns a `GenerationRequest`, the Application executes it, Core reduces the classified outcome ([ADR-0005](./0005-application-orchestration-boundary.md)).
-
-**The one change worth making: gates become a control signal, not a report.**
-
-Today a gate emits a verdict that is recorded and ignored. [DSPy Assertions](https://arxiv.org/abs/2312.13382) shows the same constraints used as runtime backtracking triggers and as a compiler objective raise constraint satisfaction "up to 164% more often" with "up to 37% more higher-quality responses". You already have the hard part: pure, deterministic, typed `GateResult`s with `message_code` and `location`. What is missing is a reducer that treats a FAIL as *retry with this feedback attached*, under a bounded attempt budget.
+[LLMRouter](https://arxiv.org/abs/2608.06867) formalises routing as a sequential decision process decomposed into five parts:
 
 ```
-reduce(input, outcome, gateResults) →
-    | Accept(output)
-    | Retry(GenerationRequest, feedback, attempt)   ← new
-    | Degrade(demo placeholder)
+context encoder  →  ┐
+model encoder    →  ├─►  scoring function  →  decision rule  →  selected model
+                    ┘                              ▲
+                                            learning signal
 ```
 
-`Retry` must be Core-pure and bounded: it returns the next request, it does not perform it. The attempt cap belongs in the Application, where the other effect budgets already live.
+Two properties transfer directly.
 
-### 3.2 Evaluation — *not built, and it is the blocking gap*
+**Routers are evaluated on quality *and* cost, under one protocol.** A router judged on quality alone always selects the largest model, which is not a router. This is the same discipline ADR-0008 applies to techniques — cost is a dimension of the result, not a footnote to it — and it means the evaluation pipeline's `EvalRun` needs no special casing to evaluate a router: a routing policy *is* part of a Configuration.
 
-Everything else in this document is unmeasurable without it.
+**The learning signal is a first-class component**, which is what makes a router improvable rather than hand-tuned. It is also what makes routing dangerous without ADR-0008 in place first: a router trained against an unmeasured objective optimises toward whatever the objective actually rewards.
 
-```
-dataset@version
-      │
-      ├── case × technique × model × params  ──►  run matrix
-      │                                              │
-      │                                     (content-addressed cache)
-      │                                              │
-      ├── deterministic scorers (Core, offline, free) ┤
-      ├── judge scorers (adapter, budgeted, recorded) ┤
-      │                                              ▼
-      └────────────────────────────────►  scores  ──►  compare(baseline)
-                                                          │
-                                          Verdict: improved | regressed | inconclusive
-```
-
-Four properties matter more than the shape:
-
-**Offline and online catch different things.** Offline evaluation catches regressions *you* introduce. Online evaluation catches changes that *happen to you* — provider models now ship faster than internal release cycles and shift behaviour without a version bump. You already record `provider_model_fingerprint`; nothing acts on it. Making a fingerprint change trigger a baseline re-run converts an existing field into online-regression detection for almost no work.
-
-**The grader is a component with an error rate.** The [LLM-as-a-Judge survey](https://arxiv.org/abs/2411.15594) spends its evaluation section on agreement-with-humans, bias, and adversarial robustness — the judge is a subject, not an instrument. The industrial study below flags *same-model judge* limitations explicitly. Two rules follow: the model under test never grades its own output, and grader identity goes in provenance.
-
-**Clean inputs overstate quality.** [Auto-Prompt Generation is Not Robust](https://arxiv.org/abs/2412.18196) shows that methods assessed "only on clean, well-structured inputs" degrade sharply under minor perturbation. The adversarial corpus should therefore be *generated* — systematic seeded perturbations of the golden set — not a handwritten attack list, which only covers what its author already imagined.
-
-**Inconclusive is a real verdict.** With stochastic decoding, a single run pair cannot distinguish improvement from noise. The comparison must report *inconclusive* rather than round toward a decision. The industrial study below used **100 trials per method** to make its claims; a suite that runs each case once is measuring sampling noise.
-
-### 3.3 Optimization — *not built*
-
-[A Survey of Automatic Prompt Engineering](https://arxiv.org/abs/2502.11560) formalises this as maximisation over discrete, continuous and hybrid prompt spaces, organised by optimisation variable (instructions, soft prompts, exemplars), objective, and method family. AutoDesign (arXiv 2608.13560) frames it more usefully for our purpose: a **meta-harness** optimises the harness, and "the optimization acts on the system surrounding the model rather than on the model itself."
-
-```
-outer loop  (meta-harness)         inner loop  (authoring pipeline)
-   propose candidate harness   ──►   run the eval pipeline
-   ▲                                        │
-   └──────── objective = eval verdict ◄─────┘
-```
-
-Two constraints keep this from becoming a random-search toy:
-
-- **The objective is the eval pipeline's verdict, not a scalar someone invented.** If the eval pipeline is not trustworthy, the optimizer amplifies its errors rather than the system's quality.
-- **Constrained optimisation, not free.** Gate verdicts and cost budget are constraints on the search space, not soft preferences. The survey names constrained optimisation as an underexplored frontier; for a production environment it is the only responsible form.
-
-### 3.4 Runtime — *partially built*
-
-Serve, route, guard, degrade, record. Built: provider invocation with typed failure, retry policy, demo-mode degradation, event emission.
-
-**Routing is the significant addition, and there is a good shape to copy.** [LLMRouter](https://arxiv.org/abs/2608.06867) formalises routing as a sequential decision process decomposed into five components — *context encoders, model encoders, scoring functions, decision rules, learning signals* — and reports that a new router requires implementing "only a routing method and a loss function". Its benchmark evaluates routers on **response quality and inference cost jointly**, under one protocol.
-
-Copy both: the five-part decomposition as the port, and quality-with-cost as the only honest evaluation of a routing decision. A router evaluated on quality alone will always select the largest model.
-
-### 3.5 Release — *not built; blocked*
-
-Freeze, stamp, promote, roll back. Blocked on there being a git remote at all (risk R8 in [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md)).
-
-Ouroboros contributes the sharpest operational rule here. Its harness modifies *itself*, so it separates lineages: **"Benchmark campaigns use frozen seeds, while Hope continues live evolution on a separate lineage."** Generalised — and this applies even without self-modification — the configuration you measure against must be frozen and separate from the configuration you are changing. A baseline that drifts with the branch is not a baseline.
-
-Its safety framing is the other transferable piece: *"guardrails must remain authoritative under evolutionary pressure."* When an optimizer is searching over prompts, the gates constrain the search. They must not be reachable *by* the search, or the optimizer will learn to satisfy the measurement instead of the goal.
+**Placement.** Routing is a decision, so the *policy* is pure and belongs in Core; the *selection and invocation* is an effect and belongs in the Application layer, alongside retry and budget. This is `decide → invoke → reduce` again, and it means routing needs no new layer — which answers the question ADR-0008 leaves open under *to revisit*.
 
 ---
 
-## 4. Seams — where scalability actually comes from
+## 3. The optimization loop — a meta-harness over the authoring pipeline
 
-Scalability here is not throughput; it is **the cost of adding the two-hundredth of something**. Every extension point should require implementing the minimum that cannot be defaulted:
+[AutoDesign](https://arxiv.org/abs/2608.13560) supplies the cleanest framing available for what an optimizer in this system actually optimises. It defines a **meta-harness** as a system that operates on the harness, with the objective
 
-| Extension | Author implements | Registry cost |
-|---|---|---|
-| Gate | one pure function | one line + `ported-gates.json` entry — *built* |
-| Technique | one record | import boundary — *built* |
-| Scorer | `score(candidate, reference, config) → Score` | one line |
-| Judge | `grade(candidate, rubric) → Verdict` behind the port | composition root |
-| Router | a routing method + a loss | one line (LLMRouter's shape) |
-| Perturbation | `perturb(input, seed) → input` | one line |
-| Provider | `generate` + `healthCheck` | composition root — *built* |
+> J(H) = E<sub>(x,c)~p<sub>task</sub></sub> [ R<sub>meta</sub>(y, x, c) ]
 
-The gate registry already demonstrates the property: 0 of 17 surveyed prototypes had one, and every one of them capped at its author's original set. **The list is the ceiling.** Registries are what stop that.
+and makes the point that matters: *"the optimization acts on the system surrounding the model rather than on the model itself"* — the model-versus-scaffold distinction. Model weights are fixed; the scaffold is the variable.
 
-### Concurrency and cost
+```
+outer loop — meta-harness                inner loop — authoring pipeline (Pipeline A)
+   propose a candidate Configuration  ──►   run Pipeline B (evaluation)
+        ▲                                        │
+        └────── objective = EvalRun verdict ◄─────┘
+```
 
-The run matrix is embarrassingly parallel and bounded by two things that must be explicit, not emergent: **provider concurrency** and **budget**. Both belong in the request contract.
+Four constraints keep this from becoming random search with a large bill:
 
-The highest-leverage single mechanism is a **content-addressed run cache**, keyed on `sha256(prompt, model, decoding params, seed, tool set)`. Evaluation re-runs the same cases constantly; without a cache the suite's cost is the reason people stop running it. With one, a re-run after an unrelated change is nearly free. This is also why decoding parameters must be *in* the provenance — they are part of the cache key, and a cache keyed on less than the full configuration returns confidently wrong results.
-
----
-
-## 5. What the evidence says to build first, and what to resist
-
-Two results from the corpus are worth more than the rest of it combined, because both are negative:
-
-**[Toward Epistemic Stability](https://arxiv.org/abs/2603.10047)** — 100 trials per strategy at temperature 0.7, industrial setting:
-
-| Strategy | "Better" verdicts |
-|---|---|
-| M4 Enhanced Data Registry | **100 / 100** |
-| M3 Single-Task Agent Specialization | 80 % |
-| M5 Domain Glossary Injection | 77 % |
-| M1 Iterative Similarity Convergence | 75 % |
-| M2 Decomposed Model-Agnostic Prompting | **34 % — net negative** |
-
-Grounding beat every prompting trick, and *decomposition made things worse* than single-shot on a modern model. The catalog is a reference of techniques; used naively it will recommend M2. **Technique selection has to be measured per model, not imported from a survey** — which is exactly what the eval pipeline is for, and another reason it comes first.
-
-**[Auto-Prompt Generation is Not Robust](https://arxiv.org/abs/2412.18196)** — optimizers tuned on clean inputs collapse under perturbation. Build the perturbation harness alongside the optimizer, not after it.
-
-### Resist
-
-- Adding techniques to the catalog faster than they can be measured. 180 unmeasured records is a bibliography.
-- Building the capability-matrix generator before there is evidence for it to generate from.
-- Adopting `gen_ai.*` as the internal event contract. Every attribute in the OpenTelemetry GenAI registry is still **"Development"** status, none stable, and names have already churned. Keep `ObservabilityEvent` as the contract and add a *mapping layer* for export. The conventions' span-tree structure — `create_agent`, `invoke_agent`, `execute_tool`, `retrieval`, memory operations — is worth mirroring structurally while the names move.
+- **The objective is Pipeline B's verdict**, not a scalar invented for the optimizer. An optimizer sitting on an untrustworthy evaluator amplifies the evaluator's errors — which is the structural reason ADR-0008's ordering is not negotiable.
+- **Constrained, not free.** Gate verdicts and the cost budget bound the search space rather than trading off against quality. The automatic-prompt-engineering survey names constrained optimisation an underexplored frontier; for production it is the only responsible form.
+- **The unit of proposal is a Configuration**, per ADR-0008 — prompt text, model, decoding parameters, retrieval and tool config together. Optimising prompt text alone reproduces the inversion problem the ADR documents, where a prompt that wins on one model generation loses on the next.
+- **Every proposal is an `EvalRun`.** The optimizer produces evidence as a side effect of running, or it produces nothing checkable.
 
 ---
 
-## 6. What makes the codebase hold up
+## 4. Self-modification, lineages, and keeping guardrails authoritative
 
-These are not style preferences. Each was measured in this repository, and the mutation data is in the git history.
+Once an optimizer can change the scaffold, the system modifies itself, and two failure modes appear that no amount of evaluation quality prevents.
 
-**Every invariant needs a second, independently-authored checker.** This is the strongest finding available here. Of the defects found this month, the ones that mattered were each caught by an independent check and missed by the primary one:
+[Ouroboros](https://arxiv.org/abs/2608.08311) is the corpus's most direct treatment — a coding-agent harness whose "tools, context assembly, prompts and core implementation improve through **reviewed commits** that become the runtime for later work". Three of its operating rules generalise beyond self-modifying agents:
+
+**Reviewed commits as the evolution mechanism.** Changes become the runtime only after review. This repository already works this way, and the discipline is what makes an optimizer's output safe to adopt: a proposed Configuration is a diff, with an `EvalRun` attached as its justification.
+
+**Separate lineages for measuring and for changing.** Ouroboros runs *"benchmark campaigns … [with] frozen seeds, while [live evolution continues] on a separate lineage."* Generalised: **the configuration you measure against must be frozen and separate from the one you are changing.** A baseline that drifts with the working branch is not a baseline — which is why ADR-0008 makes baselines immutable, and why the optimizer must not be able to promote its own candidate.
+
+**Guardrails must remain authoritative under evolutionary pressure.** This is the sharpest of the three. When a search is running over prompts, the gates *constrain* the search — so they must not be reachable *by* it. An optimizer that can weaken a gate will learn to satisfy the measurement instead of the goal, and will do so faster than a reviewer notices.
+
+Concretely, three properties follow: the gate registry and its `ported-gates.json` pin are outside the optimizer's search space; a proposal that changes a guard is a separate reviewed change, never part of a candidate Configuration; and the differential oracle ([ADR-0007](./0007-permanent-differential-oracle.md)) keeps checking the gates against an implementation the optimizer cannot touch.
+
+---
+
+## 5. What keeps the codebase itself honest
+
+These are not style preferences. Each was measured in this repository this month, and the mutation data is in the git history.
+
+**Every invariant needs a second, independently-authored checker.** The strongest finding available here, and it recurred in four different subsystems:
 
 | Defect | Found by | Missed by |
 |---|---|---|
-| Gate regex reverted to a shipped bug; key bound widened | differential oracle | the entire test suite |
-| 8 wrong citation titles | arXiv metadata | the internal consistency checker, which passed all 172 |
-| 2 invented vocabularies | the frozen XSD | the JSON Schema, which typed them as free strings |
+| Gate regex reverted to a shipped bug; key-length bound widened | differential oracle | the entire test suite |
+| Eight wrong citation titles | arXiv metadata | the internal consistency checker, which passed all 172 |
+| Two invented vocabularies | the frozen XSD | the JSON Schema, which typed them as free strings |
 | `node:fs` reachable from Core | static import scan | the runtime purity harness |
 
-Not one was found by making the first checker stricter. Internal consistency is structurally blind to a systemic error — the same argument [ADR-0007](./0007-permanent-differential-oracle.md) makes for the oracle, observed three more times in three different subsystems.
+Not one was found by making the first checker stricter. This is [ADR-0007](./0007-permanent-differential-oracle.md)'s argument observed three more times, and it is why ADR-0008 requires detector-recall equalization before comparison: an instrument that has not itself been measured is not evidence.
 
-**A guard's scope must be probed, not assumed.** Three guards here were silently narrower than their names: the purity harness never blocked the filesystem, `typecheck` covered a third of the code, and the cross-shell rule missed relative imports. All three passed continuously while incomplete. Plant a defect in *each place the guard is believed to cover* and confirm it fires there.
+**A guard's scope must be probed, not assumed.** Three guards here were silently narrower than their names — the purity harness never blocked the filesystem, `typecheck` covered a third of the code, the cross-shell rule missed relative imports. All three passed continuously while incomplete. Plant a defect in *each place the guard is believed to cover*.
 
-**Mutation-prove every guard, and measure by exit code.** A guard not observed failing is not known to work. An early probe here reported five surviving mutations because it grepped colourised output that never matched — the instrument was broken, not the code.
+**Mutation-prove every guard, and measure by exit code.** An early probe reported five surviving mutations because it grepped colourised output that never matched. The instrument was broken, not the code.
 
-**Generated artifacts need a `--check` mode.** `import:catalog --check` fails when the committed file is not what the inputs currently produce. Without it a generated file is just a file somebody edited once.
+**Generated artifacts need a `--check` mode.** `import:catalog --check` fails when the committed file is not what the inputs currently produce. Without it, a generated file is one somebody edited once.
 
-**Never edit frozen inputs; correct at the boundary.** Eight wrong titles live in hash-pinned `sources/`. They are fixed in `catalog-corrections.json`, each with `from`, `to`, reason and evidence, and the import *refuses* if the frozen value stops matching `from`. The inherited record stays intact, the fix is a reviewable diff, and a stale correction cannot apply silently.
+**Never edit frozen inputs; correct at the boundary.** Eight wrong titles live in hash-pinned `sources/`. They are fixed in `catalog-corrections.json` with `from`, `to`, reason and evidence, and the import refuses if the frozen value stops matching `from` — so a stale correction cannot apply silently.
 
-**Allowlists must expire.** Known defects are excused only with a stated reason, and an entry whose defect no longer occurs **fails as stale**. An allowlist that outlives its problem silently excuses the next one.
+**Allowlists must expire.** A known defect is excused only with a stated reason, and an entry whose defect no longer occurs **fails as stale**. An allowlist that outlives its problem silently excuses the next one.
 
 ---
 
-## 7. What this design does not claim
+## What this page does not claim
 
-- **Not that it is built.** One stage of eleven, two gates of sixteen, no eval pipeline at all. The status table in `README.md` is authoritative.
-- **Not that the technique catalog is validated.** 180 records, citations verified against arXiv, and **zero measured on any task**. Every `when_to_use` in it is an assertion from a paper, not a result from this system.
-- **Not that the literature generalises to your workload.** The 100/100 registry result and the net-negative decomposition result are one industrial setting, one model, one task family. They are strong enough to set a default and nowhere near strong enough to end an argument.
-- **Not a throughput design.** Nothing here has been load-tested. "Scalable" above means the cost of adding capability, not requests per second.
+- **Not that any of it is built.** Routing, optimization and the meta-harness are design. The status table in [`README.md`](./README.md) is authoritative and `npm run check:plan` enforces it.
+- **Not that the optimizer should be built soon.** It is last in the order for a reason: it is the component that most amplifies a weak evaluator, and ADR-0008's pipeline does not exist yet.
+- **Not that the infrastructure papers generalise.** LLMRouter, AutoDesign and Ouroboros each report on one system, one benchmark family, one set of models. They are cited here for their *structural* decompositions, which transfer more readily than their results.

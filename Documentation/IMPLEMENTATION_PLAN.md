@@ -144,18 +144,6 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 - ~~**The ensembling coverage gap.**~~ **Closed.** All eight missing techniques now have records, added at the import boundary through `scripts/catalog-additions.json` — 172 frozen records plus 8, giving 180. Every citation was resolved against arXiv's own metadata, and the additions are held to the same contract as the frozen records, with no id allowed to collide with one. Coverage against The Prompt Report's taxonomy went from 34 of 57 to 42 of 57; ensembling is 10 of 10. Fifteen scattered absences remain, but no category is now missing most of itself.
 - **Three records naming `arXiv preprint` with no identifier**, excused in `scripts/catalog-known-defects.json`. Unlike the titles these cannot be corrected from evidence — the identifier is simply absent and no index resolved it.
 
-### Phase 4b — Evaluation — *the new blocking priority*
-
-**Entry condition:** none. Nothing blocks this, and everything else is unmeasurable without it.
-
-Added after the literature review, and it changes the phase order: [ADR-0008](./0008-evaluation-as-the-primary-subsystem.md) makes evaluation a first-class plane and the attributable run the unit of work. The architecture is in [`PROMPT_ENGINEERING_ENVIRONMENT.md`](./PROMPT_ENGINEERING_ENVIRONMENT.md).
-
-**Why it jumps ahead of Phase 2's gates.** An industrial study measuring 100 trials per strategy found a data registry winning 100/100 while decomposed prompting was *net negative* against single-shot on a modern model. The catalog's 180 records are assertions from papers; none has been measured on any task by this system. Porting fourteen more gates adds capability whose value is assumed, while evaluation converts assumptions into measurements — including about the work already done.
-
-**Scope.** `Dataset` / `Run` / `Score` / `Baseline` contracts first; `ExecutionProvenance` extended with decoding parameters and seed, dataset version, grader identity and cost budget; deterministic scorers in Core; judge scoring behind a port; a content-addressed run cache keyed on the full configuration.
-
-**Exit gate:** a golden set runs offline in seconds with no provider budget; a comparison against a frozen baseline returns improved / regressed / **inconclusive**; a run missing any element of the attribution tuple is refused rather than scored.
-
 ### Phase 5 — Second adapters
 
 **Entry condition:** Phase 3, so there is a full pipeline to persist.
