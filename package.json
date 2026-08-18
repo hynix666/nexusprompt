@@ -10,7 +10,7 @@
     "shells/*"
   ],
   "scripts": {
-    "verify": "npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run test && npm run differential",
+    "verify": "npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run test && npm run differential",
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "check:plan": "node scripts/check-plan.mjs",
     "check:citations": "node scripts/check-citations.mjs",
@@ -29,7 +29,8 @@
     "check:depth": "node scripts/check-depth-budget.mjs",
     "eval": "tsx scripts/run-eval.ts",
     "eval:compare": "tsx scripts/run-eval.ts --compare",
-    "eval:adversarial": "tsx scripts/run-adversarial.ts"
+    "eval:adversarial": "tsx scripts/run-adversarial.ts",
+    "check:stages": "node scripts/check-stages.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",

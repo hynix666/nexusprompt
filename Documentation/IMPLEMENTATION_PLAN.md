@@ -23,7 +23,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
-    "import:catalog", "check:catalog", "check:xsd", "check:depth", "eval", "eval:compare", "eval:adversarial"
+    "import:catalog", "check:catalog", "check:xsd", "check:depth", "check:stages", "eval", "eval:compare", "eval:adversarial"
   ],
   "planned_commands": [
     "verify:gates", "trace:view", "docs:matrix", "verify:hash",
@@ -147,9 +147,19 @@ Read with the limit above attached: 16 of 16 means every gate is *compared*, not
 
 **Entry condition:** Phase 2 complete. The `lint` stage needs the full gate set to mean anything.
 
-**Scope.** `deconstruct`, `calibrate`, `harden`, `critique`, `refine`, `lint`, `critic`, `preview`, `cost_estimate`, `tone_check`. Stage templates come from the eleven-stage pipeline component in `files_3.zip` — **which is not in this repository and is not frozen.** Extracting and freezing it is the first task of this phase, not an assumption of it.
+**Scope.** `deconstruct`, `calibrate`, `harden`, `critique`, `refine`, `lint`, `critic`, `preview`, `cost_estimate`, `tone_check`.
 
-Each stage is a `decide`/`reduce` pair with no callback, per ADR-0005. `cost_estimate` and `tone_check` are the two the inherited `docs/` tree never mentions; they have no prior documentation to port from and need their contracts written fresh.
+**Correction, 18 August 2026.** This section said the eleven-stage component "is not in this repository and is not frozen," and that extracting it was the first task of the phase. **It was already frozen**, in Phase 0, at `sources/pipeline/SystemPromptBuilderPipeline.tsx` — SHA-256 `79deaad875a8…`, byte-identical to the copy inside `files_3.zip`, carrying `Cost Estimate`, `Tone Check` and the "Unified 11-stage map" comment. The manifest has listed it under `archive_id: files_3` the whole time. The plan was wrong about its own repository, which is R4 appearing inside the sentence warning about R7.
+
+**The real trap is still live, and it is not the one R7 named.** A *nine-stage* copy sits unfrozen in the repository root — `SystemPromptBuilderPipeline.tsx`, SHA-256 `c519e72b…`, no `Cost Estimate`, no `Tone Check`. Its mtime is **newer** than the frozen one, so "check mtimes" points the wrong way; only the content distinguishes them.
+
+**And a port from the wrong shape has already happened once.** `compile.ts` carries the comment "Prompt template ported from … (DEFAULT_STAGES, s3 'Compile')", and its template is not that template: frozen `s3` opens "STEP 2 — SCAFFOLDING" and threads `{calibration}` and `{blueprint}`; the port opens "STEP 3 — COMPILATION" and threads neither. That was defensible — neither slot had a producer during the vertical slice — but it was never recorded, and the comment asserted a fidelity the code did not have.
+
+**So this phase opens with a checker, not a stage.** `npm run check:stages` re-derives the eleven stage ids from the frozen component and requires `STAGE_IDS` to match *in order*, re-derives `DEPTH_PLAN` and requires the deepest plan to reach every stage, and compares every ported template against its frozen source. A deviation is legal only in `scripts/stage-template-deviations.json`, with a reason, under the stale rule the divergence allowlist uses. It caught `compile` on its first run.
+
+This matters more here than it did for gates: **stages have no differential oracle.** A gate that drifts disagrees with the Python linter; a stage that drifts produces prose that still looks like a prompt. Ten ports were about to be written against a component nothing compared them to.
+
+Each stage is a `decide`/`reduce` pair with no callback, per ADR-0005. `cost_estimate` and `tone_check` are the two the inherited `docs/` tree never mentions; they have no prior documentation to port from and need their contracts written fresh. Note also that **not every stage runs at every depth** — `DEPTH_PLAN` runs six of eleven at `TINY` and seven at `MINIMAL` — so an eleven-stage run is the `STANDARD`/`COMPREHENSIVE` path, not the only path.
 
 **Exit gate:** an eleven-stage run persists and reloads intact as one bundle; every stage's `decide` returns a `GenerationRequest` and its `reduce` accepts a classified outcome; the purity harness stays green; `npm run verify` passes.
 
