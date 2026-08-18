@@ -20,8 +20,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Orchestrator } from "./orchestrator.js";
 import { scoreCase, casePassed } from "../../core/src/eval/detectors.js";
+import { measureRecall } from "../../core/src/eval/probes.js";
 import type {
-  EvalCase, EvalRun, EvalSuite, Score, Configuration,
+  EvalCase, EvalRun, EvalSuite, Score, Configuration, PipelineOutcome,
   GenerationRequest, GenerationResult, ProviderFailure, ProviderTransport, RevisionStore, EventSink,
 } from "../../contracts/index.js";
 
@@ -31,7 +32,19 @@ export interface CaseStub {
   fail?: boolean;
 }
 
-export type StubbedCase = EvalCase & { stub?: CaseStub };
+/**
+ * A case, plus what the provider returns for it under each configuration.
+ *
+ * `variant_stubs` is how a second configuration is expressed without a live provider. It is
+ * not a model producing worse output — it is a *declaration* of worse output, which is the
+ * honest form here: what the exit gate tests is whether the harness reports a regression,
+ * not whether some prompt causes one. Pinning makes the deliberateness explicit rather than
+ * hiding it behind a sampled response.
+ */
+export type StubbedCase = EvalCase & {
+  stub?: CaseStub;
+  variant_stubs?: Record<string, CaseStub>;
+};
 
 /**
  * A provider whose every response is fixed by the case. Not a mock of a model — a
@@ -87,12 +100,16 @@ export interface RunSuiteOptions {
   configuration: Configuration;
   coreBuildHash?: string;
   sink?: EventSink;
+  /** Selects `variant_stubs[variant]` per case, falling back to `stub`. Absent runs the baseline. */
+  variant?: string;
 }
 
 export interface SuiteResult {
   run: EvalRun;
   scores: Score[];
   perCase: Array<{ case_id: string; passed: boolean; failure_mode: string; scores: Score[] }>;
+  /** Returned so recall stays recomputable from what the run actually produced. */
+  outcomes: PipelineOutcome[];
 }
 
 /** Content hash of everything that can move a result. Also the cache key. */
@@ -119,7 +136,12 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
   const byId = new Map(cases.map((c) => [c.case_id, c]));
   const allScores: Score[] = [];
   const perCase: SuiteResult["perCase"] = [];
+  const outcomes: PipelineOutcome[] = [];
   const byFailureMode: Record<string, { cases: number; passed: number }> = {};
+
+  /** A variant that names no stub for a case falls back to the baseline stub, never to silence. */
+  const stubFor = (kase: StubbedCase): CaseStub =>
+    (opts.variant ? kase.variant_stubs?.[opts.variant] : undefined) ?? kase.stub ?? { fail: true };
 
   for (const case_id of suite.case_ids) {
     const kase = byId.get(case_id);
@@ -131,7 +153,7 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
       continue;
     }
 
-    provider.setStub(kase.stub ?? { fail: true });
+    provider.setStub(stubFor(kase));
     const outcome = await orchestrator.run({
       command_id: `eval-${case_id}`,
       run_id: `eval-${case_id}`,
@@ -143,6 +165,7 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
     const scores = scoreCase(kase, outcome);
     const passed = casePassed(scores);
     allScores.push(...scores);
+    outcomes.push(outcome);
     perCase.push({ case_id, passed, failure_mode: kase.failure_mode, scores });
 
     const slot = (byFailureMode[kase.failure_mode] ??= { cases: 0, passed: 0 });
@@ -172,6 +195,10 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
       budget_exceeded: false,
     },
     latency_ms: null,
+    // Measured against this run's own outcomes, in this configuration's own output format.
+    // Recall is a property of (detector, configuration), so a block measured elsewhere would
+    // describe a format nobody compared.
+    detector_recall: measureRecall(outcomes),
     // No judge ran. Absent means no judge was involved, never that a judge was fine.
     grader_health: null,
     scorer_provenance: {
@@ -193,5 +220,5 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
     },
   };
 
-  return { run, scores: allScores, perCase };
+  return { run, scores: allScores, perCase, outcomes };
 }

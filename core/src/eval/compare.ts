@@ -19,7 +19,7 @@
  *     the family size travels with the comparison.
  */
 
-import type { Comparison, EvalSuite } from "../../../contracts/index.js";
+import type { Comparison, EvalSuite, DetectorRecallBlock } from "../../../contracts/index.js";
 
 export interface CaseOutcome {
   case_id: string;
@@ -37,8 +37,116 @@ export interface CompareInput {
   comparisons_in_family: number;
   /** Nominal significance level, before correction. */
   alpha: number;
-  detectors_equalized: boolean;
+  /**
+   * Recall as measured on each run's own outcomes. Null or absent is a refusal, not a
+   * default: until 2.0.0 this was a boolean the caller asserted and nothing computed,
+   * which is how the comparator's strongest guard came to check nothing at all.
+   */
+  candidateRecall: DetectorRecallBlock | null | undefined;
+  baselineRecall: DetectorRecallBlock | null | undefined;
+  /** Detectors the suite actually uses. Recall of a detector nobody ran is not this comparison's problem. */
+  suiteDetectorIds: readonly string[];
   correction?: "none" | "bonferroni";
+}
+
+type Equalization = Comparison["equalization"];
+
+/**
+ * Derive equalization from two measured recall blocks.
+ *
+ * `gap_bound` is the suite's own `detectable_delta` rather than a chosen constant, and that
+ * choice carries a guarantee. With recall r and true failure rate f, an observed failure rate
+ * is r*f, so a measured delta is `r_b*f_b - r_c*f_c`. Holding the true rates equal isolates
+ * the artifact at `f*(r_b - r_c)`, whose magnitude is at most |delta_r| because f <= 1.
+ * Bounding the gap by detectable_delta therefore bounds the artifact by it — while
+ * `adjusted_resolution = detectable_delta / min(r)` is strictly larger whenever any gap
+ * exists, since a nonzero gap forces some r < 1.
+ *
+ * So a pure recall artifact can never on its own clear the reporting threshold. The edge case
+ * where that would go non-strict needs both recalls to equal 1, which makes the gap zero.
+ */
+function deriveEqualization(
+  input: CompareInput,
+): { equalization: Equalization; refusal: string | null } {
+  const detectable = input.suite.resolution.detectable_delta;
+  const bare = (reason: string): { equalization: Equalization; refusal: string } => ({
+    equalization: {
+      equalized: false, max_gap: null, gap_bound: detectable,
+      effective_recall: null, adjusted_resolution: null, per_detector: [],
+    },
+    refusal: reason,
+  });
+
+  if (!input.candidateRecall || !input.baselineRecall) {
+    const which = !input.candidateRecall && !input.baselineRecall ? "neither run"
+      : !input.candidateRecall ? "the candidate run" : "the baseline run";
+    return bare(`${which} carries measured detector recall; an unmeasured instrument is not evidence`);
+  }
+  if (input.candidateRecall.probe_corpus_version !== input.baselineRecall.probe_corpus_version) {
+    return bare(
+      `probe corpus differs — candidate ${input.candidateRecall.probe_corpus_version}, ` +
+      `baseline ${input.baselineRecall.probe_corpus_version}; recall measured under different ` +
+      `corpora is not comparable`,
+    );
+  }
+  if (input.suiteDetectorIds.length === 0) {
+    return bare("the suite names no detectors, so there is no instrument to equalize");
+  }
+
+  const cand = new Map(input.candidateRecall.detectors.map((d) => [d.detector_id, d.recall]));
+  const base = new Map(input.baselineRecall.detectors.map((d) => [d.detector_id, d.recall]));
+
+  const per_detector = [...new Set(input.suiteDetectorIds)].sort().map((detector_id) => {
+    const c = cand.has(detector_id) ? cand.get(detector_id)! : null;
+    const b = base.has(detector_id) ? base.get(detector_id)! : null;
+    return {
+      detector_id,
+      candidate_recall: c,
+      baseline_recall: b,
+      gap: c === null || b === null ? null : Math.abs(c - b),
+    };
+  });
+
+  const unmeasured = per_detector.filter((d) => d.gap === null).map((d) => d.detector_id);
+  if (unmeasured.length > 0) {
+    // Either the detector is absent from a run's block, or its recall is null because the
+    // detector fired on every outcome and left no substrate. Both are broken instruments.
+    return {
+      equalization: {
+        equalized: false, max_gap: null, gap_bound: detectable,
+        effective_recall: null, adjusted_resolution: null, per_detector,
+      },
+      refusal: `recall is unmeasurable for ${unmeasured.join(", ")} — the detector left no ` +
+               `substrate on one side, or was not measured there at all`,
+    };
+  }
+
+  const max_gap = Math.max(...per_detector.map((d) => d.gap!));
+  const effective_recall = Math.min(
+    ...per_detector.flatMap((d) => [d.candidate_recall!, d.baseline_recall!]),
+  );
+  const equalized = max_gap <= detectable;
+
+  const equalization: Equalization = {
+    equalized,
+    max_gap,
+    gap_bound: detectable,
+    effective_recall,
+    // Recall 0 is measured-and-dead and fails the build upstream, but the comparator must
+    // not divide by it if it ever arrives here.
+    adjusted_resolution: effective_recall > 0 ? detectable / effective_recall : null,
+    per_detector,
+  };
+
+  if (!equalized) {
+    return {
+      equalization,
+      refusal: `detector recall differs by ${max_gap.toFixed(4)}, above the suite's bound of ` +
+               `${detectable.toFixed(4)}; a gap this size can produce the whole difference on ` +
+               `its own, so the comparison would measure the instrument`,
+    };
+  }
+  return { equalization, refusal: null };
 }
 
 /** Two-sided exact binomial tail for McNemar: P(X <= min | X ~ Bin(n, 0.5)) * 2. */
@@ -70,21 +178,23 @@ export function mcnemar(b: number, c: number): { p: number; discordant: number }
 export function compare(input: CompareInput): Comparison {
   const {
     comparison_id, candidate_run_id, baseline_id, candidate, baseline,
-    suite, comparisons_in_family, alpha, detectors_equalized,
+    suite, comparisons_in_family, alpha,
   } = input;
   const correction = input.correction ?? (comparisons_in_family > 1 ? "bonferroni" : "none");
   const correctedAlpha = correction === "bonferroni" ? alpha / comparisons_in_family : alpha;
+
+  const { equalization, refusal } = deriveEqualization(input);
 
   const refuse = (reason: string): Comparison => ({
     comparison_id, candidate_run_id, baseline_id,
     verdict: "refused", refusal_reason: reason, delta: null,
     protocol: { test: "none", trials: 1, alpha: correctedAlpha, comparisons_in_family, correction, p_value: null },
-    detectors_equalized,
+    equalization,
   });
 
-  if (!detectors_equalized) {
-    return refuse("detectors were not shown to have comparable recall; the comparison would measure the instrument");
-  }
+  // The instrument is checked before the measurement. Reporting a delta and then noting the
+  // detectors were unequal gets the delta quoted and the note dropped.
+  if (refusal) return refuse(refusal);
   if (candidate.length === 0 || baseline.length === 0) {
     return refuse("one side has no cases");
   }
@@ -120,15 +230,21 @@ export function compare(input: CompareInput): Comparison {
     p_value: p,
   };
 
-  // A suite cannot evidence a difference it was never sized to see. Reporting a
-  // significant p over a delta below the declared resolution would be reporting noise
-  // that happened to clear a threshold.
-  if (Math.abs(delta) > 0 && Math.abs(delta) < suite.resolution.detectable_delta) {
+  // A suite cannot evidence a difference it was never sized to see, and a blunter instrument
+  // sees less than the suite's declared resolution promises. `adjusted_resolution` is the
+  // declared figure widened by measured recall; at recall 1 it is exactly the declared one,
+  // so a perfect instrument sees no change in behaviour.
+  const resolution = equalization.adjusted_resolution ?? suite.resolution.detectable_delta;
+  if (Math.abs(delta) > 0 && Math.abs(delta) < resolution) {
+    const widened = resolution > suite.resolution.detectable_delta
+      ? ` (declared ${suite.resolution.detectable_delta}, widened by effective recall ` +
+        `${equalization.effective_recall!.toFixed(3)})`
+      : "";
     return {
       comparison_id, candidate_run_id, baseline_id,
       verdict: "inconclusive",
-      refusal_reason: `delta ${delta.toFixed(4)} is below the suite's declared resolution of ${suite.resolution.detectable_delta}`,
-      delta, protocol, detectors_equalized,
+      refusal_reason: `delta ${delta.toFixed(4)} is below this suite's resolution of ${resolution.toFixed(4)}${widened}`,
+      delta, protocol, equalization,
     };
   }
 
@@ -139,7 +255,7 @@ export function compare(input: CompareInput): Comparison {
       refusal_reason: discordant === 0
         ? "no discordant pairs — the two runs agree on every case"
         : `p=${p.toFixed(4)} does not clear alpha=${correctedAlpha.toFixed(4)}`,
-      delta, protocol, detectors_equalized,
+      delta, protocol, equalization,
     };
   }
 
@@ -147,7 +263,7 @@ export function compare(input: CompareInput): Comparison {
     comparison_id, candidate_run_id, baseline_id,
     verdict: delta > 0 ? "improved" : "regressed",
     refusal_reason: null,
-    delta, protocol, detectors_equalized,
+    delta, protocol, equalization,
   };
 }
 

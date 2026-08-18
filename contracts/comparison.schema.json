@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/comparison/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/comparison/2.0.0",
   "title": "Comparison",
   "description": "The verdict of one run against a baseline. `inconclusive` is a first-class outcome: with stochastic decoding a single run pair cannot distinguish improvement from noise, and rounding toward a decision manufactures exactly the false confidence this subsystem exists to prevent.",
   "type": "object",
-  "required": ["comparison_id", "candidate_run_id", "baseline_id", "verdict", "protocol", "detectors_equalized"],
+  "required": ["comparison_id", "candidate_run_id", "baseline_id", "verdict", "protocol", "equalization"],
   "additionalProperties": false,
   "properties": {
     "comparison_id": { "type": "string", "minLength": 1 },
@@ -48,9 +48,50 @@
         }
       }
     },
-    "detectors_equalized": {
-      "type": "boolean",
-      "description": "Whether both runs' detectors were shown to have comparable recall on the same ground truth. An intervention once appeared to raise hallucination by 10-15 points purely because structured output made failures easier to find; the effect reversed under a recall-equalized detector. Comparing unequalized detectors measures the instrument."
+    "equalization": {
+      "type": "object",
+      "description": "Evidence that both runs' detectors had comparable recall, DERIVED from the two runs' measured recall blocks rather than asserted by a caller. This replaced a boolean in 1.0.0. The boolean was never computed anywhere — a summary readable without consulting evidence is a summary that gets read instead of the evidence, which is how the guard came to check nothing. Keeping it beside this object would have preserved that.",
+      "required": ["equalized", "max_gap", "gap_bound", "effective_recall", "adjusted_resolution", "per_detector"],
+      "additionalProperties": false,
+      "properties": {
+        "equalized": { "type": "boolean" },
+        "max_gap": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Largest |recall_candidate - recall_baseline| across detectors. Per-detector, never averaged: one asymmetric detector is enough to manufacture the artifact, and averaging is what lets a bad instrument hide behind good ones. Null when recall was missing or unmeasurable, which is a refusal rather than a value."
+        },
+        "gap_bound": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Derived from the suite's own detectable_delta, not chosen. A pure recall artifact has magnitude f*(r_b - r_c) <= |delta_r| since f <= 1, so bounding the gap by detectable_delta bounds the artifact by it. Recorded rather than merely applied, so an old comparison stays auditable against the rule in force when it ran."
+        },
+        "effective_recall": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum recall across every detector the suite uses, over BOTH runs. A comparison is only as sharp as the blunter of the two instruments producing it. Null when it could not be computed."
+        },
+        "adjusted_resolution": {
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0,
+          "description": "detectable_delta / effective_recall. A blunter instrument must show a larger observed difference before it is believed, because attenuation removes discordant pairs — the evidence McNemar consumes — not just magnitude. Equals detectable_delta exactly when recall is 1, so a perfect instrument sees no change in behaviour. Null when effective_recall is unknown or 0."
+        },
+        "per_detector": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["detector_id", "candidate_recall", "baseline_recall", "gap"],
+            "additionalProperties": false,
+            "properties": {
+              "detector_id": { "type": "string", "minLength": 1 },
+              "candidate_recall": { "type": ["number", "null"] },
+              "baseline_recall": { "type": ["number", "null"] },
+              "gap": { "type": ["number", "null"] }
+            }
+          }
+        }
+      }
     }
   }
 }

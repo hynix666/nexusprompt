@@ -192,9 +192,9 @@ The design scales because of where the boundaries fall, not because of a framewo
 
 ## Action items
 
-1. [ ] Land the contract changes above as one reviewed schema PR, ahead of implementation (ADR-0002).
-2. [ ] Build Pipeline B minimally: one suite, deterministic detectors only, no judge, no perturbation. It must be able to fail.
-3. [ ] Add detector-recall equalization to the comparator before the second suite exists, not after.
+1. [x] Land the contract changes above as one reviewed schema PR, ahead of implementation (ADR-0002).
+2. [x] Build Pipeline B minimally: one suite, deterministic detectors only, no judge, no perturbation. It must be able to fail.
+3. [x] Add detector-recall equalization to the comparator before the second suite exists, not after.
 4. [ ] Wire gate verdicts into the `compile` reducer as a bounded control signal, and measure the effect against the suite from item 2.
 5. [ ] Add the `provider_model_fingerprint` watch. It is the cheapest item here and covers the failure class offline evaluation structurally cannot.
 6. [ ] Record the significance protocol per suite type before running comparisons that anyone will cite.

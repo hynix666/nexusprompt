@@ -320,14 +320,17 @@ describe("evaluation plane, against values the suite actually produced", () => {
   });
 
   it("eval-case validates every case in the suite", () => {
+    // `stub` and `variant_stubs` are harness fields: what a pinned provider returns for this
+    // case under each configuration. They are deliberately outside the contract, because a
+    // case is a case whether the provider behind it is pinned or live.
     for (const c of suiteData.cases) {
-      const { stub, ...contractFields } = c;
+      const { stub, variant_stubs, ...contractFields } = c;
       expect(report(validators["eval-case"], contractFields), c.case_id).toBe(true);
     }
   });
 
   it("eval-case rejects a case naming no failure mode", () => {
-    const { stub, ...first } = suiteData.cases[0];
+    const { stub, variant_stubs, ...first } = suiteData.cases[0];
     const { failure_mode, ...noMode } = first;
     expect(validators["eval-case"](noMode)).toBe(false);
     expect(validators["eval-case"]({ ...first, failure_mode: "vibes" })).toBe(false);
@@ -365,6 +368,17 @@ describe("evaluation plane, against values the suite actually produced", () => {
     })).toBe(false);
   });
 
+  const recall = (r: number) => ({
+    probe_corpus_version: "1.0.0",
+    detectors: [{ detector_id: "d", substrates: 4, probes_run: 4, probes_detected: Math.round(r * 4), recall: r }],
+  });
+
+  const equalization = {
+    equalized: true, max_gap: 0, gap_bound: 0.01,
+    effective_recall: 1, adjusted_resolution: 0.01,
+    per_detector: [{ detector_id: "d", candidate_recall: 1, baseline_recall: 1, gap: 0 }],
+  };
+
   it("comparison validates a real verdict and keeps inconclusive reachable", () => {
     const cmp = compare({
       comparison_id: "cmp-1",
@@ -375,10 +389,27 @@ describe("evaluation plane, against values the suite actually produced", () => {
       suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 } },
       comparisons_in_family: 1,
       alpha: 0.05,
-      detectors_equalized: true,
+      candidateRecall: recall(1),
+      baselineRecall: recall(1),
+      suiteDetectorIds: ["d"],
     });
     expect(report(validators["comparison"], cmp)).toBe(true);
     expect(cmp.verdict).toBe("inconclusive"); // one discordant pair is not evidence
+  });
+
+  it("comparison validates a refusal, which carries equalization with nulls", () => {
+    // A refusal for missing recall cannot compute a gap, and must not invent one.
+    const cmp = compare({
+      comparison_id: "cmp-2", candidate_run_id: "a", baseline_id: "b",
+      candidate: [{ case_id: "c0", passed: true }],
+      baseline: [{ case_id: "c0", passed: false }],
+      suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 } },
+      comparisons_in_family: 1, alpha: 0.05,
+      candidateRecall: null, baselineRecall: null, suiteDetectorIds: ["d"],
+    });
+    expect(report(validators["comparison"], cmp)).toBe(true);
+    expect(cmp.verdict).toBe("refused");
+    expect(cmp.equalization.max_gap).toBeNull();
   });
 
   it("comparison rejects a verdict outside the four", () => {
@@ -386,7 +417,7 @@ describe("evaluation plane, against values the suite actually produced", () => {
       comparison_id: "c", candidate_run_id: "a", baseline_id: "b",
       verdict: "probably-better", delta: 0.1,
       protocol: { test: "mcnemar", trials: 1, alpha: 0.05, comparisons_in_family: 1 },
-      detectors_equalized: true,
+      equalization,
     })).toBe(false);
   });
 
@@ -395,7 +426,28 @@ describe("evaluation plane, against values the suite actually produced", () => {
       comparison_id: "c", candidate_run_id: "a", baseline_id: "b",
       verdict: "improved", delta: 0.1,
       protocol: { test: "mcnemar", trials: 1, alpha: 0.05 },
+      equalization,
+    })).toBe(false);
+  });
+
+  it("comparison 2.0.0 rejects the 1.0.0 boolean outright", () => {
+    // The breaking half of the bump, asserted. `detectors_equalized` was a claim nobody
+    // checked; a comparison still carrying it is one nothing derived, and must not validate.
+    const asserted = {
+      comparison_id: "c", candidate_run_id: "a", baseline_id: "b",
+      verdict: "improved", delta: 0.1,
+      protocol: { test: "mcnemar", trials: 1, alpha: 0.05, comparisons_in_family: 1 },
       detectors_equalized: true,
+    };
+    expect(validators["comparison"](asserted)).toBe(false);
+    expect(validators["comparison"]({ ...asserted, equalization })).toBe(false); // both is still wrong
+  });
+
+  it("comparison requires equalization — evidence is not optional", () => {
+    expect(validators["comparison"]({
+      comparison_id: "c", candidate_run_id: "a", baseline_id: "b",
+      verdict: "improved", delta: 0.1,
+      protocol: { test: "mcnemar", trials: 1, alpha: 0.05, comparisons_in_family: 1 },
     })).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 # Detector-recall equalization
 
-**Status:** Approved, unimplemented
+**Status:** Implemented. See *As built* for the three places the build departed from this text.
 **Date:** 2026-08-18
 **Phase:** 2b — the evaluation subsystem
 **Implements:** [ADR-0008](../../../Documentation/0008-evaluation-first-environment.md) §2 and action item 3
@@ -358,6 +358,49 @@ that are *known* clean, which is the labeled-corpus problem again.
 **This remains a pipeline suite, not a model evaluation.** Eight cases is three orders of
 magnitude below the roughly 3,400 items the sizing rule requires to certify a promotion. A
 green run here is never evidence about a model.
+
+## As built
+
+Three departures from the text above, recorded rather than silently absorbed.
+
+**1. The suite grew from 8 cases to 14.** Not anticipated here, and forced by this document's
+own arithmetic. Only *four* of the original eight cases could be flipped by a prompt change —
+the two demo-mode cases, `provenance-is-complete` and `gates-actually-run` do not depend on
+pinned content at all. Four flips is p = 0.125, so the exit gate was unreachable at eight
+cases no matter how the worse prompt was written.
+
+Disabling gates in the degraded configuration would have flipped five, still short at
+p = 0.0625, and would additionally have made `gate-verdict` fire on every outcome —
+`substrates: 0`, `recall: null`, and a correct refusal. The design defeats that shortcut,
+which is a good sign for the design and a dead end for the test.
+
+The six added cases are the edge-case categories the original eight skipped: placeholders,
+leaked secrets, delimiter-lookalike text, empty input, Unicode with CRLF. They are worth
+having on their own terms; reaching the exit gate is a consequence of coverage that should
+have existed anyway, not the reason for it.
+
+**2. `equalization`'s numeric fields are nullable.** The schema requires `equalization` on
+every comparison, including refusals — but a refusal for *missing* recall cannot compute a
+gap, an effective recall, or an adjusted resolution. The spec implied concrete numbers.
+Forcing a value there would mean inventing one, which is the failure this subsystem exists to
+prevent, so `max_gap`, `effective_recall` and `adjusted_resolution` are `number | null`.
+`gap_bound` stays non-null because it comes from the suite and is always known.
+
+**3. `control_fired` became `substrates`** — already argued in Section 3, restated here
+because the field list in Section 4 was written before that argument.
+
+### Measured recall, as it currently stands
+
+All ten detectors measure **recall 1.0** against the corpus, on both configurations. That is
+the honest number and it is worth being precise about what it means: these detectors catch
+everything *we thought to plant*. It is not a claim they catch everything, and the figure will
+drop the first time a probe is added for a case somebody missed. The `probe_corpus_version`
+field exists so that drop is visible as a corpus change rather than a mystery.
+
+Because recall is uniformly 1.0, `effective_recall` is 1 and `adjusted_resolution` equals the
+declared `detectable_delta` — so the attenuation machinery is presently inert in production.
+It is exercised in tests, including the acceptance test, which is the right place for a path
+that only opens when an instrument degrades.
 
 ## Consequences
 

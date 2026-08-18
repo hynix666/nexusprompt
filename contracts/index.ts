@@ -339,6 +339,22 @@ export interface Score {
   detail: string;
 }
 
+/** One detector's measured recall under one configuration. */
+export interface DetectorRecall {
+  detector_id: string;
+  /** Outcomes where the detector was silent pre-mutation. Zero means it fires on everything. */
+  substrates: number;
+  probes_run: number;
+  probes_detected: number;
+  /** detected/run, or null when probes_run is 0. Null is not measurable; 0 is measured and dead. */
+  recall: number | null;
+}
+
+export interface DetectorRecallBlock {
+  probe_corpus_version: string;
+  detectors: DetectorRecall[];
+}
+
 export interface EvalRun {
   run_id: string;
   configuration_id: string;
@@ -359,6 +375,11 @@ export interface EvalRun {
     budget_exceeded: boolean;
   };
   latency_ms?: Record<string, number> | null;
+  /**
+   * Recall measured against mutation probes on this run's own outcomes. Null means it
+   * was not measured — never that it was adequate, and never comparable.
+   */
+  detector_recall?: DetectorRecallBlock | null;
   grader_health?: { max_disagreement_rate: number; judged_cases: number } | null;
   scorer_provenance?: { scorer_ids: string[]; selected_using: string | null } | null;
   provenance: Record<string, unknown>;
@@ -390,5 +411,25 @@ export interface Comparison {
     p_value?: number | null;
     confidence_interval?: [number, number] | null;
   };
-  detectors_equalized: boolean;
+  /**
+   * Derived from both runs' measured recall, never supplied. Replaced a boolean in 1.0.0
+   * that nothing computed — the guard the comparator advertised was a field callers filled in.
+   */
+  equalization: {
+    equalized: boolean;
+    /** Null when recall was missing or unmeasurable — a refusal, not a value. */
+    max_gap: number | null;
+    /** = suite.resolution.detectable_delta. Derived, so it tightens as a suite grows. */
+    gap_bound: number;
+    /** Minimum across detectors over BOTH runs — the blunter instrument sets the resolution. */
+    effective_recall: number | null;
+    /** detectable_delta / effective_recall. Equals detectable_delta when recall is 1. */
+    adjusted_resolution: number | null;
+    per_detector: Array<{
+      detector_id: string;
+      candidate_recall: number | null;
+      baseline_recall: number | null;
+      gap: number | null;
+    }>;
+  };
 }

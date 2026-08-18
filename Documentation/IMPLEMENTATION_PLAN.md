@@ -23,7 +23,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
-    "import:catalog", "check:catalog", "check:xsd", "check:depth", "eval"
+    "import:catalog", "check:catalog", "check:xsd", "check:depth", "eval", "eval:compare"
   ],
   "planned_commands": [
     "verify:gates", "adversarial", "trace:view", "docs:matrix", "verify:hash",
@@ -113,9 +113,19 @@ Each is one module, one registry line, one `scripts/ported-gates.json` entry, a 
 
 **Probed.** Eight mutations — demo marker removed, degraded output fabricating a prompt, a gate unregistered, the secret scanner stopped matching, provenance losing its build hash, fenced documentation scanned as live text, and a suite naming a case nobody wrote. All eight failed the suite; the control stayed green.
 
-**Still open in this phase:** detector-recall equalization (the comparator refuses without it, so nothing can compare yet), a live-provider path, the judge port, perturbation, and an anchor suite.
+**Detector-recall equalization — done.** `detectors_equalized` was a boolean the caller supplied and nothing computed; the comparator's strongest guard was a field somebody filled in, the fourth instance of a guard narrower than its name. Recall is now *measured*, per `(detector, configuration)`, from mutation probes applied to each run's own outcomes — the design and its evidence are in [the spec](../docs/superpowers/specs/2026-08-18-detector-recall-equalization-design.md).
 
-**Exit gate:** a candidate configuration is compared against a baseline over a suite, the comparison carries a significance result and detector-recall evidence, and a deliberately worse prompt is measured as worse. The last clause is the one that matters: a harness that has never reported a regression has not been shown to detect one.
+- **Ground truth is constructed, not labelled.** A probe injects the property a detector exists to catch, so the label is known by construction. A probe counts only on a substrate where the detector was *silent beforehand* — detection on an outcome that already carried the property proves nothing.
+- **The gap bound is derived, not chosen.** `gap_bound = detectable_delta`. Since a pure recall artifact has magnitude `f·(r_b − r_c) ≤ |Δr|` with `f ≤ 1`, bounding the gap by `detectable_delta` bounds the artifact by it — while `adjusted_resolution = detectable_delta / min(r)` is strictly larger whenever a gap exists. **A recall artifact can never on its own clear the reporting threshold**, and the edge case where that would go non-strict needs both recalls to equal 1, which makes the gap zero.
+- **Two zeros, deliberately distinct.** `recall: 0` is measured-and-dead and fails the build; `substrates: 0` means the detector fired on everything, so recall is `null` and the comparison refuses. Collapsing them would fail the build for the wrong reason.
+- **Contracts.** `eval-run` 1.1.0 adds `detector_recall`; `comparison` 2.0.0 **deletes** `detectors_equalized` for a derived `equalization` object. The boolean was deleted rather than kept beside the evidence: a summary readable without consulting the evidence is what let the guard go unchecked. `contracts/CHANGELOG.md` now exists — ADR-0002 has required changelog entries all along with no artifact behind them.
+- **The suite grew from 8 to 14 cases**, adding placeholder, leaked-secret, delimiter-lookalike, empty-input and Unicode/CRLF coverage. Not cosmetic: only four of the original eight could be flipped by a prompt change, and evidencing a regression needs **six** one-directional flips (p=0.031; five gives 0.063 and does not clear). An eight-case suite could not have demonstrated the exit gate.
+
+**Probed.** Eight planted defects — a no-op probe mutation, a probe naming a detector nobody wrote, a hardcoded `gap_bound`, `max` for `min`, the de-attenuating resolution direction, an ignored probe-corpus mismatch, a detector rewritten to fire unconditionally, and the equalization refusal skipped outright. All eight caught, control green.
+
+**Still open in this phase:** a live-provider path, the judge port, perturbation, and an anchor suite. Precision is also assumed rather than measured — `substrates: 0` catches the always-fires case, but a detector with a moderate false-positive rate would pass everything here, and measuring precision needs negatives known clean.
+
+**Exit gate — met.** `npm run eval:compare` runs the suite under a baseline and a deliberately worse configuration: 14/14 against 4/14, delta −0.714, p=0.00195, verdict **regressed**, with equalization derived and checked *before* the measurement. Both runs are pinned, so the regression is declared rather than sampled — what is demonstrated is the harness's ability to report one, which is the clause that matters: a harness that has never reported a regression has not been shown to detect one.
 
 ### Phase 3 — The remaining ten stages
 
