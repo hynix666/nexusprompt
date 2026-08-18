@@ -258,7 +258,7 @@ describe("technique-record", () => {
 
   it("validates every imported record, not a sample", () => {
     const records = listTechniques();
-    expect(records.length).toBe(180); // 172 frozen + 8 added at import
+    expect(records.length).toBe(195); // 172 frozen + 23 added at import
     const failed = records.filter((r) => !validateTechnique(r)).map((r) => r.id);
     if (failed.length) console.error(validators["technique-record"].errors);
     expect(failed).toEqual([]);
@@ -327,6 +327,31 @@ describe("evaluation plane, against values the suite actually produced", () => {
       const { stub, variant_stubs, ...contractFields } = c;
       expect(report(validators["eval-case"], contractFields), c.case_id).toBe(true);
     }
+  });
+
+  it("eval-suite validates the adversarial suite, exercising kind and derived_from", () => {
+    // `adversarial` and `derived_from` were declared vocabulary that nothing produced.
+    const adv = JSON.parse(readFileSync("eval/compile-adversarial.json", "utf8"));
+    expect(report(validators["eval-suite"], adv.suite)).toBe(true);
+    expect(adv.suite.kind).toBe("adversarial");
+    expect(adv.suite.derived_from).toBe(suiteData.suite.suite_id);
+  });
+
+  it("eval-case validates perturbation, and every perturbation names a real parent case", () => {
+    const adv = JSON.parse(readFileSync("eval/compile-adversarial.json", "utf8"));
+    const parents = new Set(suiteData.suite.case_ids);
+    let withPerturbation = 0;
+
+    for (const c of adv.cases) {
+      const { stub, variant_stubs, ...contractFields } = c;
+      expect(report(validators["eval-case"], contractFields), c.case_id).toBe(true);
+      if (c.perturbation) {
+        withPerturbation++;
+        // A perturbation of a case nobody wrote describes a derivation that never happened.
+        expect(parents.has(c.perturbation.of_case_id), `${c.case_id} -> ${c.perturbation.of_case_id}`).toBe(true);
+      }
+    }
+    expect(withPerturbation).toBe(adv.cases.length);
   });
 
   it("eval-case rejects a case naming no failure mode", () => {

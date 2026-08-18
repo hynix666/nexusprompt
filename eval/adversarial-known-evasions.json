@@ -1,0 +1,64 @@
+{
+  "_comment": [
+    "Adversarial cases that the pipeline currently does NOT catch.",
+    "",
+    "This is a ratchet, not an excuse list, and it works the same way as",
+    "scripts/catalog-known-defects.json and contracts/pending-implementation.json:",
+    "",
+    "  - an entry with no reason or no fix_point fails;",
+    "  - an entry whose case now PASSES is stale and fails, so a fix must delete its",
+    "    entry rather than leave the ledger describing a weakness that is gone;",
+    "  - a FAILING case with no entry is a new evasion and fails.",
+    "",
+    "The direction matters. eval/compile-adversarial.json encodes what SHOULD happen,",
+    "so fixing a gate makes its case pass and its entry stale — the build tells you to",
+    "remove the entry. Had the suite encoded current behaviour instead, fixing a gate",
+    "would have broken the build, and the suite would have been defending the defect.",
+    "",
+    "Five of these are almost certainly inherited rather than introduced by the port:",
+    "the differential oracle reports the TS gates and the frozen Python linter agreeing",
+    "on every shared verdict, so both miss them identically. That is exactly the case",
+    "ADR-0007 says parity cannot see. Confirming it against sources/v5/prompt_lint.py",
+    "is the fix_point for those entries — not a rewrite of the regex, which without",
+    "the divergence allowlist would put the two implementations out of parity and turn",
+    "the oracle red."
+  ],
+  "measured_on": "2026-08-18",
+  "evasions": [
+    {
+      "case_id": "secret-evades-via-zero-width",
+      "reason": "SECRET_LEAK_SCAN matches sk-[A-Za-z0-9]{20,128}; a U+200B inside the key breaks the character class, so the pattern does not match. Not a port defect on current evidence — the frozen linter uses the same shape.",
+      "fix_point": "ADR-0007 divergence allowlist, then normalise zero-width characters before scanning"
+    },
+    {
+      "case_id": "secret-evades-via-line-break",
+      "reason": "The key is split across a newline. The character class excludes newline, so the match ends at the break and the remaining twenty characters are never considered.",
+      "fix_point": "ADR-0007 divergence allowlist, then strip line breaks inside candidate runs before scanning"
+    },
+    {
+      "case_id": "secret-evades-via-case-flip",
+      "reason": "The literal prefix `sk-` is case-sensitive, so SK-ANT- does not match. Whether a real credential survives upper-casing is provider-specific and unverified here; the gate's behaviour is what is recorded.",
+      "fix_point": "confirm against sources/v5/prompt_lint.py, then decide whether case-insensitivity is correct rather than merely stricter"
+    },
+    {
+      "case_id": "secret-evades-via-unterminated-fence",
+      "reason": "Fenced regions are treated as documentation. A fence opened and never closed swallows the rest of the output, so everything after it is exempt. This is the most exploitable of the five: it needs three backticks and no closing pair.",
+      "fix_point": "ADR-0007 divergence allowlist, then treat an unterminated fence as not-a-fence"
+    },
+    {
+      "case_id": "secret-evades-via-nested-fence",
+      "reason": "A four-backtick fence containing a three-backtick fence confuses the region parser, and the inner content is treated as documentation.",
+      "fix_point": "ADR-0007 divergence allowlist, then parse fences by longest-run matching"
+    },
+    {
+      "case_id": "injection-payload-unflagged",
+      "reason": "ADVERSARIAL_RESILIENCE is one of the fourteen gates not yet ported, so no gate examines the output for instruction-override payloads. This entry is not a defect but an unbuilt gate, and it is here so the gap is counted rather than assumed absent.",
+      "fix_point": "Phase 2 — port ADVERSARIAL_RESILIENCE"
+    },
+    {
+      "case_id": "forged-demo-marker-in-live-output",
+      "reason": "demo-labelled-when-degraded checks that DEGRADED output carries the marker. Nothing checks the converse: live output carrying the marker passes every detector, so output can falsely present itself as demo output. The honesty guarantee is one-directional.",
+      "fix_point": "add a detector asserting the marker is absent when demo_mode is false, and decide whether CLAIM_DISCIPLINE should own it"
+    }
+  ]
+}

@@ -17,16 +17,16 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "contracts": { "schemas": 13 },
   "adapters": ["provider-local-proxy", "storage-local"],
   "shells": ["cli"],
-  "catalog": { "records_imported": 180, "records_available": 172, "records_added": 8 },
+  "catalog": { "records_imported": 195, "records_available": 172, "records_added": 23 },
   "sources": { "frozen_files": 420 },
   "ci": { "configured": false },
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
-    "import:catalog", "check:catalog", "check:xsd", "check:depth", "eval", "eval:compare"
+    "import:catalog", "check:catalog", "check:xsd", "check:depth", "eval", "eval:compare", "eval:adversarial"
   ],
   "planned_commands": [
-    "verify:gates", "adversarial", "trace:view", "docs:matrix", "verify:hash",
+    "verify:gates", "trace:view", "docs:matrix", "verify:hash",
     "scaffold:gate", "scaffold:technique", "catalog:validate", "parity"
   ]
 }
@@ -44,7 +44,7 @@ core/stages █▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
 shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
-catalog     ███████████████████▒       180 records + registry, JSON contract and XSD both enforced; 15 gaps
+catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
 release     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       no CI, no matrix generator, no build hash
 ```
 
@@ -157,12 +157,12 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 **Still open in this phase:**
 
-- ~~**XSD validation.**~~ **Done.** `npm run check:xsd` validates both the frozen XML export and XML generated from the imported 180 records against the frozen `prompt_technique_catalog_1.3.0.xsd`, using a WebAssembly build of libxml2 — no system `xmllint`, no Java, no native compilation, so `verify` stays offline and portable.
+- ~~**XSD validation.**~~ **Done.** `npm run check:xsd` validates both the frozen XML export and XML generated from the imported 195 records against the frozen `prompt_technique_catalog_1.3.0.xsd`, using a WebAssembly build of libxml2 — no system `xmllint`, no Java, no native compilation, so `verify` stays offline and portable.
 
   Running it was not redundant with the JSON contract. The XSD carries **controlled vocabularies the JSON Schema had typed as free strings**, and the eight records added for ensembling had invented values in two of them: a `source_audit.description` of `abstract-verified` where the vocabulary is `verified-against-abstract`, and three `determinism` values of the form `deterministic-given-…` that exist in no schema. Both are fixed, and `contracts/technique-record.schema.json` now carries the same enumerations so the offline check catches this class too.
 
   The XSD's own header lists five constraints it cannot express — reference resolution, count agreement, category agreement, cross-record uniqueness of name/id/title/template_id, and template placeholder declaration. `import:catalog` and `check:citations` carry those. A green XSD result is necessary, not sufficient, and the command says so.
-- **The 15 remaining coverage gaps now have resolved sources.** All fifteen were located by targeted arXiv lookup, every match exact, reducing to thirteen distinct papers — `scripts/catalog-gap-sources.json`. The corpus did not contain them because they are 2022–2023 originals and it skews 2025–2026; more reading would not have found them. What remains is authoring the records, on the same terms the ensembling eight got: description from the abstract, `verified-against-abstract`, pitfalls left unverified.
+- ~~**The 15 remaining coverage gaps.**~~ **Closed.** All fifteen were located by targeted arXiv lookup, every match exact, reducing to thirteen distinct papers — `scripts/catalog-gap-sources.json` — and the records were then authored on the same terms the ensembling eight got: description from the abstract, `verified-against-abstract`, pitfalls left unverified. The catalog is 195 records. Two of the fifteen are parent techniques whose paper also covers a child (`exemplar-generation`/`sg-icl`, `exemplar-selection`/`vote-k`); `autodicot` cites the survey itself, and its `known_pitfalls` says so rather than implying an independent evaluation. The corpus did not contain these papers because they are 2022–2023 originals and it skews 2025–2026; more reading would not have found them.
 - **A scope question the corpus raises.** 127 RAG papers and 25 on long-term memory sit outside what the catalog covers — `retrieval-augmentation` holds 11 records and there is no memory category at all. Whether the platform's technique catalog should extend into either is a decision, not an oversight to quietly correct.
 - ~~**The ensembling coverage gap.**~~ **Closed.** All eight missing techniques now have records, added at the import boundary through `scripts/catalog-additions.json` — 172 frozen records plus 8, giving 180. Every citation was resolved against arXiv's own metadata, and the additions are held to the same contract as the frozen records, with no id allowed to collide with one. Coverage against The Prompt Report's taxonomy went from 34 of 57 to 42 of 57; ensembling is 10 of 10. Fifteen scattered absences remain, but no category is now missing most of itself.
 - **Three records naming `arXiv preprint` with no identifier**, excused in `scripts/catalog-known-defects.json`. Unlike the titles these cannot be corrected from evidence — the identifier is simply absent and no index resolved it.

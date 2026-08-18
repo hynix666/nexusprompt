@@ -11,7 +11,7 @@
     "venue, `venue` says 'arXiv preprint' rather than inferring one from the survey's",
     "citation key. That inference is how eight wrong titles entered the frozen catalog.",
     "",
-    "Fifteen gap techniques resolve to thirteen distinct papers: three papers each cover",
+    "Fifteen gap techniques resolve to thirteen distinct papers: two papers each cover",
     "a parent/child pair in the survey's taxonomy, and AutoDiCoT has no external source",
     "because it originates in The Prompt Report's own case study.",
     "",
@@ -28,7 +28,9 @@
   "resolved_with": "export.arxiv.org/api/query, exact title match",
   "sources": [
     {
-      "techniques": ["style-prompting"],
+      "techniques": [
+        "style-prompting"
+      ],
       "arxiv_id": "2302.09185",
       "title": "Bounding the Capabilities of Large Language Models in Open Text Generation with Prompt Constraints",
       "authors": "Lu, Zhang, Zhang, +2",
@@ -36,7 +38,9 @@
       "published": "2023-02-17"
     },
     {
-      "techniques": ["simtom"],
+      "techniques": [
+        "simtom"
+      ],
       "arxiv_id": "2311.10227",
       "title": "Think Twice: Perspective-Taking Improves Large Language Models' Theory-of-Mind Capabilities",
       "authors": "Wilf, Lee, Liang, +1",
@@ -44,7 +48,10 @@
       "published": "2023-11-16"
     },
     {
-      "techniques": ["sg-icl", "exemplar-generation"],
+      "techniques": [
+        "sg-icl",
+        "exemplar-generation"
+      ],
       "arxiv_id": "2206.08082",
       "title": "Self-Generated In-Context Learning: Leveraging Auto-regressive Language Models as a Demonstration Generator",
       "authors": "Kim, Cho, Kim, +3",
@@ -52,7 +59,10 @@
       "published": "2022-06-16"
     },
     {
-      "techniques": ["vote-k", "exemplar-selection"],
+      "techniques": [
+        "vote-k",
+        "exemplar-selection"
+      ],
       "arxiv_id": "2209.01975",
       "title": "Selective Annotation Makes Language Models Better Few-Shot Learners",
       "authors": "Su, Kasai, Wu, +8",
@@ -60,7 +70,9 @@
       "published": "2022-09-05"
     },
     {
-      "techniques": ["instruction-selection"],
+      "techniques": [
+        "instruction-selection"
+      ],
       "arxiv_id": "2205.10782",
       "title": "Instruction Induction: From Few Examples to Natural Language Task Descriptions",
       "authors": "Honovich, Shaham, Bowman, +1",
@@ -68,7 +80,9 @@
       "published": "2022-05-22"
     },
     {
-      "techniques": ["tab-cot"],
+      "techniques": [
+        "tab-cot"
+      ],
       "arxiv_id": "2305.17812",
       "title": "Tab-CoT: Zero-shot Tabular Chain of Thought",
       "authors": "Jin, Lu",
@@ -76,7 +90,9 @@
       "published": "2023-05-28"
     },
     {
-      "techniques": ["memory-of-thought"],
+      "techniques": [
+        "memory-of-thought"
+      ],
       "arxiv_id": "2305.05181",
       "title": "MoT: Memory-of-Thought Enables ChatGPT to Self-Improve",
       "authors": "Li, Qiu",
@@ -84,7 +100,9 @@
       "published": "2023-05-09"
     },
     {
-      "techniques": ["uncertainty-routed-cot"],
+      "techniques": [
+        "uncertainty-routed-cot"
+      ],
       "arxiv_id": "2312.11805",
       "title": "Gemini: A Family of Highly Capable Multimodal Models",
       "authors": "Gemini Team, Anil, Borgeaud, +1348",
@@ -93,7 +111,9 @@
       "note": "The technique is described inside a model report rather than a paper of its own. Cite the report; do not invent a narrower source."
     },
     {
-      "techniques": ["reverse-cot"],
+      "techniques": [
+        "reverse-cot"
+      ],
       "arxiv_id": "2305.11499",
       "title": "RCOT: Detecting and Rectifying Factual Inconsistency in Reasoning by Reversing Chain-of-Thought",
       "authors": "Xue, Wang, Wang, +3",
@@ -101,7 +121,9 @@
       "published": "2023-05-19"
     },
     {
-      "techniques": ["recursion-of-thought"],
+      "techniques": [
+        "recursion-of-thought"
+      ],
       "arxiv_id": "2306.06891",
       "title": "Recursion of Thought: A Divide-and-Conquer Approach to Multi-Context Reasoning with Language Models",
       "authors": "Lee, Kim",
@@ -109,7 +131,9 @@
       "published": "2023-06-12"
     },
     {
-      "techniques": ["metacognitive-prompting"],
+      "techniques": [
+        "metacognitive-prompting"
+      ],
       "arxiv_id": "2308.05342",
       "title": "Metacognitive Prompting Improves Understanding in Large Language Models",
       "authors": "Wang, Zhao",
@@ -117,7 +141,9 @@
       "published": "2023-08-10"
     },
     {
-      "techniques": ["prompt-mining"],
+      "techniques": [
+        "prompt-mining"
+      ],
       "arxiv_id": "1911.12543",
       "title": "How Can We Know What Language Models Know?",
       "authors": "Jiang, Xu, Araki, Neubig",
@@ -126,7 +152,9 @@
       "note": "Already cited by prompt-paraphrasing. The survey cites this one paper for both techniques, which is why the shared id is correct rather than a duplicate."
     },
     {
-      "techniques": ["autodicot"],
+      "techniques": [
+        "autodicot"
+      ],
       "arxiv_id": "2406.06608",
       "title": "The Prompt Report: A Systematic Survey of Prompt Engineering Techniques",
       "authors": "Schulhoff, Ilie, Balepur, +30",

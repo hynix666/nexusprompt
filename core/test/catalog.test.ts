@@ -18,9 +18,10 @@ import {
  */
 
 describe("catalog registry", () => {
-  it("holds 172 frozen records plus 8 added at import", () => {
-    expect(TECHNIQUE_COUNT).toBe(180);
-    expect(listTechniques()).toHaveLength(180);
+  it("holds 172 frozen records plus 23 added at import", () => {
+    // 8 ensembling (2026-08-17) + 15 Prompt Report gap techniques (2026-08-18).
+    expect(TECHNIQUE_COUNT).toBe(195);
+    expect(listTechniques()).toHaveLength(195);
   });
 
   it("is frozen — a caller cannot mutate the shared catalog", () => {
@@ -30,7 +31,7 @@ describe("catalog registry", () => {
   it("records where the data came from and how many fixes were applied", () => {
     expect(CATALOG_PROVENANCE.source).toBe("sources/catalog/data/prompt_technique_catalog.json");
     expect(CATALOG_PROVENANCE.corrections_applied).toBe(8);
-    expect(CATALOG_PROVENANCE.records_added).toBe(8);
+    expect(CATALOG_PROVENANCE.records_added).toBe(23);
     expect(String(CATALOG_PROVENANCE.source_sha256)).toMatch(/^[0-9a-f]{64}$/);
   });
 
@@ -56,7 +57,10 @@ describe("catalog registry", () => {
     for (const t of reasoning) expect(t.category).toBe("reasoning-elicitation");
 
     const checkable = verifierCheckable();
-    expect(checkable.length).toBe(137); // 130 frozen + 7 of the 8 added
+    // 130 frozen + 7 of the 8 ensembling + 14 of the 15 gap records. The gap record left
+    // out is reverse-cot, which is judge-checkable: its comparison step is a model
+    // judgement, so it needs a judge whose agreement has itself been established.
+    expect(checkable.length).toBe(151);
     for (const t of checkable) expect(t.verification_status).toBe("verifier-checkable");
   });
 

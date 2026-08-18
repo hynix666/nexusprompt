@@ -19,8 +19,29 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const CATALOG = "sources/catalog/data/prompt_technique_catalog.json";
+const IMPORTED = "core/src/catalog/techniques.json";
+const ADDITIONS = "scripts/catalog-additions.json";
 const DEFECTS = "scripts/catalog-known-defects.json";
 const ARXIV = /^\d{4}\.\d{4,5}$/;
+
+/**
+ * Records added at import were never reached by this check.
+ *
+ * It read the frozen catalog and only the frozen catalog, so it audited 172 records
+ * while the shipped artifact carried 195. The twenty-three added ones — the newly
+ * authored records, whose citations were typed by hand and are therefore the ones most
+ * able to be wrong — were the exact set nothing verified. A checker whose name says
+ * "citations" and whose scope is "some citations" is the failure this repository has
+ * now found in four separate guards.
+ *
+ * Added records are audited with **no excusals**. `catalog-known-defects.json` exists
+ * because frozen data cannot be edited in place; a record written this week has no such
+ * excuse, and grandfathering one would make the allowlist a place to put mistakes.
+ */
+const readTechniques = (path) => {
+  const raw = JSON.parse(readFileSync(path, "utf8"));
+  return Array.isArray(raw) ? raw : (raw.techniques ?? raw.records ?? null);
+};
 
 /**
  * `now` is injectable so a test can pin it. An arXiv id dated after today is an error,
@@ -28,16 +49,21 @@ const ARXIV = /^\d{4}\.\d{4,5}$/;
  * stale, and a test that silently starts passing for the wrong reason is exactly what
  * this repository keeps finding.
  */
-export function checkCitations(root = process.cwd(), now = new Date()) {
+export function checkCitations(root = process.cwd(), now = new Date(), opts = {}) {
+  const source = opts.catalog ?? CATALOG;
+  const only = opts.only ?? null;          // Set of ids to restrict to, or null for all
+  const useExcusals = opts.excusals ?? true;
+
   let techniques;
   try {
-    techniques = JSON.parse(readFileSync(join(root, CATALOG), "utf8")).techniques;
+    techniques = readTechniques(join(root, source));
   } catch (err) {
-    return { ok: false, fatalCode: 2, fatal: `cannot read ${CATALOG} — ${err.message}`, problems: [] };
+    return { ok: false, fatalCode: 2, fatal: `cannot read ${source} — ${err.message}`, problems: [] };
   }
   if (!Array.isArray(techniques)) {
-    return { ok: false, fatalCode: 2, fatal: `${CATALOG} has no techniques array`, problems: [] };
+    return { ok: false, fatalCode: 2, fatal: `${source} has no techniques array`, problems: [] };
   }
+  if (only) techniques = techniques.filter((r) => only.has(r.id));
 
   const nowYYMM = (now.getUTCFullYear() % 100) * 100 + (now.getUTCMonth() + 1);
   const problems = [];
@@ -94,10 +120,12 @@ export function checkCitations(root = process.cwd(), now = new Date()) {
    * matches a live problem fails as stale.
    */
   let known = [];
-  try {
-    known = JSON.parse(readFileSync(join(root, DEFECTS), "utf8")).defects ?? [];
-  } catch {
-    known = [];
+  if (useExcusals) {
+    try {
+      known = JSON.parse(readFileSync(join(root, DEFECTS), "utf8")).defects ?? [];
+    } catch {
+      known = [];
+    }
   }
 
   const key = (kind, technique) => `${kind}::${technique}`;
@@ -135,28 +163,58 @@ export function checkCitations(root = process.cwd(), now = new Date()) {
   };
 }
 
-function main() {
-  const r = checkCitations();
-
-  if (r.fatal) {
-    console.error(`check:citations: ${r.fatal}`);
-    return r.fatalCode;
+/** Ids introduced at import. Empty is legitimate — it means nothing was added. */
+function addedIds(root = process.cwd()) {
+  try {
+    return new Set((JSON.parse(readFileSync(join(root, ADDITIONS), "utf8")).records ?? []).map((r) => r.id));
+  } catch {
+    return new Set();
   }
+}
 
-  if (r.ok) {
-    console.log(`check:citations — OK. ${r.records} technique records, every citation internally consistent.`);
-    console.log(`  ${r.withArxiv} cite an arXiv preprint (${r.distinctArxiv} distinct ids, none reused for a different paper);`);
-    console.log(`  ${r.records - r.withArxiv} cite a venue, report, or practitioner guide instead.`);
-    if (r.excused) {
-      console.log(`  ${r.excused} known defect(s) excused by ${DEFECTS}, each with a reason and a fix point.`);
-    }
-    return 0;
-  }
-
-  console.error(`check:citations — ${r.problems.length} inconsistent citation(s):\n`);
+function report(label, r) {
+  console.error(`check:citations — ${r.problems.length} inconsistent citation(s) in ${label}:\n`);
   for (const p of r.problems) console.error(`  [${p.kind}] ${p.technique}\n    ${p.detail}`);
   console.error(`\nA citation that contradicts itself is wrong in one of its fields. Read the paper.`);
-  return 1;
+}
+
+function main() {
+  const frozen = checkCitations();
+  if (frozen.fatal) {
+    console.error(`check:citations: ${frozen.fatal}`);
+    return frozen.fatalCode;
+  }
+  if (!frozen.ok) {
+    report("the frozen catalog", frozen);
+    return 1;
+  }
+
+  // Second pass: the records added at import, which the frozen catalog does not contain
+  // and which this check did not reach until 2026-08-18. No excusals — see the note above.
+  const added = addedIds();
+  const imported = added.size
+    ? checkCitations(process.cwd(), new Date(), { catalog: IMPORTED, only: added, excusals: false })
+    : null;
+
+  if (imported?.fatal) {
+    console.error(`check:citations: ${imported.fatal}`);
+    return imported.fatalCode;
+  }
+  if (imported && !imported.ok) {
+    report(`the ${added.size} records added at import`, imported);
+    console.error(`These were authored, not inherited. ${DEFECTS} does not apply to them.`);
+    return 1;
+  }
+
+  const total = frozen.records + (imported?.records ?? 0);
+  console.log(`check:citations — OK. ${total} technique records, every citation internally consistent.`);
+  console.log(`  ${frozen.records} frozen + ${imported?.records ?? 0} added at import, both audited;`);
+  console.log(`  ${frozen.withArxiv + (imported?.withArxiv ?? 0)} cite an arXiv preprint;`);
+  console.log(`  ${total - frozen.withArxiv - (imported?.withArxiv ?? 0)} cite a venue, report, or practitioner guide instead.`);
+  if (frozen.excused) {
+    console.log(`  ${frozen.excused} known defect(s) excused by ${DEFECTS}, frozen records only.`);
+  }
+  return 0;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -24,10 +24,30 @@
     "controlled vocabularies. The first draft of this file invented 'abstract-verified'",
     "and three 'deterministic-given-…' values that exist in no schema. They validated",
     "against the JSON Schema, which typed those fields as free strings, and were caught",
-    "only when the XSD was read. The JSON Schema now carries the same enumerations."
+    "only when the XSD was read. The JSON Schema now carries the same enumerations.",
+    "",
+    "── 2026-08-18: the fifteen Prompt Report gap techniques ──",
+    "",
+    "The fifteen techniques The Prompt Report lists that the frozen catalog lacked.",
+    "They resolve to thirteen distinct papers: two papers each cover a parent/child",
+    "pair (sg-icl with exemplar-generation, vote-k with exemplar-selection), and",
+    "AutoDiCoT originates in the survey's own case study rather than a separate paper.",
+    "",
+    "Citations were not written from memory. Each was resolved in",
+    "scripts/catalog-gap-sources.json against arXiv metadata by exact title query at",
+    "Jaccard 1.00, so the authoring step here was mechanical. prompt-mining shares",
+    "arXiv 1911.12543 with prompt-paraphrasing and reuses its title verbatim, which is",
+    "correct — the survey cites one paper for both — and check:citations permits a",
+    "shared id provided the titles agree.",
+    "",
+    "source_audit follows the ensembling batch: descriptions written from abstracts are",
+    "'verified-against-abstract'; pitfalls were not checked against the papers and stay",
+    "'unverified'. autodicot's known_pitfalls says outright that its evidence is one",
+    "case study rather than an independent evaluation — a weaker warrant than the others",
+    "here, and recorded as such rather than levelled up to match them."
   ],
-  "added_on": "2026-08-17",
-  "closes": "ensembling coverage gap, The Prompt Report §2.2.4",
+  "added_on": "2026-08-18",
+  "closes": "ensembling coverage gap, The Prompt Report §2.2.4; the fifteen Prompt Report gap techniques",
   "records": [
     {
       "id": "demonstration-ensembling",
@@ -50,7 +70,11 @@
         "Aggregation needs outputs that can actually be combined; free-form generations do not vote cleanly.",
         "Partitioning strategy is a real hyperparameter — arbitrary subsets can be worse than a well-chosen single prompt."
       ],
-      "related_techniques": ["few-shot-prompting", "self-consistency", "fantastically-ordered-prompts"],
+      "related_techniques": [
+        "few-shot-prompting",
+        "self-consistency",
+        "fantastically-ordered-prompts"
+      ],
       "primary_source": {
         "authors": "Khalifa, Logeswaran, Lee, Lee, Wang",
         "year": 2023,
@@ -64,22 +88,44 @@
           "template_name": "Subset-and-aggregate",
           "template": "# For each of {{num_subsets}} disjoint exemplar subsets S_i:\n{{exemplar_subset}}\n\nInput: {{test_input}}\nOutput:\n\n# Then aggregate the {{num_subsets}} outputs into a final answer.",
           "variables": [
-            { "name": "num_subsets", "description": "How many demonstration subsets to build", "example": "4" },
-            { "name": "exemplar_subset", "description": "The demonstrations assigned to this subset", "example": null },
-            { "name": "test_input", "description": "The query being answered", "example": null }
+            {
+              "name": "num_subsets",
+              "description": "How many demonstration subsets to build",
+              "example": "4"
+            },
+            {
+              "name": "exemplar_subset",
+              "description": "The demonstrations assigned to this subset",
+              "example": null
+            },
+            {
+              "name": "test_input",
+              "description": "The query being answered",
+              "example": null
+            }
           ],
           "template_id": "demonstration-ensembling--subset-and-aggregate",
           "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 once the partition is fixed; the partition itself must be recorded to reproduce a run."
         }
       ],
-      "tags": ["ensembling", "in-context-learning", "multi-call", "exemplars"],
+      "tags": [
+        "ensembling",
+        "in-context-learning",
+        "multi-call",
+        "exemplars"
+      ],
       "status": "verified-external",
-      "aliases": ["DENSE"],
+      "aliases": [
+        "DENSE"
+      ],
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
     },
     {
       "id": "mixture-of-reasoning-experts",
@@ -101,7 +147,11 @@
         "The expert set has to actually be diverse; near-identical prompts agree with each other without adding information.",
         "The agreement scorer becomes a component with its own failure modes, not a neutral tally."
       ],
-      "related_techniques": ["self-consistency", "chain-of-thought", "retrieval-augmented-generation"],
+      "related_techniques": [
+        "self-consistency",
+        "chain-of-thought",
+        "retrieval-augmented-generation"
+      ],
       "primary_source": {
         "authors": "Si, Shi, Zhao, Zettlemoyer, Boyd-Graber",
         "year": 2023,
@@ -115,22 +165,44 @@
           "template_name": "Specialised experts with agreement selection",
           "template": "# Query the model once per expert prompt:\n{{expert_prompts}}\n\nQuestion: {{question}}\n\n# Then score agreement across expert answers and return the highest-scoring one.\n# If agreement falls below {{abstain_threshold}}, abstain rather than answer.",
           "variables": [
-            { "name": "expert_prompts", "description": "One prompt per reasoning type (factual, multi-hop, commonsense, …)", "example": null },
-            { "name": "question", "description": "The question to answer", "example": null },
-            { "name": "abstain_threshold", "description": "Agreement score below which the system declines to answer", "example": "0.5" }
+            {
+              "name": "expert_prompts",
+              "description": "One prompt per reasoning type (factual, multi-hop, commonsense, …)",
+              "example": null
+            },
+            {
+              "name": "question",
+              "description": "The question to answer",
+              "example": null
+            },
+            {
+              "name": "abstain_threshold",
+              "description": "Agreement score below which the system declines to answer",
+              "example": "0.5"
+            }
           ],
           "template_id": "mixture-of-reasoning-experts--agreement-selection",
           "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 for a fixed expert set; changing the expert prompts changes the answer distribution."
         }
       ],
-      "tags": ["ensembling", "reasoning", "multi-call", "calibration"],
+      "tags": [
+        "ensembling",
+        "reasoning",
+        "multi-call",
+        "calibration"
+      ],
       "status": "verified-external",
-      "aliases": ["MoRE"],
+      "aliases": [
+        "MoRE"
+      ],
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
     },
     {
       "id": "diverse-step-aware-verifier",
@@ -153,7 +225,11 @@
         "Requires a step-level verifier; without one this degenerates to more expensive Self-Consistency.",
         "Cost is multiplicative — prompts times samples — and grows faster than it first appears."
       ],
-      "related_techniques": ["self-consistency", "chain-of-thought", "backward-self-verification"],
+      "related_techniques": [
+        "self-consistency",
+        "chain-of-thought",
+        "backward-self-verification"
+      ],
       "primary_source": {
         "authors": "Li, Lin, Zhang, Fu, Chen, Lou, Chen",
         "year": 2022,
@@ -167,24 +243,54 @@
           "template_name": "Diverse prompts, step-scored paths",
           "template": "# For each of {{num_prompts}} diverse prompts, sample {{paths_per_prompt}} reasoning paths at temperature {{temperature}}:\n{{prompt_variant}}\n\nProblem: {{problem}}\n\n# Then score each path step by step with the verifier and return the best-scoring answer.",
           "variables": [
-            { "name": "num_prompts", "description": "How many distinct prompt formulations to use", "example": "5" },
-            { "name": "paths_per_prompt", "description": "Reasoning paths sampled per prompt", "example": "20" },
-            { "name": "temperature", "description": "Sampling temperature (nonzero, for path diversity)", "example": "0.7" },
-            { "name": "prompt_variant", "description": "One of the diverse prompt formulations", "example": null },
-            { "name": "problem", "description": "The problem to solve", "example": null }
+            {
+              "name": "num_prompts",
+              "description": "How many distinct prompt formulations to use",
+              "example": "5"
+            },
+            {
+              "name": "paths_per_prompt",
+              "description": "Reasoning paths sampled per prompt",
+              "example": "20"
+            },
+            {
+              "name": "temperature",
+              "description": "Sampling temperature (nonzero, for path diversity)",
+              "example": "0.7"
+            },
+            {
+              "name": "prompt_variant",
+              "description": "One of the diverse prompt formulations",
+              "example": null
+            },
+            {
+              "name": "problem",
+              "description": "The problem to solve",
+              "example": null
+            }
           ],
           "template_id": "diverse-step-aware-verifier--diverse-prompts-step-scored",
           "determinism": "stochastic-by-design",
           "reproducibility_note": "Samples at temperature > 0 by design; outputs vary run to run."
         }
       ],
-      "tags": ["ensembling", "reasoning", "multi-call", "verifier"],
+      "tags": [
+        "ensembling",
+        "reasoning",
+        "multi-call",
+        "verifier"
+      ],
       "status": "verified-external",
-      "aliases": ["DiVeRSe"],
+      "aliases": [
+        "DiVeRSe"
+      ],
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
     },
     {
       "id": "max-mutual-information-template-selection",
@@ -207,7 +313,10 @@
         "Mutual information is a proxy for informativeness, not for correctness: a confidently wrong template can score well.",
         "Estimating the quantity requires enough samples per candidate that the selection itself becomes the dominant cost."
       ],
-      "related_techniques": ["automatic-prompt-engineer", "prompt-paraphrasing"],
+      "related_techniques": [
+        "automatic-prompt-engineer",
+        "prompt-paraphrasing"
+      ],
       "primary_source": {
         "authors": "Sorensen, Robinson, Rytting, Shaw, Rogers, Delorey, Khalil, Fulda, Wingate",
         "year": 2022,
@@ -221,22 +330,45 @@
           "template_name": "Unsupervised template selection",
           "template": "# For each candidate template T_i in {{candidate_templates}}:\n#   sample {{samples_per_template}} outputs over {{input_pool}}\n#   estimate mutual information between prompt and output\n# Select the template maximising estimated mutual information.",
           "variables": [
-            { "name": "candidate_templates", "description": "The prompt templates under consideration", "example": null },
-            { "name": "samples_per_template", "description": "Outputs sampled per candidate for the estimate", "example": "20" },
-            { "name": "input_pool", "description": "Unlabelled inputs used for the estimate", "example": null }
+            {
+              "name": "candidate_templates",
+              "description": "The prompt templates under consideration",
+              "example": null
+            },
+            {
+              "name": "samples_per_template",
+              "description": "Outputs sampled per candidate for the estimate",
+              "example": "20"
+            },
+            {
+              "name": "input_pool",
+              "description": "Unlabelled inputs used for the estimate",
+              "example": null
+            }
           ],
           "template_id": "max-mutual-information-template-selection--unsupervised-selection",
           "determinism": "stochastic-by-design",
           "reproducibility_note": "The estimate depends on sampled outputs; fix the seed and input pool to reproduce a selection."
         }
       ],
-      "tags": ["ensembling", "prompt-selection", "unsupervised", "information-theory"],
+      "tags": [
+        "ensembling",
+        "prompt-selection",
+        "unsupervised",
+        "information-theory"
+      ],
       "status": "verified-external",
-      "aliases": ["Max Mutual Information Method", "MI template selection"],
+      "aliases": [
+        "Max Mutual Information Method",
+        "MI template selection"
+      ],
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
     },
     {
       "id": "meta-reasoning-over-chains",
@@ -259,7 +391,11 @@
         "The aggregation step is itself a model call and can introduce errors absent from every input chain.",
         "Total context grows with the number of chains, so the method runs into context limits sooner than voting does."
       ],
-      "related_techniques": ["self-consistency", "universal-self-consistency", "chain-of-thought"],
+      "related_techniques": [
+        "self-consistency",
+        "universal-self-consistency",
+        "chain-of-thought"
+      ],
       "primary_source": {
         "authors": "Yoran, Wolfson, Bogin, Katz, Deutch, Berant",
         "year": 2023,
@@ -273,22 +409,45 @@
           "template_name": "Chains into one meta-prompt",
           "template": "Below are {{num_chains}} independent reasoning chains for the same question.\n\nQuestion: {{question}}\n\n{{chains}}\n\nReason over these chains together. Where they disagree, say which is better supported and why. Then give a single final answer.",
           "variables": [
-            { "name": "num_chains", "description": "How many chains were sampled", "example": "5" },
-            { "name": "question", "description": "The original question", "example": null },
-            { "name": "chains", "description": "The sampled reasoning chains, concatenated", "example": null }
+            {
+              "name": "num_chains",
+              "description": "How many chains were sampled",
+              "example": "5"
+            },
+            {
+              "name": "question",
+              "description": "The original question",
+              "example": null
+            },
+            {
+              "name": "chains",
+              "description": "The sampled reasoning chains, concatenated",
+              "example": null
+            }
           ],
           "template_id": "meta-reasoning-over-chains--meta-prompt",
           "determinism": "stochastic-by-design",
           "reproducibility_note": "Chain sampling uses temperature > 0; the aggregation call is deterministic at temperature 0 given fixed chains."
         }
       ],
-      "tags": ["ensembling", "reasoning", "multi-hop", "multi-call"],
+      "tags": [
+        "ensembling",
+        "reasoning",
+        "multi-hop",
+        "multi-call"
+      ],
       "status": "verified-external",
-      "aliases": ["Meta-CoT", "Meta-Reasoning over Multiple CoTs"],
+      "aliases": [
+        "Meta-CoT",
+        "Meta-Reasoning over Multiple CoTs"
+      ],
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
     },
     {
       "id": "consistency-based-self-adaptive-prompting",
@@ -311,7 +470,12 @@
         "Self-agreement is a proxy for correctness, not a measure of it: a confidently wrong pattern gets selected as an exemplar and then reinforced.",
         "The exemplars are model-specific artefacts; they should not be assumed transferable to another model."
       ],
-      "related_techniques": ["zero-shot-cot", "self-consistency", "universal-self-adaptive-prompting", "auto-cot"],
+      "related_techniques": [
+        "zero-shot-cot",
+        "self-consistency",
+        "universal-self-adaptive-prompting",
+        "auto-cot"
+      ],
       "primary_source": {
         "authors": "Wan, Sun, Dai, Arik, Pfister",
         "year": 2023,
@@ -325,24 +489,54 @@
           "template_name": "Self-selected exemplars",
           "template": "# Stage 1 — over {{unlabelled_pool}}, run Zero-Shot CoT with Self-Consistency at k={{k}}.\n# Stage 2 — keep the {{num_exemplars}} examples with the highest self-agreement as exemplars.\n# Stage 3 — build a few-shot CoT prompt from them and run Self-Consistency again:\n{{selected_exemplars}}\n\nQ: {{question}}\nA: Let's think step by step.",
           "variables": [
-            { "name": "unlabelled_pool", "description": "Unlabelled examples to draw exemplars from", "example": null },
-            { "name": "k", "description": "Samples per example in the agreement stage", "example": "10" },
-            { "name": "num_exemplars", "description": "How many high-agreement examples to keep", "example": "4" },
-            { "name": "selected_exemplars", "description": "The chosen exemplars with their generated chains", "example": null },
-            { "name": "question", "description": "The question to answer", "example": null }
+            {
+              "name": "unlabelled_pool",
+              "description": "Unlabelled examples to draw exemplars from",
+              "example": null
+            },
+            {
+              "name": "k",
+              "description": "Samples per example in the agreement stage",
+              "example": "10"
+            },
+            {
+              "name": "num_exemplars",
+              "description": "How many high-agreement examples to keep",
+              "example": "4"
+            },
+            {
+              "name": "selected_exemplars",
+              "description": "The chosen exemplars with their generated chains",
+              "example": null
+            },
+            {
+              "name": "question",
+              "description": "The question to answer",
+              "example": null
+            }
           ],
           "template_id": "consistency-based-self-adaptive-prompting--self-selected-exemplars",
           "determinism": "stochastic-by-design",
           "reproducibility_note": "Both stages sample at temperature > 0; the selected exemplar set must be recorded to reproduce a run."
         }
       ],
-      "tags": ["ensembling", "zero-shot", "exemplars", "multi-call"],
+      "tags": [
+        "ensembling",
+        "zero-shot",
+        "exemplars",
+        "multi-call"
+      ],
       "status": "verified-external",
-      "aliases": ["COSP"],
+      "aliases": [
+        "COSP"
+      ],
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
     },
     {
       "id": "universal-self-adaptive-prompting",
@@ -365,7 +559,11 @@
         "The scoring function is task-type-dependent, so the method carries a configuration decision that COSP does not.",
         "Selected exemplars remain model- and pool-specific artefacts, not portable assets."
       ],
-      "related_techniques": ["consistency-based-self-adaptive-prompting", "zero-shot-prompting", "self-consistency"],
+      "related_techniques": [
+        "consistency-based-self-adaptive-prompting",
+        "zero-shot-prompting",
+        "self-consistency"
+      ],
       "primary_source": {
         "authors": "Wan, Sun, Nakhost, Dai, Eisenschlos, Arik, Pfister",
         "year": 2023,
@@ -379,24 +577,54 @@
           "template_name": "Task-aware exemplar selection",
           "template": "# Stage 1 — generate candidate outputs over {{unlabelled_pool}} for task type {{task_type}}.\n# Stage 2 — score candidates with the scoring function for that task type; keep the top {{num_exemplars}}.\n# Stage 3 — prompt with the selected exemplars:\n{{selected_exemplars}}\n\nInput: {{input}}\nOutput:",
           "variables": [
-            { "name": "unlabelled_pool", "description": "Unlabelled examples to draw exemplars from", "example": null },
-            { "name": "task_type", "description": "Classification, short-form generation, or long-form generation", "example": "long-form generation" },
-            { "name": "num_exemplars", "description": "How many exemplars to keep", "example": "4" },
-            { "name": "selected_exemplars", "description": "The chosen exemplars", "example": null },
-            { "name": "input", "description": "The query being answered", "example": null }
+            {
+              "name": "unlabelled_pool",
+              "description": "Unlabelled examples to draw exemplars from",
+              "example": null
+            },
+            {
+              "name": "task_type",
+              "description": "Classification, short-form generation, or long-form generation",
+              "example": "long-form generation"
+            },
+            {
+              "name": "num_exemplars",
+              "description": "How many exemplars to keep",
+              "example": "4"
+            },
+            {
+              "name": "selected_exemplars",
+              "description": "The chosen exemplars",
+              "example": null
+            },
+            {
+              "name": "input",
+              "description": "The query being answered",
+              "example": null
+            }
           ],
           "template_id": "universal-self-adaptive-prompting--task-aware-selection",
           "determinism": "stochastic-by-design",
           "reproducibility_note": "Candidate generation samples from the model; record the selected exemplar set to reproduce a run."
         }
       ],
-      "tags": ["ensembling", "zero-shot", "exemplars", "task-general"],
+      "tags": [
+        "ensembling",
+        "zero-shot",
+        "exemplars",
+        "task-general"
+      ],
       "status": "verified-external",
-      "aliases": ["USP"],
+      "aliases": [
+        "USP"
+      ],
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
     },
     {
       "id": "prompt-paraphrasing",
@@ -419,7 +647,11 @@
         "'Meaning-preserving' is an assumption, not a guarantee: a paraphrase can quietly change the task.",
         "Paraphrases generated by the same model can share its blind spots, so the ensemble is less diverse than it looks."
       ],
-      "related_techniques": ["max-mutual-information-template-selection", "self-consistency", "promptrobust-perturbation-benchmark"],
+      "related_techniques": [
+        "max-mutual-information-template-selection",
+        "self-consistency",
+        "promptrobust-perturbation-benchmark"
+      ],
       "primary_source": {
         "authors": "Jiang, Xu, Araki, Neubig",
         "year": 2020,
@@ -433,21 +665,1236 @@
           "template_name": "Paraphrase ensemble",
           "template": "# Generate {{num_paraphrases}} meaning-preserving rewordings of the base prompt:\n{{base_prompt}}\n\n# Query the model once per paraphrase, then aggregate the answers.\n# Report the spread across paraphrases alongside the aggregate.",
           "variables": [
-            { "name": "num_paraphrases", "description": "How many rewordings to generate", "example": "5" },
-            { "name": "base_prompt", "description": "The original prompt to paraphrase", "example": null }
+            {
+              "name": "num_paraphrases",
+              "description": "How many rewordings to generate",
+              "example": "5"
+            },
+            {
+              "name": "base_prompt",
+              "description": "The original prompt to paraphrase",
+              "example": null
+            }
           ],
           "template_id": "prompt-paraphrasing--paraphrase-ensemble",
           "determinism": "deterministic-at-temperature-zero",
           "reproducibility_note": "Deterministic at temperature 0 once the paraphrase set is fixed; record the paraphrases to reproduce a run."
         }
       ],
-      "tags": ["ensembling", "prompt-variants", "robustness", "multi-call"],
+      "tags": [
+        "ensembling",
+        "prompt-variants",
+        "robustness",
+        "multi-call"
+      ],
       "status": "verified-external",
-      "aliases": ["Paraphrase ensembling"],
+      "aliases": [
+        "Paraphrase ensembling"
+      ],
       "secondary_sources": [],
       "corpus_file": null,
       "schema_version": "1.3.0",
-      "source_audit": { "description": "verified-against-abstract", "pitfalls": "unverified" }
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "style-prompting",
+      "name": "Style Prompting",
+      "category": "reasoning-elicitation",
+      "subcategory": "foundational",
+      "executive_summary": "Constrain the form of the output — tone, genre, register, length — in the instruction itself, rather than editing the result afterwards.",
+      "description": "Style prompting specifies the desired style, tone, genre or register of the output directly in the prompt, so that form is controlled at generation time rather than by post-editing. Lu et al. study this as a constraint-satisfaction problem: they define a set of prompt constraints over open text generation — stylistic, structural and numerical — and measure how reliably models honour them. The finding that matters for a catalog is that constraint compliance is uneven and does not follow model capability monotonically, so a style instruction is a request rather than a guarantee, and compliance is worth checking rather than assuming.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "single-call",
+      "when_to_use": [
+        "Output form matters as much as content — a summary that must read as plain prose, a reply that must stay in a fixed register.",
+        "You would otherwise post-process the output to fix its tone or shape, which is more brittle than asking for it up front."
+      ],
+      "when_not_to_use": [
+        "The task has a machine-checkable output shape — use a grammar or schema constraint, which is enforced rather than requested.",
+        "Style and accuracy are competing for the same limited instruction budget on a task where accuracy dominates."
+      ],
+      "known_pitfalls": [
+        "Compliance is not guaranteed and does not improve monotonically with model size; a style instruction that held on one model generation may not hold on the next.",
+        "Stacking many stylistic constraints in one prompt degrades adherence to each of them, and the failure is silent."
+      ],
+      "related_techniques": [
+        "role-prompting",
+        "zero-shot-prompting",
+        "emotionprompt"
+      ],
+      "primary_source": {
+        "authors": "Lu, Zhang, Zhang, Wang, Peng",
+        "year": 2023,
+        "title": "Bounding the Capabilities of Large Language Models in Open Text Generation with Prompt Constraints",
+        "venue": "EACL 2023",
+        "arxiv_id": "2302.09185",
+        "url": "https://arxiv.org/abs/2302.09185"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Explicit style constraint",
+          "template": "Write a {{genre}} about {{topic}}.\n\nStyle constraints:\n- Tone: {{tone}}\n- Length: {{length}}\n- Avoid: {{avoid}}",
+          "template_id": "style-prompting--explicit-style-constraint",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "Deterministic at temperature 0; adherence to each constraint is not guaranteed and should be checked rather than assumed.",
+          "variables": [
+            {
+              "name": "genre",
+              "description": "The form the output should take",
+              "example": "product announcement"
+            },
+            {
+              "name": "topic",
+              "description": "What the text is about",
+              "example": null
+            },
+            {
+              "name": "tone",
+              "description": "Register to hold throughout",
+              "example": "plain, factual, no superlatives"
+            },
+            {
+              "name": "length",
+              "description": "Target length constraint",
+              "example": "under 120 words"
+            },
+            {
+              "name": "avoid",
+              "description": "Constructions to exclude",
+              "example": "marketing adjectives"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "style",
+        "constraints",
+        "zero-shot",
+        "output-control"
+      ],
+      "status": "verified-external",
+      "aliases": [],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "simtom",
+      "name": "SimToM (Simulated Theory of Mind)",
+      "category": "reasoning-elicitation",
+      "subcategory": "single-path-reasoning",
+      "executive_summary": "Two-stage perspective taking: first restrict the context to what one character actually knows, then answer the question using only that restricted context.",
+      "description": "Questions about what someone believes fail when the model reasons over the whole narrative, including facts the character never observed. SimToM splits the task in two. The first prompt asks the model to write out only the events a named character witnessed, discarding everything else. The second prompt asks the original question against that filtered context alone. The filtering step is what does the work: it removes the privileged information that otherwise leaks into the answer, so the model is answering from the character's epistemic position rather than the reader's.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "Questions turn on what a particular agent knows or believes rather than on what is true.",
+        "The context contains information some participants did not observe, and answers are leaking it."
+      ],
+      "when_not_to_use": [
+        "Single-perspective factual questions, where the filtering pass costs a call and removes nothing.",
+        "Contexts short enough that the model is not confusing perspectives in the first place."
+      ],
+      "known_pitfalls": [
+        "The filtering step can itself drop information the character did observe, and the second stage cannot recover it.",
+        "Reported gains are on theory-of-mind benchmarks; transfer to general reasoning is not established by the source."
+      ],
+      "related_techniques": [
+        "step-back-prompting",
+        "zero-shot-cot",
+        "thread-of-thought"
+      ],
+      "primary_source": {
+        "authors": "Wilf, Lee, Liang, Morency",
+        "year": 2023,
+        "title": "Think Twice: Perspective-Taking Improves Large Language Models' Theory-of-Mind Capabilities",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2311.10227",
+        "url": "https://arxiv.org/abs/2311.10227"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Filter then answer",
+          "template": "Step 1 — Perspective\nThe following is a sequence of events:\n{{context}}\n\nList only the events that {{character}} personally observed or was told about. Omit everything else.\n\nStep 2 — Answer\nGiven only what {{character}} knows:\n{{filtered_context}}\n\nAnswer: {{question}}",
+          "template_id": "simtom--filter-then-answer",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "Two calls; the second depends on the first, so the filtered context must be recorded to reproduce a run.",
+          "variables": [
+            {
+              "name": "context",
+              "description": "The full narrative or event sequence",
+              "example": null
+            },
+            {
+              "name": "character",
+              "description": "Whose perspective to adopt",
+              "example": "Sally"
+            },
+            {
+              "name": "filtered_context",
+              "description": "Output of step 1",
+              "example": null
+            },
+            {
+              "name": "question",
+              "description": "The belief question being asked",
+              "example": "Where will Sally look for the ball?"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "theory-of-mind",
+        "perspective-taking",
+        "two-stage",
+        "context-filtering"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "SimToM"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "exemplar-generation",
+      "name": "Exemplar Generation",
+      "category": "example-selection-formatting",
+      "subcategory": "exemplar-generation",
+      "executive_summary": "The parent technique for having the model write its own few-shot demonstrations instead of requiring a hand-labelled pool.",
+      "description": "Few-shot prompting presumes a pool of labelled demonstrations exists. Exemplar generation removes that presumption: the model is prompted to produce demonstrations for the task, and those generated examples become the in-context examples for the real query. This is the umbrella under which SG-ICL and related methods sit. The trade it makes is explicit — annotation cost falls to zero, and demonstration quality is now bounded by the model's own competence on the task, which is exactly the thing in question. It is most defensible where verifying a generated exemplar is cheaper than authoring one.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "No labelled demonstrations exist and authoring them is expensive relative to checking them.",
+        "The task is easy to verify but tedious to exemplify."
+      ],
+      "when_not_to_use": [
+        "High-stakes domains where an unverified generated exemplar teaches the wrong pattern for every subsequent query.",
+        "A good labelled pool already exists — generation adds calls and variance for nothing."
+      ],
+      "known_pitfalls": [
+        "Generated exemplars inherit the model's own errors and then reinforce them in context, which is a feedback loop rather than a one-off mistake.",
+        "Quality varies per generation, so the same pipeline can produce materially different prompts on different runs unless exemplars are pinned."
+      ],
+      "related_techniques": [
+        "sg-icl",
+        "auto-cot",
+        "self-instruct"
+      ],
+      "primary_source": {
+        "authors": "Kim, Joo, Kim, Chae, Ko, Seo",
+        "year": 2022,
+        "title": "Self-Generated In-Context Learning: Leveraging Auto-regressive Language Models as a Demonstration Generator",
+        "venue": "NAACL 2022 Workshop on Large-scale Pre-trained Language Models",
+        "arxiv_id": "2206.08082",
+        "url": "https://arxiv.org/abs/2206.08082"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Generate then prompt",
+          "template": "Write {{n}} example {{task}} pairs, each with an input and its correct output.\n\n# Then use the generated pairs as the few-shot block:\n{{generated_examples}}\n\nInput: {{test_input}}\nOutput:",
+          "template_id": "exemplar-generation--generate-then-prompt",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "Generated exemplars vary run to run; pin them to a recorded set to make a run reproducible.",
+          "variables": [
+            {
+              "name": "n",
+              "description": "How many exemplars to generate",
+              "example": "4"
+            },
+            {
+              "name": "task",
+              "description": "The task being exemplified",
+              "example": "sentiment classification"
+            },
+            {
+              "name": "generated_examples",
+              "description": "Output of the generation call",
+              "example": null
+            },
+            {
+              "name": "test_input",
+              "description": "The real query",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "exemplars",
+        "in-context-learning",
+        "self-generated",
+        "annotation-free"
+      ],
+      "status": "verified-external",
+      "aliases": [],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "sg-icl",
+      "name": "SG-ICL (Self-Generated In-Context Learning)",
+      "category": "example-selection-formatting",
+      "subcategory": "exemplar-generation",
+      "executive_summary": "Use the model itself as the demonstration generator: it writes class-conditioned examples, which then serve as the few-shot block for the real input.",
+      "description": "SG-ICL is the concrete instantiation of exemplar generation. For a classification task the model is prompted once per class to produce examples of that class, giving a balanced synthetic demonstration set without any human annotation. Those examples are then assembled into the few-shot prompt for the actual test input. Kim et al. report that this beats zero-shot prompting across several classification datasets, which is the honest framing: it is a substitute for having no demonstrations, not a substitute for having good ones.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "A classification task with named classes and no annotated examples to hand.",
+        "You want a balanced demonstration set and can generate per class rather than sampling from an unlabelled pool."
+      ],
+      "when_not_to_use": [
+        "Real demonstrations are available — the source compares against zero-shot, not against good few-shot.",
+        "Open-ended generation tasks where 'one example per class' does not apply."
+      ],
+      "known_pitfalls": [
+        "Class-conditioned generation can produce prototypical examples that miss the boundary cases the classifier actually gets wrong.",
+        "Errors in the generated demonstrations propagate to every prediction made with that prompt."
+      ],
+      "related_techniques": [
+        "exemplar-generation",
+        "few-shot-prompting",
+        "auto-cot"
+      ],
+      "primary_source": {
+        "authors": "Kim, Joo, Kim, Chae, Ko, Seo",
+        "year": 2022,
+        "title": "Self-Generated In-Context Learning: Leveraging Auto-regressive Language Models as a Demonstration Generator",
+        "venue": "NAACL 2022 Workshop on Large-scale Pre-trained Language Models",
+        "arxiv_id": "2206.08082",
+        "url": "https://arxiv.org/abs/2206.08082"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Class-conditioned generation",
+          "template": "# For each class c in {{classes}}:\nWrite one example of a {{task}} input whose correct label is {{class}}.\n\n# Assemble:\n{{generated_block}}\n\nInput: {{test_input}}\nLabel:",
+          "template_id": "sg-icl--class-conditioned-generation",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "One generation call per class; record the generated block to reproduce a run.",
+          "variables": [
+            {
+              "name": "classes",
+              "description": "The label set",
+              "example": "positive, negative"
+            },
+            {
+              "name": "task",
+              "description": "The classification task",
+              "example": "movie review sentiment"
+            },
+            {
+              "name": "class",
+              "description": "The class being exemplified in this call",
+              "example": "positive"
+            },
+            {
+              "name": "generated_block",
+              "description": "Concatenated generated exemplars",
+              "example": null
+            },
+            {
+              "name": "test_input",
+              "description": "The real query",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "exemplars",
+        "in-context-learning",
+        "self-generated",
+        "classification"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "SG-ICL"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "exemplar-selection",
+      "name": "Exemplar Selection",
+      "category": "example-selection-formatting",
+      "subcategory": "exemplar-selection",
+      "executive_summary": "The parent technique for choosing which demonstrations enter the prompt, on the premise that which examples you pick moves accuracy more than how many you use.",
+      "description": "In-context learning is sensitive to the demonstrations chosen, not merely their count. Exemplar selection is the family of methods that treat that choice as a decision to optimise rather than a sampling accident: retrieve by similarity to the test input, cover the input distribution, or select an annotation budget that maximises downstream coverage. Su et al. frame this as selective annotation — choosing what to label before labelling it — which reframes exemplar selection as a data-efficiency problem rather than a prompt-formatting one. That framing is what makes it a distinct technique from few-shot prompting itself.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "You have or can build a pool of candidate demonstrations larger than fits in a prompt.",
+        "Accuracy is visibly sensitive to which examples are included."
+      ],
+      "when_not_to_use": [
+        "Fewer candidate examples than prompt slots — there is nothing to select.",
+        "Latency-critical paths where the retrieval or scoring step cannot be afforded per query."
+      ],
+      "known_pitfalls": [
+        "Selecting purely by similarity to the test input collapses diversity and can reinforce a single wrong pattern.",
+        "A selection policy tuned on the evaluation set makes any held-out claim void, even when the items are disjoint."
+      ],
+      "related_techniques": [
+        "vote-k",
+        "knn-prompting",
+        "what-makes-good-in-context-examples"
+      ],
+      "primary_source": {
+        "authors": "Su, Kasai, Wu, Shi, Wang, Xin, Zhang, Ostendorf, Zettlemoyer, Smith, Yu",
+        "year": 2022,
+        "title": "Selective Annotation Makes Language Models Better Few-Shot Learners",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2209.01975",
+        "url": "https://arxiv.org/abs/2209.01975"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Retrieve then prompt",
+          "template": "# Select {{k}} demonstrations from {{pool}} by {{policy}} against the test input.\n{{selected_examples}}\n\nInput: {{test_input}}\nOutput:",
+          "template_id": "exemplar-selection--retrieve-then-prompt",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "Deterministic once the pool, the policy and its embedding model are pinned; all three belong in the run record.",
+          "variables": [
+            {
+              "name": "k",
+              "description": "How many demonstrations to include",
+              "example": "8"
+            },
+            {
+              "name": "pool",
+              "description": "The candidate demonstration pool",
+              "example": null
+            },
+            {
+              "name": "policy",
+              "description": "Selection rule",
+              "example": "cosine similarity over sentence embeddings"
+            },
+            {
+              "name": "selected_examples",
+              "description": "The chosen demonstrations",
+              "example": null
+            },
+            {
+              "name": "test_input",
+              "description": "The real query",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "exemplars",
+        "in-context-learning",
+        "selection",
+        "annotation-efficiency"
+      ],
+      "status": "verified-external",
+      "aliases": [],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "vote-k",
+      "name": "Vote-k Selective Annotation",
+      "category": "example-selection-formatting",
+      "subcategory": "exemplar-selection",
+      "executive_summary": "Pick a diverse, representative subset of unlabelled data to annotate once, then retrieve from that small labelled pool per query.",
+      "description": "Vote-k is a two-step answer to the question of what to label when annotation is the scarce resource. First, an unsupervised graph-based selection picks a subset of the unlabelled pool that is both diverse and representative, deliberately avoiding the redundancy that similarity-only selection produces. That subset alone is annotated. Second, at inference time, demonstrations are retrieved from the annotated subset by similarity to the test input. Su et al. report that the selection step matters substantially at small annotation budgets, which is precisely the regime where a team is deciding whether few-shot prompting is affordable at all.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "Annotation budget is the binding constraint and you get to choose what gets labelled.",
+        "A large unlabelled pool exists and similarity-only retrieval is returning near-duplicate demonstrations."
+      ],
+      "when_not_to_use": [
+        "The labelled pool is already fixed — the selective-annotation half of the method no longer applies.",
+        "Very large annotation budgets, where the source reports the advantage of careful selection narrows."
+      ],
+      "known_pitfalls": [
+        "The diversity graph depends on an embedding model; changing that model changes the selected subset and therefore the results.",
+        "Gains are reported at small budgets and should not be extrapolated to large ones without measuring."
+      ],
+      "related_techniques": [
+        "exemplar-selection",
+        "knn-prompting",
+        "what-makes-good-in-context-examples"
+      ],
+      "primary_source": {
+        "authors": "Su, Kasai, Wu, Shi, Wang, Xin, Zhang, Ostendorf, Zettlemoyer, Smith, Yu",
+        "year": 2022,
+        "title": "Selective Annotation Makes Language Models Better Few-Shot Learners",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2209.01975",
+        "url": "https://arxiv.org/abs/2209.01975"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Select, annotate, retrieve",
+          "template": "# Offline: select {{budget}} diverse-and-representative items from {{unlabelled_pool}} via vote-k; annotate only those.\n# Online: retrieve {{k}} nearest annotated items to the test input.\n{{retrieved_examples}}\n\nInput: {{test_input}}\nOutput:",
+          "template_id": "vote-k--select-annotate-retrieve",
+          "determinism": "requires-external-system",
+          "reproducibility_note": "Needs an embedding model and a similarity index; both, plus the selected subset, must be pinned to reproduce a run.",
+          "variables": [
+            {
+              "name": "budget",
+              "description": "Annotation budget in items",
+              "example": "18"
+            },
+            {
+              "name": "unlabelled_pool",
+              "description": "The pool to select from",
+              "example": null
+            },
+            {
+              "name": "k",
+              "description": "Demonstrations retrieved per query",
+              "example": "8"
+            },
+            {
+              "name": "retrieved_examples",
+              "description": "The retrieved demonstrations",
+              "example": null
+            },
+            {
+              "name": "test_input",
+              "description": "The real query",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "exemplars",
+        "selective-annotation",
+        "diversity",
+        "retrieval"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "Vote-k"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "instruction-selection",
+      "name": "Instruction Selection (Instruction Induction)",
+      "category": "automatic-prompt-optimization",
+      "subcategory": "instruction-search",
+      "executive_summary": "Show the model a handful of input-output pairs and have it write the natural-language instruction that describes the task, then use that instruction as the prompt.",
+      "description": "Instruction induction inverts the usual direction of prompt engineering. Rather than writing an instruction and supplying examples, a few demonstrations are supplied and the model is asked to state the rule they exemplify. The induced instruction is then usable on its own, which is cheaper at inference than carrying the demonstrations in every prompt. Honovich et al. show models can recover task descriptions from small numbers of examples, and that this ability appears with scale and instruction tuning rather than being uniformly present. The induced instruction is a candidate, not an answer: several can be induced and the best selected by measured performance.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "You have examples of the desired behaviour but cannot articulate the rule cleanly.",
+        "Carrying demonstrations in every prompt is too expensive and you want to compress them into an instruction."
+      ],
+      "when_not_to_use": [
+        "The task rule is already known and expressible — induction adds calls and a chance to get it wrong.",
+        "Very few or unrepresentative examples, from which the induced instruction will overfit."
+      ],
+      "known_pitfalls": [
+        "An induced instruction can describe an accidental regularity of the examples rather than the intended task, and reads plausibly either way.",
+        "Selecting the best induced instruction on the same set used to evaluate it makes the resulting score optimistic."
+      ],
+      "related_techniques": [
+        "automatic-prompt-engineer",
+        "max-mutual-information-template-selection",
+        "opro"
+      ],
+      "primary_source": {
+        "authors": "Honovich, Shaham, Bowman, Levy",
+        "year": 2022,
+        "title": "Instruction Induction: From Few Examples to Natural Language Task Descriptions",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2205.10782",
+        "url": "https://arxiv.org/abs/2205.10782"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Induce then apply",
+          "template": "Here are input-output pairs for one task:\n{{demonstrations}}\n\nWrite the instruction that describes this task in one sentence.\n\n# Then use the induced instruction:\n{{induced_instruction}}\n\nInput: {{test_input}}\nOutput:",
+          "template_id": "instruction-selection--induce-then-apply",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "The induced instruction must be recorded; it is the artifact that determines every later result.",
+          "variables": [
+            {
+              "name": "demonstrations",
+              "description": "The input-output pairs to induce from",
+              "example": null
+            },
+            {
+              "name": "induced_instruction",
+              "description": "Output of the induction call",
+              "example": null
+            },
+            {
+              "name": "test_input",
+              "description": "The real query",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "instruction-induction",
+        "prompt-search",
+        "meta-prompting",
+        "compression"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "Instruction Induction"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "tab-cot",
+      "name": "Tab-CoT (Zero-shot Tabular Chain of Thought)",
+      "category": "reasoning-elicitation",
+      "subcategory": "single-path-reasoning",
+      "executive_summary": "Elicit chain-of-thought as a markdown table with fixed columns, so each reasoning step has named slots instead of free prose.",
+      "description": "Tab-CoT replaces the free-form 'let us think step by step' continuation with a tabular scaffold: the model is asked to fill a markdown table whose columns name the parts of a step — for example step number, subquestion, process and result. The structure does two things. It constrains each step to carry the same fields, which makes reasoning easier to parse and check mechanically, and it gives the model a layout to complete rather than a genre to invent. Jin and Lu report gains over standard zero-shot CoT on arithmetic and symbolic reasoning while remaining a single call and needing no exemplars.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "single-call",
+      "when_to_use": [
+        "Reasoning steps need to be parsed or audited downstream rather than only read.",
+        "Free-form chain-of-thought is producing steps that skip or merge stages."
+      ],
+      "when_not_to_use": [
+        "Tasks whose reasoning does not decompose into uniform steps, where the table forces a shape that does not fit.",
+        "Very long reasoning chains, where the table format consumes context faster than prose."
+      ],
+      "known_pitfalls": [
+        "The model can fill the table's cells plausibly while the underlying reasoning is wrong — structure improves legibility, not correctness.",
+        "Column choice is a real hyperparameter; a poorly chosen schema constrains reasoning rather than supporting it."
+      ],
+      "related_techniques": [
+        "zero-shot-cot",
+        "chain-of-thought",
+        "structured-output-json-mode"
+      ],
+      "primary_source": {
+        "authors": "Jin, Lu",
+        "year": 2023,
+        "title": "Tab-CoT: Zero-shot Tabular Chain of Thought",
+        "venue": "Findings of ACL 2023",
+        "arxiv_id": "2305.17812",
+        "url": "https://arxiv.org/abs/2305.17812"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Tabular reasoning scaffold",
+          "template": "{{question}}\n\n|step|subquestion|process|result|\n|---|---|---|---|",
+          "template_id": "tab-cot--tabular-reasoning-scaffold",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "Single call, deterministic at temperature 0; the column header is part of the prompt and changes results if edited.",
+          "variables": [
+            {
+              "name": "question",
+              "description": "The problem to reason about",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "chain-of-thought",
+        "zero-shot",
+        "structured-reasoning",
+        "tabular"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "Tabular Chain of Thought"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "memory-of-thought",
+      "name": "Memory-of-Thought (MoT)",
+      "category": "retrieval-augmentation",
+      "subcategory": "thought-revision",
+      "executive_summary": "Pre-think over unlabelled data, keep the high-confidence reasoning traces in a memory, and retrieve relevant ones as demonstrations at test time.",
+      "description": "MoT gives a model a way to improve without fine-tuning. In an offline pre-thinking stage it reasons over unlabelled questions and retains only the traces that pass a confidence filter — typically majority agreement across samples — into a memory store. At inference, traces relevant to the incoming question are retrieved and supplied as demonstrations. The result is self-improvement with no gradient updates and no human labels, at the cost of an offline pass and a retrieval dependency. Li and Qiu report gains across arithmetic, commonsense, factual and natural-language-inference tasks.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-adaptive",
+      "when_to_use": [
+        "A pool of unlabelled in-domain questions exists and an offline pass over it is affordable.",
+        "Fine-tuning is unavailable but repeated queries share structure worth caching reasoning for."
+      ],
+      "when_not_to_use": [
+        "One-off queries with no recurring structure, where the memory is never usefully hit.",
+        "Domains where a wrong-but-confident trace in memory would be repeatedly retrieved and amplified."
+      ],
+      "known_pitfalls": [
+        "The confidence filter is the only thing keeping bad reasoning out of memory; high-confidence errors pass it and are then reused indefinitely.",
+        "Memory contents become part of the configuration — a run is not reproducible unless the memory state is pinned alongside the prompt."
+      ],
+      "related_techniques": [
+        "retrieval-augmented-thoughts",
+        "auto-cot",
+        "self-consistency"
+      ],
+      "primary_source": {
+        "authors": "Li, Qiu",
+        "year": 2023,
+        "title": "MoT: Memory-of-Thought Enables ChatGPT to Self-Improve",
+        "venue": "EMNLP 2023",
+        "arxiv_id": "2305.05181",
+        "url": "https://arxiv.org/abs/2305.05181"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Pre-think, store, retrieve",
+          "template": "# Offline: for each unlabelled question, sample {{n}} reasoning traces; keep those where the answers agree.\n# Online: retrieve {{k}} memory traces relevant to the question.\n{{retrieved_traces}}\n\nQ: {{question}}\nA: Let us think step by step.",
+          "template_id": "memory-of-thought--pre-think-store-retrieve",
+          "determinism": "requires-external-system",
+          "reproducibility_note": "Depends on a memory store and a retriever; the memory snapshot is part of the configuration and must be recorded.",
+          "variables": [
+            {
+              "name": "n",
+              "description": "Samples per question in the pre-thinking stage",
+              "example": "5"
+            },
+            {
+              "name": "k",
+              "description": "Traces retrieved at inference",
+              "example": "4"
+            },
+            {
+              "name": "retrieved_traces",
+              "description": "Memory traces used as demonstrations",
+              "example": null
+            },
+            {
+              "name": "question",
+              "description": "The real query",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "memory",
+        "self-improvement",
+        "retrieval",
+        "reasoning-traces"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "MoT"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "uncertainty-routed-cot",
+      "name": "Uncertainty-Routed Chain-of-Thought",
+      "category": "reasoning-elicitation",
+      "subcategory": "multi-path-reasoning",
+      "executive_summary": "Sample several chains of thought; use the majority answer only when agreement clears a threshold, otherwise fall back to a single greedy decode.",
+      "description": "Plain self-consistency always takes the majority vote across sampled chains. Uncertainty-routed CoT makes that conditional: it samples k chains, measures agreement, and accepts the majority only if consensus exceeds a calibrated threshold. Below the threshold the sampled votes are treated as unreliable and the system falls back to greedy decoding instead. Introduced in the Gemini technical report as the evaluation protocol for its reasoning benchmarks, the method is a routing policy over an existing ensemble rather than a new way to reason — its value is in declining to trust a vote that was never decisive.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-adaptive",
+      "when_to_use": [
+        "Self-consistency is already in use and some questions produce near-tied votes that the majority rule resolves arbitrarily.",
+        "You have a held-out set on which the consensus threshold can be calibrated honestly."
+      ],
+      "when_not_to_use": [
+        "No data on which to calibrate the threshold — an uncalibrated threshold is a guess wearing a number.",
+        "Budgets that cannot absorb k samples per question in the first place."
+      ],
+      "known_pitfalls": [
+        "The threshold is a tuned parameter; tuning it on the set used to report results makes the reported gain partly a fit to that set.",
+        "Reported alongside a specific model family and benchmark suite — the routing gain is not established as model-independent."
+      ],
+      "related_techniques": [
+        "self-consistency",
+        "confidence-informed-self-consistency",
+        "universal-self-consistency"
+      ],
+      "primary_source": {
+        "authors": "Gemini Team, Google",
+        "year": 2023,
+        "title": "Gemini: A Family of Highly Capable Multimodal Models",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2312.11805",
+        "url": "https://arxiv.org/abs/2312.11805"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Sample, measure consensus, route",
+          "template": "# Sample {{k}} chains at temperature {{temp}} for:\n{{question}}\n\n# If the modal answer's share >= {{threshold}}, return it.\n# Otherwise return the greedy (temperature 0) answer.",
+          "template_id": "uncertainty-routed-cot--sample-measure-route",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "Sampling is stochastic; reproducing a run needs the seed, k, temperature and the threshold recorded together.",
+          "variables": [
+            {
+              "name": "k",
+              "description": "Number of sampled chains",
+              "example": "32"
+            },
+            {
+              "name": "temp",
+              "description": "Sampling temperature",
+              "example": "0.7"
+            },
+            {
+              "name": "threshold",
+              "description": "Consensus share required to accept the majority",
+              "example": "0.6"
+            },
+            {
+              "name": "question",
+              "description": "The problem to solve",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "self-consistency",
+        "uncertainty",
+        "routing",
+        "ensembling"
+      ],
+      "status": "verified-external",
+      "aliases": [],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "reverse-cot",
+      "name": "RCoT (Reversing Chain-of-Thought)",
+      "category": "self-verification-refinement",
+      "subcategory": "deductive-verification",
+      "executive_summary": "Reconstruct the problem from the model's own solution, then compare the reconstruction against the original to expose conditions it ignored or invented.",
+      "description": "RCoT attacks a specific failure of chain-of-thought: solutions that quietly drop a stated condition, hallucinate one that was never given, or overlook a constraint. Rather than asking the model to check its answer directly — which tends to confirm it — RCoT asks the model to reconstruct the original problem statement from its own solution. Differences between the reconstruction and the true problem localise the defect: a condition present in the problem but absent from the reconstruction was not used, and one present in the reconstruction but absent from the problem was invented. The detected inconsistencies are then fed back as fine-grained feedback for revision.",
+      "verification_status": "judge-checkable",
+      "cost_profile": "multi-call-fixed",
+      "when_to_use": [
+        "Reasoning failures are condition-handling failures — ignored constraints, invented premises — rather than arithmetic slips.",
+        "Direct self-checking is returning 'looks correct' on solutions that are not."
+      ],
+      "when_not_to_use": [
+        "Problems whose statement is too short to reconstruct meaningfully, leaving nothing to compare.",
+        "Latency-sensitive paths, since reconstruction and comparison add calls per candidate solution."
+      ],
+      "known_pitfalls": [
+        "The comparison step is itself a model judgement and can miss differences or invent them, so it needs its own evaluation before being trusted.",
+        "A reconstruction can look faithful while the solution is still wrong for reasons that leave no trace in the problem statement."
+      ],
+      "related_techniques": [
+        "backward-self-verification",
+        "chain-of-verification",
+        "self-refine"
+      ],
+      "primary_source": {
+        "authors": "Xue, Fu, Zhao, Zhang, Wang, Zhang, Yin, Zhu, Li",
+        "year": 2023,
+        "title": "RCOT: Detecting and Rectifying Factual Inconsistency in Reasoning by Reversing Chain-of-Thought",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2305.11499",
+        "url": "https://arxiv.org/abs/2305.11499"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Reconstruct and compare",
+          "template": "Solution:\n{{solution}}\n\nStep 1 — Reconstruct the problem this solution answers.\n\nStep 2 — Compare your reconstruction against the original:\n{{original_problem}}\n\nList conditions that are (a) in the original but missing from the reconstruction, (b) in the reconstruction but not the original.\n\nStep 3 — Revise the solution using those findings.",
+          "template_id": "reverse-cot--reconstruct-and-compare",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "Multi-stage and order-dependent; the reconstruction and the comparison output both belong in the run record.",
+          "variables": [
+            {
+              "name": "solution",
+              "description": "The candidate chain-of-thought solution",
+              "example": null
+            },
+            {
+              "name": "original_problem",
+              "description": "The true problem statement",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "self-verification",
+        "chain-of-thought",
+        "factual-consistency",
+        "revision"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "RCoT"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "recursion-of-thought",
+      "name": "Recursion of Thought (RoT)",
+      "category": "reasoning-elicitation",
+      "subcategory": "decomposition",
+      "executive_summary": "Let the model spawn a fresh context for a subproblem and return only its answer, so reasoning length is no longer bounded by a single context window.",
+      "description": "Long reasoning eventually exhausts the context window, and truncating it silently corrupts the result. Recursion of Thought has the model emit special control tokens that divide a problem and delegate each part to a separate reasoning context. The subcontext solves its part and returns only the answer, which is spliced back into the parent — so the parent never carries the sub-derivation, and total reasoning can far exceed one window. Lee and Kim demonstrate this on arithmetic with sequences well beyond what a single context supports. The method requires training the model to emit the control tokens, which is what separates it from purely prompt-level decomposition.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "training-time",
+      "when_to_use": [
+        "Reasoning genuinely exceeds one context window and truncation is corrupting results.",
+        "The problem decomposes into subproblems whose answers, not derivations, are what the parent needs."
+      ],
+      "when_not_to_use": [
+        "You cannot train the model — the control tokens are learned, not prompted, so prompt-level decomposition is the applicable alternative.",
+        "Problems that fit comfortably in one context, where recursion adds machinery for nothing."
+      ],
+      "known_pitfalls": [
+        "Requires supervised training on recursive traces, which is a materially different cost from any prompt-only technique in this catalog.",
+        "An error inside a subcontext returns as a bare answer with its derivation discarded, so the parent has nothing to check it against."
+      ],
+      "related_techniques": [
+        "least-to-most-prompting",
+        "decomposed-prompting",
+        "chain-of-thought"
+      ],
+      "primary_source": {
+        "authors": "Lee, Kim",
+        "year": 2023,
+        "title": "Recursion of Thought: A Divide-and-Conquer Approach to Multi-Context Reasoning with Language Models",
+        "venue": "Findings of ACL 2023 (short)",
+        "arxiv_id": "2306.06891",
+        "url": "https://arxiv.org/abs/2306.06891"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Delegate and splice",
+          "template": "# Model emits control tokens to open a subcontext:\n{{problem}}\n  GO -> subproblem: {{subproblem}}\n  STOP -> returns only: {{sub_answer}}\n# Parent continues with the returned answer spliced in.",
+          "template_id": "recursion-of-thought--delegate-and-splice",
+          "determinism": "training-time-not-applicable",
+          "reproducibility_note": "The control-token behaviour is learned, so reproduction depends on the trained checkpoint rather than on the prompt alone.",
+          "variables": [
+            {
+              "name": "problem",
+              "description": "The top-level problem",
+              "example": null
+            },
+            {
+              "name": "subproblem",
+              "description": "The delegated part",
+              "example": null
+            },
+            {
+              "name": "sub_answer",
+              "description": "What the subcontext returns",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "decomposition",
+        "recursion",
+        "context-window",
+        "multi-context"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "RoT"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "metacognitive-prompting",
+      "name": "Metacognitive Prompting (MP)",
+      "category": "reasoning-elicitation",
+      "subcategory": "single-path-reasoning",
+      "executive_summary": "Walk the model through five named stages modelled on human introspection — comprehend, judge, evaluate critically, decide, and state confidence.",
+      "description": "Metacognitive prompting structures a single reasoning pass around stages drawn from human metacognition rather than around the task's own decomposition. The model is asked in turn to clarify its understanding of the input, form a preliminary judgement, critically evaluate that judgement, commit to a decision with an explanation, and finally state its confidence. The last two stages are what distinguish it from a generic chain of thought: the critical-evaluation step gives the model licence to overturn its own first answer, and the confidence statement produces a signal a caller can route on. Wang and Zhao report gains across natural-language-understanding tasks.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "single-call",
+      "when_to_use": [
+        "Understanding tasks where the first plausible answer is often the wrong one and a revision step helps.",
+        "You want a self-reported confidence signal alongside the answer without a separate calibration call."
+      ],
+      "when_not_to_use": [
+        "Simple lookups, where five stages of introspection is overhead over a direct answer.",
+        "Cases where self-reported confidence would be treated as calibrated — it is a stated number, not a measured one."
+      ],
+      "known_pitfalls": [
+        "Self-reported confidence is not calibrated by construction and should be validated before anything routes on it.",
+        "The critical-evaluation stage can rationalise the preliminary judgement rather than challenge it, producing the appearance of scrutiny."
+      ],
+      "related_techniques": [
+        "zero-shot-cot",
+        "self-calibration",
+        "step-back-prompting"
+      ],
+      "primary_source": {
+        "authors": "Wang, Zhao",
+        "year": 2023,
+        "title": "Metacognitive Prompting Improves Understanding in Large Language Models",
+        "venue": "NAACL 2024",
+        "arxiv_id": "2308.05342",
+        "url": "https://arxiv.org/abs/2308.05342"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Five-stage metacognitive pass",
+          "template": "{{question}}\n\n1. Clarify your understanding of the question in your own words.\n2. State a preliminary judgement.\n3. Critically evaluate that judgement. Say what would make it wrong.\n4. Commit to a final decision and explain the reasoning.\n5. State your confidence in the final decision and why.",
+          "template_id": "metacognitive-prompting--five-stage-pass",
+          "determinism": "deterministic-at-temperature-zero",
+          "reproducibility_note": "Single call, deterministic at temperature 0; the stage list is part of the prompt and changes results if reordered.",
+          "variables": [
+            {
+              "name": "question",
+              "description": "The input to reason about",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "metacognition",
+        "self-evaluation",
+        "confidence",
+        "zero-shot"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "MP"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "prompt-mining",
+      "name": "Prompt Mining",
+      "category": "automatic-prompt-optimization",
+      "subcategory": "instruction-search",
+      "executive_summary": "Mine candidate prompt templates from a large corpus by finding the phrasings that actually connect subject and object in natural text.",
+      "description": "Hand-written prompts encode the author's guess at how a relation is normally expressed, and that guess is often not how the training corpus expresses it. Prompt mining replaces the guess with evidence: given subject-object pairs for a relation, search a large corpus for sentences containing both and extract the connecting phrasings as candidate templates. Middle-word and dependency-path variants generate different candidate sets. Jiang et al. show mined templates retrieve knowledge from language models more effectively than manually written ones, which reframes prompt wording as something to discover in data rather than to compose from intuition.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "training-time",
+      "when_to_use": [
+        "A relation or task has many known input-output pairs and a large corpus is available to mine against.",
+        "Manually written prompts are underperforming and you suspect the phrasing, not the task, is the problem."
+      ],
+      "when_not_to_use": [
+        "No suitable corpus, or a task whose phrasings do not appear in natural text.",
+        "One-off prompts where an offline mining pass costs more than it can return."
+      ],
+      "known_pitfalls": [
+        "Mined templates inherit the corpus's biases and artefacts, including phrasings that correlate with the answer for the wrong reason.",
+        "Mining and evaluating on overlapping data inflates the apparent gain; the corpus split matters as much as the mining method."
+      ],
+      "related_techniques": [
+        "prompt-paraphrasing",
+        "automatic-prompt-engineer",
+        "instruction-selection"
+      ],
+      "primary_source": {
+        "authors": "Jiang, Xu, Araki, Neubig",
+        "year": 2020,
+        "title": "How Can We Know What Language Models Know?",
+        "venue": "TACL 2020",
+        "arxiv_id": "1911.12543",
+        "url": "https://arxiv.org/abs/1911.12543"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Mine middle words",
+          "template": "# Offline: for each known ({{subject}}, {{object}}) pair, find corpus sentences containing both.\n# Extract the connecting text as a template: \"{{subject}} <mined phrasing> {{object}}\".\n# Rank candidates by held-out accuracy, then use the best:\n{{mined_template}}",
+          "template_id": "prompt-mining--mine-middle-words",
+          "determinism": "requires-external-system",
+          "reproducibility_note": "Depends on the mining corpus and its snapshot; the corpus version and the selected template must both be recorded.",
+          "variables": [
+            {
+              "name": "subject",
+              "description": "Subject of the relation",
+              "example": "Paris"
+            },
+            {
+              "name": "object",
+              "description": "Object of the relation",
+              "example": "France"
+            },
+            {
+              "name": "mined_template",
+              "description": "The selected mined template",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "prompt-search",
+        "corpus-mining",
+        "knowledge-probing",
+        "template-discovery"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "LPAQA mining"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
+    },
+    {
+      "id": "autodicot",
+      "name": "AutoDiCoT (Automatic Directed Chain-of-Thought)",
+      "category": "automatic-prompt-optimization",
+      "subcategory": "exemplar-curation",
+      "executive_summary": "Automatically label whether a generated chain of thought reached the right answer, then use both the correct and the incorrect traces as directed exemplars.",
+      "description": "AutoDiCoT builds a demonstration set out of the model's own reasoning attempts, keeping the failures as well as the successes. Traces are generated for labelled items, automatically marked correct or incorrect by comparing against the known answer, and then assembled into a prompt that shows both what the desired reasoning looks like and what a characteristic mistake looks like. The direction is what distinguishes it from ordinary automatic exemplar curation: the prompt tells the model not merely how to reason but which reasoning to avoid. It originates in The Prompt Report's own case study rather than in a separate paper, and its evidence is that single case study — narrower than the other entries here.",
+      "verification_status": "verifier-checkable",
+      "cost_profile": "multi-call-adaptive",
+      "when_to_use": [
+        "Labelled answers exist, so traces can be marked correct or incorrect without a human reading them.",
+        "The task has a recurring characteristic error that a negative exemplar would name directly."
+      ],
+      "when_not_to_use": [
+        "No ground-truth answers to grade traces against — the automatic labelling step has nothing to work from.",
+        "Cases where showing an incorrect trace risks teaching the error rather than warning against it."
+      ],
+      "known_pitfalls": [
+        "A trace can reach the right answer by wrong reasoning and be labelled correct, putting bad reasoning into the exemplar set.",
+        "Evidence is a single case study in the source survey, not an independent evaluation; treat the reported benefit as weaker than for the other techniques here."
+      ],
+      "related_techniques": [
+        "auto-cot",
+        "contrastive-chain-of-thought",
+        "active-prompting"
+      ],
+      "primary_source": {
+        "authors": "Schulhoff, Ilie, Balepur, Kahadze, Liu, Si, Li, Gupta, Han, Schulhoff, et al.",
+        "year": 2024,
+        "title": "The Prompt Report: A Systematic Survey of Prompt Engineering Techniques",
+        "venue": "arXiv preprint",
+        "arxiv_id": "2406.06608",
+        "url": "https://arxiv.org/abs/2406.06608"
+      },
+      "usage_templates": [
+        {
+          "template_name": "Grade traces, then direct",
+          "template": "# Generate traces for labelled items; mark each correct/incorrect against the known answer.\nHere is reasoning that reaches the right answer:\n{{correct_trace}}\n\nHere is reasoning that does not, and why:\n{{incorrect_trace}}\n\nNow reason about: {{test_input}}",
+          "template_id": "autodicot--grade-traces-then-direct",
+          "determinism": "stochastic-by-design",
+          "reproducibility_note": "Trace generation is sampled; the selected correct and incorrect exemplars must be pinned to reproduce a run.",
+          "variables": [
+            {
+              "name": "correct_trace",
+              "description": "A trace graded correct",
+              "example": null
+            },
+            {
+              "name": "incorrect_trace",
+              "description": "A trace graded incorrect",
+              "example": null
+            },
+            {
+              "name": "test_input",
+              "description": "The real query",
+              "example": null
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "exemplar-curation",
+        "chain-of-thought",
+        "negative-examples",
+        "automatic-labelling"
+      ],
+      "status": "verified-external",
+      "aliases": [
+        "AutoDiCoT"
+      ],
+      "secondary_sources": [],
+      "corpus_file": null,
+      "schema_version": "1.3.0",
+      "source_audit": {
+        "description": "verified-against-abstract",
+        "pitfalls": "unverified"
+      }
     }
   ]
 }
