@@ -170,7 +170,12 @@ function pythonVerdicts(text: string, o: CaseOptions): Map<string, Verdict> {
 
 function tsVerdicts(text: string, o: CaseOptions): Map<string, Verdict> {
   const m = new Map<string, Verdict>();
-  for (const r of runGates(text, { includeFences: o.includeFences }) as GateResult[]) {
+  // The WHOLE option set, not just includeFences. This narrowed the comparison for as long
+  // as the TS side only understood one option: every option-gated gate was handed defaults
+  // and compared against a Python run that had the flag, so the harness looked like it was
+  // testing armed behaviour and never was. The R9 pattern — a guard whose scope is quieter
+  // than its name — found here by porting gates that actually read the other options.
+  for (const r of runGates(text, o) as GateResult[]) {
     if (SHARED.has(r.gate_id)) m.set(r.gate_id, r.verdict);
   }
   return m;
@@ -234,6 +239,66 @@ const FRAGMENTS: Array<() => string> = [
   () => "`sk-ant-aaaaaaaaaaaaaaaaaaaa`",
   () => "``",
   () => "text after",
+
+  /* ── boundaries for the thirteen gates ported in Phase 2 ────────────────────
+     Added after a mutation probe: six planted defects were caught and FOUR
+     SURVIVED, all in behaviours no generated input reached. The gates agreed with
+     Python because both were correct, not because the corpus tested them — an
+     oracle is only as good as the inputs it compares, which is R9 one level up. */
+
+  // TOKEN_SPAM — the threshold is "more than 8", so 8 and 9 must both appear.
+  () => "[ACK] ".repeat(8),
+  () => "[ACK] ".repeat(9),
+  () => "[EXEC] ".repeat(9),
+  () => "[CLI] ".repeat(8),
+  () => "[MEM_STATE] ".repeat(9),
+
+  // DELIMITER_ENTROPY — on and either side of the 32-hex minimum.
+  () => `[INPUT_START_${"a".repeat(31)}]`,
+  () => `[INPUT_START_${"a".repeat(32)}]`,
+  () => `[INPUT_START_${"f".repeat(33)}]`,
+  () => "[INPUT_START_ab12cd]",
+  () => `[INPUT_END_${"9".repeat(16)}]`,
+
+  // PLACEHOLDER_AUDIT / RUNTIME_KEY_UNDECLARED
+  () => "<<ROLE>>",
+  () => "<<>>",
+  () => "<<a<<b>>",
+  () => "[[API_HOST]]",
+  () => "# Runtime Variables\n[[API_HOST]]",
+  () => "[[not a key!]]",
+
+  // The citation pair, including the self-declaring case that silenced both.
+  () => "As shown [S1].",
+  () => "As shown [S1,S2].",
+  () => "As shown [S1, S2,S3].",
+  () => "As shown [S1, p. 42].",
+  () => "# Source ledger\n\n| [S1] | a source |",
+  () => "# Source ledger\n\nSee [S1] for details.",
+
+  // GUARDRAIL_GAP — the word-boundary cases, and the stem that misses its inflection.
+  () => "The estimator is unbiased.",
+  () => "We check for biases.",
+  () => "a telescope",
+  () => "sanitization",
+  () => "sanitisation",
+  () => "recursion conflict",
+
+  // RECURSION_MACHINERY_PRESENT / RAG_SHIELD_GAP — armed only by their options.
+  () => "[ACTIVE_MEM_STATE]",
+  () => "compilation depth",
+  () => "{{COMPILATION_DEPTH}} {{STAKES_LEVEL}}",
+  () => "meta-compiler",
+  () => "insufficient_retrieval",
+  () => "rejected_context",
+
+  // DUPLICATE_INSTRUCTION — the 60-character floor, either side of it.
+  () => "This instruction block is definitely longer than sixty characters in total.",
+  () => "Short block under the floor, only fifty-nine chars long.",
+
+  // An empty fragment, so `estimateTokens`'s floor of 1 is reachable: a one-character
+  // input estimates 0 without it, which changes TOKEN_BUDGET at a budget of 0.
+  () => "",
 ];
 
 function generate(rand: () => number): string {
@@ -241,6 +306,33 @@ function generate(rand: () => number): string {
   const lines: string[] = [];
   for (let i = 0; i < n; i++) lines.push(FRAGMENTS[Math.floor(rand() * FRAGMENTS.length)]());
   return lines.join("\n") + "\n";
+}
+
+const pick = <T,>(rand: () => number, xs: readonly T[]): T => xs[Math.floor(rand() * xs.length)];
+
+/**
+ * Options are generated, not fixed at `includeFences`.
+ *
+ * Eight of the fifteen ported gates do nothing until an option arms them, so a corpus
+ * that only ever varied one flag left them comparing their not-armed branch forever.
+ * `0` appears deliberately for both `tokenBudget` and `naiveTokens`: an explicit zero is
+ * a real value on both, and the truthiness bug that treats it as absent shipped once on
+ * each. `200` is there because est=1 over baseline 200 is the .005 boundary where
+ * banker's rounding and half-up disagree — the divergence no parity test can see.
+ */
+function generateOptions(rand: () => number): CaseOptions {
+  const o: CaseOptions = {};
+  if (rand() < 0.2) o.includeFences = true;
+  if (rand() < 0.25) o.safetyTier = true;
+  if (rand() < 0.2) o.recursiveTarget = true;
+  if (rand() < 0.2) o.ragTarget = true;
+  if (rand() < 0.25) o.tokenBudget = pick(rand, [0, 1, 5, 50, 1000]);
+  if (rand() < 0.25) {
+    o.stakes = pick(rand, ["safety-critical", "high", "guarded", "medium", "low"]);
+    if (rand() < 0.6) o.naiveTokens = pick(rand, [0, 1, 200, 400]);
+  }
+  if (rand() < 0.2) o.provider = pick(rand, ["anthropic", "openai", "google", "ollama"]);
+  return o;
 }
 
 /* ── run ─────────────────────────────────────────────────────────────────── */
@@ -347,10 +439,59 @@ console.log(`  fixtures   ${fixtures.cases.length} cases`);
 const rand = rng(SEED);
 for (let i = 0; i < N; i++) {
   const text = generate(rand);
-  const options: CaseOptions = rand() < 0.2 ? { includeFences: true } : {};
+  const options: CaseOptions = generateOptions(rand);
   compare(`generated:${SEED}:${i}`, text, options);
 }
 console.log(`  generated  ${N} cases (seed ${SEED})`);
+
+/**
+ * Deterministic boundary cases, always run.
+ *
+ * Random generation cannot reliably hit a CONJUNCTION of a specific input and a specific
+ * option — a one-character text AND `tokenBudget: 0` is roughly a 1-in-800 draw, so the
+ * corpus was passing on luck. A mutation probe found three behaviours where a planted
+ * defect survived for exactly that reason. These are the conjunctions written down.
+ */
+const BOUNDARY_CASES: Array<{ name: string; text: string; options: CaseOptions }> = [
+  // estimateTokens' floor of 1: a 1-char input estimates 0 without it, which flips
+  // TOKEN_BUDGET at a budget of 0 from FAIL to PASS.
+  { name: "token-floor-empty", text: "\n", options: { tokenBudget: 0 } },
+  { name: "token-floor-tiny", text: "ab", options: { tokenBudget: 0 } },
+  { name: "token-floor-four", text: "abcd", options: { tokenBudget: 0 } },
+  // The .005 rounding boundary: est 1 over baseline 200.
+  { name: "qutm-half-boundary", text: "abcd", options: { stakes: "low", naiveTokens: 200 } },
+  { name: "qutm-half-boundary-guarded", text: "abcd", options: { stakes: "guarded", naiveTokens: 200 } },
+  { name: "qutm-baseline-zero", text: "abcd", options: { stakes: "low", naiveTokens: 0 } },
+  /**
+   * The rounding boundary that actually changes a verdict.
+   *
+   * A ratio of 0.005 rounds differently but lands nowhere near a ceiling, so the verdict
+   * is PASS either way and the case proves nothing — a mutation to truncation survived it.
+   * The value has to CROSS a ceiling: 1932 chars is 483 tokens, over a 400 baseline that
+   * is 1.2075. Half-up gives 1.21 and fails the 1.2 ceiling for `low`; truncation gives
+   * 1.20 and passes. That is the only shape in which rounding is observable.
+   */
+  { name: "qutm-ceiling-crossing", text: "a".repeat(1932), options: { stakes: "low", naiveTokens: 400 } },
+  // DUPLICATE_INSTRUCTION needs BLANK-LINE-separated blocks; the generator joins with a
+  // single newline, so its output is one paragraph and the gate was never really armed.
+  {
+    name: "duplicate-over-floor",
+    text: "This instruction block is definitely longer than sixty characters.\n\nThis instruction block is definitely longer than sixty characters.\n",
+    options: {},
+  },
+  {
+    name: "duplicate-under-floor",
+    text: "Only fifty-nine characters in this repeated little block.\n\nOnly fifty-nine characters in this repeated little block.\n",
+    options: {},
+  },
+  {
+    name: "duplicate-reflowed",
+    text: "This instruction block is definitely longer than sixty characters.\n\nThis instruction block is\ndefinitely longer than sixty characters.\n",
+    options: {},
+  },
+];
+for (const c of BOUNDARY_CASES) compare(`boundary:${c.name}`, c.text, c.options);
+console.log(`  boundary   ${BOUNDARY_CASES.length} conjunction cases`);
 
 // 3. Each allowlist entry's own demonstration, run as a case.
 //

@@ -17,5 +17,21 @@
     "the way the documented gate count did before SOURCE_VERIFICATION.md existed."
   ],
   "source_gate_count": 16,
-  "ported": ["SECRET_LEAK_SCAN", "CLAIM_DISCIPLINE"]
+  "ported": [
+    "SECRET_LEAK_SCAN",
+    "CLAIM_DISCIPLINE",
+    "PLACEHOLDER_AUDIT",
+    "RUNTIME_KEY_UNDECLARED",
+    "SOURCE_LEDGER_MISSING",
+    "ORPHAN_CLAIMS",
+    "GUARDRAIL_GAP",
+    "TOKEN_SPAM",
+    "RECURSION_MACHINERY_PRESENT",
+    "RAG_SHIELD_GAP",
+    "DUPLICATE_INSTRUCTION",
+    "DELIMITER_ENTROPY",
+    "TOKEN_BUDGET",
+    "QUTM_CEILING",
+    "CONTEXT_LIMIT"
+  ]
 }

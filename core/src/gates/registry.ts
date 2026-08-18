@@ -17,11 +17,27 @@
 import type { GateResult } from "../../../contracts/index.js";
 import { secretLeakScan, GATE_ID as SECRET_ID, GATE_VERSION as SECRET_V } from "./secret-leak-scan.js";
 import { claimDiscipline, GATE_ID as CLAIM_ID, GATE_VERSION as CLAIM_V } from "./claim-discipline.js";
+import {
+  placeholderAudit, runtimeKeyUndeclared,
+  PLACEHOLDER_GATE_ID, RUNTIME_KEY_GATE_ID, GATE_VERSION as PLACEHOLDER_V,
+} from "./placeholder-audit.js";
+import {
+  sourceLedgerMissing, orphanClaims,
+  LEDGER_GATE_ID, ORPHAN_GATE_ID, GATE_VERSION as LEDGER_V,
+} from "./source-ledger.js";
+import {
+  guardrailGap, tokenSpam, recursionMachineryPresent, ragShieldGap,
+  duplicateInstruction, delimiterEntropy,
+  GUARDRAIL_GATE_ID, TOKEN_SPAM_GATE_ID, RECURSION_GATE_ID, RAG_SHIELD_GATE_ID,
+  DUPLICATE_GATE_ID, DELIMITER_GATE_ID, GATE_VERSION as TEXT_V,
+} from "./guardrail-gap.js";
+import {
+  tokenBudget, qutmCeiling, contextLimit,
+  TOKEN_BUDGET_GATE_ID, QUTM_GATE_ID, CONTEXT_LIMIT_GATE_ID, GATE_VERSION as BUDGET_V,
+} from "./budget.js";
 
-/** Options any gate may read. Gates ignore what they don't use. */
-export interface GateOptions {
-  includeFences?: boolean;
-}
+export type { GateOptions } from "./lint-primitives.js";
+import type { GateOptions } from "./lint-primitives.js";
 
 export interface Gate {
   readonly id: string;
@@ -37,6 +53,19 @@ export interface Gate {
 const GATES: readonly Gate[] = Object.freeze([
   { id: SECRET_ID, version: SECRET_V, run: (t, o) => secretLeakScan(t, o) },
   { id: CLAIM_ID, version: CLAIM_V, run: (t, o) => claimDiscipline(t, o) },
+  { id: PLACEHOLDER_GATE_ID, version: PLACEHOLDER_V, run: (t, o) => placeholderAudit(t, o) },
+  { id: RUNTIME_KEY_GATE_ID, version: PLACEHOLDER_V, run: (t, o) => runtimeKeyUndeclared(t, o) },
+  { id: LEDGER_GATE_ID, version: LEDGER_V, run: (t, o) => sourceLedgerMissing(t, o) },
+  { id: ORPHAN_GATE_ID, version: LEDGER_V, run: (t, o) => orphanClaims(t, o) },
+  { id: GUARDRAIL_GATE_ID, version: TEXT_V, run: (t, o) => guardrailGap(t, o) },
+  { id: TOKEN_SPAM_GATE_ID, version: TEXT_V, run: (t, o) => tokenSpam(t, o) },
+  { id: RECURSION_GATE_ID, version: TEXT_V, run: (t, o) => recursionMachineryPresent(t, o) },
+  { id: RAG_SHIELD_GATE_ID, version: TEXT_V, run: (t, o) => ragShieldGap(t, o) },
+  { id: DUPLICATE_GATE_ID, version: TEXT_V, run: (t, o) => duplicateInstruction(t, o) },
+  { id: DELIMITER_GATE_ID, version: TEXT_V, run: (t, o) => delimiterEntropy(t, o) },
+  { id: TOKEN_BUDGET_GATE_ID, version: BUDGET_V, run: (t, o) => tokenBudget(t, o) },
+  { id: QUTM_GATE_ID, version: BUDGET_V, run: (t, o) => qutmCeiling(t, o) },
+  { id: CONTEXT_LIMIT_GATE_ID, version: BUDGET_V, run: (t, o) => contextLimit(t, o) },
 ]);
 
 /** Every registered gate, in stable order. */
