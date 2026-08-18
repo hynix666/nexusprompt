@@ -64,9 +64,11 @@ Consequences worth knowing before proposing changes:
 
 Treat these as open questions, not as things to quietly fix or invent answers for:
 
-1. **Phase 2 is blocked on the divergence allowlist.** `Documentation/IMPLEMENTATION_PLAN.md` now exists, and its numbers are verified by `npm run check:plan` inside `npm run verify`. The plan's own top finding: porting the remaining fourteen gates should not start until ADR-0007's divergence allowlist does, because fourteen ports will hit a case where the frozen linter is wrong and today the only green-build options are to reproduce the defect or delete the oracle.
+1. **Phase 2 is unblocked; the fourteen gates are simply unported.** ADR-0007's divergence allowlist exists as of 18 August 2026 — `scripts/divergence-allowlist.json`, enforced by `scripts/differential.ts`. A port that deliberately fixes a source defect declares the difference with a reason and an ADR instead of choosing between reproducing the bug and deleting the oracle.
 
-   Also open and larger than it looks: **there is no git remote.** All work exists on one machine, and it is why Phase 7 (CI, release truth) is blocked rather than merely undone.
+   It ships with **zero entries and that is correct** — both ported gates are faithful. Do not add the `CLAIM_DISCIPLINE` / `guarantee-free` case ADR-0007 names as a candidate: the source shares that false positive, so there is no divergence, and the entry would fail the stale rule immediately. Entries carry their demonstration inline (fixtures are frozen and cannot take new cases; generated case ids move with `--n`), and pin **both** verdicts, so a change in the shape of a divergence is a new decision. `also_matches` broadens one entry across a systematic difference.
+
+   Still open and larger than it looks: **there is no git remote.** All work exists on one machine, and it is why Phase 7 (CI, release truth) is blocked rather than merely undone.
 2. **The "nineteen target properties" are fifteen.** Searched for across every archive including the v5 framework document; no enumeration of nineteen exists. The count is corrected in `ARCHITECTURE.md`. Do not invent four to make the arithmetic work.
 3. **`storage-db` revision persistence is new work, not a port.** The inherited Drizzle schema (MySQL) has `users` and `promptAssets` and no revisions table. The revision schema needs designing and should land as a reviewed migration before either storage adapter is built.
 4. **Neither scaffolding generator exists.** `scripts/new-gate.ts` and `scripts/new-technique.py` were never written. Build them or write gate/technique files by hand — but don't tell contributors to use them.

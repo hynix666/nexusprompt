@@ -33,6 +33,7 @@ import type { GateResult, Verdict } from "../contracts/index.js";
 const LINTER = "sources/v5/prompt_lint.py";
 const FIXTURES = "sources/v5/fixtures.json";
 const PORTED = "scripts/ported-gates.json";
+const ALLOWLIST = "scripts/divergence-allowlist.json";
 
 /* ── arguments ───────────────────────────────────────────────────────────── */
 
@@ -253,6 +254,63 @@ interface Disagreement {
   options: CaseOptions;
 }
 
+/**
+ * A deliberate difference from the source (ADR-0007 action item 2).
+ *
+ * Without this, a port that fixes a source defect can only get a green build by
+ * un-fixing itself or by deleting the oracle. The ADR names that as the most likely
+ * reason the oracle gets abandoned.
+ *
+ * Both verdicts are pinned, not just the fact of a difference: an entry saying only
+ * "these may differ" would keep covering the case if the port later drifted to a third
+ * verdict. Pinning both makes a change of shape a new decision.
+ */
+interface AllowedDivergence {
+  gate: string;
+  demonstration: { text: string; options?: CaseOptions };
+  source_verdict: Verdict;
+  port_verdict: Verdict;
+  also_matches?: string;
+  reason?: string;
+  adr?: string;
+}
+
+const allowlist: AllowedDivergence[] = (() => {
+  try {
+    return JSON.parse(readFileSync(ALLOWLIST, "utf8")).entries ?? [];
+  } catch (err) {
+    console.error(`differential: cannot read ${ALLOWLIST} — ${(err as Error).message}`);
+    console.error(`  Refusing to compare without knowing which differences are deliberate.`);
+    process.exit(2);
+  }
+})();
+
+/** Structural checks. These run before any comparison, so a malformed entry cannot excuse anything. */
+const allowlistProblems: string[] = [];
+for (const [i, e] of allowlist.entries()) {
+  const at = `entry ${i} (${e.gate ?? "no gate"})`;
+  if (!e.gate) allowlistProblems.push(`${at}: no gate named`);
+  else if (!SHARED.has(e.gate)) {
+    allowlistProblems.push(`${at}: ${e.gate} is not in the shared gate set — excusing a gate that is never compared`);
+  }
+  if (!e.reason?.trim()) allowlistProblems.push(`${at}: no reason. A difference without a stated reason is a defect.`);
+  if (!e.adr?.trim()) allowlistProblems.push(`${at}: no ADR. Deliberate divergence is a decision and needs one.`);
+  if (!e.demonstration?.text) allowlistProblems.push(`${at}: no demonstration input`);
+  if (e.source_verdict === e.port_verdict) {
+    allowlistProblems.push(`${at}: source_verdict equals port_verdict — that is agreement, not a divergence`);
+  }
+  if (e.also_matches) {
+    try { new RegExp(e.also_matches); }
+    catch { allowlistProblems.push(`${at}: also_matches is not a valid regex`); }
+  }
+}
+
+const covers = (e: AllowedDivergence, d: Disagreement): boolean =>
+  d.gate === e.gate &&
+  d.python === e.source_verdict &&
+  d.typescript === e.port_verdict &&
+  (d.text === e.demonstration?.text || (!!e.also_matches && new RegExp(e.also_matches).test(d.text)));
+
 const disagreements: Disagreement[] = [];
 let compared = 0;
 
@@ -293,25 +351,66 @@ for (let i = 0; i < N; i++) {
   compare(`generated:${SEED}:${i}`, text, options);
 }
 console.log(`  generated  ${N} cases (seed ${SEED})`);
+
+// 3. Each allowlist entry's own demonstration, run as a case.
+//
+// This is what makes staleness deterministic. A frozen fixture cannot be added — the
+// corpus is hash-verified — and a generated case id moves with --n and --seed, so
+// neither can anchor an entry's liveness. The entry carries its input instead, and an
+// entry whose demonstration no longer produces the declared disagreement fails.
+const demonstrationsBefore = disagreements.length;
+for (const [i, e] of allowlist.entries()) {
+  if (e.demonstration?.text) compare(`allowlist:${i}:${e.gate}`, e.demonstration.text, e.demonstration.options ?? {});
+}
+const demonstrated = disagreements.slice(demonstrationsBefore);
+if (allowlist.length) console.log(`  allowlist  ${allowlist.length} declared divergence(s)`);
 console.log(`  compared   ${compared} gate verdicts\n`);
+
+for (const [i, e] of allowlist.entries()) {
+  const proved = demonstrated.some((d) => d.source === `allowlist:${i}:${e.gate}` && covers(e, d));
+  if (!proved) {
+    allowlistProblems.push(
+      `entry ${i} (${e.gate}): its demonstration no longer produces ` +
+      `${e.source_verdict}/${e.port_verdict}. Either the divergence is gone — delete the entry — ` +
+      `or it changed shape, which is a new decision.`,
+    );
+  }
+}
+
+if (allowlistProblems.length) {
+  console.error(`differential: ${ALLOWLIST} is not usable:\n`);
+  for (const p of allowlistProblems) console.error(`  ${p}`);
+  console.error(`\nAn allowlist that is not checked is a place disagreements go to be forgotten.`);
+  process.exit(2);
+}
 
 if (compared === 0) {
   console.error("differential: compared nothing. That is not agreement.");
   process.exit(2);
 }
 
-if (disagreements.length === 0) {
+// Excuse only what a valid entry covers. Everything else is a live disagreement.
+const excused = disagreements.filter((d) => allowlist.some((e) => covers(e, d)));
+const live = disagreements.filter((d) => !allowlist.some((e) => covers(e, d)));
+
+if (live.length === 0) {
   console.log(`✓ the two implementations agree on every shared gate.`);
+  if (excused.length) {
+    console.log(`  ${excused.length} verdict(s) differ deliberately, each declared in ${ALLOWLIST}`);
+    console.log(`  with a reason and an ADR. The oracle is not being silenced — it is being told.`);
+  }
   process.exit(0);
 }
 
-console.error(`✗ ${disagreements.length} disagreement(s):\n`);
-for (const d of disagreements.slice(0, 12)) {
+console.error(`✗ ${live.length} disagreement(s):\n`);
+for (const d of live.slice(0, 12)) {
   console.error(`  ${d.source} — ${d.gate}`);
   console.error(`    python=${d.python}  typescript=${d.typescript}  options=${JSON.stringify(d.options)}`);
   console.error(`    input: ${JSON.stringify(d.text.length > 200 ? d.text.slice(0, 200) + "…" : d.text)}`);
   if (VERBOSE) console.error();
 }
-if (disagreements.length > 12) console.error(`  … and ${disagreements.length - 12} more`);
+if (live.length > 12) console.error(`  … and ${live.length - 12} more`);
 console.error(`\nOne of the two is wrong. Neither can hide behind the other.`);
+console.error(`If the port is deliberately right and the source wrong, that is an entry in`);
+console.error(`${ALLOWLIST} with a reason and an ADR — not a change to make this go quiet.`);
 process.exit(1);

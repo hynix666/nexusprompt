@@ -77,7 +77,11 @@ What Phase 1 established that the rest of the plan leans on: Core purity holds u
 
 ### Phase 2 — The remaining fourteen gates
 
-**Entry condition — not yet met.** The divergence allowlist ([ADR-0007](./0007-permanent-differential-oracle.md), action item 2) must exist first. Fourteen ports will hit at least one case where the frozen linter is wrong, and today the only ways to get a green build are to reproduce the defect or delete the check. Neither is acceptable, and discovering that mid-port is how the oracle gets abandoned. **This is the single highest-value piece of unbuilt tooling in the repository.**
+**Entry condition — met, 18 August 2026.** The divergence allowlist ([ADR-0007](./0007-permanent-differential-oracle.md), action item 2) exists: `scripts/divergence-allowlist.json`, enforced by the oracle. A port that deliberately fixes a source defect now has a third option besides reproducing the defect and deleting the check — it declares the difference, with a reason and an ADR, and the oracle reports it as declared rather than going quiet.
+
+It ships with **zero entries**, which is correct: both ported gates are faithful to the source. The mechanism was drilled against a real candidate divergence instead — 11 states, 11 correct, including the two that matter most: a stale entry left behind after the divergence is removed **fails**, and an exact-input entry **refuses** to excuse a divergence that is systematic. An allowlist that fails open is worse than none, because it launders disagreement into silence.
+
+The port is now unblocked in the sense that mattered. Each of the fourteen can be written to be *right* rather than merely faithful.
 
 **Scope.** `PLACEHOLDER_AUDIT`, `RUNTIME_KEY_UNDECLARED`, `TOKEN_SPAM`, `SOURCE_LEDGER_MISSING`, `ORPHAN_CLAIMS`, `GUARDRAIL_GAP`, `RECURSION_MACHINERY_PRESENT`, `RAG_SHIELD_GAP`, `TOKEN_BUDGET`, `DUPLICATE_INSTRUCTION`, `DELIMITER_ENTROPY`, `QUTM_CEILING`, `CONTEXT_LIMIT`, `ADVERSARIAL_RESILIENCE`.
 
