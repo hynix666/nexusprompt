@@ -272,3 +272,123 @@ export interface ObservabilityEvent {
 export interface EventSink {
   emit(event: ObservabilityEvent): void;
 }
+
+/* ── Evaluation plane ─────────────────────────────────────────────────────── */
+
+/**
+ * The versioned artifact. A prompt alone is not a unit of version or comparison:
+ * its effectiveness inverts across model generations, and pipeline shape inverts
+ * across throughput. `configuration_id` is the content hash of everything else,
+ * and doubles as the cache key — a key over less than the full configuration
+ * returns confidently wrong results.
+ */
+export interface Configuration {
+  configuration_id: string;
+  prompt_template_ref: string;
+  model_id: string;
+  decoding: {
+    temperature: number | null;
+    top_p?: number | null;
+    top_k?: number | null;
+    seed: number | null;
+    max_tokens?: number | null;
+  };
+  topology: {
+    kind: "sequential" | "parallel-merge" | "hierarchical" | "reflexive";
+    stages: string[];
+    max_iterations?: number | null;
+  };
+  retrieval_config?: Record<string, unknown> | null;
+  tool_config?: Record<string, unknown> | null;
+  gate_set_ref?: string | null;
+  router_policy_ref?: string | null;
+}
+
+/** The fifteen system-level failure modes. Every case names the one it exists to catch. */
+export type FailureMode =
+  | "hallucination" | "logical-inconsistency" | "planning-collapse" | "overconfidence"
+  | "constraint-violation" | "ambiguous-input" | "prompt-injection" | "context-truncation"
+  | "domain-mismatch" | "conflicting-instructions" | "tool-invocation-error"
+  | "tool-runtime-failure" | "agent-communication-breakdown" | "business-rule-misalignment"
+  | "cost-driven-degradation";
+
+export interface EvalCase {
+  case_id: string;
+  input: { brief: string; previous?: string };
+  expectation: { kind: "exact" | "contains" | "schema" | "predicate" | "reference" | "none"; value?: unknown };
+  failure_mode: FailureMode;
+  detector_ids: string[];
+  perturbation?: { of_case_id: string; kind: string; seed: number } | null;
+}
+
+export interface EvalSuite {
+  suite_id: string;
+  version: string;
+  /** smoke gates every change; anchor alone may certify a promotion; adversarial holds perturbations. */
+  kind: "smoke" | "anchor" | "adversarial";
+  case_ids: string[];
+  /** What difference this suite can detect. A suite that declares none cannot evidence "no change". */
+  resolution: { detectable_delta: number; confidence: number; sized_for?: number | null };
+  derived_from?: string | null;
+}
+
+export interface Score {
+  case_id: string;
+  detector_id: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface EvalRun {
+  run_id: string;
+  configuration_id: string;
+  suite_id: string;
+  suite_version: string;
+  aggregate: {
+    cases: number;
+    passed: number;
+    score: number;
+    by_failure_mode?: Record<string, { cases: number; passed: number }>;
+  };
+  cost: {
+    tokens_in: number;
+    tokens_out: number;
+    provider_calls: number;
+    cache_hits?: number;
+    usd?: number | null;
+    budget_exceeded: boolean;
+  };
+  latency_ms?: Record<string, number> | null;
+  grader_health?: { max_disagreement_rate: number; judged_cases: number } | null;
+  scorer_provenance?: { scorer_ids: string[]; selected_using: string | null } | null;
+  provenance: Record<string, unknown>;
+}
+
+export interface Baseline {
+  baseline_id: string;
+  configuration_id: string;
+  run_id: string;
+  frozen_at: string;
+  lineage: "benchmark" | "development";
+  superseded_by?: string | null;
+}
+
+export interface Comparison {
+  comparison_id: string;
+  candidate_run_id: string;
+  baseline_id: string;
+  verdict: "improved" | "regressed" | "inconclusive" | "refused";
+  refusal_reason?: string | null;
+  delta: number | null;
+  protocol: {
+    test: "mcnemar" | "paired-bootstrap" | "5x2cv-paired-t" | "none";
+    trials: number;
+    /** Alpha AFTER multiplicity correction. An optimizer generates comparisons by construction. */
+    alpha: number;
+    comparisons_in_family: number;
+    correction?: "none" | "bonferroni" | "holm" | "benjamini-hochberg";
+    p_value?: number | null;
+    confidence_interval?: [number, number] | null;
+  };
+  detectors_equalized: boolean;
+}

@@ -1,0 +1,103 @@
+{
+  "_comment": [
+    "A pipeline smoke suite for the compile stage, not a model evaluation.",
+    "",
+    "Every case pins what the provider returns, so the whole suite runs offline, in",
+    "milliseconds, at zero budget. What it measures is whether the pipeline keeps its",
+    "own guarantees: gates fire when they should, degraded output labels itself and",
+    "fabricates nothing, provenance is complete. Those are the properties that fail",
+    "silently — the output still looks fine — which is exactly why they are worth",
+    "gating every change on.",
+    "",
+    "kind is `smoke`, and resolution says so honestly: at eight cases this suite can",
+    "only see a large difference. Certifying a promotion needs an `anchor`, which the",
+    "sizing rule puts near 3,400 items for two percentage points. They are different",
+    "objects, not the same object at different sizes."
+  ],
+  "suite": {
+    "suite_id": "compile-smoke",
+    "version": "1.0.0",
+    "kind": "smoke",
+    "case_ids": [
+      "degraded-run-is-labelled",
+      "degraded-run-does-not-fabricate",
+      "clean-output-passes-gates",
+      "secret-in-output-is-flagged",
+      "overclaim-in-output-is-flagged",
+      "fenced-secret-is-documentation",
+      "provenance-is-complete",
+      "gates-actually-run"
+    ],
+    "resolution": {
+      "detectable_delta": 0.125,
+      "confidence": 0.95,
+      "sized_for": 8
+    }
+  },
+  "cases": [
+    {
+      "case_id": "degraded-run-is-labelled",
+      "input": { "brief": "A support bot that answers billing questions." },
+      "expectation": { "kind": "none" },
+      "failure_mode": "hallucination",
+      "detector_ids": ["demo-labelled-when-degraded", "output-nonempty", "provenance-complete"],
+      "stub": { "fail": true }
+    },
+    {
+      "case_id": "degraded-run-does-not-fabricate",
+      "input": { "brief": "Write me a system prompt for a legal research assistant." },
+      "expectation": { "kind": "none" },
+      "failure_mode": "hallucination",
+      "detector_ids": ["no-fabrication-when-degraded", "demo-labelled-when-degraded"],
+      "stub": { "fail": true }
+    },
+    {
+      "case_id": "clean-output-passes-gates",
+      "input": { "brief": "A support bot." },
+      "expectation": { "kind": "none" },
+      "failure_mode": "constraint-violation",
+      "detector_ids": ["no-gate-failures", "no-gate-warnings", "gates-ran", "output-nonempty"],
+      "stub": { "content": "# SYSTEM PROMPT\n\nAnswer billing questions only. State what was verified." }
+    },
+    {
+      "case_id": "secret-in-output-is-flagged",
+      "input": { "brief": "A bot with credentials inline." },
+      "expectation": { "kind": "predicate", "value": { "gate": "SECRET_LEAK_SCAN", "verdict": "WARN" } },
+      "failure_mode": "business-rule-misalignment",
+      "detector_ids": ["gate-verdict", "gates-ran"],
+      "stub": { "content": "Use the key sk-ant-aaaaaaaaaaaaaaaaaaaa when calling the API." }
+    },
+    {
+      "case_id": "overclaim-in-output-is-flagged",
+      "input": { "brief": "A confident bot." },
+      "expectation": { "kind": "predicate", "value": { "gate": "CLAIM_DISCIPLINE", "verdict": "WARN" } },
+      "failure_mode": "overconfidence",
+      "detector_ids": ["gate-verdict"],
+      "stub": { "content": "This assistant is 100% accurate and we guarantee every answer." }
+    },
+    {
+      "case_id": "fenced-secret-is-documentation",
+      "input": { "brief": "A bot whose prompt documents a key format." },
+      "expectation": { "kind": "predicate", "value": { "gate": "SECRET_LEAK_SCAN", "verdict": "PASS" } },
+      "failure_mode": "constraint-violation",
+      "detector_ids": ["gate-verdict"],
+      "stub": { "content": "Keys look like this:\n```\nsk-ant-aaaaaaaaaaaaaaaaaaaa\n```\nNever echo one." }
+    },
+    {
+      "case_id": "provenance-is-complete",
+      "input": { "brief": "Anything." },
+      "expectation": { "kind": "none" },
+      "failure_mode": "cost-driven-degradation",
+      "detector_ids": ["provenance-complete"],
+      "stub": { "content": "# SYSTEM PROMPT\n\nBe useful." }
+    },
+    {
+      "case_id": "gates-actually-run",
+      "input": { "brief": "Anything." },
+      "expectation": { "kind": "none" },
+      "failure_mode": "constraint-violation",
+      "detector_ids": ["gates-ran"],
+      "stub": { "content": "# SYSTEM PROMPT\n\nBe useful." }
+    }
+  ]
+}

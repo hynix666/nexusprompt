@@ -23,7 +23,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
-    "import:catalog", "check:catalog", "check:xsd", "check:depth"
+    "import:catalog", "check:catalog", "check:xsd", "check:depth", "eval"
   ],
   "planned_commands": [
     "verify:gates", "adversarial", "trace:view", "docs:matrix", "verify:hash",
@@ -38,7 +38,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
 
 ```
                         built          target
-contracts   ████████████████████       13 schemas — 6 validated against real values, 7 declared for the evaluation plane
+contracts   ████████████████████       13 schemas — 11 validated against real values, 2 awaiting a judge and a promotion path
 core/gates  ██▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       2 of 16
 core/stages █▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 11
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
@@ -100,7 +100,20 @@ Each is one module, one registry line, one `scripts/ported-gates.json` entry, a 
 
 **Why it moved ahead of the stage port.** Four measured results say prompt improvements are not monotonic and their sign depends on the model — a constrained prompt that beat CoT on one model generation lost on the next; appended generic rules cut a RAG suite from 26/30 to 9/30. Building ten more stages before anything can measure them raises the rate of unverifiable change.
 
-**Scope.** The contract set first (`Configuration`, `EvalCase`/`EvalSuite`, `EvalRun`, `JudgeVerdict`, and `ExecutionProvenance` extended with decoding parameters, judge identity and budget), as its own reviewed schema PR per ADR-0002. Then Pipeline B at its minimum: one suite, deterministic detectors only, no judge, no perturbation — and it must be able to fail. Then detector-recall equalization, before a second suite exists rather than after.
+**Scope.** The contract set first per ADR-0002, then Pipeline B at its minimum: one suite, deterministic detectors only, no judge, no perturbation — and it must be able to fail.
+
+**Built so far.** The deterministic path runs end to end as `npm run eval`, inside `npm run verify`:
+
+- **Contracts.** Eleven of thirteen schemas are now validated against values a real run produced. `judge-verdict` and `baseline` remain in `contracts/pending-implementation.json` because a judge adapter and a promotion path do not exist — and the stale rule means those entries fail the moment either does.
+- **Core, pure.** `eval/detectors.ts` is a detector registry, and `eval/compare.ts` is the comparator: exact-binomial McNemar rather than the chi-square approximation, since a smoke suite lives exactly where the approximation misbehaves. `inconclusive` and `refused` are reachable verdicts, and alpha is Bonferroni-corrected by the declared family size.
+- **Application.** `eval.ts` owns the effects and pins the provider per case, so the suite is offline, deterministic and free.
+- **A suite.** `eval/compile-smoke.json`, eight cases, each naming the failure mode it exists to catch.
+
+**What it measures, and what it does not.** This is a *pipeline* suite, not a model evaluation: it checks that gates fire when they should, degraded output labels itself and fabricates nothing, and provenance is complete. Those are the properties that fail silently. It calls no live provider, runs no judge, and at eight cases sits three orders of magnitude below the ≈3,400 items the sizing rule requires to certify a promotion. A green run here must never be read as evidence about a model.
+
+**Probed.** Eight mutations — demo marker removed, degraded output fabricating a prompt, a gate unregistered, the secret scanner stopped matching, provenance losing its build hash, fenced documentation scanned as live text, and a suite naming a case nobody wrote. All eight failed the suite; the control stayed green.
+
+**Still open in this phase:** detector-recall equalization (the comparator refuses without it, so nothing can compare yet), a live-provider path, the judge port, perturbation, and an anchor suite.
 
 **Exit gate:** a candidate configuration is compared against a baseline over a suite, the comparison carries a significance result and detector-recall evidence, and a deliberately worse prompt is measured as worse. The last clause is the one that matters: a harness that has never reported a regression has not been shown to detect one.
 

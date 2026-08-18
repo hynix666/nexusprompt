@@ -20,6 +20,8 @@ import { LocalRevisionStore } from "../adapters/storage-local/src/index.js";
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
 import { runGates } from "../core/src/gates/registry.js";
 import { listTechniques } from "../core/src/catalog/registry.js";
+import { runSuite, configurationId } from "../application/src/eval.js";
+import { compare } from "../core/src/eval/compare.js";
 import type {
   GenerationRequest,
   ObservabilityEvent,
@@ -69,6 +71,11 @@ const validators: Record<string, ValidateFunction> = {
   "revision-entry": ajv.compile(load("revision-entry")),
   "observability-event": ajv.compile(load("observability-event")),
   "technique-record": ajv.compile(load("technique-record")),
+  "configuration": ajv.compile(load("configuration")),
+  "eval-suite": ajv.compile(load("eval-suite")),
+  "eval-case": ajv.compile(load("eval-case")),
+  "eval-run": ajv.compile(load("eval-run")),
+  "comparison": ajv.compile(load("comparison")),
 };
 
 const report = (v: ValidateFunction, value: unknown) => {
@@ -290,6 +297,106 @@ describe("technique-record", () => {
 
     const nulled = { ...first, primary_source: { ...first.primary_source, arxiv_id: null } };
     expect(validators["technique-record"](nulled)).toBe(true);
+  });
+});
+
+/* ── the evaluation plane ─────────────────────────────────────────────────── */
+
+describe("evaluation plane, against values the suite actually produced", () => {
+  const suiteData = JSON.parse(readFileSync("eval/compile-smoke.json", "utf8"));
+
+  it("eval-suite validates the smoke suite as written", () => {
+    expect(report(validators["eval-suite"], suiteData.suite)).toBe(true);
+  });
+
+  it("eval-suite rejects a kind outside smoke/anchor/adversarial", () => {
+    expect(validators["eval-suite"]({ ...suiteData.suite, kind: "vibes" })).toBe(false);
+  });
+
+  it("eval-suite rejects a suite that declares no resolution", () => {
+    // A suite that cannot say what difference it detects cannot evidence "no change".
+    const { resolution, ...noResolution } = suiteData.suite;
+    expect(validators["eval-suite"](noResolution)).toBe(false);
+  });
+
+  it("eval-case validates every case in the suite", () => {
+    for (const c of suiteData.cases) {
+      const { stub, ...contractFields } = c;
+      expect(report(validators["eval-case"], contractFields), c.case_id).toBe(true);
+    }
+  });
+
+  it("eval-case rejects a case naming no failure mode", () => {
+    const { stub, ...first } = suiteData.cases[0];
+    const { failure_mode, ...noMode } = first;
+    expect(validators["eval-case"](noMode)).toBe(false);
+    expect(validators["eval-case"]({ ...first, failure_mode: "vibes" })).toBe(false);
+  });
+
+  it("configuration and eval-run validate against a real run", async () => {
+    const base = {
+      prompt_template_ref: "core/src/stages/compile.ts",
+      model_id: "pinned",
+      decoding: { temperature: null, seed: null },
+      topology: { kind: "sequential" as const, stages: ["compile"], max_iterations: null },
+      retrieval_config: null,
+      tool_config: null,
+      gate_set_ref: "scripts/ported-gates.json",
+      router_policy_ref: null,
+    };
+    const configuration = { configuration_id: configurationId(base), ...base };
+    expect(report(validators["configuration"], configuration)).toBe(true);
+
+    const { run } = await runSuite({ suite: suiteData.suite, cases: suiteData.cases, configuration });
+    expect(report(validators["eval-run"], run)).toBe(true);
+    expect(run.aggregate.cases).toBe(suiteData.suite.case_ids.length);
+
+    // grader_health absent means no judge ran — never that a judge was fine.
+    expect(run.grader_health).toBeNull();
+    // Deterministic detectors are untuned, so the held-out guarantee holds by construction.
+    expect(run.scorer_provenance?.selected_using).toBeNull();
+  });
+
+  it("configuration rejects an id that is not a content hash", () => {
+    expect(validators["configuration"]({
+      configuration_id: "not-a-hash", prompt_template_ref: "x", model_id: "m",
+      decoding: { temperature: null, seed: null },
+      topology: { kind: "sequential", stages: ["compile"] },
+    })).toBe(false);
+  });
+
+  it("comparison validates a real verdict and keeps inconclusive reachable", () => {
+    const cmp = compare({
+      comparison_id: "cmp-1",
+      candidate_run_id: "a",
+      baseline_id: "b",
+      candidate: [{ case_id: "c0", passed: true }, { case_id: "c1", passed: true }],
+      baseline: [{ case_id: "c0", passed: true }, { case_id: "c1", passed: false }],
+      suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 } },
+      comparisons_in_family: 1,
+      alpha: 0.05,
+      detectors_equalized: true,
+    });
+    expect(report(validators["comparison"], cmp)).toBe(true);
+    expect(cmp.verdict).toBe("inconclusive"); // one discordant pair is not evidence
+  });
+
+  it("comparison rejects a verdict outside the four", () => {
+    expect(validators["comparison"]({
+      comparison_id: "c", candidate_run_id: "a", baseline_id: "b",
+      verdict: "probably-better", delta: 0.1,
+      protocol: { test: "mcnemar", trials: 1, alpha: 0.05, comparisons_in_family: 1 },
+      detectors_equalized: true,
+    })).toBe(false);
+  });
+
+  it("comparison requires the family size — multiplicity cannot be omitted", () => {
+    expect(validators["comparison"]({
+      comparison_id: "c", candidate_run_id: "a", baseline_id: "b",
+      verdict: "improved", delta: 0.1,
+      protocol: { test: "mcnemar", trials: 1, alpha: 0.05 },
+      detectors_equalized: true,
+    })).toBe(false);
   });
 });
 
