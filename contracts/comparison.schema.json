@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/comparison/1.0.0",
+  "title": "Comparison",
+  "description": "The verdict of one run against a baseline. `inconclusive` is a first-class outcome: with stochastic decoding a single run pair cannot distinguish improvement from noise, and rounding toward a decision manufactures exactly the false confidence this subsystem exists to prevent.",
+  "type": "object",
+  "required": ["comparison_id", "candidate_run_id", "baseline_id", "verdict", "protocol", "detectors_equalized"],
+  "additionalProperties": false,
+  "properties": {
+    "comparison_id": { "type": "string", "minLength": 1 },
+    "candidate_run_id": { "type": "string", "minLength": 1 },
+    "baseline_id": { "type": "string", "minLength": 1 },
+    "verdict": { "enum": ["improved", "regressed", "inconclusive", "refused"] },
+    "refusal_reason": {
+      "type": ["string", "null"],
+      "description": "Required when verdict is `refused`. The comparator refuses rather than reporting a number when the two runs are not comparable: differing attribution tuples, unequalized detectors, or a suite whose declared resolution cannot see a delta this small."
+    },
+    "delta": { "type": ["number", "null"] },
+    "protocol": {
+      "type": "object",
+      "required": ["test", "trials", "alpha"],
+      "additionalProperties": false,
+      "properties": {
+        "test": {
+          "type": "string",
+          "description": "Named per suite type and recorded, not improvised per comparison. Paired binary outcomes and graded or free-form metrics need different tests, and the choice is part of the result."
+        },
+        "trials": { "type": "integer", "minimum": 1 },
+        "alpha": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+        "p_value": { "type": ["number", "null"] }
+      }
+    },
+    "detectors_equalized": {
+      "type": "boolean",
+      "description": "Whether both runs' detectors were shown to have comparable recall on the same ground truth. An intervention once appeared to raise hallucination by 10-15 points purely because structured output made failures easier to find; the effect reversed under a recall-equalized detector. Comparing unequalized detectors measures the instrument."
+    }
+  }
+}

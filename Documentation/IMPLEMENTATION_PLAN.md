@@ -14,7 +14,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 {
   "gates": { "ported": 2, "source_total": 16 },
   "stages": { "built": 1, "target": 11 },
-  "contracts": { "schemas": 6 },
+  "contracts": { "schemas": 13 },
   "adapters": ["provider-local-proxy", "storage-local"],
   "shells": ["cli"],
   "catalog": { "records_imported": 180, "records_available": 172, "records_added": 8 },
@@ -23,7 +23,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
-    "import:catalog", "check:catalog", "check:xsd"
+    "import:catalog", "check:catalog", "check:xsd", "check:depth"
   ],
   "planned_commands": [
     "verify:gates", "adversarial", "trace:view", "docs:matrix", "verify:hash",
@@ -38,7 +38,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
 
 ```
                         built          target
-contracts   ████████████████████       5 schemas, each validated against a real value
+contracts   ████████████████████       13 schemas — 6 validated against real values, 7 declared for the evaluation plane
 core/gates  ██▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       2 of 16
 core/stages █▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 11
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops

@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/configuration/1.0.0",
+  "title": "Configuration",
+  "description": "The versioned artifact. A prompt alone is not a unit of version, comparison, or recommendation: its effectiveness inverts across model generations, and the same is true of pipeline depth and topology across throughput. Everything that can move the measured result belongs here, and configuration_id is the content hash of the rest.",
+  "type": "object",
+  "required": ["configuration_id", "prompt_template_ref", "model_id", "decoding", "topology"],
+  "additionalProperties": false,
+  "properties": {
+    "configuration_id": {
+      "description": "sha256 over the canonical serialization of every other field. Also the cache key: a cache keyed on less than the full configuration returns confidently wrong results.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "prompt_template_ref": { "type": "string", "minLength": 1 },
+    "model_id": { "type": "string", "minLength": 1 },
+    "decoding": {
+      "description": "Recorded, never assumed. A harness that does not set temperature inherits the provider default — measured at 1.0 in a real safety codebase, producing up to 50% per-item verdict disagreement across identical runs.",
+      "type": "object",
+      "required": ["temperature", "seed"],
+      "additionalProperties": false,
+      "properties": {
+        "temperature": { "type": ["number", "null"], "minimum": 0, "description": "null means the provider deprecated the parameter, which newer frontier models have done. null is a recorded fact, not an omission." },
+        "top_p": { "type": ["number", "null"] },
+        "top_k": { "type": ["integer", "null"] },
+        "seed": { "type": ["integer", "null"] },
+        "max_tokens": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "topology": {
+      "description": "Pipeline shape is a configuration dimension, not a fixed property of the system. A reflexive self-correcting architecture measured best at 1k documents/day and worst at 100k; the ranking inverts with load, so the shape must be selectable and measurable.",
+      "type": "object",
+      "required": ["kind", "stages"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["sequential", "parallel-merge", "hierarchical", "reflexive"] },
+        "stages": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "max_iterations": { "type": ["integer", "null"], "minimum": 1, "description": "Required for reflexive topologies. The recorded hazard for verification loops is unbounded retry with no termination rule." }
+      }
+    },
+    "retrieval_config": { "type": ["object", "null"] },
+    "tool_config": { "type": ["object", "null"] },
+    "gate_set_ref": { "type": ["string", "null"], "description": "Gates constrain a search; they are never a term in its objective. An optimizer that can move this is optimizing its own examiner." },
+    "router_policy_ref": { "type": ["string", "null"] }
+  }
+}

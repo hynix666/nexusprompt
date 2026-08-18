@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/judge-verdict/1.0.0",
+  "title": "JudgeVerdict",
+  "description": "A grader's output, carrying enough about the grader to be readable as evidence. The largest systematic evaluation to date — 21 judges, nine providers, ~541,000 judgments — found reliability and validity come apart: test-retest above 0.95 coexisted with severe position bias in two production-deployed judges. A verdict without its audit is a number of unknown meaning.",
+  "type": "object",
+  "required": ["verdict", "judge_id", "rubric_id", "runs", "disagreement_rate", "position_randomized"],
+  "additionalProperties": false,
+  "properties": {
+    "verdict": { "type": ["string", "number", "boolean"] },
+    "rationale": { "type": ["string", "null"] },
+    "judge_id": {
+      "description": "Never the model under test. Self-grading is a cycle in the grading order, and a cycle does not merely risk reward hacking — it constructs it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "rubric_id": { "type": "string", "minLength": 1 },
+    "runs": {
+      "description": "Count of independent gradings. Single-run verdicts without variance present noise as a property of the system. Setting temperature to 0 does not make grading deterministic: borderline items still flip under forced greedy decoding, and newer frontier models have deprecated the parameter outright.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "disagreement_rate": {
+      "description": "Fraction of runs disagreeing with the modal verdict. A first-class health metric, reported alongside the score rather than instead of it.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "position_randomized": {
+      "description": "Whether candidate order was randomized. Position bias above 0.10 was measured in production-deployed judges whose test-retest reliability exceeded 0.95.",
+      "type": "boolean"
+    },
+    "agreement": {
+      "type": ["object", "null"],
+      "description": "Chance-corrected agreement against a reference. Exact match is not admissible: it does not correct for chance and overstates discriminative ability by 33-41 percentage points against Cohen's kappa on the same data.",
+      "required": ["metric", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "metric": { "enum": ["cohens-kappa", "krippendorff-alpha", "scotts-pi"] },
+        "value": { "type": "number", "minimum": -1, "maximum": 1 },
+        "reference": { "type": "string" },
+        "benchmark": {
+          "type": "string",
+          "description": "Named, because judge rankings shift by up to 14 positions across benchmarks. Validation on one benchmark does not transfer to another."
+        }
+      }
+    }
+  }
+}

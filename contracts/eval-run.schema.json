@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/eval-run/1.0.0",
+  "title": "EvalRun",
+  "description": "One immutable measurement of one Configuration against one Suite. A re-run is a new run; runs are never edited. A run missing any element of the attribution tuple is not scorable, because a score is a product of the model, the harness, the environment and the grader — change any one and the number moves.",
+  "type": "object",
+  "required": ["run_id", "configuration_id", "suite_id", "suite_version", "aggregate", "cost", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": { "type": "string", "minLength": 1 },
+    "configuration_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "suite_id": { "type": "string" },
+    "suite_version": { "type": "string" },
+    "aggregate": {
+      "type": "object",
+      "required": ["cases", "passed", "score"],
+      "additionalProperties": false,
+      "properties": {
+        "cases": { "type": "integer", "minimum": 1 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "by_failure_mode": {
+          "type": "object",
+          "description": "Score broken down by the failure mode each case names. An aggregate that cannot be decomposed by failure mode tells you the system got worse, not where."
+        }
+      }
+    },
+    "cost": {
+      "description": "Cost is a dimension of the result, not a footnote. Cost-driven degradation — token truncation, fallback to a weaker model, aggressive caching — degrades correctness without triggering any alert, which makes budget a correctness constraint rather than an economic one.",
+      "type": "object",
+      "required": ["tokens_in", "tokens_out", "provider_calls", "budget_exceeded"],
+      "additionalProperties": false,
+      "properties": {
+        "tokens_in": { "type": "integer", "minimum": 0 },
+        "tokens_out": { "type": "integer", "minimum": 0 },
+        "provider_calls": { "type": "integer", "minimum": 0 },
+        "cache_hits": { "type": "integer", "minimum": 0 },
+        "usd": { "type": ["number", "null"] },
+        "budget_exceeded": { "type": "boolean" }
+      }
+    },
+    "latency_ms": { "type": ["object", "null"] },
+    "grader_health": {
+      "type": ["object", "null"],
+      "description": "Present whenever any case was judged. Absent means no judge was involved — never that the judge was fine.",
+      "required": ["max_disagreement_rate", "judged_cases"],
+      "additionalProperties": false,
+      "properties": {
+        "max_disagreement_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "judged_cases": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "scorer_provenance": {
+      "description": "Sample disjointness of a held-out set is insufficient: if the scorer was selected using the optimization set, the promotion decision carries information about that set even when the items are disjoint. The guarantee needs the held-out set and the scorer to be independent of it.",
+      "type": ["object", "null"],
+      "required": ["scorer_ids", "selected_using"],
+      "additionalProperties": false,
+      "properties": {
+        "scorer_ids": { "type": "array", "items": { "type": "string" } },
+        "selected_using": {
+          "type": ["string", "null"],
+          "description": "Dataset the scorer was tuned on, or null if untuned. If this names the optimization set, the held-out claim is void."
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "ExecutionProvenance, extended for evaluation: build hash, contract versions, provider/model fingerprint, config fingerprint, decoding parameters and seed, dataset version, grader identity, and budget."
+    }
+  }
+}

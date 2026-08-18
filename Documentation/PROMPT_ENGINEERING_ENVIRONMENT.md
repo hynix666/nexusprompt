@@ -14,6 +14,63 @@ Sections 4 and 4a draw on material in `PDF/pipeline/` that is not in the earlier
 
 ---
 
+## 0. Two principles, and what follows from them
+
+Reading ~700 papers against this system, the useful findings collapse into two statements. Everything specified below is a consequence of one or the other, and a mechanism that serves neither is decoration.
+
+### Principle 1 — LLM system failures are silent by default
+
+The system-level failure taxonomy names fifteen modes across reasoning, input/context, and operations. What is striking is not the list but the recurring phrase in every entry: hallucinations "silently propagate across modules… without any error signal"; context truncation produces "no failure signal"; business-rule misalignment is "syntactically valid but semantically incompatible, thus leading to silent failure at the application layer"; cost-driven degradation from truncation, weaker-model fallback or aggressive caching degrades correctness "without triggering alerts". Its conclusion is the frame: **"these breakdowns are indeed not model failures but system failures."**
+
+A traditional system fails loudly and you build guards to handle it. This one fails quietly and looks fine. So **the architecture's first job is manufacturing an error signal where the model emits none.** That is what every mechanism in this repository already is, and naming it makes the pattern reusable:
+
+| Mechanism | Signal it manufactures |
+|---|---|
+| Typed contracts at every stage boundary | "this stage's output is not what the next stage requires" |
+| Gates | "this output makes a claim it cannot support" |
+| `⟦WORKFLOW DEMO — no model⟧` | "no model produced this" |
+| Differential oracle | "the port reproduced a defect from its source" |
+| `check:plan`, `check:citations`, XSD | "a document or a record drifted from what it describes" |
+| `import:catalog --check` | "a generated artifact is not what its inputs produce" |
+| `check:depth` | "the declared depth and the declared per-stage floor cannot both hold" |
+| `grader_health.max_disagreement_rate` | "this judge is not measuring; it is fluctuating" |
+
+The test of a proposed feature is therefore: *what silence does it break?* A feature that adds capability without adding a signal increases the surface over which failure is invisible.
+
+### Principle 2 — no design choice has a stable sign
+
+Every level of the stack shows the same pattern, measured, in this corpus:
+
+| Choice | Inverts across |
+|---|---|
+| A constrained prompt vs CoT | model generation — won on gpt-4o (97 vs 93), **lost** on gpt-5 (94.00 vs 96.36) |
+| Reflexive vs hierarchical vs sequential architecture | throughput — best at 1k docs/day, **worst** at 100k |
+| Decomposition vs single-shot | model capability — **net negative at 34%** against single-shot on a modern model |
+| Generic "improvement" rules | task — cut a compliance suite from **26/30 to 9/30** |
+| Harness vs backbone investment | neither dominates; effects are comparable, and *scaffold complexity does not predict effectiveness* |
+
+There is no stable best practice at any level. So the environment's job is **not to encode good decisions — it is to make decisions cheap to place, cheap to measure, and cheap to reverse.** Three consequences, each of which is a design commitment rather than a preference:
+
+- **The catalog is a hypothesis space, not a recommendation engine.** 180 records, zero measured on any task by this system. A record's `when_to_use` is a claim from a paper about some model at some time; treating it as advice is how you ship the losing side of an inversion.
+- **The pipeline is not the product.** The ability to change the pipeline and *know whether that helped* is the product. This is why ADR-0008 puts evaluation ahead of porting more stages.
+- **Decision latency is the metric that matters most.** Not quality — quality is what you measure. Latency from "I have an idea" to "I know if it works" is what determines how many ideas get tested. Every tier in the evaluation design exists to lower it: deterministic detectors before judges, content-addressed caching, a smoke set in seconds against an anchor in hours.
+
+### What this means for "scalable"
+
+Not requests per second. **The cost of the Nth experiment.** A system where the two-hundredth idea costs what the second one did is scalable in the sense that matters here; one where each new gate, scorer or suite requires touching unrelated code is not, however fast it serves traffic.
+
+### What landed with this section
+
+The contracts for the evaluation plane, per ADR-0002 and ADR-0008 action item 1 — schema before implementation:
+
+`configuration` · `eval-suite` · `eval-case` · `eval-run` · `judge-verdict` · `baseline` · `comparison`
+
+Each encodes a finding rather than a guess. `eval-suite.kind` exists because a suite that runs in seconds cannot certify a promotion. `eval-case.failure_mode` is required because a case that names no failure measures only that the system still runs. `judge-verdict` makes `runs`, `disagreement_rate` and `position_randomized` mandatory, and admits only chance-corrected agreement metrics. `comparison.verdict` includes `inconclusive` and `refused` so no implementation can quietly reduce the outcome space to improved/regressed.
+
+None has a producer yet; `contracts/pending-implementation.json` records that explicitly, with a rule that the exemption fails as stale once an implementation appears.
+
+---
+
 ## 1. Seams — scalability as the cost of the two-hundredth addition
 
 Throughput is not the scaling problem in this system. The scaling problem is **what it costs to add the next gate, scorer, technique, judge, or provider** — and the failure mode is well-evidenced: of the seventeen prototypes surveyed in `SOURCE_VERIFICATION.md`, none had a registry, and not one grew past its author's original set. **The hardcoded list is the ceiling.**

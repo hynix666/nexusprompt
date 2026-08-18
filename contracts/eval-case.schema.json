@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/eval-case/1.0.0",
+  "title": "EvalCase",
+  "description": "One case, bound to the failure mode it exists to catch. Requiring failure_mode forces every case to name what it is for; a suite of cases that catch nothing in particular measures only that the system still runs.",
+  "type": "object",
+  "required": ["case_id", "input", "expectation", "failure_mode", "detector_ids"],
+  "additionalProperties": false,
+  "properties": {
+    "case_id": { "type": "string", "minLength": 1 },
+    "input": { "type": "object" },
+    "expectation": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["exact", "contains", "schema", "predicate", "reference", "none"] },
+        "value": {}
+      }
+    },
+    "failure_mode": {
+      "description": "From the system-level taxonomy: fifteen modes in three groups. Nearly all are silent by default, which is why a detector must be named per case rather than inferred.",
+      "enum": [
+        "hallucination", "logical-inconsistency", "planning-collapse", "overconfidence", "constraint-violation",
+        "ambiguous-input", "prompt-injection", "context-truncation", "domain-mismatch", "conflicting-instructions",
+        "tool-invocation-error", "tool-runtime-failure", "agent-communication-breakdown", "business-rule-misalignment",
+        "cost-driven-degradation"
+      ]
+    },
+    "detector_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "perturbation": {
+      "type": ["object", "null"],
+      "description": "Set when this case is a seeded perturbation of another. Methods assessed only on clean, well-formed inputs degrade sharply under minor perturbation, so perturbed variants belong in the suite rather than in a separate exercise.",
+      "required": ["of_case_id", "kind", "seed"],
+      "properties": {
+        "of_case_id": { "type": "string" },
+        "kind": { "type": "string" },
+        "seed": { "type": "integer" }
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "_comment": [
+    "Contracts that are declared but have no producing code yet.",
+    "",
+    "ADR-0002 makes contract-first a rule: a schema lands as its own reviewed change,",
+    "with a version bump, BEFORE any code implementing it. That rule collides with the",
+    "schema-coverage check in test/contract-conformance.test.ts, which requires every",
+    "schema on disk to be validated against a value the running system produced.",
+    "",
+    "Both are right. This file is the seam between them: a schema listed here is",
+    "exempt from needing a produced value, and says why and what will produce it.",
+    "",
+    "Two rules keep it from becoming a place schemas go to be forgotten, matching the",
+    "discipline of scripts/catalog-known-defects.json:",
+    "  - an entry with no reason or no `produced_by` fails;",
+    "  - an entry whose schema HAS a conformance case is stale and fails, so the",
+    "    exemption cannot outlive the implementation it was waiting for.",
+    "",
+    "Every entry below is ADR-0008 action item 1: the evaluation plane's contracts,",
+    "landing ahead of the pipeline that will emit them."
+  ],
+  "pending": [
+    {
+      "schema": "configuration",
+      "reason": "The versioned artifact. Nothing constructs one until the evaluation pipeline exists; until then the authoring pipeline works in terms of PipelineCommand, which carries a subset.",
+      "produced_by": "evaluation pipeline — expand step",
+      "adr": "0008"
+    },
+    {
+      "schema": "eval-suite",
+      "reason": "No suite exists yet. The smoke/anchor distinction is the reason this schema lands before the first suite is written, so the first suite has to declare which job it is doing.",
+      "produced_by": "suite authoring",
+      "adr": "0008"
+    },
+    {
+      "schema": "eval-case",
+      "reason": "Requires a failure_mode per case, which is a constraint on how the first suite is written and therefore has to exist before it.",
+      "produced_by": "suite authoring",
+      "adr": "0008"
+    },
+    {
+      "schema": "eval-run",
+      "reason": "Emitted by the evaluation pipeline's execute and aggregate steps, neither of which exists.",
+      "produced_by": "evaluation pipeline — aggregate step",
+      "adr": "0008"
+    },
+    {
+      "schema": "judge-verdict",
+      "reason": "Emitted by the judge adapter. Landing it first is deliberate: it makes runs, disagreement_rate and position_randomized mandatory before anyone writes a judge that would otherwise omit them.",
+      "produced_by": "judge adapter",
+      "adr": "0008"
+    },
+    {
+      "schema": "baseline",
+      "reason": "Written by the release pipeline when a run is promoted. No promotion path exists.",
+      "produced_by": "release pipeline — promote step",
+      "adr": "0008"
+    },
+    {
+      "schema": "comparison",
+      "reason": "Emitted by the comparator. Landing it first fixes `inconclusive` and `refused` as real verdicts before an implementation can quietly reduce the outcome space to improved/regressed.",
+      "produced_by": "evaluation pipeline — compare step",
+      "adr": "0008"
+    }
+  ]
+}

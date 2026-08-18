@@ -8,6 +8,7 @@ import { checkBoundaries } from "../scripts/check-boundaries.mjs";
 import { verifySources } from "../scripts/verify-sources.mjs";
 import { checkCitations } from "../scripts/check-citations.mjs";
 import { checkXsd, buildXml, validateAgainstXsd } from "../scripts/check-xsd.mjs";
+import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
 
 /**
  * Must-fire cases for the three checker scripts.
@@ -530,6 +531,91 @@ describe("check-xsd", () => {
     const xml = buildXml(process.cwd());
     expect(xml).toContain('<arxiv_id nil="true"/>');
     expect(xml).toContain('empty="true"');
+  });
+});
+
+/* ── check-depth-budget ───────────────────────────────────────────────────── */
+
+describe("check-depth-budget", () => {
+  /**
+   * Depth and per-stage reliability are one design choice expressed twice, since
+   * end-to-end success is p^m. This checker exists so that adding a stage forces a
+   * visible decision rather than a silent loss.
+   */
+  const makeBudgetRepo = (stages: number, target: number, floor: number) => {
+    const root = mkroot("pnx-depth-");
+    // Letter-only ids: STAGE_IDS is parsed with the same `"[a-z_]+"` pattern check:plan
+    // uses, so a fixture with digits in the names would test the fixture, not the rule.
+    const names = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta",
+                   "theta", "iota", "kappa", "lambda", "mu", "nu", "xi"];
+    const ids = names.slice(0, stages).map((n) => `  "${n}",`).join("\n");
+    write(root, "contracts/index.ts", `export const STAGE_IDS = [\n${ids}\n] as const;\n`);
+    write(root, "contracts/reliability-budget.json",
+      JSON.stringify({ end_to_end_target: target, per_stage_floor: floor, status: "declared-not-measured" }));
+    return root;
+  };
+
+  it("passes on the real repository", () => {
+    const r = checkDepthBudget(process.cwd());
+    expect(r.fatal).toBeNull();
+    expect(r.ok).toBe(true);
+  });
+
+  it("accepts a budget the depth can actually hold", () => {
+    // 0.995^11 ≈ 0.9464, comfortably above 0.90.
+    const r = checkDepthBudget(makeBudgetRepo(11, 0.9, 0.995));
+    expect(r.ok).toBe(true);
+    expect(r.depth).toBe(11);
+  });
+
+  it("fails when the per-stage floor cannot reach the end-to-end target", () => {
+    // 0.95^11 ≈ 0.5688 — the compounding result, stated as a build failure.
+    const r = checkDepthBudget(makeBudgetRepo(11, 0.9, 0.95));
+    expect(r.ok).toBe(false);
+    expect(r.achievable).toBeLessThan(0.6);
+  });
+
+  it("fails when depth grows past the headroom the floor allows", () => {
+    // The boundary is deliberately tight: 0.9905^11 ≈ 0.9005 clears a 0.90 target,
+    // 0.9905^12 ≈ 0.8919 does not. Adding one stage is the whole failure.
+    //
+    // Worth recording that the first draft of this test used a 0.99 floor on the
+    // assumption that eleven stages would clear 0.90. They do not — 0.99^11 ≈ 0.8953.
+    // The checker was right and the test was wrong, which is the argument for having
+    // the arithmetic in a build step rather than in someone's head.
+    expect(checkDepthBudget(makeBudgetRepo(11, 0.9, 0.9905)).ok).toBe(true);
+    expect(checkDepthBudget(makeBudgetRepo(12, 0.9, 0.9905)).ok).toBe(false);
+  });
+
+  it("reports the per-stage reliability the declared depth and target demand", () => {
+    const r = checkDepthBudget(makeBudgetRepo(11, 0.9, 0.95));
+    // 0.9^(1/11) ≈ 0.99046
+    expect(r.required).toBeGreaterThan(0.99);
+    expect(r.required).toBeLessThan(0.9905);
+  });
+
+  it("reports headroom in whole stages", () => {
+    const r = checkDepthBudget(makeBudgetRepo(11, 0.9, 0.995));
+    // floor 0.995 supports 21 stages at a 0.90 target, so 10 remain.
+    expect(r.headroom).toBe(10);
+  });
+
+  it("refuses a target outside (0,1) rather than computing nonsense", () => {
+    expect(checkDepthBudget(makeBudgetRepo(11, 1.5, 0.99)).fatalCode).toBe(2);
+  });
+
+  it("refuses when the budget file is absent", () => {
+    const root = mkroot("pnx-nobudget-");
+    write(root, "contracts/index.ts", `export const STAGE_IDS = ["a"] as const;\n`);
+    expect(checkDepthBudget(root).fatalCode).toBe(2);
+  });
+
+  it("refuses when no stages are declared", () => {
+    const root = mkroot("pnx-nostages-");
+    write(root, "contracts/index.ts", "export const NOTHING = 1;\n");
+    write(root, "contracts/reliability-budget.json",
+      JSON.stringify({ end_to_end_target: 0.9, per_stage_floor: 0.99 }));
+    expect(checkDepthBudget(root).fatalCode).toBe(2);
   });
 });
 

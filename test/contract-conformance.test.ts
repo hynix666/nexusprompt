@@ -296,13 +296,53 @@ describe("technique-record", () => {
 /* ── the coverage check ───────────────────────────────────────────────────── */
 
 describe("schema coverage", () => {
-  it("every schema in contracts/ is validated against a real value above", () => {
-    const onDisk = readdirSync("contracts")
+  /**
+   * Contract-first (ADR-0002) says a schema lands before the code that emits it.
+   * The coverage rule says every schema is validated against a value the system
+   * produced. Both are right, and `contracts/pending-implementation.json` is the
+   * seam: a schema listed there is exempt, and says why and what will produce it.
+   */
+  const pending = JSON.parse(readFileSync("contracts/pending-implementation.json", "utf8")).pending as Array<{
+    schema: string; reason: string; produced_by: string; adr: string;
+  }>;
+
+  const onDisk = () =>
+    readdirSync("contracts")
       .filter((f) => f.endsWith(".schema.json"))
       .map((f) => f.replace(".schema.json", ""))
       .sort();
 
-    expect(onDisk).toEqual(Object.keys(validators).sort());
+  it("every schema is either validated against a real value or declared pending", () => {
+    const covered = new Set([...Object.keys(validators), ...pending.map((p) => p.schema)]);
+    const uncovered = onDisk().filter((s) => !covered.has(s));
+    expect(uncovered).toEqual([]);
+  });
+
+  it("no schema is both validated and declared pending — a stale exemption fails", () => {
+    // The exemption must not outlive the implementation it was waiting for; once a
+    // producer exists, the entry has to go or it silently excuses the next schema.
+    const stale = pending.map((p) => p.schema).filter((s) => s in validators);
+    expect(stale).toEqual([]);
+  });
+
+  it("every pending entry states a reason, a producer, and an ADR", () => {
+    for (const p of pending) {
+      expect(p.reason?.length ?? 0, `${p.schema} reason`).toBeGreaterThan(20);
+      expect(p.produced_by?.length ?? 0, `${p.schema} produced_by`).toBeGreaterThan(3);
+      expect(p.adr, `${p.schema} adr`).toBeTruthy();
+    }
+  });
+
+  it("every pending schema actually exists on disk", () => {
+    const disk = new Set(onDisk());
+    expect(pending.map((p) => p.schema).filter((s) => !disk.has(s))).toEqual([]);
+  });
+
+  it("the declared contracts compile — a schema that ajv rejects is not a contract", () => {
+    for (const p of pending) {
+      const schema = JSON.parse(readFileSync(`contracts/${p.schema}.schema.json`, "utf8"));
+      expect(() => ajv.compile(schema), `${p.schema} failed to compile`).not.toThrow();
+    }
   });
 
   it("ajv does not silently ignore an unknown keyword here", () => {

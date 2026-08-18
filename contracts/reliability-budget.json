@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "The pipeline's error budget, as an arithmetic constraint rather than an intention.",
+    "",
+    "End-to-end success across m independent stages is p^m. The constants are",
+    "unforgiving and the intuition is wrong: at 99% per stage, ten stages reach 90.4%",
+    "and a hundred reach 36.6%; at 85% per stage, ten stages reach roughly 20%.",
+    "Measured behaviour is worse still — in a seven-model comparison on stepwise",
+    "reasoning, one model scored 100% at four steps and 0% at five, and at 11-12 steps",
+    "every model tested scored 0%.",
+    "",
+    "That measurement is of an UNVALIDATED autoregressive chain, which is not what this",
+    "pipeline is: each stage boundary carries a typed contract, a gate set, and a",
+    "persisted revision, and the compiled-graph literature reports that pre-validated",
+    "typed execution beats free-form chaining on both accuracy and cost. So depth is",
+    "affordable here — but only in proportion to per-stage reliability, and that is the",
+    "trade this file makes explicit.",
+    "",
+    "`npm run check:depth` fails when per_stage_floor^depth < end_to_end_target. Adding",
+    "a twelfth stage therefore forces one of three visible decisions: raise the floor,",
+    "lower the target, or do not add the stage. None of them can be made silently.",
+    "",
+    "Neither number is measured yet. They are declared targets, and the evaluation",
+    "pipeline (ADR-0008) is what will replace them with observations. Until then this",
+    "check constrains the design, not the system."
+  ],
+  "end_to_end_target": 0.9,
+  "per_stage_floor": 0.995,
+  "status": "declared-not-measured",
+  "measured_by": "ADR-0008 evaluation pipeline — not yet built"
+}

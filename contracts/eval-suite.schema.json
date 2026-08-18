@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/eval-suite/1.0.0",
+  "title": "EvalSuite",
+  "description": "A named, versioned set of cases with a declared job. The kind field is load-bearing: a suite small enough to run in seconds cannot certify a promotion, and a suite large enough to certify one cannot gate every change. Conflating them yields either a suite nobody runs or a promotion nobody can justify.",
+  "type": "object",
+  "required": ["suite_id", "version", "kind", "case_ids", "resolution"],
+  "additionalProperties": false,
+  "properties": {
+    "suite_id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "version": { "type": "string", "minLength": 1 },
+    "kind": {
+      "description": "smoke gates every change and must run offline in seconds. anchor alone may certify a promotion and must satisfy the sizing requirement below. adversarial holds seeded perturbations of another suite.",
+      "enum": ["smoke", "anchor", "adversarial"]
+    },
+    "case_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "resolution": {
+      "description": "What difference this suite can actually detect. Well-foundedness of the grading order is satisfied vacuously by an uninformative anchor: resolving a true gap of delta at one-sided confidence 1-epsilon needs roughly z^2/(2*delta^2) items, which is about 3400 for two percentage points at 95%. A suite that does not declare its resolution cannot be read as evidence of no-change.",
+      "type": "object",
+      "required": ["detectable_delta", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "detectable_delta": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "confidence": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+        "sized_for": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "derived_from": { "type": ["string", "null"], "description": "For adversarial suites: the suite these cases perturb." }
+  }
+}
