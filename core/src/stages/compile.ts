@@ -97,6 +97,17 @@ export function decide(input: CompileInput, run_id: string): GenerationRequest {
  *
  * The failure branch is deterministic by construction: same category in, same
  * placeholder out. Nothing here inspects a network, a clock, or an exception.
+ *
+ * **`runGates` here is a vertical-slice artifact, and `lint` (s7) is where gating belongs.**
+ * The frozen component gates in s7 only; this stage gated inline because during Phase 1 it
+ * was the sole stage and there was nowhere else to put it. `lint` now exists and runs the
+ * full sixteen-gate registry.
+ *
+ * It is deliberately NOT removed yet. No multi-stage pipeline is assembled — the
+ * orchestrator runs one stage per call — so deleting this would leave nothing gating
+ * anything, and the eval suite's fourteen cases read `gate_results` from exactly here.
+ * The reconciliation belongs with the pipeline assembly that Phase 3's exit gate
+ * describes, and is recorded rather than carried silently.
  */
 export function reduce(
   input: CompileInput,

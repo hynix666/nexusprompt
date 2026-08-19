@@ -13,7 +13,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 ```json plan-status
 {
   "gates": { "ported": 16, "source_total": 16 },
-  "stages": { "built": 6, "target": 11 },
+  "stages": { "built": 8, "target": 11 },
   "contracts": { "schemas": 13 },
   "adapters": ["provider-local-proxy", "storage-local"],
   "shells": ["cli"],
@@ -40,7 +40,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
                         built          target
 contracts   ████████████████████       13 schemas — 11 validated against real values, 2 awaiting a judge and a promotion path
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
-core/stages ███████████▒▒▒▒▒▒▒▒▒       6 of 11 — the six generating stages; s7-s11 remain
+core/stages ███████████████▒▒▒▒▒       8 of 11 — critic, preview, tone_check remain
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
 shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
