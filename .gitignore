@@ -9,3 +9,19 @@ dist/
 # what was checked and the SHA-256 of each file checked, which is what makes a
 # finding re-verifiable; the bytes themselves are not evidence of anything.
 PDF/
+
+# Loose archive extractions. `sources/` is the only place source material is tracked,
+# because it is the only place hashes are pinned — verify:sources re-checks all 420 files
+# against MANIFEST.json on every build, and a copy outside it is verified by nothing.
+#
+# These two are not hypothetical clutter. Both hold `promptnexus-v5/prompt_lint.py` with
+# FIFTEEN gates, missing DUPLICATE_INSTRUCTION; the frozen `sources/v5/prompt_lint.py` came
+# from the later files_4 drop and has sixteen. So an extraction that looks current is a
+# linter one gate behind the one the differential oracle compares against.
+#
+# That is the third time a stale duplicate has turned up beside a frozen original here: a
+# nine-stage SystemPromptBuilderPipeline.tsx sits in the repo root with a NEWER mtime than
+# the frozen eleven-stage one, and Phase 3 opened by building check:stages because of it.
+# Ignoring these keeps the trap out of history without deleting anyone's working copy.
+Nexus-Prompt/
+promptnexus-v5/
