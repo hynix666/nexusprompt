@@ -141,15 +141,42 @@ describe("CLAIM_DISCIPLINE — properties", () => {
     );
   });
 
-  it("appending an overclaim to any clean text always warns", () => {
-    // Monotonicity. A gate that can be silenced by surrounding context is worse than
-    // no gate, because the output still carries its PASS.
+  it("appending an overclaim to any clean text always warns — unless a fence is left open", () => {
+    /**
+     * Monotonicity. A gate that can be silenced by surrounding context is worse than no
+     * gate, because the output still carries its PASS.
+     *
+     * The property is stated with an exclusion because WITHOUT one it is FALSE, and this
+     * test used to assert the false version — passing only because `fc.string` rarely
+     * emits three backticks at a line start. It failed roughly one run in eight, which is
+     * worse than failing every time: an intermittent build is one people learn to re-run.
+     *
+     * The counterexample is deterministic and is pinned in the test below. An unterminated
+     * fence makes `stripDocumentationSpans` strip to EOF, taking the appended overclaim
+     * with it. That behaviour is inherited and deliberate on the source's part — an
+     * unclosed template block stays exempt rather than becoming auditable — and it is
+     * recorded as an evasion in eval/adversarial-known-evasions.json.
+     */
+    const opensAFence = (s: string) =>
+      s.split("\n").some((line) => line.replace(/^\s+/, "").startsWith("```"));
+
     fc.assert(
-      fc.property(fc.string({ maxLength: 500 }), (s) => {
+      fc.property(fc.string({ maxLength: 500 }).filter((s) => !opensAFence(s)), (s) => {
         expect(claimDiscipline(`${s}\nWe guarantee it.`).verdict).toBe("WARN");
       }),
       { numRuns: 200 },
     );
+  });
+
+  it("an unterminated fence silences the gate — the exclusion above, as a fact", () => {
+    // Not a property, because it is not random: these are the shapes that open a fence and
+    // never close it. Pinned so the exclusion cannot be quietly widened, and so the day the
+    // fence handling is fixed, this test fails and says so.
+    for (const opener of ["```", "```\nexample", "````", "  ```"]) {
+      expect(claimDiscipline(`${opener}\nWe guarantee it.`).verdict).toBe("PASS");
+    }
+    // Closing it restores the gate.
+    expect(claimDiscipline("```\nx\n```\nWe guarantee it.").verdict).toBe("WARN");
   });
 
   it("fenced content cannot change the verdict", () => {

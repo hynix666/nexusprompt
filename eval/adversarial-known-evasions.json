@@ -42,8 +42,13 @@
     },
     {
       "case_id": "secret-evades-via-unterminated-fence",
-      "reason": "Fenced regions are treated as documentation. A fence opened and never closed swallows the rest of the output, so everything after it is exempt. This is the most exploitable of the five: it needs three backticks and no closing pair.",
-      "fix_point": "ADR-0007 divergence allowlist, then treat an unterminated fence as not-a-fence"
+      "reason": "Fenced regions are treated as documentation. A fence opened and never closed swallows the rest of the output, so everything after it is exempt. This is the most exploitable of the five: it needs three backticks and no closing pair. NOT specific to SECRET_LEAK_SCAN — stripDocumentationSpans is shared, so every gate that audits stripped text is evadable the same way. Demonstrated by overclaim-evades-via-unterminated-fence below.",
+      "fix_point": "ADR-0007 divergence allowlist, then treat an unterminated fence as not-a-fence — one fix closes both entries and every other gate at once"
+    },
+    {
+      "case_id": "overclaim-evades-via-unterminated-fence",
+      "reason": "The same shared defect reaching a second gate. An unclosed fence before an overclaim strips it to EOF, so CLAIM_DISCIPLINE never sees it. Recorded separately rather than folded into the SECRET_LEAK_SCAN entry because the ledger counts CASES: one entry for a defect that spans gates would let the other gates' exposure go uncounted. Found by a property test that had been asserting monotonicity WITHOUT this exclusion — it passed for weeks because fc.string rarely emits three backticks at a line start, and failed about one run in eight.",
+      "fix_point": "ADR-0007 divergence allowlist, then treat an unterminated fence as not-a-fence — the same fix as the entry above"
     },
     {
       "case_id": "secret-evades-via-nested-fence",

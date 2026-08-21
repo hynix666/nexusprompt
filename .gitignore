@@ -23,5 +23,43 @@ PDF/
 # nine-stage SystemPromptBuilderPipeline.tsx sits in the repo root with a NEWER mtime than
 # the frozen eleven-stage one, and Phase 3 opened by building check:stages because of it.
 # Ignoring these keeps the trap out of history without deleting anyone's working copy.
+#
+# Archives keep being extracted into this working directory while work is going on, so
+# `git add -A` here is unsafe: six of these appeared BETWEEN a `git status` and the commit
+# that followed it, and swept 327 unintended files into a 4-file change. Stage explicit
+# paths in this repository, never `-A` or `.`.
+#
+# `systempromptbuilder/` carries its own `.git/`, so `git add` records it as a gitlink —
+# a submodule pointer to a repository that is not registered anywhere. That one does not
+# merely bloat history, it produces a tree git cannot check out cleanly.
 Nexus-Prompt/
 promptnexus-v5/
+PromptNexus-6.2/
+System-Prompt-Builder-final-*/
+promptnexus5/
+synth/
+system-prompt-builder-diff-fix/
+systempromptbuilder/
+
+# Model weights. 815 MB against a 6 MB tracked repository, and git keeps blobs forever —
+# committing this once makes every future clone carry it whether or not a later commit
+# removes it. Weights are also not source: nothing here re-derives or verifies them, and
+# the repository has no runtime that loads one.
+LLM/
+
+# Generated catalog export bundles. 593 files, five serializations of the same 195 records,
+# byte-equivalent to core/src/catalog/techniques.json — the only difference across all 195
+# is JSON key order inside usage_templates.
+#
+# This project does track a generated artifact, techniques.json, but only because
+# `check:catalog` re-derives it from the frozen catalog plus catalog-additions.json on every
+# build and fails on any drift. NOTHING IN THE REPOSITORY GENERATES THIS BUNDLE, so nothing
+# could ever check it. A tracked copy that no checker re-derives is a claim with no verifier.
+#
+# The name bakes in the record count, so the directory is stale the moment the catalog
+# reaches 196 — the fourth stale-duplicate-beside-a-tracked-original here, after the
+# nine-stage pipeline component and two copies of a fifteen-gate linter.
+#
+# If a distributable bundle is wanted, the fix is an exporter script wired into `verify`,
+# not a directory committed once and diverging quietly thereafter.
+final_bundle_*/
