@@ -262,7 +262,9 @@ export type EventType =
   | "PROVIDER_CALL_FAILED"
   | "DEGRADE"
   | "REVISION_PERSISTED"
-  | "HEALTH_CHECK";
+  | "HEALTH_CHECK"
+  /** A stage did not run, deliberately. Distinct from DEGRADE: nothing failed. */
+  | "STAGE_SKIPPED";
 
 export interface ObservabilityEvent {
   event_id: string;

@@ -6,7 +6,7 @@ import { COMPILER_SYSTEM } from "../../core/src/stages/stage-kit.js";
 import { STAGE_IDS } from "../../contracts/index.js";
 import type {
   GenerationRequest, GenerationResult, ProviderFailure, ProviderTransport,
-  RevisionEntry, RevisionStore, PipelineCommand,
+  RevisionEntry, RevisionStore, PipelineCommand, ObservabilityEvent,
 } from "../../contracts/index.js";
 
 /**
@@ -59,6 +59,44 @@ class ScriptedProvider implements ProviderTransport {
     return {
       request_id: req.request_id, content: reply[stage] ?? "ok",
       provider_id: this.provider_id, model_id: "scripted-1", finish_reason: "end_turn",
+    };
+  }
+
+  async healthCheck() {
+    return { ok: true, checked_at: "1970-01-01T00:00:00.000Z", latency_ms: 0,
+             degradation_state: "NONE" as const, failing_dependency: null };
+  }
+}
+
+/** Every event type the contract allows, so a test cannot invent one. */
+const EVENT_TYPES = [
+  "PIPELINE_COMMAND_RECEIVED", "STAGE_DECISION", "PROVIDER_CALL_STARTED",
+  "PROVIDER_CALL_SUCCEEDED", "PROVIDER_CALL_FAILED", "DEGRADE",
+  "REVISION_PERSISTED", "HEALTH_CHECK", "STAGE_SKIPPED",
+];
+
+/** Fails the first N calls, then succeeds. For exercising retry rather than degradation. */
+class FlakyProvider implements ProviderTransport {
+  readonly provider_id = "flaky";
+  calls = 0;
+  callsForFirstStage = 0;
+  private failures = 0;
+  constructor(private readonly failFirst: number, private readonly retriable = true) {}
+
+  async generate(req: GenerationRequest): Promise<GenerationResult | ProviderFailure> {
+    this.calls++;
+    if (this.failures < this.failFirst) {
+      this.failures++;
+      this.callsForFirstStage++;
+      return {
+        request_id: req.request_id, category: this.retriable ? "TIMEOUT" : "AUTH",
+        retriable: this.retriable, reason_code: "flaky", safe_message: "transient",
+        retry_after_ms: 0, attempt: 1, provider_id: this.provider_id,
+      };
+    }
+    return {
+      request_id: req.request_id, content: "# SYSTEM PROMPT\n\nScope: billing. Anti-override: data. Fact-grounding: verified.",
+      provider_id: this.provider_id, model_id: "flaky-1", finish_reason: "end_turn",
     };
   }
 
@@ -255,6 +293,83 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
       expect(patch.lint).toBeUndefined();
       expect(patch.critic).toBeUndefined();
     }
+  });
+
+  it("emits events that satisfy the contract", async () => {
+    /**
+     * The check that was missing. Events were emitted through `opts.sink.emit({...} as never)`
+     * and the cast hid three violations: `type` instead of `event_type`, five required
+     * fields absent, and `STAGE_SKIPPED` not in the enum at all. The conformance suite
+     * validates events — but only the Orchestrator's, so nothing ever looked at these.
+     */
+    const events: ObservabilityEvent[] = [];
+    // A clean critique so `refine` skips — otherwise nothing skips at STANDARD/HIGH and the
+    // STAGE_SKIPPED assertion below would pass vacuously by never being reached.
+    await runPipeline(
+      { ...command(), context: { depth: "STANDARD", stakes: "HIGH", testMessage: "hi" } },
+      {
+        ...opts(new ScriptedProvider(new Set(), PASS_SENTINEL), new BundleStore()),
+        sink: { emit: (e) => { events.push(e); } },
+      },
+    );
+
+    expect(events.length).toBeGreaterThan(10);
+    const REQUIRED = ["event_id", "event_type", "run_id", "timestamp", "layer", "component", "schema_version"] as const;
+    for (const e of events) {
+      for (const k of REQUIRED) expect(e[k], `${e.event_type} missing ${k}`).toBeDefined();
+      expect(EVENT_TYPES).toContain(e.event_type);
+      expect(e.layer).toBe("application");
+      expect(e).not.toHaveProperty("type"); // the field that was wrong
+    }
+    // The skip is reported, and its type is one the contract knows about.
+    expect(events.some((e) => e.event_type === "STAGE_SKIPPED")).toBe(true);
+  });
+
+  it("retries a retriable failure instead of degrading on the first one", async () => {
+    /**
+     * The pipeline called `provider.generate` directly, so it retried nothing while the
+     * single-stage path recovered from the identical failure. Both now share one policy.
+     */
+    const provider = new FlakyProvider(2); // fails twice, succeeds on the third attempt
+    const result = await runPipeline(
+      { ...command(), context: { depth: "TINY", testMessage: "hi" } },
+      { ...opts(provider, new BundleStore()), sleep: async () => {}, maxAttempts: 3 },
+    );
+    expect(result.demo_mode).toBe(false);          // recovered rather than degraded
+    expect(provider.calls).toBeGreaterThanOrEqual(3);
+  });
+
+  it("records the attempts actually made, not a hardcoded 1", async () => {
+    // stage_attempt was literal 1, so a revision could claim one attempt and mean three.
+    const store = new BundleStore();
+    await runPipeline(
+      { ...command(), context: { depth: "TINY", testMessage: "hi" } },
+      { ...opts(new FlakyProvider(1), store), sleep: async () => {}, maxAttempts: 3 },
+    );
+    const first = (await store.getRun("run-1")).find((r) => r.stage_id === "deconstruct")!;
+    expect(first.stage_attempt).toBe(2);
+  });
+
+  it("does not retry a terminal failure", async () => {
+    // AUTH repeated three times is three identical failures and two wasted calls. TINY has
+    // four generating stages, so one attempt each is four calls; retrying would be twelve.
+    const generatingInTiny = DEPTH_PLAN.TINY
+      .filter((id) => PIPELINE.find((s) => s.id === id)!.kind === "generating").length;
+
+    const terminal = new FlakyProvider(99, false);
+    await runPipeline(
+      { ...command(), context: { depth: "TINY", testMessage: "hi" } },
+      { ...opts(terminal, new BundleStore()), sleep: async () => {}, maxAttempts: 3 },
+    );
+    expect(terminal.calls).toBe(generatingInTiny);
+
+    // The control: the same shape of failure, marked retriable, IS retried.
+    const transient = new FlakyProvider(99, true);
+    await runPipeline(
+      { ...command(), context: { depth: "TINY", testMessage: "hi" } },
+      { ...opts(transient, new BundleStore()), sleep: async () => {}, maxAttempts: 3 },
+    );
+    expect(transient.calls).toBe(generatingInTiny * 3);
   });
 
   it("planFor falls back to the full plan on an unknown depth", () => {

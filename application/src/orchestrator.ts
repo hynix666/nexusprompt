@@ -23,6 +23,7 @@ import type {
   RevisionStore,
 } from "../../contracts/index.js";
 import { isFailure } from "../../contracts/index.js";
+import { invokeWithRetry as sharedInvoke } from "./invoke.js";
 import { decide, reduce, STAGE_ID } from "../../core/src/stages/compile.js";
 
 export interface OrchestratorOptions {
@@ -42,7 +43,7 @@ const CONTRACT_VERSIONS = {
   "provider-failure": "1.0.0",
   "pipeline-outcome": "1.0.0",
   "revision-entry": "1.1.0",
-  "observability-event": "1.0.0",
+  "observability-event": "1.1.0",
 };
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
@@ -137,60 +138,66 @@ export class Orchestrator {
   /**
    * Invoke the provider, retrying only where the failure says it is safe to.
    *
-   * Retry policy lives here and nowhere else. An adapter that retried internally
-   * would make the attempt count invisible to this layer, and the event stream
-   * would under-report what actually happened.
+   * The policy now lives in `invoke.ts` and this delegates to it. It used to live here,
+   * under a comment claiming "retry policy lives here and nowhere else" — which stopped
+   * being true the moment the pipeline runner called `provider.generate` directly and
+   * retried nothing, so an eleven-stage run degraded on a transient timeout that this path
+   * recovered from. Extracted rather than copied: two implementations of one rule is a
+   * drift bug with a delay fuse.
+   *
+   * What to EMIT stays here, because that is this class's business; WHEN to retry is not.
+   * An adapter that retried internally would still be wrong — the attempt count would be
+   * invisible to this layer and the event stream would under-report what happened.
    */
   private async invokeWithRetry(
     request: ReturnType<typeof decide>,
     run_id: string,
     parent: string,
   ): Promise<GenerationResult | ProviderFailure> {
-    let last: ProviderFailure | null = null;
-
-    for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
-      const started = this.now().getTime();
-      this.emit(run_id, "PROVIDER_CALL_STARTED", parent, {
-        component: this.provider.provider_id,
-        provider_id: this.provider.provider_id,
-        attempt,
-      });
-
-      const outcome = await this.provider.generate(request);
-      const elapsed = this.now().getTime() - started;
-
-      if (!isFailure(outcome)) {
-        this.emit(run_id, "PROVIDER_CALL_SUCCEEDED", parent, {
-          component: this.provider.provider_id,
-          provider_id: outcome.provider_id,
-          model_id: outcome.model_id,
-          attempt,
-          duration_ms: elapsed,
-        });
-        return outcome;
-      }
-
-      last = { ...outcome, attempt };
-      this.emit(run_id, "PROVIDER_CALL_FAILED", parent, {
-        component: this.provider.provider_id,
-        provider_id: outcome.provider_id,
-        attempt,
-        duration_ms: elapsed,
-        failure_code: outcome.reason_code,
-      });
-
-      if (!outcome.retriable || attempt === this.maxAttempts) break;
-      await this.sleep(outcome.retry_after_ms ?? 100 * attempt);
-    }
-
-    // Retries exhausted or the failure was terminal. Degrade, loudly.
-    this.emit(run_id, "DEGRADE", parent, {
-      component: "orchestrator",
-      provider_id: last!.provider_id,
-      failure_code: last!.reason_code,
-      attempt: last!.attempt,
+    const { outcome } = await sharedInvoke(request, {
+      provider: this.provider,
+      maxAttempts: this.maxAttempts,
+      now: this.now,
+      sleep: this.sleep,
+      onAttempt: (e) => {
+        if (e.phase === "started") {
+          this.emit(run_id, "PROVIDER_CALL_STARTED", parent, {
+            component: this.provider.provider_id,
+            provider_id: this.provider.provider_id,
+            attempt: e.attempt,
+          });
+        } else if (e.phase === "succeeded") {
+          const r = e.outcome as GenerationResult;
+          this.emit(run_id, "PROVIDER_CALL_SUCCEEDED", parent, {
+            component: this.provider.provider_id,
+            provider_id: r.provider_id,
+            model_id: r.model_id,
+            attempt: e.attempt,
+            duration_ms: e.duration_ms,
+          });
+        } else {
+          const f = e.outcome as ProviderFailure;
+          this.emit(run_id, "PROVIDER_CALL_FAILED", parent, {
+            component: this.provider.provider_id,
+            provider_id: f.provider_id,
+            attempt: e.attempt,
+            duration_ms: e.duration_ms,
+            failure_code: f.reason_code,
+          });
+        }
+      },
     });
-    return last!;
+
+    if (isFailure(outcome)) {
+      // Retries exhausted or the failure was terminal. Degrade, loudly.
+      this.emit(run_id, "DEGRADE", parent, {
+        component: "orchestrator",
+        provider_id: outcome.provider_id,
+        failure_code: outcome.reason_code,
+        attempt: outcome.attempt,
+      });
+    }
+    return outcome;
   }
 
   private emit(

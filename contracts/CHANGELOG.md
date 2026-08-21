@@ -18,6 +18,28 @@ Versioning, as applied here:
 
 ## 2026-08-18
 
+### `observability-event` 1.0.0 → **1.1.0** (minor)
+
+**Added** `STAGE_SKIPPED` to the `event_type` enum.
+
+A skipped stage is a real thing the pipeline does and none of the eight existing types said
+it. `DEGRADE` is wrong — a skip is a decision, not a failure — and leaving it unreported
+would make "did not run" indistinguishable from "was never reached".
+
+Found the worst way. The pipeline runner emitted events through
+`sink.emit({ ... } as never)`, and that uncommented cast was hiding three violations at
+once: the field is `event_type`, not `type`; five required fields were missing (`layer`,
+`parent_event_id`, `schema_version` and the nullables); and `STAGE_SKIPPED` was not in the
+enum. The conformance suite *does* validate events — but only ones the Orchestrator
+produced, so nothing ever looked at the pipeline's. An escape hatch with no comment
+justifying it turned out to be silencing exactly what it looked like it might be.
+
+The cast is gone, the events are built from the contract shape, and a test now validates
+every event a pipeline run emits against the required-field list and the enum.
+
+*Migration:* none. Additive to an enum; existing consumers see a type they may not know,
+which is why the field was an enum rather than a free string.
+
 ### `comparison` 1.0.0 → **2.0.0** (major)
 
 **Removed** `detectors_equalized` (boolean). **Added** `equalization` (object), now required.

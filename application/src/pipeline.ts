@@ -18,9 +18,10 @@ import {
   planFor, type PipelineContext, type PipelineStage,
 } from "../../core/src/stages/pipeline.js";
 import { isFailure } from "../../contracts/index.js";
+import { invokeWithRetry } from "./invoke.js";
 import type {
   EventSink, ExecutionProvenance, GenerationResult, PipelineCommand, ProviderFailure,
-  ProviderTransport, RevisionEntry, RevisionStore, StageId, GateResult,
+  ProviderTransport, RevisionEntry, RevisionStore, StageId, GateResult, ObservabilityEvent, EventType,
 } from "../../contracts/index.js";
 
 const CONTRACT_VERSIONS = {
@@ -28,7 +29,7 @@ const CONTRACT_VERSIONS = {
   "provider-failure": "1.0.0",
   "pipeline-outcome": "1.0.0",
   "revision-entry": "1.1.0",
-  "observability-event": "1.0.0",
+  "observability-event": "1.1.0",
 };
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
@@ -38,6 +39,9 @@ export interface PipelineRunOptions {
   store: RevisionStore;
   sink: EventSink;
   now?: () => Date;
+  sleep?: (ms: number) => Promise<void>;
+  /** Attempts including the first, shared with the Orchestrator. */
+  maxAttempts?: number;
   coreBuildHash?: string;
   configFingerprint?: string | null;
 }
@@ -87,10 +91,39 @@ export async function runPipeline(
   const revision_ids: string[] = [];
   let anyDemo = false;
 
-  const emit = (type: string, detail: Record<string, unknown>) =>
+  /**
+   * Emit a fully-formed ObservabilityEvent.
+   *
+   * This was `opts.sink.emit({ ... } as never)`, and the cast hid three contract violations
+   * at once: the field is `event_type` not `type`, five required fields were missing
+   * (`layer`, `parent_event_id`, `schema_version` and the nullables), and `STAGE_SKIPPED`
+   * was not in the enum at all. The conformance suite validates events, but only ones the
+   * Orchestrator produced — so nothing ever looked at these. An escape hatch with no comment
+   * justifying it turned out to be silencing exactly what it looked like it might be.
+   */
+  const emit = (
+    event_type: EventType,
+    detail: Partial<Omit<ObservabilityEvent, "event_id" | "event_type" | "run_id" | "timestamp" | "layer" | "schema_version">> = {},
+  ) =>
     opts.sink.emit({
-      event_id: randomUUID(), run_id, type, timestamp: now().toISOString(), ...detail,
-    } as never);
+      event_id: randomUUID(),
+      event_type,
+      run_id,
+      parent_event_id: null,
+      timestamp: now().toISOString(),
+      layer: "application",
+      component: "application/pipeline",
+      duration_ms: null,
+      attempt: null,
+      input_hash: null,
+      output_hash: null,
+      provider_id: null,
+      model_id: null,
+      failure_code: null,
+      verdict: null,
+      schema_version: "1.1.0",
+      ...detail,
+    });
 
   emit("PIPELINE_COMMAND_RECEIVED", { component: "application/pipeline" });
 
@@ -125,7 +158,26 @@ export async function runPipeline(
     const request = stage.decide!(ctx, run_id);
     emit("STAGE_DECISION", { component: `core/stages/${stage.id}`, input_hash: inputHash });
 
-    const outcome: GenerationResult | ProviderFailure = await opts.provider.generate(request);
+    // Shared with the Orchestrator. Calling `provider.generate` directly here meant an
+    // eleven-stage run degraded on the first transient timeout while the single-stage path
+    // recovered from the identical failure.
+    const { outcome, attempts } = await invokeWithRetry(request, {
+      provider: opts.provider,
+      maxAttempts: opts.maxAttempts ?? 3,
+      now,
+      sleep: opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))),
+      onAttempt: (e) => {
+        if (e.phase === "started") {
+          emit("PROVIDER_CALL_STARTED", { component: opts.provider.provider_id, provider_id: opts.provider.provider_id, attempt: e.attempt });
+        } else if (e.phase === "succeeded") {
+          const r = e.outcome as GenerationResult;
+          emit("PROVIDER_CALL_SUCCEEDED", { component: opts.provider.provider_id, provider_id: r.provider_id, model_id: r.model_id, attempt: e.attempt, duration_ms: e.duration_ms });
+        } else {
+          const f = e.outcome as ProviderFailure;
+          emit("PROVIDER_CALL_FAILED", { component: opts.provider.provider_id, provider_id: f.provider_id, attempt: e.attempt, duration_ms: e.duration_ms, failure_code: f.reason_code });
+        }
+      },
+    });
     const degraded = isFailure(outcome);
     if (degraded) anyDemo = true;
 
@@ -134,6 +186,7 @@ export async function runPipeline(
     const revision = buildRevision({
       run_id, stage_id: stage.id, inputHash,
       outputText: summarize(stage.id, ctx),
+      attempts,
       status: degraded ? "DEMO" : "SUCCEEDED",
       provider: degraded ? null : (outcome as GenerationResult).provider_id,
       fingerprint: degraded ? null : `${(outcome as GenerationResult).provider_id}:${(outcome as GenerationResult).model_id}`,
@@ -191,7 +244,7 @@ function redactForHash(ctx: PipelineContext) {
 
 function buildRevision(a: {
   run_id: string; stage_id: StageId; inputHash: string; outputText: string;
-  status: RevisionEntry["status"]; provider: string | null; fingerprint?: string | null;
+  status: RevisionEntry["status"]; provider: string | null; fingerprint?: string | null; attempts?: number;
   gate_results: GateResult[]; now: () => Date; coreBuildHash: string; configFingerprint: string | null;
 }): RevisionEntry {
   const provenance: ExecutionProvenance = {
@@ -206,7 +259,8 @@ function buildRevision(a: {
     stage_id: a.stage_id,
     parent_revision_ids: [],
     timestamp: a.now().toISOString(),
-    stage_attempt: 1,
+    // The real count. Hardcoding 1 made a revision claim one attempt and mean three.
+    stage_attempt: a.attempts ?? 1,
     input_hash: a.inputHash,
     output_hash: sha256(a.outputText),
     gate_results: a.gate_results,
