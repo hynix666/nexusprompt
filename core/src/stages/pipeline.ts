@@ -105,7 +105,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
       // A new prompt invalidates any verdict about the old one. The frozen component clears
       // lint and critic on draft/transform/refine for exactly this reason: a stale PASS
       // beside a changed prompt is worse than no verdict, because it reads as current.
-      return { prompt: s.output.text, lint: undefined, lintStatus: undefined, critic: undefined, criticVerdict: undefined };
+      return { prompt: s.output.text, lint: undefined, lintStatus: undefined, gate_results: undefined, critic: undefined, criticVerdict: undefined };
     },
   },
   {
@@ -116,7 +116,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
     decide: (c, r) => harden.decide({ prompt: c.prompt ?? "" }, r),
     reduce: (c, o) => ({
       prompt: harden.reduce({ prompt: c.prompt ?? "" }, o).prompt,
-      lint: undefined, lintStatus: undefined, critic: undefined, criticVerdict: undefined,
+      lint: undefined, lintStatus: undefined, gate_results: undefined, critic: undefined, criticVerdict: undefined,
     }),
     reduceSkipped: (c) => ({ prompt: c.prompt }),
   },
@@ -137,7 +137,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
     reduce: (c, o) => ({
       prompt: refine.reduce({ prompt: c.prompt ?? "", critique: c.critique ?? "" }, o).prompt,
       // The critique has been resolved; carrying it forward would re-apply it.
-      critique: "", lint: undefined, lintStatus: undefined, critic: undefined, criticVerdict: undefined,
+      critique: "", lint: undefined, lintStatus: undefined, gate_results: undefined, critic: undefined, criticVerdict: undefined,
     }),
     reduceSkipped: (c) => ({ prompt: c.prompt, critique: "" }),
   },
@@ -150,7 +150,9 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
   },
   {
     id: "critic", kind: "generating",
-    shouldSkip: (c) => critic.shouldSkip({ prompt: c.prompt ?? "", stakes: c.stakes }),
+    // A PASS about a placeholder is a clean verdict on a non-artifact — the same thing the
+    // stale-verdict clearing above exists to prevent, arrived at from the other direction.
+    shouldSkip: (c) => isDemoArtifact(c.prompt) || critic.shouldSkip({ prompt: c.prompt ?? "", stakes: c.stakes }),
     decide: (c, r) => critic.decide({ prompt: c.prompt ?? "", lint: c.lint, stakes: c.stakes }, r),
     reduce: (c, o) => {
       const s = critic.reduce({ prompt: c.prompt ?? "", lint: c.lint, stakes: c.stakes }, o);
@@ -163,6 +165,10 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
   },
   {
     id: "preview", kind: "generating",
+    // Previewing a placeholder sends it to a live model AS the system prompt and stores a
+    // clean, shippable-looking reply as the run demonstration of a prompt never compiled.
+    shouldSkip: (c) => isDemoArtifact(c.prompt),
+    reduceSkipped: () => ({ preview: "[SKIPPED] No compiled prompt to preview — the build degraded." }),
     decide: (c, r) => preview.decide({ prompt: c.prompt, testMessage: c.testMessage ?? "" }, r),
     reduce: (c, o) => ({ preview: preview.reduce({ prompt: c.prompt, testMessage: c.testMessage ?? "" }, o).reply }),
   },
@@ -172,7 +178,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
   },
   {
     id: "tone_check", kind: "generating",
-    shouldSkip: (c) => tone.shouldSkip({ prompt: c.prompt ?? "", depth: c.depth }),
+    shouldSkip: (c) => isDemoArtifact(c.prompt) || tone.shouldSkip({ prompt: c.prompt ?? "", depth: c.depth }),
     decide: (c, r) => tone.decide({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, r),
     reduce: (c, o) => {
       const s = tone.reduce({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, o);

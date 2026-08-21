@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
-  fillTemplate, buildRequest, BLUEPRINT, NO_CALIBRATION, DEMO_MARKER, COMPILER_SYSTEM,
+  fillTemplate, unknownSlots, buildRequest, BLUEPRINT, NO_CALIBRATION, DEMO_MARKER, COMPILER_SYSTEM,
 } from "../src/stages/stage-kit.js";
 import * as deconstruct from "../src/stages/deconstruct.js";
 import * as calibrate from "../src/stages/calibrate.js";
@@ -45,11 +45,35 @@ describe("fillTemplate", () => {
     expect(fillTemplate("{calibration}", { brief: "b" })).toBe(NO_CALIBRATION);
   });
 
-  it("refuses a template with an unfilled single-brace slot", () => {
+  it("refuses a TEMPLATE naming a slot nothing fills", () => {
     // A half-filled template is not a degraded prompt — it names a slot the model cannot
     // see, and the model will invent content for it.
     expect(() => fillTemplate("hello {nobody_fills_this}", { brief: "b" }))
-      .toThrow(/unresolved placeholders: \{nobody_fills_this\}/);
+      .toThrow(/names slot\(s\) nothing fills: \{nobody_fills_this\}/);
+  });
+
+  it("does NOT refuse because the interpolated DATA contains braces", () => {
+    /**
+     * The distinction the check exists on, and the bug it had. Scanning the RENDERED string
+     * cannot tell "our template had an unfilled slot" (a wiring bug) from "the data we were
+     * handed contains braces" (ordinary content). A brief mentioning {customer_name} — an
+     * entirely normal input for a prompt-engineering tool — threw and aborted an eleven-stage
+     * run with an unhandled rejection. After substitution every brace is data, and data is
+     * not ours to police.
+     */
+    expect(() => fillTemplate("SPEC:\n{brief}\n", { brief: "A bot that greets {customer_name}." }))
+      .not.toThrow();
+    expect(fillTemplate("{brief}", { brief: "use {slot} and {{DOUBLE}}" }))
+      .toBe("use {slot} and {{DOUBLE}}");
+    // And a real stage survives it end to end.
+    expect(() => deconstruct.decide({ brief: "Greet {customer_name} warmly." }, "run")).not.toThrow();
+  });
+
+  it("lists the known slots so the message is actionable", () => {
+    // "unknown slot" without saying which are known costs the reader a grep.
+    expect(() => fillTemplate("{nope}", { brief: "b" })).toThrow(/Known slots: .*calibration/);
+    expect(unknownSlots("{brief} {prompt} {{VAR}}")).toEqual([]);
+    expect(unknownSlots("{brief} {mystery}")).toEqual(["mystery"]);
   });
 
   it("leaves DOUBLED braces alone — the divergence from the frozen component", () => {

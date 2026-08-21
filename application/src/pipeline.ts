@@ -49,7 +49,7 @@ export interface PipelineRunOptions {
 /** What one stage did. `skipped` is a real outcome, distinct from succeeded and degraded. */
 export interface StageRecord {
   stage_id: StageId;
-  status: "SUCCEEDED" | "DEMO" | "SKIPPED";
+  status: "SUCCEEDED" | "DEMO" | "SKIPPED" | "FAILED";
   revision_id: string | null;
   output_hash: string | null;
 }
@@ -62,6 +62,8 @@ export interface PipelineRunResult {
   gate_results: GateResult[];
   /** True when ANY stage degraded. One unlabelled degraded stage taints the run. */
   demo_mode: boolean;
+  /** True when any stage threw. Distinct from demo_mode: a throw is a defect, not an outage. */
+  failed: boolean;
   revision_ids: string[];
 }
 
@@ -90,6 +92,7 @@ export async function runPipeline(
   const stages: StageRecord[] = [];
   const revision_ids: string[] = [];
   let anyDemo = false;
+  let anyFailed = false;
 
   /**
    * Emit a fully-formed ObservabilityEvent.
@@ -138,9 +141,38 @@ export async function runPipeline(
       continue;
     }
 
+    /**
+     * An unexpected throw is a FAILED stage, not an aborted run.
+     *
+     * Core stages are pure but not total — `fillTemplate` throws on a template naming an
+     * unfillable slot, and a future stage may throw for its own reasons. Letting that
+     * escape contradicted this module's own promise that "stage failures do not abort the
+     * run": the caller got an unhandled rejection, no result, no event, and a bundle
+     * silently truncated at however far it got. `RevisionStatus` already had a `FAILED`
+     * member that nothing ever wrote; now something does.
+     */
+    const failStage = async (err: unknown): Promise<void> => {
+      anyFailed = true;
+      const message = err instanceof Error ? err.message : String(err);
+      const revision = buildRevision({
+        run_id, stage_id: stage.id, inputHash,
+        outputText: "", status: "FAILED", provider: null, gate_results: [],
+        now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null,
+      });
+      await opts.store.append(revision);
+      revision_ids.push(revision.revision_id);
+      stages.push({ stage_id: stage.id, status: "FAILED", revision_id: revision.revision_id, output_hash: revision.output_hash });
+      emit("DEGRADE", { component: `core/stages/${stage.id}`, failure_code: "stage_threw", verdict: message.slice(0, 200) });
+    };
+
     // ── deterministic: no request, no provider, no outcome to classify ──────
     if (stage.kind === "deterministic") {
-      ctx = { ...ctx, ...(stage.run?.(ctx) ?? {}) };
+      try {
+        ctx = { ...ctx, ...(stage.run?.(ctx) ?? {}) };
+      } catch (err) {
+        await failStage(err);
+        continue;
+      }
       const revision = buildRevision({
         run_id, stage_id: stage.id, inputHash,
         outputText: summarize(stage.id, ctx), status: "SUCCEEDED", provider: null,
@@ -155,14 +187,32 @@ export async function runPipeline(
     }
 
     // ── decide (Core, pure) → invoke (here) → reduce (Core, pure) ───────────
-    const request = stage.decide!(ctx, run_id);
-    emit("STAGE_DECISION", { component: `core/stages/${stage.id}`, input_hash: inputHash });
+    let request;
+    try {
+      request = stage.decide!(ctx, run_id);
+    } catch (err) {
+      await failStage(err);
+      continue;
+    }
+    // The input hash identifies what this stage was ACTUALLY given: the system prompt plus
+    // the rendered user turn, already content-hashed into request_id by buildRequest. The
+    // previous hash covered only the run's inputs, so nine of eleven stages produced an
+    // identical input_hash across runs whose outputs differed — a provenance record
+    // contradicting itself, and useless for replay or caching.
+    const stageInputHash = sha256(`${request.system ?? ""} ${request.messages[0]?.content ?? ""}`);
+    emit("STAGE_DECISION", { component: `core/stages/${stage.id}`, input_hash: stageInputHash });
 
     // Shared with the Orchestrator. Calling `provider.generate` directly here meant an
     // eleven-stage run degraded on the first transient timeout while the single-stage path
     // recovered from the identical failure.
-    const { outcome, attempts } = await invokeWithRetry(request, {
-      provider: opts.provider,
+    // The invoke is guarded too. A ProviderTransport is *supposed* to return a typed
+    // failure rather than throw — but an adapter bug or an unexpected exception would
+    // otherwise escape here and abort the run, which is the same defect as an unguarded
+    // Core throw and just as invisible until it happens.
+    let invoked;
+    try {
+      invoked = await invokeWithRetry(request, {
+        provider: opts.provider,
       maxAttempts: opts.maxAttempts ?? 3,
       now,
       sleep: opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))),
@@ -176,15 +226,25 @@ export async function runPipeline(
           const f = e.outcome as ProviderFailure;
           emit("PROVIDER_CALL_FAILED", { component: opts.provider.provider_id, provider_id: f.provider_id, attempt: e.attempt, duration_ms: e.duration_ms, failure_code: f.reason_code });
         }
-      },
-    });
+        },
+      });
+    } catch (err) {
+      await failStage(err);
+      continue;
+    }
+    const { outcome, attempts } = invoked;
     const degraded = isFailure(outcome);
     if (degraded) anyDemo = true;
 
-    ctx = { ...ctx, ...(stage.reduce!(ctx, outcome) ?? {}) };
+    try {
+      ctx = { ...ctx, ...(stage.reduce!(ctx, outcome) ?? {}) };
+    } catch (err) {
+      await failStage(err);
+      continue;
+    }
 
     const revision = buildRevision({
-      run_id, stage_id: stage.id, inputHash,
+      run_id, stage_id: stage.id, inputHash: stageInputHash,
       outputText: summarize(stage.id, ctx),
       attempts,
       status: degraded ? "DEMO" : "SUCCEEDED",
@@ -195,6 +255,15 @@ export async function runPipeline(
     });
     await opts.store.append(revision);
     revision_ids.push(revision.revision_id);
+    if (degraded) {
+      // The orchestrator emits this and the pipeline did not, so from events alone a
+      // consumer could not tell an eleven-stage run degraded eleven times.
+      const f = outcome as ProviderFailure;
+      emit("DEGRADE", {
+        component: `core/stages/${stage.id}`,
+        provider_id: f.provider_id, failure_code: f.reason_code, attempt: f.attempt,
+      });
+    }
     stages.push({
       stage_id: stage.id,
       status: degraded ? "DEMO" : "SUCCEEDED",
@@ -214,6 +283,7 @@ export async function runPipeline(
     // the full sixteen-gate registry against the final prompt rather than an intermediate.
     gate_results: ctx.gate_results ?? [],
     demo_mode: anyDemo,
+    failed: anyFailed,
     revision_ids,
   };
 }

@@ -127,6 +127,15 @@ export interface TemplateValues {
  * is the difference between a caught wiring bug and a plausible fabricated section.
  */
 export function fillTemplate(template: string, values: TemplateValues): string {
+  const unknown = unknownSlots(template);
+  if (unknown.length > 0) {
+    throw new Error(
+      `Template names slot(s) nothing fills: ${unknown.map((s) => `{${s}}`).join(", ")}. ` +
+      `A prompt that names a slot it cannot fill invites the model to invent one. ` +
+      `Known slots: ${[...KNOWN_SLOTS].join(", ")}.`,
+    );
+  }
+
   const resolved: Record<string, string> = {
     blueprint: BLUEPRINT,
     brief: values.brief ?? "",
@@ -141,14 +150,30 @@ export function fillTemplate(template: string, values: TemplateValues): string {
     (_, key: string) => resolved[key],
   );
 
-  const left = rendered.match(UNRESOLVED_RE) ?? [];
-  if (left.length > 0) {
-    throw new Error(
-      `Template contains unresolved placeholders: ${[...new Set(left)].join(", ")}. ` +
-      `A prompt that names a slot it cannot fill invites the model to invent one.`,
-    );
-  }
   return rendered;
+}
+
+/** The slots this pipeline fills. Every one has a value or a documented default. */
+const KNOWN_SLOTS = new Set(["blueprint", "brief", "prompt", "critique", "calibration", "previous"]);
+
+/**
+ * Slots a template names that nothing here can fill.
+ *
+ * **Checked on the TEMPLATE, before substitution — never on the rendered output.**
+ *
+ * The first version scanned the rendered string, which cannot tell "our template had an
+ * unfilled slot" from "the interpolated DATA contained braces". Those are opposite things:
+ * the first is a wiring bug, the second is ordinary content. A brief mentioning
+ * `{customer_name}` — an entirely normal thing for a prompt-engineering tool to be handed —
+ * made the next stage throw and aborted the whole run with an unhandled rejection.
+ *
+ * Validating the template keeps the honest intent: a template naming a slot nobody fills is
+ * still caught, at the only moment when that question is answerable. After substitution
+ * every brace is data, and data is not ours to police.
+ */
+export function unknownSlots(template: string): string[] {
+  const named = template.match(UNRESOLVED_RE) ?? [];
+  return [...new Set(named.map((s) => s.slice(1, -1)).filter((n) => !KNOWN_SLOTS.has(n)))];
 }
 
 /**
