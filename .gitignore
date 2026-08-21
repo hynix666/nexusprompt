@@ -48,6 +48,17 @@ systempromptbuilder/
 # found beside a frozen original here. Note also that `*.zip` above does not cover the
 # `.tar.gz` files inside it.
 promptnexus-ci/
+#
+# `promptnexus-v6-benchmark/` is a specification skeleton, NOT the independent v6
+# implementation ADR-0007 wants. That ADR says a v6-equivalent "should be preferred over
+# the frozen linter" as the oracle, so this directory is exactly what someone would assume
+# had arrived — its `src/lint/prompt_lint.py` is titled "14-Gate Static Analysis Engine"
+# and is 29 lines that raise NotImplementedError. Zero gates against the frozen v5's
+# sixteen. A name broader than its mechanism, in a filename.
+#
+# Checked so nobody spends an afternoon wiring it into scripts/differential.ts. If a real
+# v6 lands later it belongs in sources/ with a manifest entry, not loose here.
+promptnexus-v6-benchmark/
 
 # Model weights. 815 MB against a 6 MB tracked repository, and git keeps blobs forever —
 # committing this once makes every future clone carry it whether or not a later commit
