@@ -40,6 +40,14 @@ promptnexus5/
 synth/
 system-prompt-builder-diff-fix/
 systempromptbuilder/
+#
+# `promptnexus-ci/` is filesZ.zip despite the name — catalog.js, PromptNexus.jsx,
+# test_app_scope.py and two nested tarballs. It is the historical toolkit archive, NOT CI
+# configuration for this repository, which still has none. Its PromptNexus.jsx is 178,520
+# bytes against the frozen 179,558 from the later files_4 drop: the fifth stale duplicate
+# found beside a frozen original here. Note also that `*.zip` above does not cover the
+# `.tar.gz` files inside it.
+promptnexus-ci/
 
 # Model weights. 815 MB against a 6 MB tracked repository, and git keeps blobs forever —
 # committing this once makes every future clone carry it whether or not a later commit
