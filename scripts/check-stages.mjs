@@ -216,6 +216,37 @@ export function checkStages(root = process.cwd()) {
   }
 
   /**
+   * Core's DEPTH_PLAN must agree with the frozen one.
+   *
+   * Core writes it with stage ids so a reader need not hold `s1..s11` in their head, and
+   * that translation is exactly where a hand-maintained list drifts. TINY and MINIMAL are
+   * literal arrays and are compared member-for-member; STANDARD and COMPREHENSIVE are
+   * derived from the registry in Core and are already covered by the completeness rule
+   * above, which requires the deepest frozen plan to reach every defined stage.
+   */
+  const corePlanFile = at(join(STAGE_DIR, "pipeline.ts"));
+  if (existsSync(corePlanFile) && Object.keys(depths).length) {
+    const coreText = readText(corePlanFile);
+    const sToId = new Map(frozenStages.map((s) => [s.s, toStageId(s.name)]));
+    for (const depth of ["TINY", "MINIMAL"]) {
+      const frozenIds = (depths[depth] ?? []).map((s) => sToId.get(s));
+      const m = coreText.match(new RegExp(`${depth}:\\s*\\[([^\\]]*)\\]`));
+      if (!m) {
+        problems.push({ kind: "core-depth-plan-missing", detail: `pipeline.ts declares no ${depth} plan` });
+        continue;
+      }
+      const coreIds = (m[1].match(/"([a-z_]+)"/g) ?? []).map((q) => q.slice(1, -1));
+      if (coreIds.join(",") !== frozenIds.join(",")) {
+        problems.push({
+          kind: "core-depth-plan-drift",
+          detail: `${depth} differs from the frozen DEPTH_PLAN.\n` +
+                  `    frozen: ${frozenIds.join(", ")}\n    core  : ${coreIds.join(", ")}`,
+        });
+      }
+    }
+  }
+
+  /**
    * System prompts must appear verbatim in the frozen component.
    *
    * check:stages compared TEMPLATE text and nothing else, and that scope was narrower than

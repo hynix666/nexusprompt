@@ -17,6 +17,23 @@ import type { GenerationRequest, ProviderFailure } from "../../../contracts/inde
 export const DEMO_MARKER = "⟦WORKFLOW DEMO — no model⟧";
 
 /**
+ * Is this text a degraded placeholder rather than a real artifact?
+ *
+ * Load-bearing once stages are chained. Assembling the pipeline surfaced a laundering
+ * hole: `harden` degrades, `prompt` becomes a labelled placeholder, and `refine` then
+ * rewrites that placeholder into a clean-looking prompt with no marker on it. The run still
+ * reported `demo_mode: true`, but the ARTIFACT no longer said so — and the artifact is what
+ * gets read, copied, and shipped.
+ *
+ * A single degraded stage is exactly where this matters: the honesty guarantee is not
+ * "the run knows it degraded", it is "output produced without a model never presents itself
+ * as though it had one". A transforming stage handed a placeholder must decline rather than
+ * produce, because a placeholder is not a prompt and there is nothing to transform.
+ */
+export const isDemoArtifact = (text: string | undefined): boolean =>
+  typeof text === "string" && text.includes(DEMO_MARKER);
+
+/**
  * The shared compiler identity, sent as the system prompt on every non-preview stage call.
  *
  * Ported verbatim. The frozen component's comment is explicit that this governs "every

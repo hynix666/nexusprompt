@@ -1,0 +1,221 @@
+/**
+ * The pipeline: eleven stages, one registry, one context.
+ *
+ * Pure. This module decides WHAT should happen in what order and how each stage's output
+ * folds into the run's state. It performs nothing — the Application walks this plan and
+ * owns every effect, exactly as ADR-0005 requires.
+ *
+ * **Why a registry rather than a switch.** The gate registry exists because seventeen
+ * surveyed prototypes hardcoded their gate lists and not one grew past its author's
+ * original set. A pipeline written as a chain of eleven `if (stage === ...)` branches has
+ * the same ceiling, and it is worse here: the eleven stages do not share an input type, so
+ * a switch would spread eleven ad-hoc argument mappings across a runner nobody wants to
+ * read. The mapping lives beside each stage instead, in one table.
+ *
+ * **Three kinds, because the stages genuinely differ.** Six generate and need
+ * `decide → invoke → reduce`. Two are deterministic and have no `decide` at all: forcing
+ * them into the split would produce a request nothing should execute. Three carry a skip
+ * rule, so "did not run" is a first-class outcome rather than an absent one.
+ */
+
+import type {
+  GenerationRequest, GenerationResult, ProviderFailure, StageId, GateResult,
+} from "../../../contracts/index.js";
+
+import * as deconstruct from "./deconstruct.js";
+import * as calibrate from "./calibrate.js";
+import * as compile from "./compile.js";
+import * as harden from "./harden.js";
+import * as critique from "./critique.js";
+import * as refine from "./refine.js";
+import * as lint from "./lint.js";
+import * as critic from "./critic.js";
+import * as preview from "./preview.js";
+import * as cost from "./cost-estimate.js";
+import * as tone from "./tone-check.js";
+import type { GateOptions } from "../gates/registry.js";
+import { isDemoArtifact } from "./stage-kit.js";
+
+/**
+ * Everything one run accumulates.
+ *
+ * Named for what produced it rather than what consumes it, matching the frozen component's
+ * own context object — `spec` from deconstruct, `calibration` from calibrate, `prompt`
+ * rewritten by compile/harden/refine, and so on.
+ */
+export interface PipelineContext {
+  brief: string;
+  stakes?: string;
+  depth?: string;
+  testMessage?: string;
+  gateOptions?: GateOptions;
+
+  spec?: string;
+  calibration?: string;
+  prompt?: string;
+  critique?: string;
+  lint?: string;
+  lintStatus?: lint.LintStatus | null;
+  gate_results?: GateResult[];
+  critic?: string;
+  criticVerdict?: critic.CriticVerdict | "SKIPPED";
+  preview?: string;
+  cost?: string;
+  tone?: string;
+  voice?: tone.VoiceLevel;
+}
+
+/** What a stage contributes back to the run. */
+export type ContextPatch = Partial<PipelineContext>;
+
+export interface PipelineStage {
+  readonly id: StageId;
+  /** `generating` needs a provider; `deterministic` is a pure function of the context. */
+  readonly kind: "generating" | "deterministic";
+  /** True when this stage does not run for this context at all. */
+  shouldSkip?(ctx: PipelineContext): boolean;
+  decide?(ctx: PipelineContext, run_id: string): GenerationRequest;
+  reduce?(ctx: PipelineContext, outcome: GenerationResult | ProviderFailure): ContextPatch;
+  /** Deterministic stages only. No request, no outcome. */
+  run?(ctx: PipelineContext): ContextPatch;
+  /** What the context gets when the stage is skipped. Absent means "nothing". */
+  reduceSkipped?(ctx: PipelineContext): ContextPatch;
+}
+
+/**
+ * The eleven, in frozen order. `check:stages` requires this to match the component's own
+ * stage array, so the list cannot drift from the artifact it was ported from.
+ */
+export const PIPELINE: readonly PipelineStage[] = Object.freeze([
+  {
+    id: "deconstruct", kind: "generating",
+    decide: (c, r) => deconstruct.decide({ brief: c.brief }, r),
+    reduce: (c, o) => ({ spec: deconstruct.reduce({ brief: c.brief }, o).spec }),
+  },
+  {
+    id: "calibrate", kind: "generating",
+    decide: (c, r) => calibrate.decide({ brief: c.brief, previous: c.spec }, r),
+    reduce: (c, o) => ({ calibration: calibrate.reduce({ brief: c.brief, previous: c.spec }, o).calibration }),
+  },
+  {
+    id: "compile", kind: "generating",
+    decide: (c, r) => compile.decide({ brief: c.brief, previous: c.spec, calibration: c.calibration }, r),
+    reduce: (c, o) => {
+      const s = compile.reduce({ brief: c.brief, previous: c.spec, calibration: c.calibration }, o);
+      // A new prompt invalidates any verdict about the old one. The frozen component clears
+      // lint and critic on draft/transform/refine for exactly this reason: a stale PASS
+      // beside a changed prompt is worse than no verdict, because it reads as current.
+      return { prompt: s.output.text, lint: undefined, lintStatus: undefined, critic: undefined, criticVerdict: undefined };
+    },
+  },
+  {
+    id: "harden", kind: "generating",
+    // Cannot harden a placeholder. See `isDemoArtifact` — a transforming stage handed a
+    // degraded artifact must decline, or it launders the marker off it.
+    shouldSkip: (c) => isDemoArtifact(c.prompt),
+    decide: (c, r) => harden.decide({ prompt: c.prompt ?? "" }, r),
+    reduce: (c, o) => ({
+      prompt: harden.reduce({ prompt: c.prompt ?? "" }, o).prompt,
+      lint: undefined, lintStatus: undefined, critic: undefined, criticVerdict: undefined,
+    }),
+    reduceSkipped: (c) => ({ prompt: c.prompt }),
+  },
+  {
+    id: "critique", kind: "generating",
+    decide: (c, r) => critique.decide({ prompt: c.prompt ?? "" }, r),
+    reduce: (c, o) => ({ critique: critique.reduce({ prompt: c.prompt ?? "" }, o).critique }),
+  },
+  {
+    id: "refine", kind: "generating",
+    // Two reasons to skip. A clean critique means there is nothing to rewrite. A degraded
+    // prompt means there is nothing real to rewrite INTO — refining a placeholder produces
+    // a clean-looking artifact from output no model made, which is the laundering the demo
+    // marker exists to prevent.
+    shouldSkip: (c) =>
+      isDemoArtifact(c.prompt) || refine.shouldSkip({ prompt: c.prompt ?? "", critique: c.critique ?? "" }),
+    decide: (c, r) => refine.decide({ prompt: c.prompt ?? "", critique: c.critique ?? "" }, r),
+    reduce: (c, o) => ({
+      prompt: refine.reduce({ prompt: c.prompt ?? "", critique: c.critique ?? "" }, o).prompt,
+      // The critique has been resolved; carrying it forward would re-apply it.
+      critique: "", lint: undefined, lintStatus: undefined, critic: undefined, criticVerdict: undefined,
+    }),
+    reduceSkipped: (c) => ({ prompt: c.prompt, critique: "" }),
+  },
+  {
+    id: "lint", kind: "deterministic",
+    run: (c) => {
+      const s = lint.run({ prompt: c.prompt, options: c.gateOptions });
+      return { lint: s.report, lintStatus: s.status, gate_results: s.gate_results };
+    },
+  },
+  {
+    id: "critic", kind: "generating",
+    shouldSkip: (c) => critic.shouldSkip({ prompt: c.prompt ?? "", stakes: c.stakes }),
+    decide: (c, r) => critic.decide({ prompt: c.prompt ?? "", lint: c.lint, stakes: c.stakes }, r),
+    reduce: (c, o) => {
+      const s = critic.reduce({ prompt: c.prompt ?? "", lint: c.lint, stakes: c.stakes }, o);
+      return { critic: s.report, criticVerdict: s.verdict };
+    },
+    reduceSkipped: () => {
+      const s = critic.reduceSkipped();
+      return { critic: s.report, criticVerdict: s.verdict };
+    },
+  },
+  {
+    id: "preview", kind: "generating",
+    decide: (c, r) => preview.decide({ prompt: c.prompt, testMessage: c.testMessage ?? "" }, r),
+    reduce: (c, o) => ({ preview: preview.reduce({ prompt: c.prompt, testMessage: c.testMessage ?? "" }, o).reply }),
+  },
+  {
+    id: "cost_estimate", kind: "deterministic",
+    run: (c) => ({ cost: cost.run({ prompt: c.prompt }).report }),
+  },
+  {
+    id: "tone_check", kind: "generating",
+    shouldSkip: (c) => tone.shouldSkip({ prompt: c.prompt ?? "", depth: c.depth }),
+    decide: (c, r) => tone.decide({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, r),
+    reduce: (c, o) => {
+      const s = tone.reduce({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, o);
+      return { tone: s.report, voice: s.voice };
+    },
+    reduceSkipped: () => {
+      const s = tone.reduceSkipped();
+      return { tone: s.report, voice: s.voice };
+    },
+  },
+]);
+
+/**
+ * Which stages run at which depth, ported from the frozen `DEPTH_PLAN`.
+ *
+ * Not every stage runs every time: TINY runs six of eleven and MINIMAL seven, so an
+ * eleven-stage run is the STANDARD/COMPREHENSIVE path rather than the only path. Written
+ * with stage ids rather than the source's `s1..s11` so a reader does not have to hold the
+ * numbering in their head; `check:stages` verifies the mapping against the source.
+ */
+export const DEPTH_PLAN: Record<string, readonly StageId[]> = Object.freeze({
+  TINY: ["deconstruct", "calibrate", "compile", "lint", "preview", "cost_estimate"],
+  MINIMAL: ["deconstruct", "calibrate", "compile", "harden", "lint", "preview", "cost_estimate"],
+  STANDARD: PIPELINE.map((s) => s.id),
+  COMPREHENSIVE: PIPELINE.map((s) => s.id),
+});
+
+/** Stakes → depth, ported from the frozen `DEPTH_OF`. */
+export const DEPTH_OF: Record<string, string> = Object.freeze({
+  LOW: "TINY", MEDIUM: "MINIMAL", HIGH: "STANDARD", "SAFETY-CRITICAL": "COMPREHENSIVE",
+});
+
+/**
+ * The stages to run, in order, for a depth.
+ *
+ * An unknown depth returns the full plan rather than an empty one. Returning nothing would
+ * make a typo look like a completed run — the same failure `lint` avoids by reporting null
+ * instead of PASS when it had no prompt.
+ */
+export function planFor(depth: string | undefined): readonly PipelineStage[] {
+  const ids = DEPTH_PLAN[depth ?? ""] ?? DEPTH_PLAN.STANDARD;
+  const wanted = new Set(ids);
+  return PIPELINE.filter((s) => wanted.has(s.id));
+}
+
+export const getStage = (id: StageId): PipelineStage | undefined => PIPELINE.find((s) => s.id === id);

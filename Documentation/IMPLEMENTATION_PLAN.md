@@ -40,8 +40,8 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
                         built          target
 contracts   ████████████████████       13 schemas — 11 validated against real values, 2 awaiting a judge and a promotion path
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
-core/stages ████████████████████       11 of 11 — no pipeline assembled yet
-application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
+core/stages ████████████████████       11 of 11, assembled — one bundle per run
+application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
 shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
@@ -143,7 +143,7 @@ Read with the limit above attached: 16 of 16 means every gate is *compared*, not
 
 **Exit gate — met.** `npm run eval:compare` runs the suite under a baseline and a deliberately worse configuration: 14/14 against 4/14, delta −0.714, p=0.00195, verdict **regressed**, with equalization derived and checked *before* the measurement. Both runs are pinned, so the regression is declared rather than sampled — what is demonstrated is the harness's ability to report one, which is the clause that matters: a harness that has never reported a regression has not been shown to detect one.
 
-### Phase 3 — The remaining ten stages
+### Phase 3 — The remaining ten stages ✅ complete
 
 **Entry condition:** Phase 2 complete. The `lint` stage needs the full gate set to mean anything.
 
@@ -175,7 +175,17 @@ Fixed by adding `system` to `GenerationRequest`, wiring it through the local-pro
 
 Two brace conventions were conflated: `{calibration}` is a slot *this pipeline* fills, `{{VARIABLE_1}}` is a slot the *compiled prompt* exposes to its own callers and must reach the model intact. The port fixes it and says so — reproducing this one faithfully would ship a stage that always throws. Unlike a gate divergence there is no oracle to declare it to, so it is recorded in `stage-kit.ts` and pinned by a test that asserts the frozen guard *would* have thrown.
 
-**Exit gate:** an eleven-stage run persists and reloads intact as one bundle; every stage's `decide` returns a `GenerationRequest` and its `reduce` accepts a classified outcome; the purity harness stays green; `npm run verify` passes.
+**Exit gate — met, 18 August 2026.** `application/src/pipeline.ts` walks the plan Core supplies in `core/src/stages/pipeline.ts`; an eleven-stage run persists one revision per stage under a single `run_id` and reloads through `store.getRun` in frozen order. Every generating stage's `decide` returns a request and its `reduce` accepts a classified outcome; the purity harness stays green; `npm run verify` passes at 402 tests.
+
+The plan is a **registry, not a switch**, for the reason the gate registry is: seventeen surveyed prototypes hardcoded their lists and none grew past its author's set. Here it is also a practical necessity — the eleven stages share no input type, so a switch would scatter eleven ad-hoc argument mappings through the runner. Core's `DEPTH_PLAN` is checked against the frozen one by `check:stages`, so the stage-id translation cannot drift.
+
+**Assembly exposed an honesty hole that no single stage could show.** When `harden` degraded, `prompt` became a labelled placeholder — and `refine` then rewrote that placeholder into a clean-looking prompt with no marker on it. The run still reported `demo_mode: true`, but the *artifact* no longer did, and the artifact is what gets read and shipped. The guarantee is not "the run knows it degraded"; it is that output produced without a model never presents itself as though it had one.
+
+Fixed with `isDemoArtifact`: a transforming stage handed a placeholder **declines**, because a placeholder is not a prompt and there is nothing to transform. `harden` and `refine` both skip on it.
+
+Probing that fix caught a second, quieter mistake. The first test looked like it covered both guards and covered neither properly — it failed `harden`, so `refine`'s guard did all the work and removing `harden`'s changed nothing. Failing `compile` instead is what hands `harden` a degraded prompt. Both guards are now individually probed: remove either and the suite fails.
+
+**`compile`'s inline gating is reconciled.** `lint` owns the run's verdict, computed with the full sixteen-gate registry against the final prompt rather than an intermediate one. `compile` still gates inline for the single-stage path the eval suite uses, and that is now a stated split rather than an unexamined leftover.
 
 ### Phase 4 — Catalog import — *mostly done*
 
