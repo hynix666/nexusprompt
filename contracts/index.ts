@@ -33,6 +33,21 @@ export interface GateResult {
 export interface GenerationRequest {
   request_id: string;
   run_id: string;
+  /**
+   * The system prompt, separate from the turns.
+   *
+   * Added 2026-08-18 because it was missing and the omission was silent. The frozen
+   * pipeline sends a shared compiler identity with EVERY non-preview stage call —
+   * anti-override, out-of-scope refusal, fact-grounding, placeholder completeness — and
+   * six ported stages were sending their stage instruction with none of it. Nothing
+   * failed: the request was well-formed, the gates still ran, and the missing half of
+   * the prompt was invisible because no contract had a place to put it.
+   *
+   * A separate field rather than a `system` role in `messages`, matching both the source's
+   * `callProvider(..., system, ...)` signature and the provider APIs, where system is a
+   * top-level parameter and not a turn.
+   */
+  system?: string;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   model_policy: { preferred_models: string[]; allow_fallback: boolean };
   generation_options?: { max_tokens?: number; effort?: string };

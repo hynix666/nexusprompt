@@ -215,6 +215,46 @@ export function checkStages(root = process.cwd()) {
     }
   }
 
+  /**
+   * System prompts must appear verbatim in the frozen component.
+   *
+   * check:stages compared TEMPLATE text and nothing else, and that scope was narrower than
+   * its name: six stages shipped sending NO system prompt at all, because the frozen
+   * pipeline attaches a shared compiler identity at the call site rather than in the
+   * template field, and `GenerationRequest` had nowhere to put one. Every template matched;
+   * half of every prompt was missing. R9 in this checker, found by porting the stages whose
+   * system prompts are not the shared one.
+   *
+   * A constant here that the frozen source does not contain is either invented or drifted.
+   */
+  for (const file of ported) {
+    const text = readText(at(join(STAGE_DIR, file)));
+    for (const m of text.matchAll(/export const (\w*SYSTEM) = `([\s\S]*?)`;/g)) {
+      if (!normalize(frozen).includes(normalize(m[2]))) {
+        problems.push({
+          kind: "system-prompt-drift",
+          detail: `${file} declares ${m[1]}, which does not appear verbatim in ${FROZEN}.\n` +
+                  `    starts: ${JSON.stringify(normalize(m[2]).slice(0, 72))}\n` +
+                  `    A system prompt is half the request. Drift here is invisible in the template.`,
+        });
+      }
+    }
+  }
+  // The shared identity lives in stage-kit.ts, which declares no STAGE_ID and so is not in
+  // `ported`. It is the one every generating stage inherits, so it is checked by name.
+  const kit = at(join(STAGE_DIR, "stage-kit.ts"));
+  if (existsSync(kit)) {
+    const shared = readText(kit).match(/export const COMPILER_SYSTEM = `([\s\S]*?)`;/);
+    if (!shared) {
+      problems.push({ kind: "shared-system-missing", detail: `stage-kit.ts declares no COMPILER_SYSTEM` });
+    } else if (!normalize(frozen).includes(normalize(shared[1]))) {
+      problems.push({
+        kind: "system-prompt-drift",
+        detail: `stage-kit.ts COMPILER_SYSTEM does not appear verbatim in ${FROZEN}`,
+      });
+    }
+  }
+
   for (const d of deviations) {
     if (!byStageId.has(d.stage)) {
       problems.push({ kind: "deviation-unknown-stage", detail: `${DEVIATIONS} names "${d.stage}", which the frozen component does not define` });

@@ -33,6 +33,7 @@ PDF/
 # a submodule pointer to a repository that is not registered anywhere. That one does not
 # merely bloat history, it produces a tree git cannot check out cleanly.
 Nexus-Prompt/
+Prompt-Nexus/
 promptnexus-v5/
 PromptNexus-6.2/
 System-Prompt-Builder-final-*/

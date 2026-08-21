@@ -94,6 +94,10 @@ export class LocalProxyProvider implements ProviderTransport {
       model: this.model,
       max_tokens: req.generation_options?.max_tokens ?? 8000,
       output_config: { effort: req.generation_options?.effort ?? "medium" },
+      // Top-level, not a turn — that is the API's shape and the source's. Omitted when the
+      // request carries none, so a preview (whose system prompt is the compiled prompt
+      // itself, supplied by the caller) does not get an empty string sent on its behalf.
+      ...(req.system ? { system: req.system } : {}),
       messages: req.messages,
     });
 

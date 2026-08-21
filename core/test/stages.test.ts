@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { fillTemplate, buildRequest, BLUEPRINT, NO_CALIBRATION, DEMO_MARKER } from "../src/stages/stage-kit.js";
+import {
+  fillTemplate, buildRequest, BLUEPRINT, NO_CALIBRATION, DEMO_MARKER, COMPILER_SYSTEM,
+} from "../src/stages/stage-kit.js";
 import * as deconstruct from "../src/stages/deconstruct.js";
 import * as calibrate from "../src/stages/calibrate.js";
 import * as compile from "../src/stages/compile.js";
@@ -9,6 +11,9 @@ import * as critique from "../src/stages/critique.js";
 import * as refine from "../src/stages/refine.js";
 import * as lint from "../src/stages/lint.js";
 import * as cost from "../src/stages/cost-estimate.js";
+import * as critic from "../src/stages/critic.js";
+import * as preview from "../src/stages/preview.js";
+import * as toneCheck from "../src/stages/tone-check.js";
 import type { ProviderFailure, GenerationResult } from "../../contracts/index.js";
 
 /**
@@ -116,6 +121,154 @@ describe("calibrate", () => {
     expect(state.demo_mode).toBe(true);
     expect(state.calibration).toContain(DEMO_MARKER);
     expect(state.calibration).not.toMatch(/HIGH-TEMPERATURE|LOW-TEMPERATURE/);
+  });
+});
+
+describe("the system prompt, which six stages shipped without", () => {
+  /**
+   * The defect this suite exists to prevent recurring. The frozen pipeline attaches a
+   * shared compiler identity to EVERY non-preview call, at the call site rather than in the
+   * template field — and `GenerationRequest` had no `system` at all, so six ported stages
+   * sent their stage instruction and nothing else. Every template matched the source.
+   * Half of every prompt was missing, and no check could see it.
+   */
+  const generating: Array<[string, () => { system?: string; generation_options?: { max_tokens?: number } }]> = [
+    ["deconstruct", () => deconstruct.decide({ brief: "b" }, "r")],
+    ["calibrate", () => calibrate.decide({ brief: "b" }, "r")],
+    ["compile", () => compile.decide({ brief: "b" }, "r")],
+    ["harden", () => harden.decide({ prompt: "p" }, "r")],
+    ["critique", () => critique.decide({ prompt: "p" }, "r")],
+    ["refine", () => refine.decide({ prompt: "p", critique: "c" }, "r")],
+  ];
+
+  it.each(generating)("%s sends the shared compiler identity", (_name, build) => {
+    expect(build().system).toBe(COMPILER_SYSTEM);
+  });
+
+  it.each(generating)("%s uses the source's 2400-token ceiling, not 8000", (_name, build) => {
+    expect(build().generation_options?.max_tokens).toBe(2400);
+  });
+
+  it("the shared identity carries the four rules that are not decoration", () => {
+    // FACT-GROUNDING is the one with a visible consequence: it forbids exactly the language
+    // CLAIM_DISCIPLINE flags, so its absence makes the gate fire on the pipeline's own output.
+    for (const rule of ["ANTI-OVERRIDE", "OUT OF SCOPE", "FACT-GROUNDING", "PLACEHOLDER COMPLETENESS"]) {
+      expect(COMPILER_SYSTEM).toContain(rule);
+    }
+  });
+
+  it("the request id covers the system prompt, not just the user turn", () => {
+    // Two materially different requests must not share an id — the whole point of deriving
+    // it from content is that it moves when the request does.
+    const a = buildRequest("r", "s", "prompt", { system: "one" });
+    const b = buildRequest("r", "s", "prompt", { system: "two" });
+    expect(a.request_id).not.toBe(b.request_id);
+  });
+
+  it("an empty system prompt is omitted, not sent as an empty string", () => {
+    expect(buildRequest("r", "s", "p", { system: "" }).system).toBeUndefined();
+  });
+});
+
+describe("critic, preview, tone_check — the three that are not the shared identity", () => {
+  it("critic and tone_check bring their own system prompts", () => {
+    expect(critic.decide({ prompt: "p", stakes: "HIGH" }, "r").system).toBe(critic.CRITIC_SYSTEM);
+    expect(toneCheck.decide({ prompt: "p", depth: "STANDARD" }, "r").system).toBe(toneCheck.TONE_SYSTEM);
+    expect(critic.CRITIC_SYSTEM).not.toBe(COMPILER_SYSTEM);
+  });
+
+  it("preview runs the compiled prompt AS the system message", () => {
+    // The only stage whose system prompt is data. Sending COMPILER_SYSTEM here would test
+    // the compiler instead of the artifact it produced.
+    const req = preview.decide({ prompt: "THE COMPILED PROMPT", testMessage: "hello" }, "r");
+    expect(req.system).toBe("THE COMPILED PROMPT");
+    expect(req.messages[0].content).toBe("hello");
+    expect(req.system).not.toBe(COMPILER_SYSTEM);
+  });
+
+  it("preview falls back to a bare assistant and records that it did", () => {
+    const req = preview.decide({ testMessage: "hi" }, "r");
+    expect(req.system).toBe(preview.NO_PROMPT_SYSTEM);
+    expect(preview.reduce({ testMessage: "hi" }, ok("reply")).used_fallback).toBe(true);
+    expect(preview.reduce({ prompt: "p", testMessage: "hi" }, ok("reply")).used_fallback).toBe(false);
+  });
+
+  it("each uses its own token ceiling", () => {
+    expect(critic.decide({ prompt: "p", stakes: "HIGH" }, "r").generation_options?.max_tokens).toBe(800);
+    expect(preview.decide({ testMessage: "x" }, "r").generation_options?.max_tokens).toBe(1400);
+    expect(toneCheck.decide({ prompt: "p", depth: "STANDARD" }, "r").generation_options?.max_tokens).toBe(900);
+  });
+});
+
+describe("critic", () => {
+  it("runs only at HIGH and SAFETY-CRITICAL stakes", () => {
+    expect(critic.shouldSkip({ prompt: "p", stakes: "LOW" })).toBe(true);
+    expect(critic.shouldSkip({ prompt: "p", stakes: "MEDIUM" })).toBe(true);
+    expect(critic.shouldSkip({ prompt: "p", stakes: "HIGH" })).toBe(false);
+    expect(critic.shouldSkip({ prompt: "p", stakes: "SAFETY-CRITICAL" })).toBe(false);
+    expect(critic.shouldSkip({ prompt: "p" })).toBe(true); // unstated is not HIGH
+  });
+
+  it("states the lint report is absent rather than hiding it", () => {
+    expect(critic.buildPrompt({ prompt: "p" })).toContain("(not run)");
+    expect(critic.buildPrompt({ prompt: "p", lint: "[PASS] token_estimate=9" })).toContain("[PASS]");
+  });
+
+  it("an unparseable reply is DEGRADED, never PASS", () => {
+    /**
+     * The asymmetry that matters. A critic reply nobody can parse is a review that did not
+     * happen; reading it as a pass would let a malformed response certify a prompt.
+     */
+    expect(critic.parseVerdict("VERDICT: PASS\n")).toBe("PASS");
+    expect(critic.parseVerdict("VERDICT: GATE_FAIL\n1. scope")).toBe("GATE_FAIL");
+    expect(critic.parseVerdict("I think it looks fine!")).toBe("DEGRADED");
+    expect(critic.parseVerdict("")).toBe("DEGRADED");
+  });
+
+  it("a degraded critic certifies nothing", () => {
+    const state = critic.reduce({ prompt: "p", stakes: "HIGH" }, failure);
+    expect(state.demo_mode).toBe(true);
+    expect(state.verdict).toBe("DEGRADED");
+    expect(state.verdict).not.toBe("PASS");
+  });
+
+  it("the skip path is SKIPPED, distinct from both PASS and a failure", () => {
+    const s = critic.reduceSkipped();
+    expect(s.verdict).toBe("SKIPPED");
+    expect(s.demo_mode).toBe(false); // nothing was invoked, so nothing degraded
+    expect(s.report).toContain("[ASSUMPTION:self_verified_no_critic]");
+  });
+});
+
+describe("tone_check", () => {
+  it("runs at STANDARD depth and above only", () => {
+    expect(toneCheck.shouldSkip({ prompt: "p", depth: "TINY" })).toBe(true);
+    expect(toneCheck.shouldSkip({ prompt: "p", depth: "MINIMAL" })).toBe(true);
+    expect(toneCheck.shouldSkip({ prompt: "p", depth: "STANDARD" })).toBe(false);
+    expect(toneCheck.shouldSkip({ prompt: "p", depth: "COMPREHENSIVE" })).toBe(false);
+  });
+
+  it("is advisory — no level of its vocabulary blocks a compile", () => {
+    // Its own system prompt says "never claim a finding here blocks compilation", and the
+    // vocabulary has no failing value. A voice audit that could block a release would make
+    // a stylistic opinion a gate.
+    expect(toneCheck.TONE_SYSTEM).toContain("advisory, not a gate");
+    for (const level of ["CONSISTENT", "MINOR_DRIFT", "INCONSISTENT"]) {
+      expect(level).not.toMatch(/FAIL/);
+    }
+  });
+
+  it("an unparseable reply is MINOR_DRIFT — neither clean nor a fabricated worst case", () => {
+    expect(toneCheck.parseVoice("VOICE: CONSISTENT")).toBe("CONSISTENT");
+    expect(toneCheck.parseVoice("VOICE: INCONSISTENT\n1. drift")).toBe("INCONSISTENT");
+    expect(toneCheck.parseVoice("looks good to me")).toBe("MINOR_DRIFT");
+  });
+
+  it("threads calibration, falling back to the shared default", () => {
+    const withCal = toneCheck.decide({ prompt: "p", calibration: "LOW", depth: "STANDARD" }, "r");
+    expect(withCal.messages[0].content).toContain("LOW");
+    expect(toneCheck.decide({ prompt: "p", depth: "STANDARD" }, "r").messages[0].content)
+      .toContain(NO_CALIBRATION);
   });
 });
 

@@ -13,7 +13,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 ```json plan-status
 {
   "gates": { "ported": 16, "source_total": 16 },
-  "stages": { "built": 8, "target": 11 },
+  "stages": { "built": 11, "target": 11 },
   "contracts": { "schemas": 13 },
   "adapters": ["provider-local-proxy", "storage-local"],
   "shells": ["cli"],
@@ -40,7 +40,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
                         built          target
 contracts   ████████████████████       13 schemas — 11 validated against real values, 2 awaiting a judge and a promotion path
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
-core/stages ███████████████▒▒▒▒▒       8 of 11 — critic, preview, tone_check remain
+core/stages ████████████████████       11 of 11 — no pipeline assembled yet
 application ████████████████▒▒▒▒       decide/invoke/reduce + lint; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
 shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
@@ -161,7 +161,15 @@ This matters more here than it did for gates: **stages have no differential orac
 
 Each stage is a `decide`/`reduce` pair with no callback, per ADR-0005. `cost_estimate` and `tone_check` are the two the inherited `docs/` tree never mentions; they have no prior documentation to port from and need their contracts written fresh. Note also that **not every stage runs at every depth** — `DEPTH_PLAN` runs six of eleven at `TINY` and seven at `MINIMAL` — so an eleven-stage run is the `STANDARD`/`COMPREHENSIVE` path, not the only path.
 
-**Built so far — 6 of 11:** `deconstruct` (s1), `calibrate` (s2), `compile` (s3), `harden` (s4), `critique` (s5), `refine` (s6), plus `stage-kit.ts` for what all eleven need identically. Every template is verbatim. The five remaining are the ones whose frozen templates are EMPTY — `lint` and `cost_estimate` are deterministic and make no provider call, `critic` is a fixed temperature-0 verification call, `preview` uses the finished prompt as a system message, and `tone_check` has a real template but runs only at STANDARD depth and above. Both new templates are verbatim, and `compile`'s deviation entry is **gone**: `deconstruct` and `calibrate` now supply `{previous}` and `{calibration}`, `{blueprint}` was always a constant, so frozen s3 fits. Deleting it was not optional — once the template matched, the stale rule failed the build until the entry went, which is the ratchet running in the direction it was built for.
+**All eleven stages ported, 18 August 2026.** Every template verbatim, zero declared deviations. `compile`'s deviation entry is **gone**: `deconstruct` and `calibrate` supply `{previous}` and `{calibration}`, `{blueprint}` was always a constant, so frozen s3 fits. Deleting it was not optional — once the template matched, the stale rule failed the build until the entry went, which is the ratchet running the direction it was built for.
+
+Three shapes, not one. Six stages generate and share `COMPILER_SYSTEM`. Two are **deterministic and have no `decide` at all** — `lint` and `cost_estimate` perform no effect, and ADR-0005's split exists to keep Core from performing one; forcing it here would return a request nothing should execute. Three bring their own identity: `critic` and `tone_check` have their own system prompts, and `preview` is the only stage whose system prompt is *data* — it runs the finished prompt AS the system message, because sending the compiler identity there would test the compiler instead of its output.
+
+**The sixth instance of R9, and this one was mine.** The frozen pipeline attaches a shared compiler identity to every non-preview call — anti-override, out-of-scope refusal, fact-grounding, placeholder completeness — at the *call site*, not in the template field. `GenerationRequest` had no `system` at all, so the first six ported stages sent their stage instruction and nothing else. Every template matched the source; half of every prompt was missing; nothing failed. `check:stages` could not see it because it compared template text — a checker whose name says "stages" and whose scope was "stage templates".
+
+The consequence was not cosmetic. `FACT-GROUNDING` forbids exactly the language `CLAIM_DISCIPLINE` flags, so its absence makes the pipeline's own gate fire on the pipeline's own output. The ports were also using an 8000-token ceiling against the source's 2400 / 800 / 1400 / 900 per stage — a ceiling is a cost control and a truncation risk at once.
+
+Fixed by adding `system` to `GenerationRequest`, wiring it through the local-proxy adapter as a top-level field (which is the provider API's shape and the source's), and extending `check:stages` to require every declared `*_SYSTEM` constant to appear verbatim in the frozen component. Tests assert the runtime half the checker still cannot see: that each generating stage actually *sends* the identity, and that its request id covers the system prompt so two materially different requests cannot share one.
 
 **A latent defect in the frozen component, found by porting its own invariant.** The source's `fill()` refuses to send a template with an unresolved `{slot}`, using `/\{[a-zA-Z][^}]*\}/`. That pattern matches `{VARIABLE_1}` *inside* `{{VARIABLE_1}}` — and `BLUEPRINT` is full of doubled braces, so interpolating the blueprint into s3 makes the guard throw. **The frozen compile stage cannot render.** Verified by running the source's exact `fill()` against its own s3 and blueprint: `{VARIABLE_1}, {VARIABLE_2}` unresolved, every time.
 
