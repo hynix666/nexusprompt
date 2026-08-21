@@ -73,13 +73,6 @@ class ScriptedProvider implements ProviderTransport {
   }
 }
 
-/** Every event type the contract allows, so a test cannot invent one. */
-const EVENT_TYPES = [
-  "PIPELINE_COMMAND_RECEIVED", "STAGE_DECISION", "PROVIDER_CALL_STARTED",
-  "PROVIDER_CALL_SUCCEEDED", "PROVIDER_CALL_FAILED", "DEGRADE",
-  "REVISION_PERSISTED", "HEALTH_CHECK", "STAGE_SKIPPED",
-];
-
 /** Fails the first N calls, then succeeds. For exercising retry rather than degradation. */
 class FlakyProvider implements ProviderTransport {
   readonly provider_id = "flaky";
@@ -206,14 +199,42 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
 
   it("a clean critique skips refine, and the skip is recorded not absent", async () => {
     const provider = new ScriptedProvider(new Set(), PASS_SENTINEL);
+    const store = new BundleStore();
     const result = await runPipeline(
       { ...command(), context: { depth: "STANDARD", stakes: "HIGH", testMessage: "hi" } },
-      opts(provider, new BundleStore()),
+      opts(provider, store),
     );
     const refine = result.stages.find((s) => s.stage_id === "refine")!;
     expect(refine.status).toBe("SKIPPED");
-    expect(refine.revision_id).toBeNull(); // nothing ran, so nothing was persisted
     expect(result.stages).toHaveLength(11); // still reported, still in order
+
+    /**
+     * The skip is PERSISTED, not merely evented. This test previously asserted
+     * `revision_id` was null — encoding the defect as the expectation. Events are not
+     * persisted; revisions are, so a bundle with no skip entry could not tell
+     * "deliberately skipped" from "never reached", which is the distinction the
+     * STAGE_SKIPPED event type was introduced for.
+     */
+    expect(refine.revision_id).not.toBeNull();
+    const entry = (await store.getRun("run-1")).find((r) => r.stage_id === "refine")!;
+    expect(entry.status).toBe("SKIPPED");
+    expect(entry.provider_used).toBeNull(); // nothing was invoked
+  });
+
+  it("the bundle records every stage of a short run, including why it was short", async () => {
+    // A TINY run and a degraded run are both short. Without persisted skips a reader cannot
+    // tell either from a run that was truncated mid-flight.
+    const store = new BundleStore();
+    const result = await runPipeline(
+      { ...command(), context: { depth: "STANDARD", stakes: "LOW", testMessage: "hi" } },
+      opts(new ScriptedProvider(), store),
+    );
+    const reloaded = await store.getRun("run-1");
+
+    // Every stage in the plan has an entry, skipped ones included.
+    expect(reloaded.map((r) => r.stage_id)).toEqual([...STAGE_IDS]);
+    expect(reloaded).toHaveLength(result.stages.length);
+    expect(reloaded.find((r) => r.stage_id === "critic")!.status).toBe("SKIPPED");
   });
 
   it("TINY runs six of eleven — an eleven-stage run is the STANDARD path, not the only one", async () => {
@@ -378,7 +399,8 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
     // current. compile, harden and refine each clear lint and critic.
     for (const id of ["compile", "harden", "refine"]) {
       const stage = PIPELINE.find((s) => s.id === id)!;
-      const patch = stage.reduce!(
+      if (stage.kind !== "generating") throw new Error(id + " should be a generating stage");
+      const patch = stage.reduce(
         { brief: "b", prompt: "old", critique: "c", lint: "[PASS]", critic: "VERDICT: PASS" },
         { request_id: "r", content: "new prompt", provider_id: "p", model_id: "m", finish_reason: "end_turn" },
       );
@@ -411,14 +433,14 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
     );
 
     expect(events.length).toBeGreaterThan(10);
-    const REQUIRED = ["event_id", "event_type", "run_id", "timestamp", "layer", "component", "schema_version"] as const;
     for (const e of events) {
-      for (const k of REQUIRED) expect(e[k], `${e.event_type} missing ${k}`).toBeDefined();
-      expect(EVENT_TYPES).toContain(e.event_type);
       expect(e.layer).toBe("application");
-      expect(e).not.toHaveProperty("type"); // the field that was wrong
+      expect(e).not.toHaveProperty("type"); // the field name that was wrong
     }
-    // The skip is reported, and its type is one the contract knows about.
+    // The skip is reported at all — that it is a VALID event type is checked against the
+    // schema itself in test/contract-conformance.test.ts, which now drives runPipeline.
+    // A hand-copied required-field list here would be a second drift surface against the
+    // same contract, which is what this test had before.
     expect(events.some((e) => e.event_type === "STAGE_SKIPPED")).toBe(true);
   });
 

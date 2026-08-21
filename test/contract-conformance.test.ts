@@ -240,6 +240,61 @@ describe("observability-event", () => {
     }
   });
 
+  it("validates every event the PIPELINE emitted", async () => {
+    /**
+     * This suite validated events — but only the Orchestrator's, so the pipeline runner's
+     * were checked by nothing. It emitted them through a cast that hid a wrong field name,
+     * five missing required fields, and an event type absent from the enum.
+     *
+     * The pipeline is driven here, against the same Ajv validator, so the gap closes at the
+     * source rather than in a hand-copied field list in the application suite. That list is
+     * a second drift surface against this schema; this is the schema itself.
+     */
+    const { runPipeline } = await import("../application/src/pipeline.js");
+    const emitted: ObservabilityEvent[] = [];
+    let t = 0;
+
+    await runPipeline(
+      {
+        command_id: "cmd", run_id: "conformance-run", stage_id: "deconstruct",
+        input: { brief: "A support bot." },
+        context: { depth: "STANDARD", stakes: "LOW", testMessage: "hi" },
+      },
+      {
+        // Always fails, so the degraded, skipped and retry paths all emit too — a run that
+        // only succeeds exercises four of the nine event types.
+        provider: {
+          provider_id: "conformance",
+          async generate(req) {
+            return {
+              request_id: req.request_id, category: "UNAVAILABLE" as const, retriable: false,
+              reason_code: "conformance", safe_message: "no provider in this suite",
+              retry_after_ms: null, attempt: 1, provider_id: "conformance",
+            };
+          },
+          async healthCheck() {
+            return { ok: false, checked_at: "1970-01-01T00:00:00.000Z", latency_ms: 0,
+                     degradation_state: "UNAVAILABLE" as const, failing_dependency: null };
+          },
+        },
+        store: { async append() {}, async getRun() { return []; }, async listRecent() { return []; }, async markStale() {} },
+        sink: { emit: (e) => { emitted.push(e); } },
+        now: () => new Date(1_760_000_000_000 + t++ * 10),
+        sleep: async () => {},
+        coreBuildHash: "conformance",
+      },
+    );
+
+    expect(emitted.length).toBeGreaterThan(10);
+    for (const e of emitted) {
+      expect(report(validators["observability-event"], e), e.event_type).toBe(true);
+    }
+    // The types the pipeline adds beyond the orchestrator's, each actually reached.
+    for (const type of ["STAGE_SKIPPED", "DEGRADE", "STAGE_DECISION", "REVISION_PERSISTED"]) {
+      expect(emitted.some((e) => e.event_type === type), type).toBe(true);
+    }
+  });
+
   it("rejects an unknown event type", () => {
     expect(validators["observability-event"]({ ...events[0], event_type: "SOMETHING_ELSE" })).toBe(false);
   });

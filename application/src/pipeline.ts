@@ -15,22 +15,14 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import {
-  planFor, type PipelineContext, type PipelineStage,
+  planForContext, type PipelineContext, type PipelineStage,
 } from "../../core/src/stages/pipeline.js";
-import { isFailure } from "../../contracts/index.js";
+import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { invokeWithRetry } from "./invoke.js";
 import type {
   EventSink, ExecutionProvenance, GenerationResult, PipelineCommand, ProviderFailure,
   ProviderTransport, RevisionEntry, RevisionStore, StageId, GateResult, ObservabilityEvent, EventType,
 } from "../../contracts/index.js";
-
-const CONTRACT_VERSIONS = {
-  "gate-result": "1.3.0",
-  "provider-failure": "1.0.0",
-  "pipeline-outcome": "1.0.0",
-  "revision-entry": "1.1.0",
-  "observability-event": "1.1.0",
-};
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
@@ -124,19 +116,34 @@ export async function runPipeline(
       model_id: null,
       failure_code: null,
       verdict: null,
-      schema_version: "1.1.0",
+      schema_version: CONTRACT_VERSIONS["observability-event"],
       ...detail,
     });
 
   emit("PIPELINE_COMMAND_RECEIVED", { component: "application/pipeline" });
 
-  for (const stage of planFor(ctx.depth)) {
+  for (const stage of planForContext(ctx)) {
     const inputHash = sha256(JSON.stringify({ id: stage.id, ctx: redactForHash(ctx) }));
 
-    // ── skip: a decision, recorded, not an absence ──────────────────────────
+    /**
+     * A skip is persisted, not merely evented.
+     *
+     * It used to push a `StageRecord` and emit `STAGE_SKIPPED` and store nothing — so a
+     * reloaded bundle could not tell "deliberately skipped" from "never reached", which is
+     * the exact distinction the `STAGE_SKIPPED` event type was added for. Events are not
+     * persisted; revisions are. A run with a clean critique, LOW stakes, or any degradation
+     * produced a short bundle with no record of why it was short.
+     */
     if (stage.shouldSkip?.(ctx)) {
       ctx = { ...ctx, ...(stage.reduceSkipped?.(ctx) ?? {}) };
-      stages.push({ stage_id: stage.id, status: "SKIPPED", revision_id: null, output_hash: null });
+      const revision = buildRevision({
+        run_id, stage_id: stage.id, inputHash,
+        outputText: "", status: "SKIPPED", provider: null, gate_results: [],
+        now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null,
+      });
+      await opts.store.append(revision);
+      revision_ids.push(revision.revision_id);
+      stages.push({ stage_id: stage.id, status: "SKIPPED", revision_id: revision.revision_id, output_hash: null });
       emit("STAGE_SKIPPED", { component: `core/stages/${stage.id}`, input_hash: inputHash });
       continue;
     }
@@ -168,7 +175,7 @@ export async function runPipeline(
     // ── deterministic: no request, no provider, no outcome to classify ──────
     if (stage.kind === "deterministic") {
       try {
-        ctx = { ...ctx, ...(stage.run?.(ctx) ?? {}) };
+        ctx = { ...ctx, ...stage.run(ctx) };
       } catch (err) {
         await failStage(err);
         continue;
@@ -189,7 +196,7 @@ export async function runPipeline(
     // ── decide (Core, pure) → invoke (here) → reduce (Core, pure) ───────────
     let request;
     try {
-      request = stage.decide!(ctx, run_id);
+      request = stage.decide(ctx, run_id);
     } catch (err) {
       await failStage(err);
       continue;
@@ -237,7 +244,7 @@ export async function runPipeline(
     if (degraded) anyDemo = true;
 
     try {
-      ctx = { ...ctx, ...(stage.reduce!(ctx, outcome) ?? {}) };
+      ctx = { ...ctx, ...stage.reduce(ctx, outcome) };
     } catch (err) {
       await failStage(err);
       continue;

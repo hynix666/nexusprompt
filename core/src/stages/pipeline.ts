@@ -68,19 +68,33 @@ export interface PipelineContext {
 /** What a stage contributes back to the run. */
 export type ContextPatch = Partial<PipelineContext>;
 
-export interface PipelineStage {
+interface StageCommon {
   readonly id: StageId;
-  /** `generating` needs a provider; `deterministic` is a pure function of the context. */
-  readonly kind: "generating" | "deterministic";
   /** True when this stage does not run for this context at all. */
   shouldSkip?(ctx: PipelineContext): boolean;
-  decide?(ctx: PipelineContext, run_id: string): GenerationRequest;
-  reduce?(ctx: PipelineContext, outcome: GenerationResult | ProviderFailure): ContextPatch;
-  /** Deterministic stages only. No request, no outcome. */
-  run?(ctx: PipelineContext): ContextPatch;
   /** What the context gets when the stage is skipped. Absent means "nothing". */
   reduceSkipped?(ctx: PipelineContext): ContextPatch;
 }
+
+/**
+ * A discriminated union, not one shape with optional members.
+ *
+ * With a single interface, `decide` and `reduce` were optional and the runner reached them
+ * through `stage.decide!(...)` — so a registry entry declaring `kind: "generating"` without
+ * a `decide` was a runtime TypeError waiting for a twelfth stage. The union makes that
+ * entry fail to compile instead, and both non-null assertions disappear from the runner.
+ */
+export type PipelineStage =
+  | (StageCommon & {
+      readonly kind: "generating";
+      decide(ctx: PipelineContext, run_id: string): GenerationRequest;
+      reduce(ctx: PipelineContext, outcome: GenerationResult | ProviderFailure): ContextPatch;
+    })
+  | (StageCommon & {
+      readonly kind: "deterministic";
+      /** No request, no outcome — a pure function of the context. */
+      run(ctx: PipelineContext): ContextPatch;
+    });
 
 /**
  * The eleven, in frozen order. `check:stages` requires this to match the component's own
@@ -224,4 +238,17 @@ export function planFor(depth: string | undefined): readonly PipelineStage[] {
   return PIPELINE.filter((s) => wanted.has(s.id));
 }
 
-export const getStage = (id: StageId): PipelineStage | undefined => PIPELINE.find((s) => s.id === id);
+/**
+ * The depth a run should use: explicit if given, otherwise derived from stakes.
+ *
+ * `DEPTH_OF` was ported and then never called, so `stakes: "LOW"` with no depth ran all
+ * eleven stages instead of TINY's six — the frozen component derives one from the other and
+ * this did not. Dead constants are worse than absent ones: this one looked like the binding
+ * existed.
+ */
+export const resolveDepth = (ctx: Pick<PipelineContext, "depth" | "stakes">): string | undefined =>
+  ctx.depth ?? DEPTH_OF[ctx.stakes ?? ""];
+
+/** The stages to run for a whole context, resolving depth from stakes when it is unset. */
+export const planForContext = (ctx: Pick<PipelineContext, "depth" | "stakes">): readonly PipelineStage[] =>
+  planFor(resolveDepth(ctx));

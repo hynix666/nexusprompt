@@ -22,7 +22,7 @@ import type {
   RevisionEntry,
   RevisionStore,
 } from "../../contracts/index.js";
-import { isFailure } from "../../contracts/index.js";
+import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { invokeWithRetry as sharedInvoke } from "./invoke.js";
 import { decide, reduce, STAGE_ID } from "../../core/src/stages/compile.js";
 
@@ -37,14 +37,6 @@ export interface OrchestratorOptions {
   sleep?: (ms: number) => Promise<void>;
   coreBuildHash?: string;
 }
-
-const CONTRACT_VERSIONS = {
-  "gate-result": "1.3.0",
-  "provider-failure": "1.0.0",
-  "pipeline-outcome": "1.0.0",
-  "revision-entry": "1.1.0",
-  "observability-event": "1.1.0",
-};
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
@@ -167,7 +159,7 @@ export class Orchestrator {
             attempt: e.attempt,
           });
         } else if (e.phase === "succeeded") {
-          const r = e.outcome as GenerationResult;
+          const r = e.outcome;
           this.emit(run_id, "PROVIDER_CALL_SUCCEEDED", parent, {
             component: this.provider.provider_id,
             provider_id: r.provider_id,
@@ -176,7 +168,7 @@ export class Orchestrator {
             duration_ms: e.duration_ms,
           });
         } else {
-          const f = e.outcome as ProviderFailure;
+          const f = e.outcome;
           this.emit(run_id, "PROVIDER_CALL_FAILED", parent, {
             component: this.provider.provider_id,
             provider_id: f.provider_id,

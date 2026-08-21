@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/revision-entry/1.1.0",
+  "$id": "https://promptnexus.dev/contracts/revision-entry/1.2.0",
   "title": "RevisionEntry",
   "description": "One stage execution. freshness and status are independent: a revision can be SUCCEEDED and STALE at once.",
   "type": "object",
@@ -17,7 +17,10 @@
     "output_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "gate_results": { "type": "array" },
     "freshness": { "enum": ["FRESH", "STALE"] },
-    "status": { "enum": ["SUCCEEDED", "DEMO", "FAILED", "CANCELLED"] },
+    "status": {
+      "description": "SKIPPED means the stage was deliberately not run — a depth plan omitted it, a stakes tier did not reach it, or its input was a degraded placeholder. Distinct from CANCELLED (stopped) and from absence (never reached): without it, a reloaded bundle cannot tell a skip from a truncated run.",
+      "enum": ["SUCCEEDED", "DEMO", "FAILED", "CANCELLED", "SKIPPED"]
+    },
     "provider_used": { "type": ["string", "null"] },
     "execution_provenance": { "type": "object" },
     "retention_scope": { "enum": ["LOCAL_BUNDLE", "DB", "EXPORT"] }

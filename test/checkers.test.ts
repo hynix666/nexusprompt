@@ -9,6 +9,7 @@ import { verifySources } from "../scripts/verify-sources.mjs";
 import { checkCitations } from "../scripts/check-citations.mjs";
 import { checkXsd, buildXml, validateAgainstXsd } from "../scripts/check-xsd.mjs";
 import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
+import { checkStages } from "../scripts/check-stages.mjs";
 
 /**
  * Must-fire cases for the three checker scripts.
@@ -672,5 +673,112 @@ describe("check-citations known-defects allowlist", () => {
       expect(d.fix_at).toBeTruthy();
       expect(d.found).toBeTruthy();
     }
+  });
+});
+
+/* ── check-stages ─────────────────────────────────────────────────────────── */
+
+describe("check-stages", () => {
+  /**
+   * The only checker in `verify` without a test here. It was mutation-proved by hand when
+   * written — a hand proof that nothing re-runs is a claim, not a check, which is the
+   * distinction this whole suite exists on.
+   *
+   * The fixture is a miniature frozen component: two stages, a DEPTH_PLAN, a matching
+   * STAGE_IDS and one ported stage module.
+   */
+  const frozenComponent = (stages: Array<[string, string, string]>, depthPlan: string) => `
+const DEPTH_PLAN = {
+${depthPlan}
+};
+const DEFAULT_STAGES = [
+${stages.map(([s, name, tpl]) => `  {
+    id: "${s}", name: "${name}", role: "x", on: true,
+    template:
+\`${tpl}\`,
+  },`).join("\n")}
+];
+const COMPILER_SYSTEM = \`shared identity\`;
+`;
+
+  const makeStageRepo = (over: {
+    component?: string;
+    stageIds?: string[];
+    portedTemplate?: string;
+    deviations?: unknown[];
+  } = {}) => {
+    const root = mkdtempSync(join(tmpdir(), "stages-"));
+    const stages: Array<[string, string, string]> = [["s1", "Deconstruct", "T-ONE"], ["s2", "Calibrate", "T-TWO"]];
+    write(root, "sources/pipeline/SystemPromptBuilderPipeline.tsx",
+      over.component ?? frozenComponent(stages, `  TINY:     ["s1"],\n  MINIMAL:  ["s1"],\n  STANDARD: ["s1", "s2"],`));
+    const ids = over.stageIds ?? ["deconstruct", "calibrate"];
+    write(root, "contracts/index.ts",
+      `export const STAGE_IDS = [\n${ids.map((i) => `  "${i}",`).join("\n")}\n] as const;\n`);
+    write(root, "core/src/stages/deconstruct.ts",
+      `export const STAGE_ID = "deconstruct";\nconst TEMPLATE = \`${over.portedTemplate ?? "T-ONE"}\`;\n`);
+    write(root, "core/src/stages/stage-kit.ts", "export const COMPILER_SYSTEM = `shared identity`;\n");
+    write(root, "core/src/stages/pipeline.ts",
+      `export const DEPTH_PLAN = {\n  TINY: ["deconstruct"],\n  MINIMAL: ["deconstruct"],\n};\n`);
+    write(root, "scripts/stage-template-deviations.json",
+      JSON.stringify({ deviations: over.deviations ?? [] }));
+    return root;
+  };
+
+  const kinds = (r: { problems: Array<{ kind: string }> }) => r.problems.map((p) => p.kind);
+
+  it("passes a tree whose STAGE_IDS, depth plan and templates all match", () => {
+    const r = checkStages(makeStageRepo());
+    expect(r.problems).toEqual([]);
+    expect(r.ok).toBe(true);
+    // The fatal path returns a narrower shape, so `stages` is only present on a real result
+    // — narrowed rather than cast, since a cast here is exactly what this repo keeps finding
+    // behind its worst defects.
+    expect("stages" in r && r.stages).toBe(2);
+  });
+
+  it("catches STAGE_IDS drifting from the frozen stage list", () => {
+    // The nine-stage trap: a hand-maintained list losing a stage the component defines.
+    expect(kinds(checkStages(makeStageRepo({ stageIds: ["deconstruct"] })))).toContain("stage-list-drift");
+    // Order matters too — the component defines a sequence, not a set.
+    expect(kinds(checkStages(makeStageRepo({ stageIds: ["calibrate", "deconstruct"] })))).toContain("stage-list-drift");
+  });
+
+  it("catches a ported template that does not match its frozen source", () => {
+    expect(kinds(checkStages(makeStageRepo({ portedTemplate: "SOMETHING ELSE" })))).toContain("template-drift");
+  });
+
+  it("requires a deviation to state a reason and pin the ported template", () => {
+    const withDrift = { portedTemplate: "SOMETHING ELSE" };
+    expect(kinds(checkStages(makeStageRepo({ ...withDrift, deviations: [{ stage: "deconstruct" }] }))))
+      .toContain("deviation-without-reason");
+    expect(kinds(checkStages(makeStageRepo({ ...withDrift, deviations: [{ stage: "deconstruct", reason: "because" }] }))))
+      .toContain("deviation-without-pinned-template");
+  });
+
+  it("fails a deviation that is stale — the template now matches", () => {
+    const r = checkStages(makeStageRepo({ deviations: [{ stage: "deconstruct", reason: "r", ported_sha256: "x" }] }));
+    expect(kinds(r)).toContain("stale-deviation");
+  });
+
+  it("catches Core's DEPTH_PLAN drifting from the frozen one", () => {
+    // Core writes stage ids where the component writes s1..s11; that translation is exactly
+    // where a hand-maintained list drifts.
+    const root = makeStageRepo();
+    write(root, "core/src/stages/pipeline.ts",
+      `export const DEPTH_PLAN = {\n  TINY: ["calibrate"],\n  MINIMAL: ["deconstruct"],\n};\n`);
+    expect(kinds(checkStages(root))).toContain("core-depth-plan-drift");
+  });
+
+  it("catches a system prompt that does not appear in the frozen component", () => {
+    const root = makeStageRepo();
+    write(root, "core/src/stages/stage-kit.ts", "export const COMPILER_SYSTEM = `invented identity`;\n");
+    expect(kinds(checkStages(root))).toContain("system-prompt-drift");
+  });
+
+  it("refuses rather than passing when the frozen component cannot be read", () => {
+    const root = mkdtempSync(join(tmpdir(), "stages-empty-"));
+    const r = checkStages(root);
+    expect(r.ok).toBe(false);
+    expect(r.fatalCode).toBe(2);
   });
 });

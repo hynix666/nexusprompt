@@ -145,6 +145,25 @@ export interface PipelineOutcome {
   execution_provenance: ExecutionProvenance;
 }
 
+/**
+ * The contract versions a run was executed against.
+ *
+ * One table, exported from the contracts themselves. It was duplicated in
+ * `application/src/orchestrator.ts` and `application/src/pipeline.ts`, so the
+ * `observability-event` bump to 1.1.0 had to be made in both — precisely the drift class
+ * `invoke.ts` was extracted to prevent, reappearing two files away. `schema_version` on an
+ * emitted event reads from here too, rather than being a third hardcoded literal.
+ */
+export const CONTRACT_VERSIONS = {
+  "gate-result": "1.3.0",
+  "provider-failure": "1.0.0",
+  "pipeline-outcome": "1.0.0",
+  "revision-entry": "1.2.0",
+  "observability-event": "1.1.0",
+  "eval-run": "1.1.0",
+  comparison: "2.0.0",
+} as const;
+
 export interface ExecutionProvenance {
   core_build_hash: string;
   contract_versions: Record<string, string>;
@@ -154,7 +173,8 @@ export interface ExecutionProvenance {
 
 /* ── Revision / storage protocol ──────────────────────────────────────────── */
 
-export type RevisionStatus = "SUCCEEDED" | "DEMO" | "FAILED" | "CANCELLED";
+/** SKIPPED: deliberately not run. Without it a bundle cannot tell a skip from a truncated run. */
+export type RevisionStatus = "SUCCEEDED" | "DEMO" | "FAILED" | "CANCELLED" | "SKIPPED";
 export type Freshness = "FRESH" | "STALE";
 
 export interface RevisionEntry {

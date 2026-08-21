@@ -18,6 +18,23 @@ Versioning, as applied here:
 
 ## 2026-08-18
 
+### `revision-entry` 1.1.0 → **1.2.0** (minor)
+
+**Added** `SKIPPED` to the `status` enum.
+
+A skipped stage was reported as an event and persisted as nothing — and events are not
+persisted, revisions are. So a reloaded bundle could not distinguish "deliberately skipped"
+from "never reached", which is the exact distinction `STAGE_SKIPPED` was added to the event
+enum for one entry above. Any short run — a clean critique, LOW stakes, a degradation —
+produced a short bundle with no record of why it was short.
+
+`SKIPPED` is distinct from `CANCELLED`: cancelled means stopped, skipped means a decision
+was taken not to run. The pipeline now appends a revision for every stage in the plan, so
+the bundle is complete by construction rather than complete only on the happy path.
+
+*Migration:* none. Additive to an enum; a consumer switching on `status` sees a new value,
+which is why it was an enum rather than a free string.
+
 ### `observability-event` 1.0.0 → **1.1.0** (minor)
 
 **Added** `STAGE_SKIPPED` to the `event_type` enum.
