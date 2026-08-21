@@ -136,6 +136,12 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
   },
   {
     id: "critique", kind: "generating",
+    // Found by running the CLI, not by review: with compile degraded this was the one
+    // prompt-consuming stage still calling out, spending a request to review a placeholder
+    // whose critique `refine` then skips anyway. You cannot critique a non-artifact any
+    // more than you can harden one.
+    shouldSkip: (c) => isDemoArtifact(c.prompt),
+    reduceSkipped: () => ({ critique: "[SKIPPED] No compiled prompt to review — the build degraded." }),
     decide: (c, r) => critique.decide({ prompt: c.prompt ?? "" }, r),
     reduce: (c, o) => ({ critique: critique.reduce({ prompt: c.prompt ?? "" }, o).critique }),
   },

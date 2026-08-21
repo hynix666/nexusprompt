@@ -43,7 +43,7 @@ core/gates  ████████████████████       1
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
 adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
-shells      ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3
+shells      ███████▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3 — cli now runs the full pipeline
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
 release     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       no CI, no matrix generator, no build hash
 ```

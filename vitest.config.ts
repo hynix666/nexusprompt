@@ -21,6 +21,13 @@ export default defineConfig({
         test: { name: "adapters", include: ["adapters/*/test/**/*.test.ts"] },
       },
       {
+        // Shells drive the real CLI in a subprocess. Slow by construction — each case is a
+        // process spawn plus a full pipeline run — and the only place wiring bugs are
+        // visible: a composition root naming the wrong adapter, a flag that never reaches
+        // the runner, an exit code that contradicts what happened.
+        test: { name: "shells", include: ["shells/*/test/**/*.test.ts"], testTimeout: 120_000 },
+      },
+      {
         // Contract conformance sits above every layer: it drives the real
         // orchestrator, store, and provider adapter to produce values, then
         // validates them against the JSON Schemas. No purity harness — producing a

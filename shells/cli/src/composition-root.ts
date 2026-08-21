@@ -14,6 +14,7 @@
 
 import { join } from "node:path";
 import { Orchestrator } from "../../../application/src/orchestrator.js";
+import type { PipelineRunOptions } from "../../../application/src/pipeline.js";
 import { LocalProxyProvider } from "../../../adapters/provider-local-proxy/src/index.js";
 import { LocalRevisionStore } from "../../../adapters/storage-local/src/index.js";
 import type { EventSink } from "../../../contracts/index.js";
@@ -24,12 +25,32 @@ export interface CompositionOptions {
   runsDir?: string;
 }
 
+const defaultRunsDir = (opts: CompositionOptions) =>
+  opts.runsDir ?? join(process.cwd(), ".promptnexus", "runs");
+
 export function composeOrchestrator(opts: CompositionOptions): Orchestrator {
   return new Orchestrator({
     provider: new LocalProxyProvider(),
-    store: new LocalRevisionStore(
-      opts.runsDir ?? join(process.cwd(), ".promptnexus", "runs"),
-    ),
+    store: new LocalRevisionStore(defaultRunsDir(opts)),
     sink: opts.sink,
   });
+}
+
+/**
+ * The dependencies an eleven-stage run needs.
+ *
+ * `runPipeline` is a function rather than a class, so this hands back the wiring instead of
+ * an instance. Same two adapters, same store — a pipeline run and a single-stage run write
+ * into the same bundle directory and are read back by the same `getRun`.
+ *
+ * This is the first caller of `runPipeline` outside a test. Until now the pipeline existed
+ * and nothing could reach it: the exit gate's "persists and reloads intact" rested entirely
+ * on an in-memory store in the suite.
+ */
+export function composePipeline(opts: CompositionOptions): PipelineRunOptions {
+  return {
+    provider: new LocalProxyProvider(),
+    store: new LocalRevisionStore(defaultRunsDir(opts)),
+    sink: opts.sink,
+  };
 }

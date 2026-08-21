@@ -17,7 +17,8 @@
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { lint, listPortedGates, worstVerdict } from "../../../application/src/lint.js";
-import { composeOrchestrator } from "./composition-root.js";
+import { composeOrchestrator, composePipeline } from "./composition-root.js";
+import { runPipeline } from "../../../application/src/pipeline.js";
 import type { ObservabilityEvent, PipelineCommand } from "../../../contracts/index.js";
 
 const C = {
@@ -83,6 +84,81 @@ async function cmdRun(file: string): Promise<number> {
   return outcome.demo_mode ? 3 : 0;
 }
 
+/**
+ * Run the whole pipeline over a brief.
+ *
+ * The Shell's job here is argument parsing and presentation. Every decision about WHICH
+ * stages run belongs to Core's depth plan, and every effect to the Application — this
+ * function chooses neither, which is what keeps the boundary rule checkable.
+ *
+ * Exit codes follow the linter's convention rather than inventing a second one:
+ *   0  every stage ran and the gates were clean
+ *   1  a gate FAILed, or a stage threw
+ *   3  the run degraded, or the gates warned
+ */
+async function cmdPipeline(file: string, argv: string[]): Promise<number> {
+  const flag = (name: string) => {
+    const i = argv.indexOf(`--${name}`);
+    return i === -1 ? undefined : argv[i + 1];
+  };
+
+  const brief = await readFile(file, "utf8");
+  const run_id = randomUUID().replace(/-/g, "").slice(0, 16);
+  const stakes = flag("stakes") ?? "MEDIUM";
+  const events: ObservabilityEvent[] = [];
+
+  const result = await runPipeline(
+    {
+      command_id: randomUUID(),
+      run_id,
+      stage_id: "deconstruct",
+      input: { brief },
+      context: {
+        stakes,
+        // Depth is DERIVED from stakes unless given, which is the frozen component's own
+        // binding. Passing neither runs the full eleven.
+        depth: flag("depth"),
+        testMessage: flag("test") ?? "Hello — can you help me with something?",
+      },
+    },
+    { ...composePipeline({ sink: { emit: (e) => events.push(e) } }), coreBuildHash: "cli" },
+  );
+
+  const plan = result.stages;
+  console.log(
+    `${C.bold("pipeline")} ${file}   ` +
+      C.dim(`run ${run_id} · stakes ${stakes} · ${plan.length} stage(s)`),
+  );
+
+  const mark = (s: string) =>
+    s === "SUCCEEDED" ? C.pass("ok  ") : s === "SKIPPED" ? C.dim("skip") : s === "DEMO" ? C.warn("demo") : C.fail("FAIL");
+  for (const s of plan) console.log(`  ${mark(s.status)} ${s.stage_id}`);
+
+  if (result.context.lint) console.log(`\n${result.context.lint}`);
+
+  // The artifact, or an honest statement that there is not one.
+  const prompt = result.context.prompt;
+  if (prompt) {
+    console.log(`\n${C.bold("compiled prompt")}`);
+    console.log(prompt);
+  }
+
+  console.log(
+    `\n${C.dim(`bundle: ${result.revision_ids.length} revision(s) under run ${run_id}`)}`,
+  );
+  if (result.demo_mode) {
+    // Said plainly rather than left for the reader to notice the marker. A degraded run
+    // still produces an artifact; what it must never do is let that artifact pass as live.
+    console.log(C.warn("\nThis run degraded — at least one stage never reached a model."));
+    console.log(C.dim("Output above is labelled placeholder text, not model output."));
+  }
+  if (result.failed) console.log(C.fail("\nAt least one stage threw. See the bundle for which."));
+
+  if (result.failed || result.context.lintStatus === "GATE_FAIL") return 1;
+  if (result.demo_mode || result.context.lintStatus === "DEGRADED") return 3;
+  return 0;
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
@@ -94,6 +170,9 @@ async function main(): Promise<void> {
     const file = argv[argv.indexOf("--stage") === -1 ? 1 : argv.length - 1];
     if (file) process.exit(await cmdRun(file));
   }
+  if (cmd === "pipeline" && argv[1] && !argv[1].startsWith("--")) {
+    process.exit(await cmdPipeline(argv[1], argv));
+  }
   if (cmd === "gates") {
     for (const g of listPortedGates()) console.log(`  ${g.id}  ${C.dim(g.version)}`);
     process.exit(0);
@@ -102,7 +181,19 @@ async function main(): Promise<void> {
   console.log(`promptnexus — usage:
   promptnexus lint <file>              run the registered gates
   promptnexus run --stage compile <f>  run one pipeline stage end to end
-  promptnexus gates                    list registered gates`);
+  promptnexus pipeline <file>          run the full pipeline over a brief
+  promptnexus gates                    list registered gates
+
+pipeline options:
+  --stakes LOW|MEDIUM|HIGH|SAFETY-CRITICAL   selects depth (default MEDIUM)
+  --depth  TINY|MINIMAL|STANDARD|COMPREHENSIVE   overrides the stakes mapping
+  --test   "<message>"                       the turn the preview stage tries
+
+Stakes selects depth: LOW runs six of eleven stages, SAFETY-CRITICAL all eleven.
+Without ANTHROPIC_API_KEY the run degrades and every stage says so — that is the
+honesty guarantee working, not a failure.
+
+exit: 0 clean · 1 a gate FAILed or a stage threw · 3 degraded or gates warned`);
   process.exit(2);
 }
 

@@ -277,9 +277,14 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
       { ...command(), context: { depth: "STANDARD", stakes: "HIGH", testMessage: "hi" } },
       opts(new ScriptedProvider(new Set(["compile"])), new BundleStore()),
     );
-    for (const id of ["harden", "refine", "critic", "preview", "tone_check"] as const) {
+    // Every prompt-consuming stage declines. `critique` was the last one still calling out
+    // — found by running the CLI, where it was the only stage spending a request on a
+    // placeholder — so no provider call is made about a non-artifact at all.
+    for (const id of ["harden", "critique", "refine", "critic", "preview", "tone_check"] as const) {
       expect(result.stages.find((s) => s.stage_id === id)!.status, id).toBe("SKIPPED");
     }
+    // Only the three stages that ran before the degradation made requests.
+    expect(result.stages.filter((s) => s.status === "SKIPPED")).toHaveLength(6);
     expect(result.context.criticVerdict).not.toBe("PASS");
     expect(result.context.prompt).toContain("⟦WORKFLOW DEMO — no model⟧");
   });
