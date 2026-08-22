@@ -35,12 +35,14 @@
 
 import type { Baseline, Comparison, EvalRun, Promotion, PromotionCondition } from "../../../contracts/index.js";
 import type { JudgeAdmission } from "../eval/judge-policy.js";
+import { admitCostJustification, type CostJustification } from "../routing/policy.js";
 
 export type RefusalCode =
   | "development-lineage"
   | "pointer-mismatch"
   | "not-significant"
   | "unattainable-comparison"
+  | "cost-justification"
   | "mode-regression"
   | "over-budget"
   | "judge-calibration"
@@ -74,6 +76,13 @@ export interface PromotionRequest {
   /** The promotion this replaces, written forward because evidence is immutable. */
   supersedes?: string | null;
   kind?: "promote" | "rollback";
+  /**
+   * What the promotion claims. Absent means quality, which is the only claim this system can
+   * currently certify; "cost" is accepted as an input and refused with the reason, rather
+   * than being unrepresentable. A claim you cannot state is a claim that gets made anyway,
+   * in prose, beside the record.
+   */
+  justification?: CostJustification;
 }
 
 export interface PromotionDecision {
@@ -185,6 +194,21 @@ export function decidePromotion(req: PromotionRequest): PromotionDecision {
       `No outcome it could have produced would be significant.`,
     );
     refuse("unattainable-comparison", significance.detail);
+  } else if (req.justification === "cost") {
+    /**
+     * A cost-justified promotion is refused before the quality verdict is even consulted for
+     * superiority, because the argument being made is a different one. See
+     * `admitCostJustification`: an inconclusive quality comparison says the suite could not
+     * separate the two configurations, not that they are equivalent, and reading a
+     * superiority test backwards is how a router is adopted on a cost number while the
+     * regression it bought stays invisible.
+     */
+    const cost = admitCostJustification({
+      justification: "cost",
+      qualityVerdict: comparison.verdict,
+    });
+    significance = failed(cost.reason);
+    refuse("cost-justification", cost.reason);
   } else if (comparison.verdict !== "improved") {
     significance = failed(
       `comparison ${comparison.comparison_id} returned "${comparison.verdict}"` +

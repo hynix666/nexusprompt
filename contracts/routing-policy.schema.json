@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/routing-policy/1.0.0",
+  "title": "RoutingPolicy",
+  "description": "Which model answers a request, and what escalates to a more expensive one. Routing is a component with an explicit decision rule rather than a configuration constant, because no single model is optimal across all queries and budget constraints. A policy is part of the Configuration it belongs to -- configuration_id hashes it -- so a routed configuration is a different configuration and is measured as one, under the same EvalRun protocol as any other change.",
+  "type": "object",
+  "required": [
+    "policy_id",
+    "method",
+    "tiers"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "method": {
+      "enum": [
+        "fixed",
+        "cascade"
+      ],
+      "description": "fixed always uses tier 0, and exists so that a routed and an unrouted configuration take the same code path -- a policy bypassed for the common case is a policy whose common case is untested. cascade starts cheapest and escalates on a declared signal."
+    },
+    "tiers": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Cheapest first. The order IS the policy; nothing re-sorts it at run time.",
+      "items": {
+        "type": "object",
+        "required": [
+          "model_id",
+          "family",
+          "usd_per_mtok_in",
+          "usd_per_mtok_out"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "model_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "family": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Carried per tier so a routed run can still be checked against 'the judge is never the model under test'. Without it, escalating to the judge's own family would silently create the self-preference cycle judge-policy refuses."
+          },
+          "usd_per_mtok_in": {
+            "type": "number",
+            "minimum": 0
+          },
+          "usd_per_mtok_out": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "escalate_on": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "gate-fail",
+          "provider-failure"
+        ]
+      },
+      "description": "gate-fail reuses the bounded control signal from the gate-feedback loop rather than inventing a second notion of 'not good enough'."
+    },
+    "max_escalations": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "description": "Required for cascade. The recorded hazard for a verification or retry loop is unbounded retry with no termination rule, which is why topology.max_iterations is required for a reflexive topology; an undeclared cap here is the same hazard by a different name."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "cascade"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "required": [
+          "escalate_on",
+          "max_escalations"
+        ],
+        "properties": {
+          "tiers": {
+            "minItems": 2
+          },
+          "escalate_on": {
+            "minItems": 1
+          },
+          "max_escalations": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "fixed"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "max_escalations"
+              ],
+              "properties": {
+                "max_escalations": {
+                  "type": "integer"
+                }
+              }
+            },
+            {
+              "required": [
+                "escalate_on"
+              ],
+              "properties": {
+                "escalate_on": {
+                  "minItems": 1
+                }
+              }
+            }
+          ]
+        },
+        "description": "A fixed policy may not declare escalation settings it can never use. Accepting and ignoring them is how router_policy_ref spent three versions as a field that existed and meant nothing; a configuration describing behaviour it does not have is worse than one describing none."
+      }
+    }
+  ]
+}

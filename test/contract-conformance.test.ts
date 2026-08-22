@@ -25,6 +25,7 @@ import { runSuite, configurationId } from "../application/src/eval.js";
 import { compare } from "../core/src/eval/compare.js";
 import { LocalEvidenceStore } from "../adapters/evidence-local/src/index.js";
 import { freezeBaseline, promote } from "../application/src/release.js";
+import { validateRoutingPolicy } from "../core/src/routing/policy.js";
 import type {
   EvalRun,
   GenerationRequest,
@@ -83,6 +84,7 @@ const validators: Record<string, ValidateFunction> = {
   "judge-verdict": ajv.compile(load("judge-verdict")),
   "baseline": ajv.compile(load("baseline")),
   "promotion": ajv.compile(load("promotion")),
+  "routing-policy": ajv.compile(load("routing-policy")),
 };
 
 const report = (v: ValidateFunction, value: unknown) => {
@@ -781,5 +783,68 @@ describe("release plane, against records the promotion path wrote", () => {
     const bare = JSON.parse(JSON.stringify(promotion)) as Record<string, Record<string, Record<string, unknown>>>;
     bare.conditions.within_budget = { held: true };
     expect(validators["promotion"](bare)).toBe(false);
+  });
+});
+
+/**
+ * routing-policy, against values `validateRoutingPolicy` accepts and rejects.
+ *
+ * Both sides are checked, because the schema and the Core validator can disagree in either
+ * direction and only one of them runs at contract time. `configuration.router_policy_ref`
+ * was a bare nullable string with no description from 1.0.0 and `null` in every instance —
+ * a field that existed and meant nothing. 1.3.0 gives it a meaning; this gives it a shape.
+ */
+describe("routing-policy, checked against the Core validator in both directions", () => {
+  const cheap = { model_id: "small-1", family: "vendor-a", usd_per_mtok_in: 0.25, usd_per_mtok_out: 1.25 };
+  const big = { model_id: "large-1", family: "vendor-b", usd_per_mtok_in: 15, usd_per_mtok_out: 75 };
+
+  it("validates a cascade the Core validator also accepts", () => {
+    const policy = {
+      policy_id: "cascade-v1", method: "cascade", tiers: [cheap, big],
+      escalate_on: ["gate-fail"], max_escalations: 1,
+    };
+    expect(report(validators["routing-policy"], policy)).toBe(true);
+    expect(() => validateRoutingPolicy(policy as never)).not.toThrow();
+  });
+
+  it("validates a fixed policy with one tier, which Core also accepts", () => {
+    const policy = { policy_id: "fixed-v1", method: "fixed", tiers: [cheap] };
+    expect(report(validators["routing-policy"], policy)).toBe(true);
+    expect(() => validateRoutingPolicy(policy as never)).not.toThrow();
+  });
+
+  it("rejects a cascade with one tier, on BOTH sides", () => {
+    // The case that would otherwise report itself as a cascade whose escalations never fired.
+    const policy = {
+      policy_id: "bad", method: "cascade", tiers: [cheap],
+      escalate_on: ["gate-fail"], max_escalations: 1,
+    };
+    expect(validators["routing-policy"](policy)).toBe(false);
+    expect(() => validateRoutingPolicy(policy as never)).toThrow();
+  });
+
+  it("rejects a cascade with no termination rule, on BOTH sides", () => {
+    const policy = { policy_id: "bad", method: "cascade", tiers: [cheap, big], escalate_on: ["gate-fail"] };
+    expect(validators["routing-policy"](policy)).toBe(false);
+    expect(() => validateRoutingPolicy(policy as never)).toThrow(/max_escalations/);
+  });
+
+  it("rejects a fixed policy carrying escalation settings, on BOTH sides", () => {
+    // A probe found the `method === "fixed"` guard in reduceRouteOutcome was unreachable.
+    // The answer was to refuse the configuration that would have needed it, in both the
+    // schema and the Core validator, rather than to test dead code.
+    const policy = {
+      policy_id: "confused", method: "fixed", tiers: [cheap, big],
+      escalate_on: ["gate-fail"], max_escalations: 1,
+    };
+    expect(validators["routing-policy"](policy)).toBe(false);
+    expect(() => validateRoutingPolicy(policy as never)).toThrow(/can never use/);
+  });
+
+  it("requires a family on every tier", () => {
+    // Without it, escalating into the judge's own family would silently create the
+    // self-preference cycle `admitJudge` exists to refuse.
+    const { family: _drop, ...noFamily } = cheap;
+    expect(validators["routing-policy"]({ policy_id: "p", method: "fixed", tiers: [noFamily] })).toBe(false);
   });
 });

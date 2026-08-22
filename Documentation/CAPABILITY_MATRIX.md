@@ -19,7 +19,7 @@ enforces, so this table and that test cannot disagree.
 |---|---|---|
 | `baseline` | 2.0.0 | validated |
 | `comparison` | 2.2.0 | validated |
-| `configuration` | 1.2.0 | validated |
+| `configuration` | 1.3.0 | validated |
 | `eval-case` | 1.2.0 | validated |
 | `eval-run` | 1.1.0 | validated |
 | `eval-suite` | 2.0.1 | validated |
@@ -30,9 +30,10 @@ enforces, so this table and that test cannot disagree.
 | `promotion` | 1.0.0 | validated |
 | `provider-failure` | 1.0.0 | validated |
 | `revision-entry` | 1.3.0 | validated |
+| `routing-policy` | 1.0.0 | validated |
 | `technique-record` | 1.3.0 | validated |
 
-**14 of 14** schemas are validated against a value the system produced.
+**15 of 15** schemas are validated against a value the system produced.
 
 ### Columns this table does not have
 

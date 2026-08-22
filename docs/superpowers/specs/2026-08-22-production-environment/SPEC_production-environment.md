@@ -396,7 +396,19 @@ This is not the discredited post-hoc power calculation — nothing here is compu
 
 ### Phase ζ — routing, then optimization (Parts 10, 11)
 
-**Entry for 10:** ε complete — **met as of 22 August 2026.** Routing is now the next schedulable work: policy pure in Core, selection in Application, no new layer, and evaluated on quality *and* cost under the same `EvalRun` protocol as any configuration.
+**Part 10 — LANDED 22 August 2026.** Entry (ε complete) was met, and routing is built: `core/src/routing/policy.ts`, pure, with `routing-policy` **1.0.0**.
+
+**ADR-0008's open item is answered: routing needs no layer.** `decideRoute` returns a decision, the Application calls, `reduceRouteOutcome` reduces the classified outcome into the next decision. That is `decide → invoke → reduce` for the third time here — after the provider loop and the gate-feedback loop — and the fact that a router fits it without strain is the answer, not an argument for one.
+
+**`configuration.router_policy_ref` had existed since 1.0.0 as a nullable string with no description, `null` in every instance.** Declared, and meaning nothing. 1.3.0 gives it one.
+
+**The refusal is worth more than the policy.** A router is adopted on a cost number, and the quality argument beside it is nearly always *"the comparison was inconclusive, so quality held."* That reads a superiority test backwards. `inconclusive` says the suite could not separate the two configurations — and with these suites, none of which resolves below ~53 pp, it says very little. Equivalence is a different procedure with a different null hypothesis: non-inferiority against a declared margin. None is implemented, so `admitCostJustification` **refuses and names it**, exactly as the comparator refuses `bootstrap-ci` rather than substituting a test of a different question. A cost-justified promotion is refused even when quality *also* improved — promote that on the quality result, because accepting it here would open a path the next candidate would use without one.
+
+Three shapes the validator refuses because they are indistinguishable from working ones: a **one-tier cascade** (validates, runs, never escalates, and reports itself as a cascade — indistinguishable from one whose cheap tier always sufficed); a cascade with **no `max_escalations`** (the hazard `topology.max_iterations` guards for the reflexive pipeline, by another name); and a **fixed policy carrying escalation settings** (a configuration describing behaviour it does not have).
+
+That last one came from a probe and changed the code rather than the test. A mutation deleted the `method === "fixed"` early return in `reduceRouteOutcome` and nothing failed: the line was **unreachable**, since a fixed policy has no `escalate_on` for the next line to match. Dead code shaped like a guard is worse than no code — it invites the belief that something is protected and cannot fail visibly. The line is gone and the configuration it would have caught is refused at validation instead.
+
+**Verified:** 337 core tests, **17 of 17 mutation probes** caught after two survivors — the second being that dead guard, and the first a test whose regex was loose enough to match a *different* rule's message, so it passed against a policy that had lost its termination rule entirely.
 
 **Entry for 11:** an anchor meeting `requiredPairedSize(Δ, {alpha, power, discordanceRate})` for the declared target — **not** the `n₀ ≳ z²/(2Δ²)` this line used to name, which Phase ε showed understates by ≈2.9× and hides its assumptions — held outside the optimizer's write surface and proven so by probe; plus a Goodhart alarm on the generalization ratio. **Not scheduled.**
 

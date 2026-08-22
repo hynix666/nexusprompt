@@ -14,7 +14,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 {
   "gates": { "ported": 16, "source_total": 16 },
   "stages": { "built": 11, "target": 11 },
-  "contracts": { "schemas": 14 },
+  "contracts": { "schemas": 15 },
   "adapters": ["provider-local-proxy", "storage-local", "evidence-local"],
   "shells": ["cli"],
   "catalog": { "records_imported": 195, "records_available": 172, "records_added": 23 },
@@ -40,7 +40,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
 
 ```
                         built          target
-contracts   ████████████████████       14 schemas — all 14 validated against values a real run produced
+contracts   ████████████████████       15 schemas — all 15 validated against values a real run produced
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
@@ -122,7 +122,7 @@ Read with the limit above attached: 16 of 16 means every gate is *compared*, not
 
 **Built so far.** The deterministic path runs end to end as `npm run eval`, inside `npm run verify`:
 
-- **Contracts.** All fourteen schemas are validated against values a real run produced, and `contracts/pending-implementation.json` is empty. `judge-verdict` left it in Phase δ when the judge adapter landed; `baseline` left it in Phase ε when the release pipeline did, and `promotion` was written with its producer. Landing each schema first did what ADR-0002 promises — `baseline`'s `superseded_by` turned out to be unwritable, which is only discoverable by trying to write one.
+- **Contracts.** All fifteen schemas are validated against values a real run produced, and `contracts/pending-implementation.json` is empty. `judge-verdict` left it in Phase δ when the judge adapter landed; `baseline` left it in Phase ε when the release pipeline did, and `promotion` was written with its producer. Landing each schema first did what ADR-0002 promises — `baseline`'s `superseded_by` turned out to be unwritable, which is only discoverable by trying to write one.
 - **Core, pure.** `eval/detectors.ts` is a detector registry, and `eval/compare.ts` is the comparator: exact-binomial McNemar rather than the chi-square approximation, since a smoke suite lives exactly where the approximation misbehaves. `inconclusive` and `refused` are reachable verdicts, and alpha is Bonferroni-corrected by the declared family size.
 - **Application.** `eval.ts` owns the effects and pins the provider per case, so the suite is offline, deterministic and free.
 - **A suite.** `eval/compile-smoke.json`, eight cases, each naming the failure mode it exists to catch.

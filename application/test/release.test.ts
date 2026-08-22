@@ -273,6 +273,34 @@ describe("promotion gate — the five conditions", () => {
     expect(decision.refusals.map((r) => r.code)).toEqual(["detectors-unequalized"]);
   });
 
+  it("refuses a promotion justified by cost rather than by quality", async () => {
+    /**
+     * A router is adopted on a cost number, and the quality argument beside it is almost
+     * always "the comparison was inconclusive, so quality held". That reads a superiority
+     * test backwards. Refusing names the missing procedure — a non-inferiority test against
+     * a declared margin — instead of substituting the one that exists, which is exactly what
+     * the comparator does with `bootstrap-ci`.
+     */
+    const store = mkstore();
+    await seed(store, { cmp: { verdict: "inconclusive", refusal_reason: "p=0.2 does not clear alpha=0.05" } });
+    const { decision } = await promote(store, { ...request, justification: "cost" });
+    expect(decision.refusals.map((r) => r.code)).toEqual(["cost-justification"]);
+    expect(decision.conditions.significance.detail).toContain("non-inferiority");
+  });
+
+  it("refuses a cost justification even when quality also improved", async () => {
+    // Cheaper and better is the happy case, and it is promotable — on the QUALITY result.
+    // Accepting it as a cost justification would open the path for the next one, which will
+    // not have an improved quality verdict behind it.
+    const store = mkstore();
+    await seed(store);
+    const asCost = await promote(store, { ...request, justification: "cost" });
+    expect(asCost.decision.promoted).toBe(false);
+
+    const asQuality = await promote(store, { ...request, promotion_id: "promo-q" });
+    expect(asQuality.decision.promoted).toBe(true);
+  });
+
   it("gives each of the five conditions a distinct refusal code", () => {
     // The conjunction is only auditable if its terms are distinguishable after the fact.
     const codes = new Set([

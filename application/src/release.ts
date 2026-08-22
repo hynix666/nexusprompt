@@ -85,6 +85,8 @@ export interface PromoteInput {
   suiteGranularity: number;
   /** Supplied when the run was judged. Whether it WAS is read from the run, not from this. */
   judge?: JudgeAdmission | null;
+  /** What the promotion claims. Absent means quality; "cost" is refused, with the reason. */
+  justification?: "quality" | "cost";
   supersedes?: string | null;
 }
 
@@ -122,6 +124,7 @@ export async function promote(store: EvidenceStore, input: PromoteInput): Promis
     baseline,
     comparison,
     judge: input.judge ?? null,
+    justification: input.justification,
     suiteGranularity: input.suiteGranularity,
     supersedes: input.supersedes ?? null,
   });

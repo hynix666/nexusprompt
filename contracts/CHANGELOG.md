@@ -16,6 +16,53 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-22 (Phase ζ, Part 10)
+
+### `routing-policy` **1.0.0** (new)
+
+Which model answers a request, and what escalates to a more expensive one. ADR-0008 left
+open "whether routing belongs in Application or becomes its own layer once more than one
+model is in play." It needs no layer: `decideRoute` returns a decision, the Application
+calls, `reduceRouteOutcome` reduces the classified outcome into the next decision. That is
+`decide → invoke → reduce` for the third time here, after the provider loop and the
+gate-feedback loop, and the fact that it fits is the answer to the open question.
+
+Three constraints in the schema exist because the shapes they forbid are silently
+indistinguishable from working ones:
+
+- **A cascade needs at least two tiers.** One tier validates, runs, never escalates, and
+  reports itself as a cascade — indistinguishable from a cascade whose cheap tier was always
+  sufficient. Those are different facts and only one of them is evidence.
+- **A cascade must declare `max_escalations`.** The same hazard `topology.max_iterations`
+  guards for the reflexive pipeline: the recorded failure for a retry loop is unbounded retry
+  with no termination rule, and an undeclared cap is an unbounded one.
+- **Every tier carries a `family`.** Without it, escalating into the judge's own family would
+  silently construct the self-preference cycle `admitJudge` exists to refuse — a guard
+  defeated not by removing it but by moving the model out from under it.
+
+### `configuration` 1.2.0 → **1.3.0** (minor)
+
+Description only on `router_policy_ref`, which is why this is minor and not a patch — the
+field's *meaning* is new even though its shape is not.
+
+It has existed since 1.0.0 as `{"type": ["string", "null"]}` with **no description**, set to
+`null` in every instance: declared, and meaning nothing. It now names a `RoutingPolicy`, and
+records the two things a reader needs. First, that it is part of the hashed `Configuration`,
+so changing a routing policy yields a different `configuration_id` and the router is
+*measured* rather than deployed beside the measurement. Second, that a promotion justified by
+the cost a router saves is refused.
+
+That refusal is the part worth having. A router is adopted on a cost number, and the quality
+argument beside it is almost always "the comparison came back inconclusive, so quality held."
+That reads a superiority test backwards. `inconclusive` says the suite could not separate the
+two configurations — and with the suites here, none of which resolves below about fifty
+percentage points, it says very little. Establishing equivalence is a different procedure
+with a different null hypothesis: a non-inferiority test against a declared margin. None is
+implemented, so `admitCostJustification` refuses and names it, exactly as the comparator
+refuses `bootstrap-ci` rather than substituting a test of a different question.
+
+---
+
 ## 2026-08-22 (Phase ε)
 
 ### `promotion` **1.0.0** (new)
