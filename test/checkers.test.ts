@@ -10,6 +10,9 @@ import { checkCitations } from "../scripts/check-citations.mjs";
 import { checkXsd, buildXml, validateAgainstXsd } from "../scripts/check-xsd.mjs";
 import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
 import { checkStages } from "../scripts/check-stages.mjs";
+import { checkCorpus, buildManifest } from "../scripts/check-corpus.mjs";
+import { checkCounts } from "../scripts/check-counts.mjs";
+import { checkFingerprint } from "../scripts/check-fingerprint.mjs";
 
 /**
  * Must-fire cases for the three checker scripts.
@@ -780,5 +783,242 @@ const COMPILER_SYSTEM = \`shared identity\`;
     const r = checkStages(root);
     expect(r.ok).toBe(false);
     expect(r.fatalCode).toBe(2);
+  });
+});
+
+/* ── check-corpus ─────────────────────────────────────────────────────────── */
+
+/**
+ * A corpus fixture plus its manifest. Two of the four PDFs share content, so
+ * `unique_documents` is 3 while `files` is 4 — the shape of the real corpus, where
+ * 661 files dedupe to 599 and four documents got the arithmetic wrong.
+ */
+function makeCorpusRepo(): { root: string } {
+  const root = mkroot("pnx-corpus-");
+  write(root, "PDF/a.pdf", "alpha");
+  write(root, "PDF/PROMPT/a.pdf", "alpha");   // byte-identical duplicate
+  write(root, "PDF/PROMPT/b.pdf", "beta");
+  write(root, "PDF/RAG/c.pdf", "gamma");
+  write(root, "PDF/notes.txt", "not a pdf, must be ignored");
+  write(root, "scripts/corpus-manifest.json", JSON.stringify(buildManifest(root), null, 2));
+  return { root };
+}
+
+describe("check-corpus", () => {
+  it("passes on a corpus that matches its manifest, counting duplicates as one document", () => {
+    const { root } = makeCorpusRepo();
+    const r = checkCorpus(root);
+    expect(r.failures).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.manifest.files).toBe(4);
+    expect(r.manifest.unique_documents).toBe(3);
+    expect(r.manifest.duplicate_files).toBe(1);
+  });
+
+  it("passes on the real repository", () => {
+    expect(checkCorpus(process.cwd()).ok).toBe(true);
+  });
+
+  it("catches a file substituted for one of the same length", () => {
+    // The case an inventory-only check could not see: "beta" and "BETA" are both four
+    // bytes, so only re-hashing separates them. This is why the fast/deep split was
+    // deleted rather than shipped — hashing 2 GB costs 1.4s, not the 11s first measured.
+    const { root } = makeCorpusRepo();
+    write(root, "PDF/PROMPT/b.pdf", "BETA");
+    const r = checkCorpus(root);
+    expect(r.ok).toBe(false);
+    expect(r.failures.map((f) => f.kind)).toEqual(["modified"]);
+  });
+
+  it.each([
+    ["a deleted file", (root: string) => rmSync(join(root, "PDF/RAG/c.pdf")), "missing"],
+    ["a resized file", (root: string) => write(root, "PDF/RAG/c.pdf", "gamma-plus"), "resized"],
+    ["an unpinned addition", (root: string) => write(root, "PDF/new.pdf", "delta"), "unpinned"],
+  ])("catches %s", (_name, mutate, kind) => {
+    const { root } = makeCorpusRepo();
+    mutate(root);
+    const r = checkCorpus(root);
+    expect(r.ok).toBe(false);
+    expect(r.failures.map((f) => f.kind)).toContain(kind);
+  });
+
+  it("refuses rather than passing when there is no manifest", () => {
+    const root = mkroot("pnx-corpus-bare-");
+    write(root, "PDF/a.pdf", "alpha");
+    const r = checkCorpus(root);
+    expect(r.ok).toBe(false);
+    expect(r.fatalCode).toBe(2);
+  });
+});
+
+/* ── check-counts ─────────────────────────────────────────────────────────── */
+
+function makeCountsRepo(prose: string, pattern = "a catalog of ([\\d,]+) techniques"): string {
+  const root = mkroot("pnx-counts-");
+  write(root, "core/src/catalog/techniques.json",
+    JSON.stringify(Array.from({ length: 195 }, (_, i) => ({
+      id: `T${i}`,
+      verification_status:
+        i < 151 ? "verifier-checkable" : i < 161 ? "judge-checkable" : "unverifiable-by-text",
+    }))));
+  write(root, "Documentation/ADR.md", prose);
+  write(root, "scripts/counted-claims.json", JSON.stringify({
+    claims: [{ document: "Documentation/ADR.md", pattern, resolver: "catalog.records", reason: "fixture" }],
+  }));
+  return root;
+}
+
+describe("check-counts", () => {
+  it("passes when the prose matches the repository", () => {
+    const r = checkCounts(makeCountsRepo("It ships a catalog of 195 techniques today.\n"));
+    expect(r.failures).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("passes on the real repository", () => {
+    const r = checkCounts(process.cwd());
+    expect(r.failures.map((f) => f.detail ?? f.kind)).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("catches the count that shipped wrong in four documents", () => {
+    const r = checkCounts(makeCountsRepo("It ships a catalog of 180 techniques today.\n"));
+    expect(r.ok).toBe(false);
+    expect(r.failures[0]).toMatchObject({ kind: "false", expected: 195, found: 180, line: 1 });
+  });
+
+  it("requires EVERY occurrence to agree, not just the first", () => {
+    // "673-paper corpus" appeared three times. A checker that stopped at the first
+    // match would have reported one defect and left two standing.
+    const r = checkCounts(makeCountsRepo(
+      "a catalog of 195 techniques\n\nand later, a catalog of 180 techniques\n"));
+    expect(r.ok).toBe(false);
+    expect(r.failures).toHaveLength(1);
+    expect(r.failures[0]).toMatchObject({ found: 180, line: 3 });
+  });
+
+  it("fails a pin whose sentence has been deleted, rather than passing quietly", () => {
+    // The stale rule. Without it, rewording a sentence silently retires its check and
+    // the pin file fills with guards over prose nobody has written for months.
+    const r = checkCounts(makeCountsRepo("The catalog is large.\n"));
+    expect(r.ok).toBe(false);
+    expect(r.failures[0].kind).toBe("stale");
+  });
+
+  it("reads a captured trailing comma as a number", () => {
+    // The pattern /`judge-checkable` ([\d,]+)/ captures "10," from "10, unverifiable".
+    const root = makeCountsRepo("partition: 195, and more\n", "partition: ([\\d,]+)");
+    expect(checkCounts(root).ok).toBe(true);
+  });
+
+  it("refuses a pin with no reason", () => {
+    const root = makeCountsRepo("a catalog of 195 techniques\n");
+    write(root, "scripts/counted-claims.json", JSON.stringify({
+      claims: [{ document: "Documentation/ADR.md", pattern: "of ([0-9]+) tech", resolver: "catalog.records" }],
+    }));
+    expect(checkCounts(root).fatalCode).toBe(2);
+  });
+
+  it("refuses an unknown resolver rather than skipping the claim", () => {
+    const root = makeCountsRepo("a catalog of 195 techniques\n");
+    write(root, "scripts/counted-claims.json", JSON.stringify({
+      claims: [{ document: "Documentation/ADR.md", pattern: "of ([0-9]+) tech", resolver: "catalog.invented", reason: "x" }],
+    }));
+    expect(checkCounts(root).fatalCode).toBe(2);
+  });
+
+  it("checks the routing partition as three independent numbers", () => {
+    // 137/8/35 was wrong in all three. Checking only the sum would let a compensating
+    // pair of errors through, and ADR-0008 routes judge calls on this partition.
+    const root = makeCountsRepo("verifier 151, judge 10, unverifiable 34\n");
+    const pins = (p: string, r: string) => ({ document: "Documentation/ADR.md", pattern: p, resolver: r, reason: "x" });
+    write(root, "scripts/counted-claims.json", JSON.stringify({
+      claims: [
+        pins("verifier ([\\d,]+)", "catalog.verifier_checkable"),
+        pins("judge ([\\d,]+)", "catalog.judge_checkable"),
+        pins("unverifiable ([\\d,]+)", "catalog.unverifiable_by_text"),
+      ],
+    }));
+    expect(checkCounts(root).ok).toBe(true);
+
+    write(root, "Documentation/ADR.md", "verifier 152, judge 9, unverifiable 34\n");
+    const bad = checkCounts(root);
+    expect(bad.ok).toBe(false);
+    expect(bad.failures).toHaveLength(2);
+  });
+});
+
+/* ── check-fingerprint ────────────────────────────────────────────────────── */
+
+const revision = (provider: string | null, fingerprint: string | null) => ({
+  revision_id: "r", run_id: "run", stage_id: "compile", provider_used: provider,
+  execution_provenance: {
+    core_build_hash: "h", contract_versions: {},
+    provider_model_fingerprint: fingerprint, config_fingerprint: null,
+  },
+});
+
+function makeFingerprintRepo(bundle: unknown[], watch: unknown = {}): string {
+  const root = mkroot("pnx-fp-");
+  write(root, ".promptnexus/runs/run.json", JSON.stringify(bundle));
+  write(root, "scripts/model-fingerprints.json", JSON.stringify({ watch }));
+  return root;
+}
+
+const WATCH = {
+  "local-proxy": {
+    fingerprints: ["local-proxy:claude-opus-5"],
+    first_seen: "2026-08-22",
+    baseline_suite: "compile-smoke",
+  },
+};
+
+describe("check-fingerprint", () => {
+  it("passes on the real repository, and reports that it is not armed", () => {
+    const r = checkFingerprint(process.cwd());
+    expect(r.ok).toBe(true);
+    // Honest about coverage: zero observations is reported as unarmed, not as OK.
+    expect(r.armed).toBe(false);
+  });
+
+  it("passes when the observed fingerprint is the pinned one", () => {
+    const r = checkFingerprint(makeFingerprintRepo([revision("local-proxy", "local-proxy:claude-opus-5")], WATCH));
+    expect(r.failures).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.armed).toBe(true);
+  });
+
+  it("catches the model changing underneath a pinned provider", () => {
+    const r = checkFingerprint(makeFingerprintRepo([revision("local-proxy", "local-proxy:claude-opus-6")], WATCH));
+    expect(r.ok).toBe(false);
+    expect(r.failures[0]).toMatchObject({ kind: "drift", found: "local-proxy:claude-opus-6" });
+  });
+
+  it("catches a provider nobody pinned", () => {
+    const r = checkFingerprint(makeFingerprintRepo([revision("hosted", "hosted:claude-opus-5")], WATCH));
+    expect(r.ok).toBe(false);
+    expect(r.failures[0].kind).toBe("unwatched");
+  });
+
+  it("counts a null fingerprint as unavailable, never as agreement", () => {
+    // A degraded run reached no model, so it says nothing about which model is live.
+    // Treating null as a match would let demo mode arm the watch with nothing.
+    const r = checkFingerprint(makeFingerprintRepo([revision("local-proxy", null), revision(null, null)], WATCH));
+    expect(r.ok).toBe(true);
+    expect(r.armed).toBe(false);
+    expect(r.unavailable).toBe(2);
+  });
+
+  it("deduplicates one fingerprint across an eleven-stage run", () => {
+    const bundle = Array.from({ length: 11 }, () => revision("local-proxy", "local-proxy:claude-opus-5"));
+    const r = checkFingerprint(makeFingerprintRepo(bundle, WATCH));
+    expect(r.observations).toHaveLength(1);
+    expect(r.entries).toBe(11);
+  });
+
+  it("ignores a half-written bundle rather than crashing on it", () => {
+    const root = makeFingerprintRepo([revision("local-proxy", "local-proxy:claude-opus-5")], WATCH);
+    write(root, ".promptnexus/runs/torn.json", '[{"revision_id":');
+    expect(checkFingerprint(root).ok).toBe(true);
   });
 });

@@ -35,7 +35,7 @@ It follows the convention of [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md
 
 `sources/` holds prior artifacts this project ports from, hash-pinned so a port can be checked against the exact revision it came from. These are third-party published papers: nothing is ported from them, their canonical location is arXiv, and the three corpora together are **1.87 GB against a 6 MB tracked repository** — roughly 300 times its size, permanently in history.
 
-SHA-256 is recorded for every file instead, so any claim here can be re-checked against the exact bytes. `*.zip` and `PDF/` are `.gitignore`d; `npm run verify:sources` still tracks 420 files, unchanged.
+SHA-256 is recorded for every file instead, so any claim here can be re-checked against the exact bytes. `*.zip` and `PDF/` are `.gitignore`d; `npm run verify:sources` still tracks 420 files, unchanged. The corpus itself is 661 PDF files on disk, 599 of them unique — 62 are byte-identical duplicates of another file, the same paper filed under two topic directories. `npm run check:corpus` re-hashes every one against `scripts/corpus-manifest.json` and prints both numbers, so no document has to remember them.
 
 ## Verified: how the corpus was identified
 
@@ -213,7 +213,7 @@ Two judgements are marked rather than counted as certain: **Self-Verification** 
 
 ## Verified: the 15 remaining gaps cannot be closed from this corpus
 
-The obvious hope for a 673-paper corpus is that it contains the primary sources for the fifteen techniques the catalog still lacks. **It does not — not one of them.**
+The obvious hope for a 599-document corpus is that it contains the primary sources for the fifteen techniques the catalog still lacks. **It does not — not one of them.**
 
 Two independent keyword passes were run over every paper's filename and page-1 header, and every hit was read rather than counted. All of them are different papers:
 
@@ -296,7 +296,7 @@ table with authors, venues and dates as arXiv states them.
 | Prompt Mining | 1911.12543 | TACL 2020 — already cited |
 | AutoDiCoT | 2406.06608 | the survey itself, §6.2.3.3 |
 
-The earlier finding that the 673-paper corpus contained none of these stands, and is
+The earlier finding that the 599-document corpus contained none of these stands, and is
 now explained rather than merely reported: these are 2022–2023 originals and the corpus
 skews 2025–2026. **More reading would not have found them; a targeted lookup did.**
 

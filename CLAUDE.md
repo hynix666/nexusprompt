@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mostly documentation, plus **one vertical slice that really runs**. It holds:
 
-- `Documentation/` — 26 Markdown files describing the *target* architecture of the PromptNexus Unified Platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists.
+- `Documentation/` — 31 Markdown files describing the *target* architecture of the PromptNexus Unified Platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists.
 - `sources/` — 420 files extracted from five archives, frozen and SHA-256-verified against `sources/MANIFEST.json`. Read from these; never write into them.
-- A working slice: `contracts/`, `core/` (2 of 16 gates, one pipeline stage), `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `shells/cli`, `scripts/`, `test/`.
+- A working slice: `contracts/`, `core/` (16 of 16 gates, 11 pipeline stages), `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `shells/cli`, `scripts/`, `test/`.
 - Four source archives (still zipped) and `SystemPromptBuilderPipeline.tsx`, loose on disk. **That copy is stale** (nine stages); the current one is inside `~/Downloads/Compressed/files_3.zip` and has eleven.
 
 `npm install && npm run verify` works and takes about ten seconds. **Use `npm`, not `pnpm`** — pnpm is not installed and the workspace is defined with npm workspaces, though much of the documentation still says `pnpm`.
@@ -82,7 +82,10 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 | `npm run verify` | boundaries → typecheck → source freeze → tests → differential oracle. The whole check, ~10s. |
 | `npm run lint:boundaries` | Import-boundary rule (`scripts/check-boundaries.mjs`). |
 | `npm run verify:sources` | Re-hashes all 420 frozen files against `MANIFEST.json`. |
-| `npm test` | Vitest: projects `core`, `application`, `adapters`, `contracts`. |
+| `npm test` | Vitest: projects `core`, `application`, `adapters`, `shells`, `contracts`. |
+| `npm run check:corpus` | Re-hashes all 661 PDFs under `PDF/` against `scripts/corpus-manifest.json` and prints the deduplicated count. ~1.4s. |
+| `npm run check:counts` | Re-derives every pinned number in the docs from the repo. Caught 15 wrong counts across 6 files on its first run. |
+| `npm run check:fingerprint` | Watches for the provider swapping the model under you. Reports "not armed" until a run reaches a provider. |
 | `npm run differential` | The oracle — ported gates vs. the frozen Python linter. Needs Python. |
 | `npm run cli` | `promptnexus lint\|run\|gates`. |
 

@@ -16,7 +16,7 @@ Sections 4 and 4a draw on material in `PDF/pipeline/` that is not in the earlier
 
 ## 0. Two principles, and what follows from them
 
-Reading ~700 papers against this system, the useful findings collapse into two statements. Everything specified below is a consequence of one or the other, and a mechanism that serves neither is decoration.
+Reading the 599-document corpus against this system, the useful findings collapse into two statements. Everything specified below is a consequence of one or the other, and a mechanism that serves neither is decoration.
 
 ### Principle 1 — LLM system failures are silent by default
 
@@ -51,7 +51,7 @@ Every level of the stack shows the same pattern, measured, in this corpus:
 
 There is no stable best practice at any level. So the environment's job is **not to encode good decisions — it is to make decisions cheap to place, cheap to measure, and cheap to reverse.** Three consequences, each of which is a design commitment rather than a preference:
 
-- **The catalog is a hypothesis space, not a recommendation engine.** 180 records, zero measured on any task by this system. A record's `when_to_use` is a claim from a paper about some model at some time; treating it as advice is how you ship the losing side of an inversion.
+- **The catalog is a hypothesis space, not a recommendation engine.** 195 records, zero measured on any task by this system. A record's `when_to_use` is a claim from a paper about some model at some time; treating it as advice is how you ship the losing side of an inversion.
 - **The pipeline is not the product.** The ability to change the pipeline and *know whether that helped* is the product. This is why ADR-0008 puts evaluation ahead of porting more stages.
 - **Decision latency is the metric that matters most.** Not quality — quality is what you measure. Latency from "I have an idea" to "I know if it works" is what determines how many ideas get tested. Every tier in the evaluation design exists to lower it: deterministic detectors before judges, content-addressed caching, a smoke set in seconds against an anchor in hours.
 

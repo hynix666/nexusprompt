@@ -1,0 +1,139 @@
+{
+  "_comment": [
+    "Numbers in prose, pinned to a resolver that re-derives them from the repository.",
+    "",
+    "Read by scripts/check-counts.mjs. Each entry names a document, a regex with exactly",
+    "one capture group around the number, a resolver, and why the number is worth guarding.",
+    "",
+    "Two rules, matching scripts/catalog-known-defects.json and divergence-allowlist.json:",
+    "  - an entry whose pattern matches nothing FAILS AS STALE, so a pin cannot outlive",
+    "    the sentence it guards;",
+    "  - every occurrence of a pattern must agree, because a number repeated three times",
+    "    is three chances to be wrong and '673-paper corpus' was exactly that.",
+    "",
+    "Pin a number when being wrong about it would change a decision. Do not pin every",
+    "digit in the documentation — a pin file nobody can read is one nobody maintains."
+  ],
+  "claims": [
+    {
+      "document": "Documentation/0008-evaluation-first-environment.md",
+      "pattern": "([\\d,]+)[- ](?:paper|document) corpus",
+      "resolver": "corpus.unique_documents",
+      "reason": "The corpus is the stated warrant for the four measured results this ADR opens with. It said '673-paper corpus' three times; the tree holds 661 files and 599 unique documents. A warrant nobody can reproduce is not one."
+    },
+    {
+      "document": "Documentation/LITERATURE_CORPUS.md",
+      "pattern": "([\\d,]+)[- ](?:paper|document) corpus",
+      "resolver": "corpus.unique_documents",
+      "reason": "Same claim, restated twice more in the corpus document itself — the place a reader would go to check it."
+    },
+    {
+      "document": "Documentation/LITERATURE_CORPUS.md",
+      "pattern": "([\\d,]+) PDF files on disk",
+      "resolver": "corpus.files",
+      "reason": "The file count and the document count differ by 62 byte-identical duplicates. Stating only one of them is how 599 got rounded up to 673."
+    },
+    {
+      "document": ".gitignore",
+      "pattern": "PDF/ alone is ([\\d,]+) MB",
+      "resolver": "corpus.megabytes",
+      "reason": "This comment justifies ignoring the corpus. It said 906 MB against a measured 2,081 — the same drift class as the documentation, in a file that changes behaviour."
+    },
+    {
+      "document": "Documentation/0008-evaluation-first-environment.md",
+      "pattern": "a catalog of ([\\d,]+) techniques",
+      "resolver": "catalog.records",
+      "reason": "Said 180; the registry holds 195. check:plan already reports 195, so the repository knew and the ADR did not."
+    },
+    {
+      "document": "Documentation/0008-evaluation-first-environment.md",
+      "pattern": "backfill the ([\\d,]+) records",
+      "resolver": "catalog.records",
+      "reason": "Action item 7 sizes future work off this number."
+    },
+    {
+      "document": "Documentation/PROMPT_ENGINEERING_ENVIRONMENT.md",
+      "pattern": "([\\d,]+) records, zero measured",
+      "resolver": "catalog.records",
+      "reason": "The 'catalog is a hypothesis space' argument counts the hypotheses."
+    },
+    {
+      "document": "Documentation/README.md",
+      "pattern": "\\| ([\\d,]+) records behind a pure registry",
+      "resolver": "catalog.records",
+      "reason": "The status table is the first thing a reader trusts."
+    },
+    {
+      "document": "Documentation/README.md",
+      "pattern": "records behind a pure registry — ([\\d,]+) frozen",
+      "resolver": "catalog.frozen_records",
+      "reason": "172 frozen records, from the frozen catalog rather than from memory."
+    },
+    {
+      "document": "Documentation/README.md",
+      "pattern": "frozen, ([\\d,]+) added to close",
+      "resolver": "catalog.records_added",
+      "reason": "Said 8 added; 23 were. The gap between 172 and 195 is exactly what this number is supposed to explain."
+    },
+    {
+      "document": "Documentation/IMPLEMENTATION_PLAN.md",
+      "pattern": "([\\d,]+) frozen records plus",
+      "resolver": "catalog.frozen_records",
+      "reason": "The plan's PROSE contradicted the plan's own machine-checked JSON block, which check:plan reads instead. Two claims, one document, one checker covering only one of them."
+    },
+    {
+      "document": "Documentation/IMPLEMENTATION_PLAN.md",
+      "pattern": "frozen records plus ([\\d,]+), giving",
+      "resolver": "catalog.records_added",
+      "reason": "Same sentence, second wrong number."
+    },
+    {
+      "document": "Documentation/IMPLEMENTATION_PLAN.md",
+      "pattern": "frozen records plus [\\d,]+, giving ([\\d,]+)",
+      "resolver": "catalog.records",
+      "reason": "Same sentence, third number — and the one check:plan's JSON block gets right, which is what makes the prose contradiction worth catching."
+    },
+    {
+      "document": "Documentation/0008-evaluation-first-environment.md",
+      "pattern": "`verifier-checkable` ([\\d,]+)",
+      "resolver": "catalog.verifier_checkable",
+      "reason": "ADR-0008 names this partition 'the routing rule' deciding which cases may reach a judge. A stale partition is a stale rule, not a cosmetic count — this is the single highest-consequence number in the documentation."
+    },
+    {
+      "document": "Documentation/0008-evaluation-first-environment.md",
+      "pattern": "`judge-checkable` ([\\d,]+)",
+      "resolver": "catalog.judge_checkable",
+      "reason": "The judge-routed share grew 25% (8 to 10) while the documented figure stood still. Judge calls are the expensive, biased path the rule exists to bound."
+    },
+    {
+      "document": "Documentation/0008-evaluation-first-environment.md",
+      "pattern": "`unverifiable-by-text` ([\\d,]+)",
+      "resolver": "catalog.unverifiable_by_text",
+      "reason": "Completes the partition. Three numbers that must sum to the catalog size, checked separately so the sum cannot hide a compensating error."
+    },
+    {
+      "document": "Documentation/SOURCE_VERIFICATION.md",
+      "pattern": "re-hashes all ([\\d,]+) files",
+      "resolver": "sources.frozen_files",
+      "reason": "True today, and pinned deliberately: a pin file containing only broken claims proves the checker fires, never that it stays quiet when it should."
+    },
+    {
+      "document": "Documentation/LITERATURE_CORPUS.md",
+      "pattern": "still tracks ([\\d,]+) files",
+      "resolver": "sources.frozen_files",
+      "reason": "Second currently-true pin, in a different document, for the same must-not-fire reason."
+    },
+    {
+      "document": "CLAUDE.md",
+      "pattern": "([\\d,]+) Markdown files describing",
+      "resolver": "docs.markdown_files",
+      "reason": "CLAUDE.md is loaded into every session, so a wrong number here misleads before any file is read. It said 26; there are 31."
+    },
+    {
+      "document": "CLAUDE.md",
+      "pattern": "([\\d,]+) files extracted from five archives",
+      "resolver": "sources.frozen_files",
+      "reason": "Third currently-true pin. Also the number CLAUDE.md is most likely to be trusted on without checking."
+    }
+  ]
+}

@@ -23,7 +23,8 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
-    "import:catalog", "check:catalog", "check:xsd", "check:depth", "check:stages", "eval", "eval:compare", "eval:adversarial"
+    "import:catalog", "check:catalog", "check:xsd", "check:depth", "check:stages", "eval", "eval:compare", "eval:adversarial",
+    "check:corpus", "check:counts", "check:fingerprint"
   ],
   "planned_commands": [
     "verify:gates", "trace:view", "docs:matrix", "verify:hash",
@@ -214,7 +215,7 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
   The XSD's own header lists five constraints it cannot express — reference resolution, count agreement, category agreement, cross-record uniqueness of name/id/title/template_id, and template placeholder declaration. `import:catalog` and `check:citations` carry those. A green XSD result is necessary, not sufficient, and the command says so.
 - ~~**The 15 remaining coverage gaps.**~~ **Closed.** All fifteen were located by targeted arXiv lookup, every match exact, reducing to thirteen distinct papers — `scripts/catalog-gap-sources.json` — and the records were then authored on the same terms the ensembling eight got: description from the abstract, `verified-against-abstract`, pitfalls left unverified. The catalog is 195 records. Two of the fifteen are parent techniques whose paper also covers a child (`exemplar-generation`/`sg-icl`, `exemplar-selection`/`vote-k`); `autodicot` cites the survey itself, and its `known_pitfalls` says so rather than implying an independent evaluation. The corpus did not contain these papers because they are 2022–2023 originals and it skews 2025–2026; more reading would not have found them.
 - **A scope question the corpus raises.** 127 RAG papers and 25 on long-term memory sit outside what the catalog covers — `retrieval-augmentation` holds 11 records and there is no memory category at all. Whether the platform's technique catalog should extend into either is a decision, not an oversight to quietly correct.
-- ~~**The ensembling coverage gap.**~~ **Closed.** All eight missing techniques now have records, added at the import boundary through `scripts/catalog-additions.json` — 172 frozen records plus 8, giving 180. Every citation was resolved against arXiv's own metadata, and the additions are held to the same contract as the frozen records, with no id allowed to collide with one. Coverage against The Prompt Report's taxonomy went from 34 of 57 to 42 of 57; ensembling is 10 of 10. Fifteen scattered absences remain, but no category is now missing most of itself.
+- ~~**The ensembling coverage gap.**~~ **Closed.** All eight missing techniques now have records, added at the import boundary through `scripts/catalog-additions.json` — 172 frozen records plus 23, giving 195. Every citation was resolved against arXiv's own metadata, and the additions are held to the same contract as the frozen records, with no id allowed to collide with one. Coverage against The Prompt Report's taxonomy went from 34 of 57 to 42 of 57; ensembling is 10 of 10. Fifteen scattered absences remain, but no category is now missing most of itself.
 - **Three records naming `arXiv preprint` with no identifier**, excused in `scripts/catalog-known-defects.json`. Unlike the titles these cannot be corrected from evidence — the identifier is simply absent and no index resolved it.
 
 ### Phase 5 — Second adapters

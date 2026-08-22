@@ -1,0 +1,3726 @@
+{
+  "_comment": [
+    "Inventory pin for the research corpus under PDF/, which is .gitignore'd.",
+    "",
+    "unique_documents is an UPPER BOUND on independent sources: identical bytes are",
+    "detected, the same paper under two filenames is not. Documents citing this number",
+    "must say 'at most', and scripts/check-counts.mjs holds them to it.",
+    "",
+    "Regenerate with `node scripts/check-corpus.mjs --write` after deliberately adding",
+    "to the corpus, and say in the commit message what was added and why."
+  ],
+  "generated_at": "2026-08-22T11:09:22.018Z",
+  "root": "PDF",
+  "algorithm": "sha256",
+  "files": 661,
+  "unique_documents": 599,
+  "duplicate_files": 62,
+  "bytes": 2079359740,
+  "duplicates": [
+    {
+      "sha256": "69f852cecf564599328118aa5419f94a118c893f770d7d58e3467f0cba4fcdcd",
+      "paths": [
+        "PDF/AI4AI at Test-Time Strong-to-Weak Capability Transfer via Harnesses.pdf",
+        "PDF/RAG/AI4AI at Test-Time Strong-to-Weak Capability Transfer via Harnesses.pdf"
+      ]
+    },
+    {
+      "sha256": "b748a078404345546599b57f0139d1a00eaad814ccbc22ab21dac0013a7ce6da",
+      "paths": [
+        "PDF/Automated AI Skill Generation via Expert Knowledge Distillation.pdf",
+        "PDF/RAG/Automated AI Skill Generation via Expert Knowledge Distillation.pdf"
+      ]
+    },
+    {
+      "sha256": "910c2905cae3646ad646738da3267f79776ada3d9f8a3e2e93aac2df0de0b85c",
+      "paths": [
+        "PDF/LYCHEEMEMORY V2 Efficient Long-Term Memory for LLM Agents via Semantic Segment-Level Consolidation.pdf",
+        "PDF/Memory/LYCHEEMEMORY V2 Efficient Long-Term Memory for LLM Agents via Semantic Segment-Level Consolidation.pdf",
+        "PDF/RAG/LYCHEEMEMORY V2 Efficient Long-Term Memory for LLM Agents via Semantic Segment-Level Consolidation.pdf"
+      ]
+    },
+    {
+      "sha256": "795eb2936d46aab06c84f36be947fd326853bf6c0573d49942ad53196262001d",
+      "paths": [
+        "PDF/Macaron-V1 TowardsOpenContinualLearning with Self-Improvement and Mixture-of-LoRA.pdf",
+        "PDF/RAG/Macaron-V1 TowardsOpenContinualLearning with Self-Improvement and Mixture-of-LoRA.pdf"
+      ]
+    },
+    {
+      "sha256": "bec870b657aa73405275a6d8fe27bcd4271799e028bc62986ab9c4cd27a3712d",
+      "paths": [
+        "PDF/Mem0 Building Production-Ready AI Agents with Scalable Long-Term Memory.pdf",
+        "PDF/Memory/Building Production-Ready AI Agents with Scalable Long-Term Memory.pdf"
+      ]
+    },
+    {
+      "sha256": "6fad525a02e920fc34b7ba0f5c27b72f9214f5ef42a54c74040f33f95a033eba",
+      "paths": [
+        "PDF/Memory/A Survey on the Security of Long-Term Memory in LLM Agents Toward Mnemonic Sovereignty.pdf",
+        "PDF/Memory/A Survey on the Security of Long-Term Memory in LLM.pdf",
+        "PDF/PROMPT/A Survey on the Security of Long-Term Memory in LLM.pdf"
+      ]
+    },
+    {
+      "sha256": "d26f7eb599540e8b14d75e7efda58a07661abbb1b864e58323b5768475a15d42",
+      "paths": [
+        "PDF/Memory/A Temporal Knowledge Graph Architecture for Agent Memory.pdf",
+        "PDF/ZEP A TEMPORAL KNOWLEDGE GRAPH ARCHITECTURE FOR AGENT MEMORY.pdf"
+      ]
+    },
+    {
+      "sha256": "df18bc67d05f6d63abe6731c4b7b02978d5a8b90cc69341290183a7aea778396",
+      "paths": [
+        "PDF/Memory/Advancing Multimodal Agent Reasoning with Long-Term Neuro-Symbolic Memory.pdf",
+        "PDF/Memory/Advancing Multimodal Agent Reasoning with Long-Term.pdf"
+      ]
+    },
+    {
+      "sha256": "da65007d2f04bb7347c5dae5cf8ef3e5891a6236e6041e9e2ad9d02e7ac64363",
+      "paths": [
+        "PDF/Memory/Augmenting Language Agents with Parametric Reflective Memory.pdf",
+        "PDF/PROMPT/Augmenting Language Agents with Parametric Reflective Memory.pdf",
+        "PDF/pipeline/Augmenting Language Agents with Parametric Reflective Memory.pdf"
+      ]
+    },
+    {
+      "sha256": "dab7e73744bbf87bb27ba8b53258270775767057c759d623086e5ffbd6d44180",
+      "paths": [
+        "PDF/Memory/Beyond RAG for Agent Memory.pdf",
+        "PDF/RAG/Beyond RAG for Agent Memory.pdf"
+      ]
+    },
+    {
+      "sha256": "29144eb3d8668d1d4ae41a294b3593b85db2bd7b4720894fb0cc293f3868ad5f",
+      "paths": [
+        "PDF/Memory/Generalizable Self-Evolving Memory for Automatic Prompt Optimization.pdf",
+        "PDF/PROMPT/Generalizable Self-Evolving Memory for Automatic Prompt Optimization.pdf"
+      ]
+    },
+    {
+      "sha256": "7c6b1f5bab0154d5ec5d204b3ce44aaa79952f7c511fd598c626cda723262cce",
+      "paths": [
+        "PDF/Memory/Scaling Long-Horizon LLM Agents via Indexed Experience Memory.pdf",
+        "PDF/PROMPT/Scaling Long-Horizon LLM Agents via Indexed Experience Memory.pdf",
+        "PDF/RAG/Scaling Long-Horizon LLM Agents via Indexed Experience Memory.pdf"
+      ]
+    },
+    {
+      "sha256": "b34235d831a4cdf70008876fcbda2bccb872d1dca33f08958480e19f11f2c82c",
+      "paths": [
+        "PDF/pipeline/A Modular Methodology for LLM-Based Data Enrichment Pipeline Generation.pdf",
+        "PDF/pipeline/Prompt2DAG A Modular Methodology for LLM-Based Data Enrichment Pipeline Generation.pdf"
+      ]
+    },
+    {
+      "sha256": "4d390ef78477c194d5d455d59664c427c52c725cc07c4d0f3386c5383186a05b",
+      "paths": [
+        "PDF/PROMPT/A comprehensive taxonomy of prompt engineering techniques for large language models.pdf",
+        "PDF/pipeline/A comprehensive taxonomy of prompt engineering techniques for large language models.pdf"
+      ]
+    },
+    {
+      "sha256": "af0963d7b7b0f7e2de4e0ad99bbb997e8dc0352e083a9b0cce9978181ed64d35",
+      "paths": [
+        "PDF/PROMPT/A Systematic Literature Review of Retrieval-Augmented Generation Techniques, Metrics, and Challenges.pdf",
+        "PDF/RAG/A Systematic Literature Review of Retrieval-Augmented Generation Techniques, Metrics, and Challenges.pdf"
+      ]
+    },
+    {
+      "sha256": "216931d7d622c3ab07d6e14ce60f50b6df6b9fa5e7c413aec333afe8d45c83d7",
+      "paths": [
+        "PDF/PROMPT/A Unified Agentic Harness for MLLMs.pdf",
+        "PDF/RAG/A Unified Agentic Harness for MLLMs.pdf"
+      ]
+    },
+    {
+      "sha256": "20b685bf60808e141ee6eb5ef9f539d7535fb02d28acddc7158b62e4b326db24",
+      "paths": [
+        "PDF/PROMPT/Adaptive Test-Time Compute Allocation for Reasoning LLMs via Constrained Policy Optimization.pdf",
+        "PDF/pipeline/Adaptive Test-Time Compute Allocation for Reasoning LLMs via Constrained Policy Optimization.pdf"
+      ]
+    },
+    {
+      "sha256": "98d00d193ad458ff4bba27987ae5b1414a6e0b913ec8093569af3d571d099589",
+      "paths": [
+        "PDF/PROMPT/AgentDyn A Dynamic Open-Ended Benchmark for Evaluating Prompt Injection Attacks of Real-World Agent Security System.pdf",
+        "PDF/pipeline/AgentDyn A Dynamic Open-Ended Benchmark for Evaluating Prompt Injection Attacks of Real-World Agent Security System.pdf"
+      ]
+    },
+    {
+      "sha256": "edc82b75fe0496cb13bf8288aac941e4437dc136a82b2dce4a7ab55d130db916",
+      "paths": [
+        "PDF/PROMPT/Agentic Reasoning for Large Language Models.pdf",
+        "PDF/RAG/Agentic Reasoning for Large Language Models.pdf"
+      ]
+    },
+    {
+      "sha256": "5bc1f774244b9b7167221b1ed2fd0ec6a5c1cec46ea42e97e0d8dab94bdead9f",
+      "paths": [
+        "PDF/PROMPT/AgentRedBench Dynamic Redteaming and Integration-Aware Defense for LLM Agents over SaaS Integrations.pdf",
+        "PDF/pipeline/AgentRedBench Dynamic Redteaming and Integration-Aware Defense for LLM Agents over SaaS Integrations.pdf"
+      ]
+    },
+    {
+      "sha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+      "paths": [
+        "PDF/PROMPT/Attention Is All You Need.pdf",
+        "PDF/RAG/Attention Is All You Need.pdf"
+      ]
+    },
+    {
+      "sha256": "a4ab3326464a010895ada1850a8a8d76f74a227e2933f3882810c4dd87d00414",
+      "paths": [
+        "PDF/PROMPT/AutoSurvey2 Empowering Researchers with Next Level Automated Literature Surveys.pdf",
+        "PDF/pipeline/AutoSurvey2 Empowering Researchers with Next Level Automated Literature Surveys.pdf"
+      ]
+    },
+    {
+      "sha256": "34a4a0872964a5562f84b76dc4206ec31325a19a518b1b06aec6346190ccb400",
+      "paths": [
+        "PDF/PROMPT/Can You Trust LLM Judgments Reliability of LLM-as-a-Judge.pdf",
+        "PDF/pipeline/Can You Trust LLM Judgments Reliability of LLM-as-a-Judge.pdf"
+      ]
+    },
+    {
+      "sha256": "7d9f878c23b460e4566aa4ec9201b1abfb3b8faefb2b1356e411cb90fef72a12",
+      "paths": [
+        "PDF/PROMPT/Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.pdf",
+        "PDF/RAG/Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.pdf"
+      ]
+    },
+    {
+      "sha256": "5663314dea6dbc4e91f801b5bb29b0564f45cdc87b54bc2c6f7f242442e4f76a",
+      "paths": [
+        "PDF/PROMPT/CHATINJECT ABUSING CHAT TEMPLATES FOR PROMPT INJECTION IN LLM AGENTS.pdf",
+        "PDF/pipeline/CHATINJECT ABUSING CHAT TEMPLATES FOR PROMPT INJECTION IN LLM AGENTS.pdf"
+      ]
+    },
+    {
+      "sha256": "c373f57ef9db0918505bd7d4742b8ea65ae564100e81e57a92ba5b346c3c7989",
+      "paths": [
+        "PDF/PROMPT/CLEV LLM-Based Evaluation Through Lightweight Efficient Voting for Free-Form Question-Answering.pdf",
+        "PDF/pipeline/CLEV LLM-Based Evaluation Through Lightweight Efficient Voting for Free-Form Question-Answering.pdf"
+      ]
+    },
+    {
+      "sha256": "d6357f6d25a9ae833845b946eed49a703ae3735e9c130e91591dd9c8aa5c1be8",
+      "paths": [
+        "PDF/PROMPT/CoT2-Meta Budgeted Metacognitive Control for Test-Time Reasoning.pdf",
+        "PDF/pipeline/Budgeted Metacognitive Control for Test-Time Reasoning.pdf"
+      ]
+    },
+    {
+      "sha256": "223a36f9d06c1eaa2564a9ec76cb4615516b88eaa387ecce2333f9c27402810e",
+      "paths": [
+        "PDF/PROMPT/ENHANCING ZERO-SHOT LLM RECOMMENDATIONS VIA SEMANTICS AND COLLABORATIVE SIGNALS.pdf",
+        "PDF/pipeline/ENHANCING ZERO-SHOT LLM RECOMMENDATIONS VIA SEMANTICS AND COLLABORATIVE SIGNALS.pdf"
+      ]
+    },
+    {
+      "sha256": "b7ba05ee48c43b56a40726f0e3d29a80970d46df23d042db491001a1e4652005",
+      "paths": [
+        "PDF/PROMPT/Key-Point-Driven Data Synthesis with its Enhancement on Mathematical Reasoning.pdf",
+        "PDF/RAG/Key-Point-Driven Data Synthesis with its Enhancement on Mathematical Reasoning.pdf"
+      ]
+    },
+    {
+      "sha256": "d5e561b3fcd3aaee03c4651cada1400c0ce792e202a3a4ca424ec139e252486f",
+      "paths": [
+        "PDF/PROMPT/Meta Prompting for AI Systems.pdf",
+        "PDF/pipeline/Meta Prompting for AI Systems.pdf"
+      ]
+    },
+    {
+      "sha256": "5794757457459531ce764abbce2b9748055cf37f1ba4ab63f68102fd4fa3ffc6",
+      "paths": [
+        "PDF/PROMPT/Mining Hidden Prompt Engineering Patterns with Formal Concept Analysis and Association Rules.pdf",
+        "PDF/pipeline/Mining Hidden Prompt Engineering Patterns with Formal Concept Analysis and Association Rules.pdf"
+      ]
+    },
+    {
+      "sha256": "5482b5c79dc89aa1c2855193a6a7c906a7be5263a22c0e6680c3da44fa5c7cfd",
+      "paths": [
+        "PDF/PROMPT/Necessary but Not Sufficient Temperature Control and Reproducibility in LLM-as-Judge Safety Evaluations.pdf",
+        "PDF/pipeline/Necessary but Not Sufficient Temperature Control and Reproducibility in LLM-as-Judge Safety Evaluations.pdf"
+      ]
+    },
+    {
+      "sha256": "984c42de0762b731301b56dff0fa57451bd00e9c8aa20b59d7a587c96516f3cb",
+      "paths": [
+        "PDF/PROMPT/On Meta-Prompting.pdf",
+        "PDF/pipeline/On Meta-Prompting.pdf"
+      ]
+    },
+    {
+      "sha256": "9de5f2fec8c2084efbc0087dabf42f9cb555f9ba8eda149421ac52d59810e6e0",
+      "paths": [
+        "PDF/PROMPT/PI_Hunter_Automated_Red_Teaming_for_Exposing_and_Localizing_Prompt.pdf",
+        "PDF/pipeline/PI-Hunter Automated Red-Teaming for Exposing and Localizing Prompt Injections.pdf"
+      ]
+    },
+    {
+      "sha256": "8785f058eb535827656e65451a7857f40dbfd58d0beaad159f8ac73c2f487f58",
+      "paths": [
+        "PDF/PROMPT/PISmith_Reinforcement_Learning_based_Red_Teaming_for_Prompt_Injection.pdf",
+        "PDF/pipeline/PISmith Reinforcement Learning-based Red Teaming for Prompt Injection Defenses.pdf"
+      ]
+    },
+    {
+      "sha256": "c6e2edadd4fefc94526dc54fa8c548093748e138270381f7681b59a1fe5269a6",
+      "paths": [
+        "PDF/PROMPT/Problem Elaboration Prompting Improves Mathematical Reasoning in Large Language Models.pdf",
+        "PDF/pipeline/Problem Elaboration Prompting Im- proves Mathematical Reasoning in Large Language Models.pdf"
+      ]
+    },
+    {
+      "sha256": "6575ed46e6ca62a2cffd1d3e4889eb1393b120e2d3b78cfa4fbafd9cec7a271d",
+      "paths": [
+        "PDF/PROMPT/PromptArmor Simple yet Effective Prompt Injection Defenses.pdf",
+        "PDF/pipeline/PromptArmor Simple yet Effective Prompt Injection Defenses.pdf"
+      ]
+    },
+    {
+      "sha256": "0e5b44b77d345581509bb58b009fa7fef9928bf8c090b2a056e8916f25d974a0",
+      "paths": [
+        "PDF/PROMPT/PROMPTBREEDER SELF-REFERENTIAL SELF-IMPROVEMENT VIA PROMPT EVOLUTION VIA PROMPT EVOLUTION.pdf",
+        "PDF/pipeline/SELF-REFERENTIAL SELF-IMPROVEMENT VIA PROMPT EVOLUTION.pdf"
+      ]
+    },
+    {
+      "sha256": "c4c08a388abb8414bcbc0d68a3626445edbb7f4b9159509aa683ebf098ab74b9",
+      "paths": [
+        "PDF/PROMPT/Prompting Large Language Models for Recommendation with Semantic and Collaborative Data.pdf",
+        "PDF/pipeline/Prompting Large Language Models for Recommendation with Semantic and Collaborative Data.pdf"
+      ]
+    },
+    {
+      "sha256": "715239e051ab7cc75847ef58bd0da63390a687e20600bd0436fcd590c16131cc",
+      "paths": [
+        "PDF/PROMPT/Prompting Large Language Models for Recommender Systems A Comprehensive Framework and Empirical Analysis.pdf",
+        "PDF/pipeline/Prompting Large Language Models for Recommender Systems A Comprehensive Framework and Empirical Analysis  .pdf",
+        "PDF/pipeline/Prompting Large Language Models for Recommender Systems A Comprehensive Framework and Empirical Analysis.pdf"
+      ]
+    },
+    {
+      "sha256": "0cc637f5492ed565fc9f80fa9a1b5772d3e3743a13ef5bc294c0c081b7142f93",
+      "paths": [
+        "PDF/PROMPT/Recursive Self-Improvement in AI From Bounded Self-Refinement to Autonomous Research Loops.pdf",
+        "PDF/RAG/Recursive Self-Improvement in AI From Bounded Self-Refinement to Autonomous Research Loops.pdf",
+        "PDF/pipeline/Recursive Self-Improvement in AI From Bounded Self-Refinement to Autonomous Research Loops.pdf"
+      ]
+    },
+    {
+      "sha256": "a6d1e6105ee08314fcfc07d6c24bbf8a05eb1c935c71bae9d8d61d068af685e1",
+      "paths": [
+        "PDF/PROMPT/Reference-Guided Verdict LLMs-as-Judges in Automatic Evaluation of Free-Form QA.pdf",
+        "PDF/pipeline/Reference-Guided Verdict LLMs-as-Judges in Automatic Evaluation of.pdf"
+      ]
+    },
+    {
+      "sha256": "faacf577921eab7a38f1a7b04899b6db5acbb17434ff78cb8f9f25e3b87f3230",
+      "paths": [
+        "PDF/PROMPT/Reliability without Validity A Systematic, Large-Scale Evaluation of LLM-as-a-Judge Models Across Agreement, Consistency, and Bias.pdf",
+        "PDF/pipeline/Reliability without Validity A Systematic, Large-Scale Evaluation of LLM-as-a-Judge Models Across Agreement, Consistency, and Bias.pdf"
+      ]
+    },
+    {
+      "sha256": "17b86d18004bf6f500927ae519524fa3f6af4c2964246c670d4d53a232573be9",
+      "paths": [
+        "PDF/PROMPT/Same Input, Different Scores A Multi Model Study on the Inconsistency of LLM Judge.pdf",
+        "PDF/pipeline/Same_Input_Different_Scores_A_Multi_Model_Study_on.pdf"
+      ]
+    },
+    {
+      "sha256": "2f6ef742c2799b931ef92337a2e3e899d1b8940f4fb10d94fca5b8e2353601fc",
+      "paths": [
+        "PDF/PROMPT/Scaling Long-Horizon LLM Agent via Context-Folding.pdf",
+        "PDF/RAG/Scaling Long-Horizon LLM Agent via Context-Folding.pdf"
+      ]
+    },
+    {
+      "sha256": "377d2331bb2949538e66c1b933ba43656d0ac407db97289f353d219002272f49",
+      "paths": [
+        "PDF/PROMPT/The Necessity of Setting Temperature in LLM-as-a-Judge.pdf",
+        "PDF/pipeline/The Necessity of Setting Temperature in LLM-as-a-Judge.pdf"
+      ]
+    },
+    {
+      "sha256": "c1984bb50a5b90fddb895fdc3a0f72e5bc977148c9f63ef6040cbe7a3e1f0d98",
+      "paths": [
+        "PDF/PROMPT/Training language models to follow instructions with human feedback.pdf",
+        "PDF/RAG/Training language models to follow instructions with human feedback.pdf"
+      ]
+    },
+    {
+      "sha256": "f87d7413120be1b4225de53be0eb2f768dba7b7bfe691d742cbd2472f0783d80",
+      "paths": [
+        "PDF/PROMPT/Uncertainty of Thoughts Uncertainty-Aware Planning Enhances Information Seeking in Large Language Models.pdf",
+        "PDF/pipeline/Uncertainty of Thoughts Uncertainty-Aware Planning Enhances Information Seeking in Large Language Models.pdf"
+      ]
+    },
+    {
+      "sha256": "8b0453f1044655dc0144fc1f3904d5e6d8b4efb3531e918affe0fbccc0e2d34a",
+      "paths": [
+        "PDF/RAG/Agentic Retrieval-Augmented Generation (RAG) Taxonomy, Architectures, Evaluation, and Research Directions.pdf",
+        "PDF/RAG/SoK Agentic Retrieval-Augmented Generation (RAG) Taxonomy, Architectures, Evaluation, and Research Directions.pdf"
+      ]
+    },
+    {
+      "sha256": "967517dbde132a515386f9c8ac25969be2578658a7b9a7927c893751b009c3c4",
+      "paths": [
+        "PDF/RAG/Group-Evolving Agents Open-Ended Self-Improvement via Experience Sharing.pdf",
+        "PDF/pipeline/Group-Evolving Agents Open-Ended Self-Improvement via Experience Sharing.pdf"
+      ]
+    },
+    {
+      "sha256": "5059d3f7ca0296ee247d00c3414ed82d745543324ced4309eaf3135314478a71",
+      "paths": [
+        "PDF/RAG/KiRAG Knowledge-Driven Iterative Retriever for Enhancing Retrieval-Augmented Generation.pdf",
+        "PDF/RAG/KiRAG v1.pdf"
+      ]
+    },
+    {
+      "sha256": "8e5ce5dcf6fc4d2f18c436f7573d3e6427142f77363e23bf9e7ab3bc8e3fb3cc",
+      "paths": [
+        "PDF/RAG/LlamaFirewall An open source guardrail system for building secure AI agents.pdf",
+        "PDF/pipeline/LlamaFirewall An open source guardrail system for building secure AI agents.pdf"
+      ]
+    },
+    {
+      "sha256": "995acf8cd981a357da48c64235d9303252611c619cdec9a95d1f603ac70cfe43",
+      "paths": [
+        "PDF/RAG/RecursiveSynthesisforLong-HorizonTerminalTasks.pdf",
+        "PDF/RecursiveSynthesisforLong-HorizonTerminalTasks.pdf"
+      ]
+    },
+    {
+      "sha256": "7e5beb9aa569a19aa1a7758ba6be95bd7c14070f09c56cb8e2734553a4517d82",
+      "paths": [
+        "PDF/RAG/SWE-Bench ProMax Benchmarking Agents on Large-Scale Multilingual Code Refactoring.pdf",
+        "PDF/SWE-Bench ProMax Benchmarking Agents on Large-Scale Multilingual Code Refactoring.pdf"
+      ]
+    },
+    {
+      "sha256": "389e5a98621dde143fe1b8a4bf128d6da0214aa19ec71d5d565738702cf88a9c",
+      "paths": [
+        "PDF/RAG/Taxonomy and Consistency Analysis of Safety Benchmarks for AI Agents.pdf",
+        "PDF/pipeline/Taxonomy and Consistency Analysis of Safety Benchmarks for AI Agents.pdf"
+      ]
+    },
+    {
+      "sha256": "caf448002fbe0d679a298b74e363d9dc91aa4f4397a193e708e9d623b42b4d6a",
+      "paths": [
+        "PDF/RAG/Thought-Level Beam Search for Reasoning.pdf",
+        "PDF/Thought-Level Beam Search for Reasoning.pdf"
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "path": "PDF/A Unified View of Long-Sequence Models towards Modeling Million-Scale Dependencies.pdf",
+      "sha256": "b34480c6beaa68d1f921d7954c62853c6f4f3ae166b18eb4a53cf0523d685c38",
+      "bytes": 858628
+    },
+    {
+      "path": "PDF/AI4AI at Test-Time Strong-to-Weak Capability Transfer via Harnesses.pdf",
+      "sha256": "69f852cecf564599328118aa5419f94a118c893f770d7d58e3467f0cba4fcdcd",
+      "bytes": 1123067
+    },
+    {
+      "path": "PDF/ARIS Autonomous Research via Adversarial Multi-Agent Collaboration.pdf",
+      "sha256": "2f9e22ebacb7a56b43b9675441ab18465729f2ff6f3d34175560368a116ba382",
+      "bytes": 933612
+    },
+    {
+      "path": "PDF/AnOmni-Modal Omni-Discipline AI Scientist.pdf",
+      "sha256": "028cdc0c2163563cdee101a7c5754343f0c4b00ffab85da675dcc3b080842554",
+      "bytes": 4734161
+    },
+    {
+      "path": "PDF/AutoDesign Meta-Harness Optimization for Long-Horizon Agentic Design.pdf",
+      "sha256": "9e9b8532f29ab9d12756f4dba5cc8d1577feb9b0057ae1ae6f2bcc9f04ce06d8",
+      "bytes": 19057789
+    },
+    {
+      "path": "PDF/Automated AI Skill Generation via Expert Knowledge Distillation.pdf",
+      "sha256": "b748a078404345546599b57f0139d1a00eaad814ccbc22ab21dac0013a7ce6da",
+      "bytes": 385334
+    },
+    {
+      "path": "PDF/BDH-CQ IN-CONTEXT LEARNING WITH RECURRENT LATENT REASONING.pdf",
+      "sha256": "9033d8de6c728a0c236e894b1958da5399bef9c8a25a6fa686acfa503c408a33",
+      "bytes": 959907
+    },
+    {
+      "path": "PDF/Boosting Language Models Reasoning with Chain-of-Knowledge Prompting.pdf",
+      "sha256": "29ef6ca233730792d3427e39d1f980751f1d9ae4857502f5c455105310784e97",
+      "bytes": 855692
+    },
+    {
+      "path": "PDF/Buffer Overflow in Mixture of Experts.pdf",
+      "sha256": "dc5305ea824bc62532fe3e73b537f29f1857b9bf22bbfdf57b2b7eca46246969",
+      "bytes": 649722
+    },
+    {
+      "path": "PDF/Count Anything.pdf",
+      "sha256": "8710f89f651b21e9746c6a7e0c3dac89128795a6d0152d94c97d1f8d255a81f3",
+      "bytes": 43577871
+    },
+    {
+      "path": "PDF/DECISION TREES THAT REMEMBER GRADIENT BASEDLEARNINGOFRECURRENTDECISIONTREES WITHMEMORY.pdf",
+      "sha256": "f0f4f29f64d75ce770c5d0bcf90013a0e8f1c4946af9b1d637f37ebff58a8254",
+      "bytes": 987975
+    },
+    {
+      "path": "PDF/DeepSeek-R1 Incentivizing Reasoning Capability in LLMs via Reinforcement Learning.pdf",
+      "sha256": "b191b0a365a64b4ab2791d117069ed17a2933d03554a662ced58b37df52018f4",
+      "bytes": 5034998
+    },
+    {
+      "path": "PDF/Direct Preference Optimization Your Language Model is Secretly a Reward Model.pdf",
+      "sha256": "92cb3a2b71362acda98a789b03d88688fd33cf5fcf13f81d2b1de30ee7d3b67a",
+      "bytes": 1299212
+    },
+    {
+      "path": "PDF/Enhancing LLM Reasoning with Iterative DPO A Comprehensive Empirical Investigation.pdf",
+      "sha256": "f6f405e2bff869d7c5a7cbd3661427b89407132170e0a4bcda98ae9e98ed2e7c",
+      "bytes": 1191122
+    },
+    {
+      "path": "PDF/Evaluation of Large Language Models for Decision Making in Autonomous Driving.pdf",
+      "sha256": "8dd077c1fb0af3e304ca4b7db1bd1730bf468c2ca204abbf56c5f763a2300f2f",
+      "bytes": 4692699
+    },
+    {
+      "path": "PDF/FlashAttention Fast and Memory-Efficient Exact Attention with IO-Awareness.pdf",
+      "sha256": "be21f20c749ba8443988b479bece93617dd37b214ea9099413f951f756d4104f",
+      "bytes": 2004922
+    },
+    {
+      "path": "PDF/Gemini 2.5 Pushing the Frontier with Advanced Reasoning, Multimodality, Long Context, and Next Generation Agentic Capabilities..pdf",
+      "sha256": "b4cfe19f7eea7b0308cb0282127ef4821bb8f1d1e270e7a6f398b30fe57d41cb",
+      "bytes": 10501019
+    },
+    {
+      "path": "PDF/How Can Rhetoric Reward-Hack AI Reviewers Dissecting Rhetorical Sensitivity in AI-Based Peer Review.pdf",
+      "sha256": "cea31a07b3d124be3cb87c6193feaee8924f167a9ae3f8d2cb9ba29995924d01",
+      "bytes": 1322174
+    },
+    {
+      "path": "PDF/KIMI K3 OPEN FRONTIER INTELLIGENCE.pdf",
+      "sha256": "1a21e4d15de52eb0d4cf09cdbffc6248c497ba6897572cc5574af237c13da51d",
+      "bytes": 1790685
+    },
+    {
+      "path": "PDF/LLMROUTER UNIFIED INFRASTRUCTURE FOR DEVELOPING, EVALUATING, AND DEPLOYING LLM ROUTERS.pdf",
+      "sha256": "2da60abf0bc4c73ae95365850f92eca90e13c37d56822c1f98873901eb157878",
+      "bytes": 3132243
+    },
+    {
+      "path": "PDF/LORA LOW-RANK ADAPTATION OF LARGE LAN GUAGE MODELS.pdf",
+      "sha256": "e9a0d3128767db616085dc0f4e6e455e672e89af823e8ed1282793682787395a",
+      "bytes": 1609513
+    },
+    {
+      "path": "PDF/LYCHEEMEMORY V2 Efficient Long-Term Memory for LLM Agents via Semantic Segment-Level Consolidation.pdf",
+      "sha256": "910c2905cae3646ad646738da3267f79776ada3d9f8a3e2e93aac2df0de0b85c",
+      "bytes": 1192710
+    },
+    {
+      "path": "PDF/LongHorizon-Harness Advancing Long Horizon Agents for Real-World Tasks.pdf",
+      "sha256": "ce534c4fd69b47086b724cdcf7af10faad54f44b025c13bd67ab6975d58f200a",
+      "bytes": 27448724
+    },
+    {
+      "path": "PDF/Macaron-V1 TowardsOpenContinualLearning with Self-Improvement and Mixture-of-LoRA.pdf",
+      "sha256": "795eb2936d46aab06c84f36be947fd326853bf6c0573d49942ad53196262001d",
+      "bytes": 4473615
+    },
+    {
+      "path": "PDF/MatrAIx Simulating the World with 8.3 Billion Persona Agents.pdf",
+      "sha256": "354f10b100a4b5933f8e22058cae7bb23bb2bdbc5d9f5b21ba0c8fda8821013d",
+      "bytes": 16237598
+    },
+    {
+      "path": "PDF/Mem0 Building Production-Ready AI Agents with Scalable Long-Term Memory.pdf",
+      "sha256": "bec870b657aa73405275a6d8fe27bcd4271799e028bc62986ab9c4cd27a3712d",
+      "bytes": 1144031
+    },
+    {
+      "path": "PDF/Memory/A Hybrid Neuro-Symbolic Memory System for LLM Agents.pdf",
+      "sha256": "dd0d0e4a36fbda69785d15d11f356a740492f484d8ee3d4057979afdde4edd88",
+      "bytes": 176922
+    },
+    {
+      "path": "PDF/Memory/A Survey on the Memory Mechanism of Large.pdf",
+      "sha256": "aae2f9537f748f30f0ca59fd66c499b7df7bdb199d24ce43cab0a6170f7dceef",
+      "bytes": 2040345
+    },
+    {
+      "path": "PDF/Memory/A Survey on the Security of Long-Term Memory in LLM Agents Toward Mnemonic Sovereignty.pdf",
+      "sha256": "6fad525a02e920fc34b7ba0f5c27b72f9214f5ef42a54c74040f33f95a033eba",
+      "bytes": 18305316
+    },
+    {
+      "path": "PDF/Memory/A Survey on the Security of Long-Term Memory in LLM.pdf",
+      "sha256": "6fad525a02e920fc34b7ba0f5c27b72f9214f5ef42a54c74040f33f95a033eba",
+      "bytes": 18305316
+    },
+    {
+      "path": "PDF/Memory/A Temporal Knowledge Graph Architecture for Agent Memory.pdf",
+      "sha256": "d26f7eb599540e8b14d75e7efda58a07661abbb1b864e58323b5768475a15d42",
+      "bytes": 148771
+    },
+    {
+      "path": "PDF/Memory/A_Comprehensive_Analysis_of_Google_DeepMind’s_Post_AGI_Roadmap.pdf",
+      "sha256": "2d36381d4778a594125a4c650d6a4db19c4a36367c2154b20d113f558cb47d10",
+      "bytes": 244368
+    },
+    {
+      "path": "PDF/Memory/Advancing Multimodal Agent Reasoning with Long-Term Neuro-Symbolic Memory.pdf",
+      "sha256": "df18bc67d05f6d63abe6731c4b7b02978d5a8b90cc69341290183a7aea778396",
+      "bytes": 1400387
+    },
+    {
+      "path": "PDF/Memory/Advancing Multimodal Agent Reasoning with Long-Term.pdf",
+      "sha256": "df18bc67d05f6d63abe6731c4b7b02978d5a8b90cc69341290183a7aea778396",
+      "bytes": 1400387
+    },
+    {
+      "path": "PDF/Memory/Agentic Memory for LLM Agents.pdf",
+      "sha256": "fec32b521c4a1f793442bf1aeb26139c583078350d1cd4ab8f4eccc54a0694f0",
+      "bytes": 1015164
+    },
+    {
+      "path": "PDF/Memory/Augmenting Language Agents with Parametric Reflective Memory.pdf",
+      "sha256": "da65007d2f04bb7347c5dae5cf8ef3e5891a6236e6041e9e2ad9d02e7ac64363",
+      "bytes": 2862673
+    },
+    {
+      "path": "PDF/Memory/Beyond RAG for Agent Memory.pdf",
+      "sha256": "dab7e73744bbf87bb27ba8b53258270775767057c759d623086e5ffbd6d44180",
+      "bytes": 2141574
+    },
+    {
+      "path": "PDF/Memory/Building Production-Ready AI Agents with Scalable Long-Term Memory.pdf",
+      "sha256": "bec870b657aa73405275a6d8fe27bcd4271799e028bc62986ab9c4cd27a3712d",
+      "bytes": 1144031
+    },
+    {
+      "path": "PDF/Memory/Episodic Memory is the Missing Piece for Long-Term LLM Agents.pdf",
+      "sha256": "72d687114dcec3f7b00f205d06f7efdd2aada4afada24af12a6d4bee24676c51",
+      "bytes": 430850
+    },
+    {
+      "path": "PDF/Memory/Evaluating Very Long-Term Conversational Memory of LLM Agents.pdf",
+      "sha256": "218188e1d66a553afe324491e3e5e5d0af107196c9ff32c65bb3640ebf638539",
+      "bytes": 1608560
+    },
+    {
+      "path": "PDF/Memory/Generalizable Self-Evolving Memory for Automatic Prompt Optimization.pdf",
+      "sha256": "29144eb3d8668d1d4ae41a294b3593b85db2bd7b4720894fb0cc293f3868ad5f",
+      "bytes": 1648114
+    },
+    {
+      "path": "PDF/Memory/Hierarchical Memory for High-Efficiency Long-Term Reasoning in LLM Agents.pdf",
+      "sha256": "47516de7e7feb4738f967fed3f1055e8f3fc038c01283fb3b6ab9b0ea4a279b9",
+      "bytes": 1432791
+    },
+    {
+      "path": "PDF/Memory/LYCHEEMEMORY V2 Efficient Long-Term Memory for LLM Agents via Semantic Segment-Level Consolidation.pdf",
+      "sha256": "910c2905cae3646ad646738da3267f79776ada3d9f8a3e2e93aac2df0de0b85c",
+      "bytes": 1192710
+    },
+    {
+      "path": "PDF/Memory/Learning Unified Long-Term and Short-Term Memory.pdf",
+      "sha256": "73f24aaf8234d38eb96a27b465c7da4f370b91d71823cb518641015e0330382c",
+      "bytes": 1159291
+    },
+    {
+      "path": "PDF/Memory/Long Short-Term Memory Networks A Comprehensive Survey.pdf",
+      "sha256": "fb82156d7e70375fba0a110085eda6fa33de9c49c493e09ec530fd4f7c9599f8",
+      "bytes": 482293
+    },
+    {
+      "path": "PDF/Memory/Lost in the Middle; How Language Models Use Long Contexts.pdf",
+      "sha256": "653b29619eae2ae4b361d7bdcdc06db4bedcb1b0eabe31814036beca8c1af0b1",
+      "bytes": 747542
+    },
+    {
+      "path": "PDF/Memory/MemSlides A Hierarchical Memory Driven Agent Framework for Personalized Slide Generation with Multi-turn Local Revision.pdf",
+      "sha256": "42b59b33f388e6adb930fbf058377bf8d25a70204c14a04eb465ad8bc9e07af2",
+      "bytes": 14802101
+    },
+    {
+      "path": "PDF/Memory/Memory Intelligence Agent.pdf",
+      "sha256": "d2fe7604d1a4c679b38dfad9d0ba14854ec4dfb438b514949688121f2322a226",
+      "bytes": 6486782
+    },
+    {
+      "path": "PDF/Memory/Memory for Autonomous LLM Agents Mechanisms, Evaluation, and Emerging Frontiers.pdf",
+      "sha256": "ca7d6c5dfb712921da92542454e07af2a09751d61811e76a29066e89dd57cc51",
+      "bytes": 313563
+    },
+    {
+      "path": "PDF/Memory/Memory in the Age of AI Agents.pdf",
+      "sha256": "10de3c050903bfa1113c9a954380e2786f42d25a9ea24478bf6cc69fef2e2b42",
+      "bytes": 14916725
+    },
+    {
+      "path": "PDF/Memory/Scaling Long-Horizon LLM Agents via Indexed Experience Memory.pdf",
+      "sha256": "7c6b1f5bab0154d5ec5d204b3ce44aaa79952f7c511fd598c626cda723262cce",
+      "bytes": 1353534
+    },
+    {
+      "path": "PDF/OPENHANDS AN OPEN PLATFORM FOR AI SOFTWARE DEVELOPERS AS GENERALIST AGENTS.pdf",
+      "sha256": "5d802255c4a58104a06147ba736fee09569faf3c26f251e5e9b7eff5d7662c14",
+      "bytes": 3293124
+    },
+    {
+      "path": "PDF/Ouroboros A Self-Developing Frontier Coding Agent with Reviewed Core Evolution.pdf",
+      "sha256": "ec88162e9af42b7a703acbbfb35ce17b1929d41320065549f1fc654ccaeaeba0",
+      "bytes": 1175237
+    },
+    {
+      "path": "PDF/PROMPT/A Comparative Empirical Study of Prompting Strategies for Code Generation with Large Language Models.pdf",
+      "sha256": "dcabfe4f816240fbad60fbb7700a91ea88bbf1367cf04b8bea910bc27ded3903",
+      "bytes": 455653
+    },
+    {
+      "path": "PDF/PROMPT/A Comprehensive Evaluation of LLM Reasoning From Single-Model to Multi-Agent Paradigms.pdf",
+      "sha256": "925d7dfce24fbe6057a84a4ac46c94203210d93ca2145c927af609d423fde94d",
+      "bytes": 5606840
+    },
+    {
+      "path": "PDF/PROMPT/A Dialectic Pipeline for Improving LLM Robustness.pdf",
+      "sha256": "3b83946e0554c618c2bd0e6bb6513fcb6afc2c8f2dffaaa42f7dab132d395fb6",
+      "bytes": 16560472
+    },
+    {
+      "path": "PDF/PROMPT/A Practical Survey on Zero-shot Prompt Design for In-context Learning.pdf",
+      "sha256": "3c03880c255921c6d11aa554ae47bd26a51d15f1dcbee2ebef5f59b83d65255e",
+      "bytes": 496289
+    },
+    {
+      "path": "PDF/PROMPT/A Prompt Pattern Catalog to Enhance Prompt Engineering with ChatGPT.pdf",
+      "sha256": "15b11c93075e943d9dd7154252784a723490086cddec65ec38361fcea597f33d",
+      "bytes": 297795
+    },
+    {
+      "path": "PDF/PROMPT/A Structural Theory of Position Bias in Transformers.pdf",
+      "sha256": "e0e81a37de3623886f2c5e07c779b4ebc4e7445305c2d12a5603f984b5326f55",
+      "bytes": 3914960
+    },
+    {
+      "path": "PDF/PROMPT/A Survey of Attacks on Large Language Models.pdf",
+      "sha256": "cf68c64e85e32b01759924657ffad2bb845ae72727a4047e157c6384e2bff3d8",
+      "bytes": 2058504
+    },
+    {
+      "path": "PDF/PROMPT/A Survey of Chain of Thought Reasoning Advances, Frontiers and Future.pdf",
+      "sha256": "beb420b7553de155991b8edd8800f15a011d733e754ef7816b993b7370e65837",
+      "bytes": 1407585
+    },
+    {
+      "path": "PDF/PROMPT/A Survey of Query Optimization in Large Language Models.pdf",
+      "sha256": "bf849305129a08f00ec95db9717f19d0fe68a6822748675c2f7e6a24d27e0eed",
+      "bytes": 462499
+    },
+    {
+      "path": "PDF/PROMPT/A Survey of Self-Evolving Agents.pdf",
+      "sha256": "0b39df03feea2f4d8ac41e35a9247889978a53cb1e7b7d3eafaae76ad97b5602",
+      "bytes": 5726709
+    },
+    {
+      "path": "PDF/PROMPT/A Survey on LLM-as-a-Judge.pdf",
+      "sha256": "b9aa718f833b295d3790820d9d2f844c8445dfd3bec7bf3bd5136d1faaef1c0b",
+      "bytes": 9788880
+    },
+    {
+      "path": "PDF/PROMPT/A Survey on Large Language Models with some Insights on their Capabilities and Limitations.pdf",
+      "sha256": "bdc88367a44922f6bbd02aa8871ac25c0659cd1727b5295046f87bc36fea0cfa",
+      "bytes": 11170449
+    },
+    {
+      "path": "PDF/PROMPT/A Survey on the Security of Long-Term Memory in LLM.pdf",
+      "sha256": "6fad525a02e920fc34b7ba0f5c27b72f9214f5ef42a54c74040f33f95a033eba",
+      "bytes": 18305316
+    },
+    {
+      "path": "PDF/PROMPT/A Systematic Evaluation of Large Models for Geometric Reasoning.pdf",
+      "sha256": "736da3447f65b714694719a5850101d8526ff2d2115d85364181817d3b226c47",
+      "bytes": 1776598
+    },
+    {
+      "path": "PDF/PROMPT/A Systematic Literature Review of Retrieval-Augmented Generation Techniques, Metrics, and Challenges.pdf",
+      "sha256": "af0963d7b7b0f7e2de4e0ad99bbb997e8dc0352e083a9b0cce9978181ed64d35",
+      "bytes": 2037808
+    },
+    {
+      "path": "PDF/PROMPT/A Systematic Review of Algorithmic Red Teaming Methodologies for Assurance and Security of AI Applications.pdf",
+      "sha256": "1679244371af089558be28dcf0c16a6015b9693dbdd52f1c211c82249fca2344",
+      "bytes": 4732409
+    },
+    {
+      "path": "PDF/PROMPT/A Taxonomy of Prompt Modifiers for Text-To-Image Generation.pdf",
+      "sha256": "da0e6c8f3c5bd23f689b5f29d9a80eb717d658efa27b83f7e6135d9a4facf34d",
+      "bytes": 5175891
+    },
+    {
+      "path": "PDF/PROMPT/A Unified Agentic Harness for MLLMs.pdf",
+      "sha256": "216931d7d622c3ab07d6e14ce60f50b6df6b9fa5e7c413aec333afe8d45c83d7",
+      "bytes": 14067903
+    },
+    {
+      "path": "PDF/PROMPT/A comprehensive taxonomy of prompt engineering techniques for large language models.pdf",
+      "sha256": "4d390ef78477c194d5d455d59664c427c52c725cc07c4d0f3386c5383186a05b",
+      "bytes": 3053415
+    },
+    {
+      "path": "PDF/PROMPT/AGENTIC AI THE ERA OF SEMANTIC DECODING.pdf",
+      "sha256": "e6de6785277d9c763ea21c62332c5a12a898e5234f540162fe06d9407198b6d9",
+      "bytes": 2194081
+    },
+    {
+      "path": "PDF/PROMPT/AI Agent Systems Architectures, Applications, and Evaluation.pdf",
+      "sha256": "e4cb99f0dd5ec704740fdb692e72c449159bf9e2183c75c2cabb34c30a730d01",
+      "bytes": 50093204
+    },
+    {
+      "path": "PDF/PROMPT/AI Alignment A Comprehensive Survey.pdf",
+      "sha256": "24e34bdd6e1c8422592c19e4b39c467f101382536be2f137c33fb818f339fc25",
+      "bytes": 3818986
+    },
+    {
+      "path": "PDF/PROMPT/AI Safety in Generative AI Large Language Models A Survey.pdf",
+      "sha256": "f9ae5c637184ab9688b2df665b297ae4b377549d5c40b90e4b89003c0c0551d2",
+      "bytes": 1451087
+    },
+    {
+      "path": "PDF/PROMPT/AN EMPIRICAL STUDY OF PRIVACY LEAKAGE CHAINS VIA PROMPT INJECTION IN BLACK-BOX CHATBOT ENVIRONMENTS.pdf",
+      "sha256": "7d0f80f39647f8b6223d6380dfafa3ba6f6dcc8b7aab936fba2265d9ced5a4ac",
+      "bytes": 301985
+    },
+    {
+      "path": "PDF/PROMPT/APEER Automatic Prompt Engineering Enhances Large Language Model Reranking.pdf",
+      "sha256": "92a22221d044cab47df007a10bd2cc95a80f65cd4034b6a41790ef43a1dd241f",
+      "bytes": 712674
+    },
+    {
+      "path": "PDF/PROMPT/ARC Argument Representation and Coverage Analysis for Zero-Shot Long Document Summarization with Instruction Following LLMs.pdf",
+      "sha256": "bb57883f0801401f234dfc48d7542f5cc4c56e77984e0704a33d0fbeec355656",
+      "bytes": 5884509
+    },
+    {
+      "path": "PDF/PROMPT/ART Automatic multi-step reasoning and tool-use for large language models.pdf",
+      "sha256": "b93afc2d95a82fbf1204f5cae3a0322aec2ca6ff258ab45115d7f047bcd5593f",
+      "bytes": 662733
+    },
+    {
+      "path": "PDF/PROMPT/ASK ME ANYTHING A SIMPLE STRATEGY FOR PROMPTING LANGUAGE MODELS.pdf",
+      "sha256": "f0061197060e6076df6b40f935f36cf699cd8f706966ae3c8e680cdfd3a0cd78",
+      "bytes": 1487721
+    },
+    {
+      "path": "PDF/PROMPT/AUTODAN GENERATING STEALTHY JAILBREAK PROMPTS ON ALIGNED LARGE LANGUAGE MODELS.pdf",
+      "sha256": "1d6cff474509628c16bc31e219f1c7bfbe0ef61a875f94fda29a784ebf935dae",
+      "bytes": 611538
+    },
+    {
+      "path": "PDF/PROMPT/AUTOFEEDBACK AN LLM-BASED FRAMEWORK FOR EFFICIENT AND ACCURATE API REQUEST GENERATION.pdf",
+      "sha256": "7ca3ca0dcd9a8bec6fe86bcd5f09d88159a948753e4cc4d140257311482ed34c",
+      "bytes": 9491995
+    },
+    {
+      "path": "PDF/PROMPT/Abstraction-of-Thought Makes Language Models Better Reasoners.pdf",
+      "sha256": "155626d192a971d1909be97bf3e9c477f9a0832054d147d5472b2e38421adaae",
+      "bytes": 878142
+    },
+    {
+      "path": "PDF/PROMPT/Active Prompting with Chain-of-Thought for Large Language Models.pdf",
+      "sha256": "d43201ae6c739568ef5eea7b650680d44bfe603a42e89b5fdcbdb11025c366a7",
+      "bytes": 936927
+    },
+    {
+      "path": "PDF/PROMPT/Adaptive Test-Time Compute Allocation for Reasoning LLMs via Constrained Policy Optimization.pdf",
+      "sha256": "20b685bf60808e141ee6eb5ef9f539d7535fb02d28acddc7158b62e4b326db24",
+      "bytes": 1252025
+    },
+    {
+      "path": "PDF/PROMPT/AgentDyn A Dynamic Open-Ended Benchmark for Evaluating Prompt Injection Attacks of Real-World Agent Security System.pdf",
+      "sha256": "98d00d193ad458ff4bba27987ae5b1414a6e0b913ec8093569af3d571d099589",
+      "bytes": 722327
+    },
+    {
+      "path": "PDF/PROMPT/AgentRedBench Dynamic Redteaming and Integration-Aware Defense for LLM Agents over SaaS Integrations.pdf",
+      "sha256": "5bc1f774244b9b7167221b1ed2fd0ec6a5c1cec46ea42e97e0d8dab94bdead9f",
+      "bytes": 833347
+    },
+    {
+      "path": "PDF/PROMPT/Agentic Agile-V From Vibe Coding to Verified Engineering in Software and Hardware Development.pdf",
+      "sha256": "21bf735feda38da23fe4d4308d063dfe9cbb2f9b125c1a1b6eeb215c5961c513",
+      "bytes": 175406
+    },
+    {
+      "path": "PDF/PROMPT/Agentic Reasoning for Large Language Models.pdf",
+      "sha256": "edc82b75fe0496cb13bf8288aac941e4437dc136a82b2dce4a7ab55d130db916",
+      "bytes": 9857705
+    },
+    {
+      "path": "PDF/PROMPT/Agentic Tool Use in Large Language Models A Survey.pdf",
+      "sha256": "d1b8f8d3bbca401ac09fc88e8d1f28f5d15dd5d6b15c52d4e3137a13ca44e872",
+      "bytes": 1464541
+    },
+    {
+      "path": "PDF/PROMPT/Algorithm of Thoughts Enhancing Exploration of Ideas in Large Language Models.pdf",
+      "sha256": "05baa636de7fe8b91d372a6c75a598352f3d2a01b59ad0c5f91bb6918e50d5d1",
+      "bytes": 953713
+    },
+    {
+      "path": "PDF/PROMPT/Analyzing the Inherent Response Tendency of LLMs Real-World Instructions-Driven Jailbreak.pdf",
+      "sha256": "7b69f6606d85a2309399c7ae244501dc426cea5207862cb85cffcfe3cab381bc",
+      "bytes": 1854919
+    },
+    {
+      "path": "PDF/PROMPT/Answering Questions by Meta-Reasoning over Multiple Chains of Thought.pdf",
+      "sha256": "b71f4dc490dee2ba85dba497a763d9d6e000169edbd881eabd26fbd6338b28e6",
+      "bytes": 1496934
+    },
+    {
+      "path": "PDF/PROMPT/ArbGraph Conflict-Aware Evidence Arbitration for Reliable Long-Form Retrieval-Augmented Generation.pdf",
+      "sha256": "beb3729e4fbd90dce9cb2a7a9e71feafe795b8e9988661077d9e94beebe74525",
+      "bytes": 1753942
+    },
+    {
+      "path": "PDF/PROMPT/Architecture-Sensitive Supervised Fine-Tuning for Screen-Conditioned Action Prediction A PiSAR Benchmark.pdf",
+      "sha256": "5632fa8bd90a3190d52d6d8ea7bd0dc29519e00c9ffffe5604673cd2ccc880bd",
+      "bytes": 827342
+    },
+    {
+      "path": "PDF/PROMPT/Attention Is All You Need.pdf",
+      "sha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+      "bytes": 2215244
+    },
+    {
+      "path": "PDF/PROMPT/Attention Meets Reachability Structural Equivalence and Efficiency in Grammar-Constrained LLM Decoding.pdf",
+      "sha256": "eb2c72e37c4fdae0bf15ed229473412841f2978f41659ba28837186998bd9097",
+      "bytes": 664388
+    },
+    {
+      "path": "PDF/PROMPT/Attention-Guided Reward for Reinforcement Learning-based Jailbreak against Large Reasoning Models.pdf",
+      "sha256": "24b91a1dd510bb9409120c3d922b2e582b5f93c91f45700ec0ec2fca4edc4736",
+      "bytes": 2140649
+    },
+    {
+      "path": "PDF/PROMPT/Augment Engineering A Methodology for Multi-Tool AI Orches tration Across Professional Domains.pdf",
+      "sha256": "7a1507c23dd35321f0c285c5339c2c7052a4b74ed7ed01b0916aa29caa7810fe",
+      "bytes": 912434
+    },
+    {
+      "path": "PDF/PROMPT/Augmenting Language Agents with Parametric Reflective Memory.pdf",
+      "sha256": "da65007d2f04bb7347c5dae5cf8ef3e5891a6236e6041e9e2ad9d02e7ac64363",
+      "bytes": 2862673
+    },
+    {
+      "path": "PDF/PROMPT/AuthTrace Diagnosing Evidence Construction in Thematically Dense Single-Author Corpora.pdf",
+      "sha256": "4abeaee181731806971fa0171f0c04bb54b3a2caeb521d2c906edeaa50ea1d54",
+      "bytes": 1446360
+    },
+    {
+      "path": "PDF/PROMPT/Auto-Prompt Generation is Not Robust Prompt Optimization Driven by Pseudo Gradient.pdf",
+      "sha256": "72413a0cc8b91d2de9e862c9290aad407b738bc9383483d76c4e543c86fde88b",
+      "bytes": 10638949
+    },
+    {
+      "path": "PDF/PROMPT/AutoAdv Automated Adversarial Prompting for Multi-Turn Jailbreaking of Large Language Models.pdf",
+      "sha256": "185b61fd24d512f1b9e13644dc5bff310de4a5f02ad9101b9940820b1c5e6099",
+      "bytes": 315571
+    },
+    {
+      "path": "PDF/PROMPT/AutoDojo Adaptive Black-Box Attacks Reveal the Limits of IPI Defenses and Task-Specification Effects in LLM Agents.pdf",
+      "sha256": "4538009542e7c8646f7dd37bf9f8ee397e46767a80ee2193b600d91d9d9d232e",
+      "bytes": 984690
+    },
+    {
+      "path": "PDF/PROMPT/AutoRed A Free-form Adversarial Prompt Generation Framework for Automated Red Teaming.pdf",
+      "sha256": "f0e96eb44d520efbdf8cc3101e23e085a39a27359b4aba0fb0518ad1b5ee8285",
+      "bytes": 4173613
+    },
+    {
+      "path": "PDF/PROMPT/AutoSurvey2 Empowering Researchers with Next Level Automated Literature Surveys.pdf",
+      "sha256": "a4ab3326464a010895ada1850a8a8d76f74a227e2933f3882810c4dd87d00414",
+      "bytes": 618680
+    },
+    {
+      "path": "PDF/PROMPT/BAG OF TRICKS FOR SUBVERTING REASONING-BASED.pdf",
+      "sha256": "23b4149d249d72e2106d9d53477730124fdff7f13fc7abb8954fad6eb5c512c7",
+      "bytes": 1112810
+    },
+    {
+      "path": "PDF/PROMPT/BASELINE DEFENSES FOR ADVERSARIAL ATTACKS AGAINST ALIGNED LANGUAGE MODELS.pdf",
+      "sha256": "9de28d79861f1f6e86c3ca4affa2ca73a699afc538c061dd9d19f7570fccefc8",
+      "bytes": 593964
+    },
+    {
+      "path": "PDF/PROMPT/BOOSTING OF THOUGHTS TRIAL-AND-ERROR PROBLEM SOLVING WITH LARGE LANGUAGE MODELS.pdf",
+      "sha256": "0f19b01bdda97e4e8b8e9853e18ebb6429c1d26226772aad12c6c9890ff39993",
+      "bytes": 1081355
+    },
+    {
+      "path": "PDF/PROMPT/Beyond Accuracy The Role of Calibration in Self-Improving Large Language Models.pdf",
+      "sha256": "8d5d11f1357d4dbf3b834739a5d9b13da05058727e3c3f6f98220f399bb5bf70",
+      "bytes": 1440855
+    },
+    {
+      "path": "PDF/PROMPT/Beyond ChatBots ExploreLLM for Structured Thoughts and Personalized Model Responses.pdf",
+      "sha256": "f57fa0a91d9ffd7f9927373c35dec97c28501706ede46a86157d896d03bcc31e",
+      "bytes": 2039474
+    },
+    {
+      "path": "PDF/PROMPT/Beyond Jailbreaks Revealing Stealthier and Broader LLM Security Risks Stemming from Alignment Failures.pdf",
+      "sha256": "455187750ce8ea50cee21131318accc5346deb5cbbd49c7a59abd5f3e363131a",
+      "bytes": 4734799
+    },
+    {
+      "path": "PDF/PROMPT/Beyond Output Critique Self-Correction via Task Distillation.pdf",
+      "sha256": "18fdaddf6aae63167bd66cf633c8db5b80cad7b89a1dc7a96ccafd0d9fc8fb41",
+      "bytes": 1211661
+    },
+    {
+      "path": "PDF/PROMPT/Bootstrapping Fuzzers for Compilers of Low-Resource Language Dialects Using Language Models.pdf",
+      "sha256": "26c2db365092d2d68a50f667f1337530d212a8481a5f255c6908a9d3925c103b",
+      "bytes": 1034553
+    },
+    {
+      "path": "PDF/PROMPT/C3oT Generating Shorter Chain-of-Thought without Compromising Effectiveness.pdf",
+      "sha256": "4e178027ad61b2b1dd0c4b441a152f775f771b1040368157f6978f1cf304e83e",
+      "bytes": 805879
+    },
+    {
+      "path": "PDF/PROMPT/CAPABILITY-BASED SCALING TRENDS FOR LLM-BASED RED-TEAMING.pdf",
+      "sha256": "17d08cd1d26800b96621dfc8619346cc78523b2149da21950a5366d4a5343afd",
+      "bytes": 1537571
+    },
+    {
+      "path": "PDF/PROMPT/CAPE AChinese Dataset for Appraisal-based Emotional Generation using Large Language Models.pdf",
+      "sha256": "bb77adaa0300f0674b434ffcbdcf1ffedd30185d65066331ac1b6912d0b68100",
+      "bytes": 1438510
+    },
+    {
+      "path": "PDF/PROMPT/CHAIN-OF-VERIFICATION REDUCES HALLUCINATION IN LARGE LANGUAGE MODELS.pdf",
+      "sha256": "644d73511170fc7f6bdd14c62279259c39c79c87564f7d74c1033cf04c7900c9",
+      "bytes": 1121859
+    },
+    {
+      "path": "PDF/PROMPT/CHATINJECT ABUSING CHAT TEMPLATES FOR PROMPT INJECTION IN LLM AGENTS.pdf",
+      "sha256": "5663314dea6dbc4e91f801b5bb29b0564f45cdc87b54bc2c6f7f242442e4f76a",
+      "bytes": 822670
+    },
+    {
+      "path": "PDF/PROMPT/CIA+TA Risk Assessment for AI Reasoning Vulnerabilities.pdf",
+      "sha256": "87212ca39f0cdafb6c193f7ea61955c54cc940fc2f23179b3796e011132e401f",
+      "bytes": 487615
+    },
+    {
+      "path": "PDF/PROMPT/CLAWTRAP A MITM-BASED RED-TEAMING FRAMEWORK FOR REAL-WORLD OPENCLAW SECURITY EVALUATION.pdf",
+      "sha256": "bac6da729b7586b1b2b0756e93dc465e2e919294216c666347581262b0c9144b",
+      "bytes": 2225656
+    },
+    {
+      "path": "PDF/PROMPT/CLEV LLM-Based Evaluation Through Lightweight Efficient Voting for Free-Form Question-Answering.pdf",
+      "sha256": "c373f57ef9db0918505bd7d4742b8ea65ae564100e81e57a92ba5b346c3c7989",
+      "bytes": 758685
+    },
+    {
+      "path": "PDF/PROMPT/COMPLEXITY-BASED PROMPTING FOR MULTI-STEP REASONING.pdf",
+      "sha256": "cbf2553cc5fba3102398e41bc9dba303ffb2b88d0843f593c49634f75a12003d",
+      "bytes": 562974
+    },
+    {
+      "path": "PDF/PROMPT/CRITIC LARGE LANGUAGE MODELS CAN SELFCORRECT WITH TOOL-INTERACTIVE CRITIQUING.pdf",
+      "sha256": "ed5cbff53c8ff550b72d6abba0d7e4d83c5d214d61d0fafde10cbe4bbfc31a5b",
+      "bytes": 1581312
+    },
+    {
+      "path": "PDF/PROMPT/Can You Trust LLM Judgments Reliability of LLM-as-a-Judge.pdf",
+      "sha256": "34a4a0872964a5562f84b76dc4206ec31325a19a518b1b06aec6346190ccb400",
+      "bytes": 356611
+    },
+    {
+      "path": "PDF/PROMPT/Chain of Evidences and Evidence to Generate Prompting for Context Grounded and Retrieval Augmented Reasoning.pdf",
+      "sha256": "dcd64d0b5206fe7e6857aa00d67a3529d97f49aee8452a49a5b74150a55c9acc",
+      "bytes": 956313
+    },
+    {
+      "path": "PDF/PROMPT/Chain-of-Note Enhancing Robustness in Retrieval-Augmented Language Models.pdf",
+      "sha256": "850b8a55d53101bee66cbbd67fe2bda3f2aa0ba2fcbb5007a655bea5bfee25ee",
+      "bytes": 502511
+    },
+    {
+      "path": "PDF/PROMPT/Chain-of-Symbol Prompting for Spatial Reasoning in Large Language Models.pdf",
+      "sha256": "a89c72d45971aa436a7176927147bef5bca2d5fab99c3ab41cf57a60797dfd85",
+      "bytes": 507211
+    },
+    {
+      "path": "PDF/PROMPT/Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.pdf",
+      "sha256": "7d9f878c23b460e4566aa4ec9201b1abfb3b8faefb2b1356e411cb90fef72a12",
+      "bytes": 891773
+    },
+    {
+      "path": "PDF/PROMPT/Chain-of-Thought for Large Language Model-empowered Wireless Communications.pdf",
+      "sha256": "7f27c38bc953422bae92eae5327db6f1d3b9c5cbc7979653a4cbe699ec20ca89",
+      "bytes": 994825
+    },
+    {
+      "path": "PDF/PROMPT/ChatGPT’s One-year Anniversary Are Open-Source Large Language Models Catching up.pdf",
+      "sha256": "e8fbfe0bee0213dffaf509a038e74899b237aaaec2b10bc21e18427a92f5c462",
+      "bytes": 712075
+    },
+    {
+      "path": "PDF/PROMPT/Checkpoint-GCG Auditing and Attacking Fine-Tuning-Based Prompt Injection Defenses.pdf",
+      "sha256": "82291a2f123d5b79009614cae621001d7ffb98fa073863c6821284710e23a932",
+      "bytes": 1332277
+    },
+    {
+      "path": "PDF/PROMPT/CoRA Confidence–Rationale Alignment for Reliable Chain-of-Thought Reasoning.pdf",
+      "sha256": "f239770cdab765e924162e5cee59420fe6426609190c5f0a84e02ecdba98729b",
+      "bytes": 514312
+    },
+    {
+      "path": "PDF/PROMPT/CoT2-Meta Budgeted Metacognitive Control for Test-Time Reasoning.pdf",
+      "sha256": "d6357f6d25a9ae833845b946eed49a703ae3735e9c130e91591dd9c8aa5c1be8",
+      "bytes": 9393487
+    },
+    {
+      "path": "PDF/PROMPT/Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection.pdf",
+      "sha256": "428e23e8c7e4f89310e113e38d082b3f65548a8b887188ebc536099061800e81",
+      "bytes": 7306999
+    },
+    {
+      "path": "PDF/PROMPT/Concretized Proposition Prompting Resolves Composition-Knowledge Dichotomy in Large Language Models.pdf",
+      "sha256": "5ff7d198d1f330974106bf3f32ae133e3babf722eb9e81f1d96809bcc1e9c950",
+      "bytes": 1399682
+    },
+    {
+      "path": "PDF/PROMPT/Confidence Improves Self-Consistency in LLMs.pdf",
+      "sha256": "452bb644c22d52aec740809b7ac2ce04e1fbd673e83cc01b4693e94aebd300c0",
+      "bytes": 611856
+    },
+    {
+      "path": "PDF/PROMPT/Confidence-Modulated Speculative Decoding for Large Language Models.pdf",
+      "sha256": "3272537b1804d6a9daf0f84f42721a0e38ab16604f6228d3d68c5e918560f813",
+      "bytes": 644213
+    },
+    {
+      "path": "PDF/PROMPT/Constitutional Black-Box Monitoring for Scheming in LLM Agents.pdf",
+      "sha256": "d8ffcbd352abd9c6bd9aeb1ded6d337689ae980980960fdd8de12bd3d1fd775d",
+      "bytes": 2773537
+    },
+    {
+      "path": "PDF/PROMPT/Continuous Diffusion Models Can Obey Formal Syntax.pdf",
+      "sha256": "103f3e8eee387ea55891e4ded50fafba0fc70c6f2f80a0ec0b2cabd2900320a9",
+      "bytes": 499302
+    },
+    {
+      "path": "PDF/PROMPT/Contrastive Chain-of-ThoughtPrompting.pdf",
+      "sha256": "8815de945e670e90f00c97e55ef97ff9f9e22fa4bfb1a6701baec49a2dce1227",
+      "bytes": 3492096
+    },
+    {
+      "path": "PDF/PROMPT/Crystallographic Symmetry Generates Phononic Holonomic Gates with Biased-Erasure Channels.pdf",
+      "sha256": "ea4ce98a3e08a50e618f83a7f4d12557e13a35ac558e807981637365a796aed9",
+      "bytes": 2472387
+    },
+    {
+      "path": "PDF/PROMPT/DADIR Density-Aware Data-level Imbalanced.pdf",
+      "sha256": "f68d884a5368b4bed0cd64966b1e5bf75db50ec0ebcd987454b9685e918e4b8e",
+      "bytes": 3815141
+    },
+    {
+      "path": "PDF/PROMPT/DISENTANGLING INTENT FROM ROLE ADVERSARIAL SELF-PLAY FOR PERSONA-INVARIANT SAFETY ALIGNMENT.pdf",
+      "sha256": "843b34676959dc5ba81db918146f96bc872c6cb7166ac5c48d0c30057f7ba11d",
+      "bytes": 862239
+    },
+    {
+      "path": "PDF/PROMPT/DRAINCODE Stealthy Energy Consumption Attacks on Retrieval-Augmented Code Generation via Context Poisoning.pdf",
+      "sha256": "b0971ec4bed8e0f4fd05e370438bc2e45b9d8c213c0b66c8f053226ea8192e2d",
+      "bytes": 626011
+    },
+    {
+      "path": "PDF/PROMPT/DSPY COMPILING DECLARATIVE LANGUAGE MODEL CALLS INTO SELF-IMPROVING PIPELINES.pdf",
+      "sha256": "5309836325c3a580b6c176242f49f21ca40e413b0acd514e74b67e16bb1b56bc",
+      "bytes": 460814
+    },
+    {
+      "path": "PDF/PROMPT/DSPy Assertions Computational Constraints for Self-Refining Language Model Pipelines.pdf",
+      "sha256": "8ce67d793991d4f63a326b2276adaa9b210c16c6c52a034393928942c2a3d535",
+      "bytes": 262119
+    },
+    {
+      "path": "PDF/PROMPT/Demonstration Notebook Finding the Most Suited In-Context Learning Example from Interactions.pdf",
+      "sha256": "91736203f7611cc61ff9282bb159adef4cf1d579c5700e089d4abddc85e9b7ef",
+      "bytes": 464153
+    },
+    {
+      "path": "PDF/PROMPT/DetermLR Augmenting LLM-based Logical Reasoning from Indeterminacy to Determinacy.pdf",
+      "sha256": "7ef85146dae41ee48c44bf5f705ab4ebbeeaa68dc357aa2ccf6019da1851b557",
+      "bytes": 710276
+    },
+    {
+      "path": "PDF/PROMPT/Diffusion Attacker Diffusion-Driven Prompt Manipulation for LLM Jailbreak.pdf",
+      "sha256": "3e53ab9c479d6e38a1f5522716a7d28f396bee3d1aabeadd4510865e040619ca",
+      "bytes": 3470555
+    },
+    {
+      "path": "PDF/PROMPT/Discourse Structure as an Interpretable Signal for Detecting Hallucinated Chain-of-Thought Reasoning in Large Language Models.pdf",
+      "sha256": "705be10180826264d002aabc7b6bdf57734c473d1babf30a40bfd8c6622586be",
+      "bytes": 684945
+    },
+    {
+      "path": "PDF/PROMPT/Distilling System 2 into System 1.pdf",
+      "sha256": "57ffe53f87a20f24e6b9a69ae2fc9a11abd366f87af67665673333e04504637d",
+      "bytes": 1111156
+    },
+    {
+      "path": "PDF/PROMPT/Do programming languages still matter to your AI coding agent teammate Evidence at scale from chess engines.pdf",
+      "sha256": "642783b4b52ed7568be75b8e8ab4064d36a784389e1a7b0377b511d52d1dd629",
+      "bytes": 2681390
+    },
+    {
+      "path": "PDF/PROMPT/Does Verbose Chain-of-Thought Really Help In-Distribution Evidence that Content, Not Length, Matters.pdf",
+      "sha256": "9e16ee264c3c383fd441dab394569ade302ec29e91eafe2769fa0830a9e768a2",
+      "bytes": 603245
+    },
+    {
+      "path": "PDF/PROMPT/ENHANCING ZERO-SHOT LLM RECOMMENDATIONS VIA SEMANTICS AND COLLABORATIVE SIGNALS.pdf",
+      "sha256": "223a36f9d06c1eaa2564a9ec76cb4615516b88eaa387ecce2333f9c27402810e",
+      "bytes": 628915
+    },
+    {
+      "path": "PDF/PROMPT/EVOLUTIONARY TEST-TIME LEARNING.pdf",
+      "sha256": "f4f4c2c08a352ccc272aaa6b9da8f25543533e6aa38d18db133596acbc452c44",
+      "bytes": 777140
+    },
+    {
+      "path": "PDF/PROMPT/EXPLORING LARGE LANGUAGE MODEL BASED INTELLIGENT AGENTS DEFINITIONS, METHODS, AND PROSPECTS.pdf",
+      "sha256": "9ae25f880e9110669c1e396ef854dda5b8c8a4632f7f413a843ce3f65d1a4182",
+      "bytes": 1680318
+    },
+    {
+      "path": "PDF/PROMPT/Effectively Controlling Reasoning Models through Thinking Intervention.pdf",
+      "sha256": "d78d93db4ae4ee82b60f84f2f98071e76fa6a03db81aa4eb07a31178f8bef352",
+      "bytes": 4883479
+    },
+    {
+      "path": "PDF/PROMPT/Efficient Guided Generation for LLMs.pdf",
+      "sha256": "028595800fce3310f57a2c05efe0cd167bfef30f9b03c558f8e538457b0f96b1",
+      "bytes": 345494
+    },
+    {
+      "path": "PDF/PROMPT/Efficient Guided Generation for Large Language Models.pdf",
+      "sha256": "8888aa2043588e41d0f222b59ca6896e5211816eeca8896db215234ba209aa4f",
+      "bytes": 375946
+    },
+    {
+      "path": "PDF/PROMPT/Efficient LLM-Jailbreaking via Multimodal-LLM Jailbreak.pdf",
+      "sha256": "3e2265c7584fb06c31f0ef49421d7ba6c3846b5c332d59a0d78b2bb877c737fb",
+      "bytes": 527931
+    },
+    {
+      "path": "PDF/PROMPT/Efficient Tool Use with Chain-of-Abstraction Reasoning.pdf",
+      "sha256": "0ac7a9c821fcfd59b851af94b4f0f2d045e7d9fdd7e5f2f72919246051d3f469",
+      "bytes": 959345
+    },
+    {
+      "path": "PDF/PROMPT/EmotionPrompt Leveraging Psychology for Large Language Models Enhancement via Emotional Stimulus.pdf",
+      "sha256": "9fe6fddbedb79ed94943d82f9dfe0c9dcccf175a563394f006e754d79eeb1d05",
+      "bytes": 646684
+    },
+    {
+      "path": "PDF/PROMPT/Enhancing Knowledge Distillation for LLMs with Response-Priming Prompting.pdf",
+      "sha256": "bcc5bf6ce46d9dfe077fcaa9aed7e4629d13f1e285e0a1ac33bae4bd02b90ff9",
+      "bytes": 635965
+    },
+    {
+      "path": "PDF/PROMPT/Enhancing Mathematical Reasoning in LLMs with Background Operators.pdf",
+      "sha256": "86c312238ef398f36f9d97a8e6b6ac3be1085b2157bffecf017573ebf9a61362",
+      "bytes": 1159403
+    },
+    {
+      "path": "PDF/PROMPT/Enhancing User Interaction in ChatGPT Characterizing and Consolidating Multiple Prompts for Issue Resolution.pdf",
+      "sha256": "0e546a0e8621434bfafbcb548e4edf881cbd05576cb61ac958ed83b0c29a7217",
+      "bytes": 623682
+    },
+    {
+      "path": "PDF/PROMPT/Entropy-based Exploration Conduction for Multi-step Reasoning.pdf",
+      "sha256": "c0374293cdefcde9374a8dfcc914934989a0263ca55628ad029d4c1d692973a7",
+      "bytes": 1771597
+    },
+    {
+      "path": "PDF/PROMPT/Evaluating 5W3H Structured Prompting for Intent Alignment in Human-AI Interaction.pdf",
+      "sha256": "e7d50c30a4519ceeacf5ee81d9444ea2805cc8ccbdde760b3d698d2591d1aabb",
+      "bytes": 1063415
+    },
+    {
+      "path": "PDF/PROMPT/Evaluating and Improving Tool-Augmented Computation-Intensive Math Reasoning.pdf",
+      "sha256": "01be6cecff06968f93e34564b1bea9a7bc3596f87a80d42cfdabf6bd9214fb1c",
+      "bytes": 1476860
+    },
+    {
+      "path": "PDF/PROMPT/Evaluation Agent Efficient and Promptable Evaluation Framework for Visual Generative Models.pdf",
+      "sha256": "a9d85b6ea3c28c2b17e2242aa92ecdb0716a6c67ebb1ac60672a9d2b27ae17bb",
+      "bytes": 10838796
+    },
+    {
+      "path": "PDF/PROMPT/Evolve the Method, Not the Prompts Evolutionary Synthesis of Jailbreak Attacks on LLMs.pdf",
+      "sha256": "af9995b863edce7c110c53b63a1749436ef235f183f4ea8ba67cc674313a3a3f",
+      "bytes": 3222516
+    },
+    {
+      "path": "PDF/PROMPT/Existing Large Language Model Unlearning Evaluations Are Inconclusive.pdf",
+      "sha256": "4a1587375655737f5577ade5249ec51a06c0144cb1b63cbd654dbcec7840a22e",
+      "bytes": 1692161
+    },
+    {
+      "path": "PDF/PROMPT/ExpertPrompting Instructing Large Language Models to be Distinguished Experts.pdf",
+      "sha256": "b7f7e6bad244a2d844631d7971f0ed16dce0391a6b63588be5c87d79e9dbbfd2",
+      "bytes": 976407
+    },
+    {
+      "path": "PDF/PROMPT/Exploiting Web Search Tools of AI Agents for Data Exfiltration.pdf",
+      "sha256": "6c515286b987143f64c7c22d050554bce17bc95baa63a2d580014de5cc286701",
+      "bytes": 394440
+    },
+    {
+      "path": "PDF/PROMPT/Exploring Prompt Engineering A Systematic Review with SWOT Analysis.pdf",
+      "sha256": "11deba5e1472e25febea0f7595516aebc0806084fa5eb7a222afeb85e970dc3a",
+      "bytes": 501589
+    },
+    {
+      "path": "PDF/PROMPT/Exploring Prompting Large Language Models as Explainable Metrics.pdf",
+      "sha256": "f0c0ed0985a662a365478293e5c6bacf9cabf3d9050deb75691a4997e3710200",
+      "bytes": 146230
+    },
+    {
+      "path": "PDF/PROMPT/Exploring Vulnerabilities and Protections in Large Language Models A Survey.pdf",
+      "sha256": "7a43268731dec02fef36ff1b837dd7614f622a532f9f3b686d8aece36c9d2149",
+      "bytes": 395168
+    },
+    {
+      "path": "PDF/PROMPT/Faithful Chain-of-Thought Reasoning.pdf",
+      "sha256": "0391b7fd3e6436a94ccd9843d3852f0f4720793c78f04aec60149e68ab1b1423",
+      "bytes": 1386799
+    },
+    {
+      "path": "PDF/PROMPT/Fast Controlled Generation from Language Models with Adaptive Weighted Rejection Sampling.pdf",
+      "sha256": "29d491586f8b0a45a6ab87e7cae182a7674e6ff125af06eed7cb58dbfa81add2",
+      "bytes": 2429028
+    },
+    {
+      "path": "PDF/PROMPT/Fast ECoT Efficient Embodied Chain-of-Thought via Thoughts Reuse.pdf",
+      "sha256": "c85969c7936e5912265bdd92df228372bb8e3aaf9ef2488a73bbbdc63c7d536e",
+      "bytes": 1825935
+    },
+    {
+      "path": "PDF/PROMPT/FigStep Jailbreaking Large Vision-Language Models via Typographic Visual Prompts.pdf",
+      "sha256": "0ee05b4de6516ca3b7801cfbd5e54c69a248aa44d79a0baa43ff09cacbbbdf12",
+      "bytes": 8781991
+    },
+    {
+      "path": "PDF/PROMPT/Fine-Tuning Language Models to Know What They Know.pdf",
+      "sha256": "dec32a55d5434fa9ada14d9544d51e9c6bcf171bf7fa4a327c3192966c3d31d9",
+      "bytes": 2057550
+    },
+    {
+      "path": "PDF/PROMPT/Fixed-Point Theorems and the Ethics of Radical Transparency A Logic-First Treatment.pdf",
+      "sha256": "59baa45de110a606f0310c23752f12fbc1a6fa3e6fc88354660725214e1ea709",
+      "bytes": 507218
+    },
+    {
+      "path": "PDF/PROMPT/Foot-In-The-Door AMulti-turn Jailbreak for LLMs.pdf",
+      "sha256": "cae3138fdc27c102d9ac7ff529d1166820baff57e2d9e00979a89aef86e630a7",
+      "bytes": 1596821
+    },
+    {
+      "path": "PDF/PROMPT/Found in the Middle Calibrating Positional Attention Bias Improves Long Context Utilization.pdf",
+      "sha256": "d410712e052811a9b888f69f4db077a2234d84644bcfcc1b457e71c448735446",
+      "bytes": 1873118
+    },
+    {
+      "path": "PDF/PROMPT/Found in the Middle How Language Models Use Long Contexts Better via Plug-and-Play Positional Encoding.pdf",
+      "sha256": "394f8c13cfaedb8570b739e937a751314df5fe64d542fd94c6249aa146f9ce3c",
+      "bytes": 1460611
+    },
+    {
+      "path": "PDF/PROMPT/From Summary to Action Enhancing Large Language Models for Complex Tasks with Open World APIs.pdf",
+      "sha256": "345c86ba5c136c770d874050a9b547cb3b833d8faa19a28d99806979c21eeb00",
+      "bytes": 675074
+    },
+    {
+      "path": "PDF/PROMPT/From System 1 to System 2 A Survey of Reasoning Large Language Models.pdf",
+      "sha256": "d21b700e9f68323fc41945debabf571503f9f8ab63bb4d2b997ff2880dc807e1",
+      "bytes": 1786133
+    },
+    {
+      "path": "PDF/PROMPT/GPT, But Backwards Exactly Inverting Language Model Outputs.pdf",
+      "sha256": "05eb437c84badc9895771a8b0746bcab5eb93cf3f23086d1fe345a2de65710ed",
+      "bytes": 1356276
+    },
+    {
+      "path": "PDF/PROMPT/GSPR ALIGNING LLM SAFEGUARDS AS GENERALIZABLE SAFETY POLICY REASONERS.pdf",
+      "sha256": "4d99a5b2bb77dc775f5e7166daa4b2c49762c9755fb74135fec287e2e33fc6c4",
+      "bytes": 1191141
+    },
+    {
+      "path": "PDF/PROMPT/Gap-Filling Prompting Enhances Code-Assisted Mathematical Reasoning.pdf",
+      "sha256": "8d31177542cc11e1c79598091bb88c3a81e4e2d61831b6a64469e66bd5ded06e",
+      "bytes": 306034
+    },
+    {
+      "path": "PDF/PROMPT/Generalizable Self-Evolving Memory for Automatic Prompt Optimization.pdf",
+      "sha256": "29144eb3d8668d1d4ae41a294b3593b85db2bd7b4720894fb0cc293f3868ad5f",
+      "bytes": 1648114
+    },
+    {
+      "path": "PDF/PROMPT/Graph of Thoughts Solving Elaborate Problems with Large Language Models.pdf",
+      "sha256": "73caa3c05813105e5db38edfbb58e1b660771a00dfdb74768c8845e15263c5da",
+      "bytes": 3128193
+    },
+    {
+      "path": "PDF/PROMPT/Great, Now Write an Article About That The Crescendo Multi-Turn LLM Jailbreak Attack.pdf",
+      "sha256": "a20ef519f1a8f8c224e1bb5a3c42a52991c7aada6ff5d9b5c182a7eb57b893dd",
+      "bytes": 9185259
+    },
+    {
+      "path": "PDF/PROMPT/Guaranteed Jailbreaking Defense via Disrupt-and-Rectify Smoothing.pdf",
+      "sha256": "29f937a70ea1c8b67bb947c96f1ec5188c80917dff2444e5dcb6609955de0d2a",
+      "bytes": 3855962
+    },
+    {
+      "path": "PDF/PROMPT/Guided Decoding and Its Critical Role in Retrieval-Augmented Generation.pdf",
+      "sha256": "98cd49057891e08ac5d20db51819e1168475563dd3a01bb85de627fa79eb0a07",
+      "bytes": 178381
+    },
+    {
+      "path": "PDF/PROMPT/Guiding Large Language Models via Directional Stimulus Prompting.pdf",
+      "sha256": "d981d974c907cb5eb2104e5b17d67beccc01f233de29bc2db2744f59a977b573",
+      "bytes": 2072759
+    },
+    {
+      "path": "PDF/PROMPT/H-NODE ATTACK AND DEFENSE IN LARGE LANGUAGE MODELS.pdf",
+      "sha256": "675453e115503295ce86845c93e96858b16cbdb96fa425207346f1284502d0aa",
+      "bytes": 891445
+    },
+    {
+      "path": "PDF/PROMPT/HUSKY A Unified,Open-Source Language Agent for Multi-Step Reasoning.pdf",
+      "sha256": "ee803e33c690790cf6f377749fc1b9fd52b6d87e7a701da876f0b87ee559245c",
+      "bytes": 2439999
+    },
+    {
+      "path": "PDF/PROMPT/HarmBench A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal.pdf",
+      "sha256": "e6cbcbedbef6aebea3b6fc6c8fd7933546b26cf0a1e65bcf128eea235007c732",
+      "bytes": 3233876
+    },
+    {
+      "path": "PDF/PROMPT/Harnesses That Improve Themselves.pdf",
+      "sha256": "065712f5bc1caeed717ad94e68bc0a011420417e86ef9b919ddb5e44e41398ab",
+      "bytes": 4307149
+    },
+    {
+      "path": "PDF/PROMPT/Harnessing Agents for Autonomous Research and Human-in-the-Loop Refinement.pdf",
+      "sha256": "9f61139ff6f78c60a419229733e1dfc4e3f59d5dd1ba5521eb24abd159db7ec6",
+      "bytes": 1935806
+    },
+    {
+      "path": "PDF/PROMPT/Harnessing Consistency for Robust Test-Time LLM Ensemble.pdf",
+      "sha256": "11bce4259a80b8d594f2c229f385290456cf42249f57a71922169c07826bc7b1",
+      "bytes": 3312677
+    },
+    {
+      "path": "PDF/PROMPT/Hierarchical Prompting Taxonomy A Universal Evaluation Framework for Large Language Models Aligned with Human Cognitive Principles.pdf",
+      "sha256": "1e297fcc3558e801ae511f3a506d4ce3dfc815a05087ce66bdd949ca932316e5",
+      "bytes": 803247
+    },
+    {
+      "path": "PDF/PROMPT/How Effective Are They Exploring Large Language Model Based Fuzz Driver Generation.pdf",
+      "sha256": "b70d916c2da9a27460db5e364391133b6a57b078d80516ced43708ec2a0c86b1",
+      "bytes": 1518682
+    },
+    {
+      "path": "PDF/PROMPT/How to Evaluate Medical AI.pdf",
+      "sha256": "83503d77509458cdaae2e1a870e6c47afcfb0961432f97bf16a582b1e5a09f43",
+      "bytes": 1606682
+    },
+    {
+      "path": "PDF/PROMPT/HybridThinker Efficient Chain-of-Thought Reasoning via Compressed Memory and Transient Thought Steps.pdf",
+      "sha256": "fd6e02a276ae006961b2c0b3ec86d19a60aa944bedb70bac017c6694e91596ac",
+      "bytes": 3865302
+    },
+    {
+      "path": "PDF/PROMPT/INJECAGENT Benchmarking Indirect Prompt Injections in Tool-Integrated Large Language Model Agents.pdf",
+      "sha256": "49e6e6a4a00c797a772ef905a154c0839426655027d5fa0ce6b632e6c1db2bfb",
+      "bytes": 3183277
+    },
+    {
+      "path": "PDF/PROMPT/IPAD Inverse Prompt for AI Detection - A Robust and Interpretable LLM-Generated Text Detector.pdf",
+      "sha256": "ef5a94c27bd0e014c96799ae01234a90f73b5dbfb19415639ff64e50fd5b3d23",
+      "bytes": 1257516
+    },
+    {
+      "path": "PDF/PROMPT/Improved Few-Shot Jailbreaking Can Circumvent Aligned Language Models and Their Defenses.pdf",
+      "sha256": "3472f778a0feedc9084de0ce997a60f4975428d542686925cab5b42250cc4708",
+      "bytes": 772808
+    },
+    {
+      "path": "PDF/PROMPT/Improving Alignment and Robustness with Circuit Breakers.pdf",
+      "sha256": "c3519984a56dba2d7010058ecf736caaeb2656712e1ba409b050971960f7bb92",
+      "bytes": 920758
+    },
+    {
+      "path": "PDF/PROMPT/Improving Factuality and Reasoning in Language Models through Multiagent Debate.pdf",
+      "sha256": "b302ff15202dc3cda03f40ea1ac92b29e1519978540b345af92991f6d3e619b4",
+      "bytes": 1779875
+    },
+    {
+      "path": "PDF/PROMPT/In-Context Impersonation Reveals Large Language Models’ Strengths and Biases.pdf",
+      "sha256": "bf4f83d6579cf96586a754a669cb763e6d8c89d0a4536be7a431d32b29575603",
+      "bytes": 3966488
+    },
+    {
+      "path": "PDF/PROMPT/In-Context Learning User Simulators for Task-Oriented Dialog Systems.pdf",
+      "sha256": "fff406b3153272b3ec1fe617b5a7e7809dc2444c71e9a8a1f8ce8cdf23cbbe4c",
+      "bytes": 478038
+    },
+    {
+      "path": "PDF/PROMPT/Inducing Reasoning Primitives from Agent Traces.pdf",
+      "sha256": "1b3b9fffaad4aad59848f741b9724c6326f23043f99473f52bbf5bababfbc210",
+      "bytes": 513190
+    },
+    {
+      "path": "PDF/PROMPT/Instance-adaptive Zero-shot Chain-of-Thought Prompting.pdf",
+      "sha256": "1ec95cec142f29ce8d5fd05839dad18d64e9b22f5d253937bdc860d54eb666cc",
+      "bytes": 1712296
+    },
+    {
+      "path": "PDF/PROMPT/InstructTODS Large Language Models for End-to-End Task-Oriented Dialogue Systems.pdf",
+      "sha256": "a1313d268b6b99237fef4bc1debf47bb0a53ff5023fe9c004c8f853c9492cb26",
+      "bytes": 1731428
+    },
+    {
+      "path": "PDF/PROMPT/Integrating graphs, large language models, and agents.pdf",
+      "sha256": "e4d06ba515ca6a9acc23cec4a0bbfbad316f1a63dda2186d11cfe039d874bc8d",
+      "bytes": 12718133
+    },
+    {
+      "path": "PDF/PROMPT/Interactive Natural Language Processing.pdf",
+      "sha256": "065bc486632628c99205daa9e58d4988d345497d10c4f48daa4d92e866fbd0d8",
+      "bytes": 12131851
+    },
+    {
+      "path": "PDF/PROMPT/Is ChatGPT a Good Sentiment Analyzer A Preliminary Study.pdf",
+      "sha256": "ce311b065f470d0d5cba39639a06a20c32d15540bb807bc30d35f005357f3e6a",
+      "bytes": 1404494
+    },
+    {
+      "path": "PDF/PROMPT/It Takes Two Complementary Self-Distillation for Contextual Integrity in LLMs.pdf",
+      "sha256": "935384b27432033400729290600c5e65e38ac8959c4e18396523f734463b7ef6",
+      "bytes": 1039112
+    },
+    {
+      "path": "PDF/PROMPT/JAILBREAKING COMMERCIAL BLACK-BOX LLMS WITH EXPLICITLY HARMFUL PROMPTS.pdf",
+      "sha256": "54e95d3baddda8cbfbf67768f4ea3d0f1369061a7885f7f4176310d9e17a536f",
+      "bytes": 691318
+    },
+    {
+      "path": "PDF/PROMPT/JailGuard A Universal Detection Framework for Prompt-based Attacks on LLM Systems.pdf",
+      "sha256": "354e16267a70a1326a403c416692cadb43b8b4511662f10d2c5ffb9d17ae24bf",
+      "bytes": 2581360
+    },
+    {
+      "path": "PDF/PROMPT/JailbreakBench An Open Robustness Benchmark for Jailbreaking Large Language Models.pdf",
+      "sha256": "78c2f251cc101bce36e3dd3138fc0c89f7b73c599099f79ec55318165fe4a981",
+      "bytes": 641300
+    },
+    {
+      "path": "PDF/PROMPT/Jailbreaking Black Box Large Language Models in Twenty Queries.pdf",
+      "sha256": "590bf40aa58061928f54d01b7d53f0d5141bb2ecf4f01483c6849423934f44e4",
+      "bytes": 5353023
+    },
+    {
+      "path": "PDF/PROMPT/Jailbroken How Does LLM Safety Training Fail.pdf",
+      "sha256": "53d7ff7f10b7e12fbcef827df4c69fb800c5c6213f855ea29d0929d213c907a9",
+      "bytes": 453581
+    },
+    {
+      "path": "PDF/PROMPT/KNOWLEDGE PROMPT CHAINING FOR SEMANTIC MODELING.pdf",
+      "sha256": "f00a5469ed908fdca63704f754bd0bb6b0cf15d19292baaa62cf4184a885297e",
+      "bytes": 2299107
+    },
+    {
+      "path": "PDF/PROMPT/Key-Point-Driven Data Synthesis with its Enhancement on Mathematical Reasoning.pdf",
+      "sha256": "b7ba05ee48c43b56a40726f0e3d29a80970d46df23d042db491001a1e4652005",
+      "bytes": 790140
+    },
+    {
+      "path": "PDF/PROMPT/LANGUAGE AGENT TREE SEARCH UNIFIES REASON ING ACTING AND PLANNING IN LANGUAGE MODELS.pdf",
+      "sha256": "c4b9ae82a4375fe878fc5b74aa82199414ff87a7e429d017d30baee59f83cbe6",
+      "bytes": 930999
+    },
+    {
+      "path": "PDF/PROMPT/LARGE LANGUAGE MODELS ARE HUMAN-LEVEL PROMPT ENGINEERS.pdf",
+      "sha256": "b4162f38101db7511e6292a2577c66514c757824ddd21f8426a6276485355e81",
+      "bytes": 4085477
+    },
+    {
+      "path": "PDF/PROMPT/LARGE LANGUAGE MODELS AS OPTIMIZERS.pdf",
+      "sha256": "61c8493c964f6d4436f69ae63ff52d3a91540708e9387615f3a8f034bab081c0",
+      "bytes": 1594288
+    },
+    {
+      "path": "PDF/PROMPT/LARGE LANGUAGE MODELS CAN SELF-IMPROVE AT WEB AGENT TASKS.pdf",
+      "sha256": "c6c591f5459d388eede92c1003d2b03f9dd4fdcf38c8e46f128c82bddd7f08ff",
+      "bytes": 599837
+    },
+    {
+      "path": "PDF/PROMPT/LLM-Agnostic Semantic Representation Attack.pdf",
+      "sha256": "3b4213428efdd6b29f5f7d824c9597f44d254d2434b5e6212a44110425639eb3",
+      "bytes": 2201977
+    },
+    {
+      "path": "PDF/PROMPT/LLMLingua Compressing Prompts for Accelerated Inference of Large Language Models.pdf",
+      "sha256": "0cd06ff6bf440d4a560937195c03dc56a1234ede8eec48129164c940262c90d8",
+      "bytes": 645326
+    },
+    {
+      "path": "PDF/PROMPT/LLMLingua-2 Data Distillation for Efficient and Faithful Task-Agnostic Prompt Compression.pdf",
+      "sha256": "09c11fd0b701272d4285c72b9de713108518018c3cb77cb21c447018715a2f35",
+      "bytes": 579796
+    },
+    {
+      "path": "PDF/PROMPT/LM vsLMDetecting Factual Errors via Cross Examination.pdf",
+      "sha256": "6aa6bb6c764c306f04bc5e385a57cb726cd58a0075205b15941136f5522a3915",
+      "bytes": 871683
+    },
+    {
+      "path": "PDF/PROMPT/Language Agent Tree Search Unifies Reasoning, Acting, and Planning in Language Models.pdf",
+      "sha256": "04c1e9cb00f384052739c53bcecb75626bf1f58f66c379cc289ea60ffc988635",
+      "bytes": 1054882
+    },
+    {
+      "path": "PDF/PROMPT/Language Models (Mostly) Know What They Know.pdf",
+      "sha256": "1d861f7732f65769703cb2731dc085f3c9e69771b1b6196d074646d1473c3fbf",
+      "bytes": 2616253
+    },
+    {
+      "path": "PDF/PROMPT/Language Models are Few-Shot Learners.pdf",
+      "sha256": "5fb1e3b8062688f5023ee63a9641d39c8c86922f2bca98535dcba084af7f719e",
+      "bytes": 1283694
+    },
+    {
+      "path": "PDF/PROMPT/Language hooks a modular framework for augmenting LLM reasoning that decouples tool usage from the model and its prompt.pdf",
+      "sha256": "cf0003664fb32e26d52ed9da02c1494d74c2ad65a055619543133ec66a5f7be5",
+      "bytes": 982412
+    },
+    {
+      "path": "PDF/PROMPT/Large Language Model (LLM) for Telecommunications A Comprehensive Survey on Principles, Key Techniques, and Opportunities.pdf",
+      "sha256": "7822784f8669720559cc618a52eb391f57051ab343df3950d95bc8e19c0f9ba3",
+      "bytes": 7654248
+    },
+    {
+      "path": "PDF/PROMPT/Large Language Models Understand and Can Be Enhanced by Emotional Stimuli.pdf",
+      "sha256": "09c3597eb5846c0cfdfb329bb1e03eae0216ada2fa15d8219094cd28c2220645",
+      "bytes": 1945282
+    },
+    {
+      "path": "PDF/PROMPT/Large Language Models are Better Reasoners with Self-Verification.pdf",
+      "sha256": "e85895a3ef23f6685d1831a1dd1dd14efc5c704d7d9bc734216b2318163af340",
+      "bytes": 3191352
+    },
+    {
+      "path": "PDF/PROMPT/Large Language Models are Zero-Shot Reasoners.pdf",
+      "sha256": "43a3d73c77c7f3e115bb85522a4d94aaa54cdb55a0d9e17eb6af3117f39111c7",
+      "bytes": 762445
+    },
+    {
+      "path": "PDF/PROMPT/Large Language Models as Zero-Shot Conversational Recommenders.pdf",
+      "sha256": "20563804f71ca3cb1fa9a5e712f53b8a0f711cecf60c6868cde93e07744b20de",
+      "bytes": 2254940
+    },
+    {
+      "path": "PDF/PROMPT/Large Language and Reasoning Models are Shallow Disjunctive Reasoners.pdf",
+      "sha256": "fb990a17c3ae0df6ac161c59318419dd951aee015f3563f7ce6156842544e24e",
+      "bytes": 1129301
+    },
+    {
+      "path": "PDF/PROMPT/Large Reasoning Models Are Autonomous Jailbreak Agents.pdf",
+      "sha256": "175a4c0209b6b1a1b19f5e87db9b7194184d533db37b16b88553a9aebe1e4de1",
+      "bytes": 1400255
+    },
+    {
+      "path": "PDF/PROMPT/Leveraging the Context through Multi-Round Interactions for Jailbreaking Attacks.pdf",
+      "sha256": "42a4ebcd11531e56eaa622259a46e82bd9f5606bd751c8ca7ffa5ca08b820b5d",
+      "bytes": 12902604
+    },
+    {
+      "path": "PDF/PROMPT/Leyline KV Cache Directives for Agentic Inference.pdf",
+      "sha256": "978e7333cc6c5003204385ce90df19175845eb695ea28f6f38119cb4eafec245",
+      "bytes": 763405
+    },
+    {
+      "path": "PDF/PROMPT/Lifelong Safety Alignment for Language Models.pdf",
+      "sha256": "f77a6f9bdc7b3fef89c8750ea3917c503e0a4b87060b0b9b2e53d9f01f4537ee",
+      "bytes": 3534779
+    },
+    {
+      "path": "PDF/PROMPT/LongLLMLingua Accelerating and Enhancing LLMs in Long Context Scenarios via Prompt Compression.pdf",
+      "sha256": "a81090e2589fcef37f310ee2a265076e4560a296a59864c9d43a6e9b62fe3997",
+      "bytes": 2530020
+    },
+    {
+      "path": "PDF/PROMPT/Lookahead-then-Verify Reliable Constrained Decoding for Diffusion LLMs under Context-Free Grammars.pdf",
+      "sha256": "4aabb791373f9d825c0df8f9b11f8d0bd911407c6068d06c17b7647e462796f4",
+      "bytes": 1644585
+    },
+    {
+      "path": "PDF/PROMPT/MAKING SLOW THINKING FASTER COMPRESSING LLM CHAIN-OF-THOUGHT VIA STEP ENTROPY.pdf",
+      "sha256": "ff90fdb912e4d35b9576a4b44c7a7f00eb6d8a239df9d8fe161e171fa06a73d1",
+      "bytes": 888124
+    },
+    {
+      "path": "PDF/PROMPT/MATHCHAT CONVERSE TO TACKLE CHALLENGING MATH PROBLEMS WITH LLM AGENTS.pdf",
+      "sha256": "b0f7b2e5de6bd58c1075d0691af87593923f8cd04cceae6bf6469d417fc5bef4",
+      "bytes": 2700899
+    },
+    {
+      "path": "PDF/PROMPT/MIRROR A Hierarchical Benchmark for Metacognitive Calibration in Large Language Models.pdf",
+      "sha256": "0509464c00848ff3be958ffcef41dba1e3bd9ac0aaae6f77c0dafc6563aeba04",
+      "bytes": 645073
+    },
+    {
+      "path": "PDF/PROMPT/Many-Tier Instruction Hierarchy in LLM Agents.pdf",
+      "sha256": "22d838f3f87a1e2e63014d73618c846913d51167ca34a88db5a0516a7abaf56c",
+      "bytes": 1392159
+    },
+    {
+      "path": "PDF/PROMPT/Measuring and Narrowing the Compositionality Gap in Language Models.pdf",
+      "sha256": "7d59ee4f7dd213d05fa8e2346e58fdf0fc792fdf96390d960c79c338aa68bb77",
+      "bytes": 1073843
+    },
+    {
+      "path": "PDF/PROMPT/Meta Prompting for AI Systems.pdf",
+      "sha256": "d5e561b3fcd3aaee03c4651cada1400c0ce792e202a3a4ca424ec139e252486f",
+      "bytes": 843766
+    },
+    {
+      "path": "PDF/PROMPT/Meta-Prompting Enhancing Language Models with Task-Agnostic Scaffolding.pdf",
+      "sha256": "9e1a9f81765dc892588b86742823daa27d25db5e01315e3f027ff34b73167213",
+      "bytes": 793470
+    },
+    {
+      "path": "PDF/PROMPT/Mining Hidden Prompt Engineering Patterns with Formal Concept Analysis and Association Rules.pdf",
+      "sha256": "5794757457459531ce764abbce2b9748055cf37f1ba4ab63f68102fd4fa3ffc6",
+      "bytes": 586737
+    },
+    {
+      "path": "PDF/PROMPT/Mission Impossible A Statistical Perspective on Jailbreaking LLMs.pdf",
+      "sha256": "d2936a39e6c7fbc90371847937a4f728dc5074bc0cadc465704c692d514667b4",
+      "bytes": 1104669
+    },
+    {
+      "path": "PDF/PROMPT/MoT Modularization-of-Thought Prompting for Effective Code Generation.pdf",
+      "sha256": "215915e7d6a0d74a686f8995fc95a627b67503126fe23d6b39e6edecd39d8214",
+      "bytes": 1962545
+    },
+    {
+      "path": "PDF/PROMPT/Multi-LLM Text Summarization.pdf",
+      "sha256": "85ff2191bf7a2f644fb71aa1f91c355e1910b79bbe6c0d816541cc56af6114ed",
+      "bytes": 726821
+    },
+    {
+      "path": "PDF/PROMPT/Multi-round jailbreak attack on large language models.pdf",
+      "sha256": "8e52cb91d0cde3e39cc45e30b2f9f800dabd0d04b68f0c972e6b29346693ac2c",
+      "bytes": 772823
+    },
+    {
+      "path": "PDF/PROMPT/NAAMSE FRAMEWORK FOR EVOLUTIONARY SECURITY EVALUATION OF AGENTS.pdf",
+      "sha256": "be3893d2e6211f339de994cf4bf64cc9e51f49ae8b05733563104a7777142db6",
+      "bytes": 307121
+    },
+    {
+      "path": "PDF/PROMPT/NEXUS Network Exploration for eXploiting Unsafe Sequences in Multi-Turn LLM Jailbreaks.pdf",
+      "sha256": "5f9efd1df26dd7954398fe5fb7a89660a39a0c97aed96567b0a9da28826bf3ab",
+      "bytes": 7485043
+    },
+    {
+      "path": "PDF/PROMPT/Necessary but Not Sufficient Temperature Control and Reproducibility in LLM-as-Judge Safety Evaluations.pdf",
+      "sha256": "5482b5c79dc89aa1c2855193a6a7c906a7be5263a22c0e6680c3da44fa5c7cfd",
+      "bytes": 465605
+    },
+    {
+      "path": "PDF/PROMPT/NetInjectBench Benchmarking Indirect Prompt Injection in Tool-Using Large Language Model Agents for Network Operations.pdf",
+      "sha256": "3917a3e65e9736622601fd9c8518fb2fb1893b669ea3f16c2970e571f62f88f7",
+      "bytes": 1512175
+    },
+    {
+      "path": "PDF/PROMPT/On Measuring Faithfulness or Self-consistency of Natural Language Explanations.pdf",
+      "sha256": "0ed64218daceb71eff0ba5ba7d5e1d20412d1f55a4be46d4f13400c0ff68b85e",
+      "bytes": 1974586
+    },
+    {
+      "path": "PDF/PROMPT/On Meta-Prompting.pdf",
+      "sha256": "984c42de0762b731301b56dff0fa57451bd00e9c8aa20b59d7a587c96516f3cb",
+      "bytes": 486080
+    },
+    {
+      "path": "PDF/PROMPT/Open Data Synthesis For Deep Research.pdf",
+      "sha256": "c8bca064658a9b897052ee9a29e7d6bdf0e8c1d5abc179f07e29baaee700f501",
+      "bytes": 4158365
+    },
+    {
+      "path": "PDF/PROMPT/Open-Ended Instructable Embodied Agents with Memory-Augmented Large Language Models.pdf",
+      "sha256": "4dadba0dd690d995009147efbefeb4ce057817e5179740a93e4cf24f50b15f0d",
+      "bytes": 3929860
+    },
+    {
+      "path": "PDF/PROMPT/Optimizing Instructions and Demonstrations for Multi-Stage Language Model Programs.pdf",
+      "sha256": "f00093af256c7b3e5168c2e98fbb8c4847232a8838c91baad4540cb4f19c91f7",
+      "bytes": 1616047
+    },
+    {
+      "path": "PDF/PROMPT/PAL Program-aided Language Models.pdf",
+      "sha256": "388628b05575ce71a9e8c0dd3a371addcb293f3b4fe31f61d58f7ec99560597b",
+      "bytes": 1180832
+    },
+    {
+      "path": "PDF/PROMPT/PAPERCLIP Associating Astronomical Observations and Natural Language with Multi-Modal Models.pdf",
+      "sha256": "171c6e59d85b10d6d2968f55953a07c97523f81e932b83e8f66bd06576e26650",
+      "bytes": 8579706
+    },
+    {
+      "path": "PDF/PROMPT/PISmith_Reinforcement_Learning_based_Red_Teaming_for_Prompt_Injection.pdf",
+      "sha256": "8785f058eb535827656e65451a7857f40dbfd58d0beaad159f8ac73c2f487f58",
+      "bytes": 577476
+    },
+    {
+      "path": "PDF/PROMPT/PI_Hunter_Automated_Red_Teaming_for_Exposing_and_Localizing_Prompt.pdf",
+      "sha256": "9de5f2fec8c2084efbc0087dabf42f9cb555f9ba8eda149421ac52d59810e6e0",
+      "bytes": 1543599
+    },
+    {
+      "path": "PDF/PROMPT/PLAY2PROMPT Zero-shot Tool Instruction Optimization for LLM Agents via Tool Play.pdf",
+      "sha256": "39d1689b1a3c5d856654bfe79e4836f61567d589f76dd94637824639075b901a",
+      "bytes": 1720163
+    },
+    {
+      "path": "PDF/PROMPT/PROMPT ATTACK DETECTION WITH LLM-AS-A-JUDGE AND MIXTURE-OF-MODELS.pdf",
+      "sha256": "ce4b795ef168328f5c646dda3afeb4a8690a17dea210aec06cde99ee1389bbe5",
+      "bytes": 455348
+    },
+    {
+      "path": "PDF/PROMPT/PROMPTBREEDER SELF-REFERENTIAL SELF-IMPROVEMENT VIA PROMPT EVOLUTION VIA PROMPT EVOLUTION.pdf",
+      "sha256": "0e5b44b77d345581509bb58b009fa7fef9928bf8c090b2a056e8916f25d974a0",
+      "bytes": 819158
+    },
+    {
+      "path": "PDF/PROMPT/Personality, Role, and Expressive Style in Large Language Models An Interactionist Analysis.pdf",
+      "sha256": "a02b1fbe66c59bf511c21b4bc81b0d7e4fe8f63d7edd550b17443f3b1ebe635c",
+      "bytes": 1091026
+    },
+    {
+      "path": "PDF/PROMPT/Privacy Policy Analysis through Prompt Engineering for LLMs.pdf",
+      "sha256": "05577cf1e448f1168fb55b6852575589355e1222b2232cc28365698be7798ad5",
+      "bytes": 14673902
+    },
+    {
+      "path": "PDF/PROMPT/Problem Elaboration Prompting Improves Mathematical Reasoning in Large Language Models.pdf",
+      "sha256": "c6e2edadd4fefc94526dc54fa8c548093748e138270381f7681b59a1fe5269a6",
+      "bytes": 944513
+    },
+    {
+      "path": "PDF/PROMPT/Process Supervision via Verbal Critique Improves Reasoning in Large Language Models.pdf",
+      "sha256": "df7f4226102d90a4530cc0629308e1a9ea337102127941d608f9726f7e2a9c45",
+      "bytes": 1201595
+    },
+    {
+      "path": "PDF/PROMPT/Program of Thoughts Prompting Disentangling Computation from Reasoning for Numerical Reasoning Tasks.pdf",
+      "sha256": "34aaf52e7e0ca5acd46e811fff318a9c99310c1921d2b759640361aa2d6165f1",
+      "bytes": 2997096
+    },
+    {
+      "path": "PDF/PROMPT/Progressive-Hint Prompting Improves Reasoning in Large Language Models.pdf",
+      "sha256": "5037a48b303a87e06473f9ffc4da1258d5ce54c6bf46e7e5f892d19c21dd3b21",
+      "bytes": 518330
+    },
+    {
+      "path": "PDF/PROMPT/Prompt Compression with Context-Aware Sentence Encoding for Fast and Improved LLM Inference.pdf",
+      "sha256": "f70ceed61b3f734216c6fa0a29f5fc0fdf4cda42a3fe9178862c6b0f41a66baf",
+      "bytes": 572060
+    },
+    {
+      "path": "PDF/PROMPT/Prompt Decorators A Declarative and Composable Syntax for Reasoning, Formatting, and Control in LLMs.pdf",
+      "sha256": "30769ec4d7576d39de956ff1892447df8e01faa595b7a63963fe90e9b1602c4f",
+      "bytes": 760789
+    },
+    {
+      "path": "PDF/PROMPT/Prompt Engineering a Prompt Engineer.pdf",
+      "sha256": "dc643d91f3b09c9d48fc79d128d4d8e5579f0c6d958e87c495ed7a3610df83db",
+      "bytes": 1177252
+    },
+    {
+      "path": "PDF/PROMPT/Prompt Repetition Improves Non-Reasoning LLMs.pdf",
+      "sha256": "5dd7b024ba18d86a4ca3855620b34bf41dc5905c27a9c6866d971f29ae7e0815",
+      "bytes": 1809081
+    },
+    {
+      "path": "PDF/PROMPT/Prompt engineering in consistency and reliability with the evidence-based guideline for LLMs.pdf",
+      "sha256": "8ed50322d800c9d44bdbe2f782fab07f6897e59de42a3d11fe2548d49b29e302",
+      "bytes": 1004263
+    },
+    {
+      "path": "PDF/PROMPT/Prompt engineering paradigms for medical applications scoping review and recommendations for better practices.pdf",
+      "sha256": "6eddbd6ddf1ed1ec45d0df487caaa48c6af5428c758b78d3a9c759cc2e6f2b01",
+      "bytes": 1842741
+    },
+    {
+      "path": "PDF/PROMPT/Prompt-Matcher Leveraging Large Models to Reduce Uncertainty in Schema Matching Results.pdf",
+      "sha256": "1d184e819bb69101e70158483dd3f271ef32b38584871d86bb92a1d1ea7db8f3",
+      "bytes": 643199
+    },
+    {
+      "path": "PDF/PROMPT/PromptArmor Simple yet Effective Prompt Injection Defenses.pdf",
+      "sha256": "6575ed46e6ca62a2cffd1d3e4889eb1393b120e2d3b78cfa4fbafd9cec7a271d",
+      "bytes": 468196
+    },
+    {
+      "path": "PDF/PROMPT/PromptChainer Chaining Large Language Model Prompts through Visual Programming.pdf",
+      "sha256": "3bf24495177bbabf70a55b7c82e90bbbffb4d706950c3df7c3667c06ca1edd4b",
+      "bytes": 2468720
+    },
+    {
+      "path": "PDF/PROMPT/PromptRobust Towards Evaluating the Robustness of Large Language Models on Adversarial Prompts.pdf",
+      "sha256": "49eb350182156b245867622bd561dd109525179065b5424bdf205ab149b00ac3",
+      "bytes": 780406
+    },
+    {
+      "path": "PDF/PROMPT/Prompting AI Art An Investigation into the Creative Skill of Prompt Engineering.pdf",
+      "sha256": "c46de3ea18e71599b8938ed1b8b57f30dff8f72b622740c9a74bc66712b10043",
+      "bytes": 7718089
+    },
+    {
+      "path": "PDF/PROMPT/Prompting Destiny Negotiating Socialization and Growth in an LLM-Mediated Speculative Gameworld.pdf",
+      "sha256": "7e558dc9f9235925bcd941abf025eafd4f76e6c73b4b7ece6cdf9653ef41daa8",
+      "bytes": 5197940
+    },
+    {
+      "path": "PDF/PROMPT/Prompting Large Language Models for Recommendation with Semantic and Collaborative Data.pdf",
+      "sha256": "c4c08a388abb8414bcbc0d68a3626445edbb7f4b9159509aa683ebf098ab74b9",
+      "bytes": 7493805
+    },
+    {
+      "path": "PDF/PROMPT/Prompting Large Language Models for Recommender Systems A Comprehensive Framework and Empirical Analysis.pdf",
+      "sha256": "715239e051ab7cc75847ef58bd0da63390a687e20600bd0436fcd590c16131cc",
+      "bytes": 1775488
+    },
+    {
+      "path": "PDF/PROMPT/Prompting Techniques for Secure Code Generation A Systematic Investigation.pdf",
+      "sha256": "f67897cfad4e383219c8a562e0f6c00052a248befad7844a3c544e40168f765e",
+      "bytes": 2726731
+    },
+    {
+      "path": "PDF/PROMPT/QA-prompting Improving Summarization with Large Language Models using Question-Answering.pdf",
+      "sha256": "5a57b7e64ec8ba017697352451a1cc2a041c29de790803323d648fa404b3026f",
+      "bytes": 408381
+    },
+    {
+      "path": "PDF/PROMPT/QUERY-DEPENDENT PROMPT EVALUATION AND OPTIMIZATION WITH OFFLINE INVERSE RL.pdf",
+      "sha256": "23a343530a8c6a129947398fe60b20de233614531f02cb4a37b82a18abc8bbcf",
+      "bytes": 3185943
+    },
+    {
+      "path": "PDF/PROMPT/RAPTOR RECURSIVE ABSTRACTIVE PROCESSING FOR TREE-ORGANIZED RETRIEVAL.pdf",
+      "sha256": "01319e2e6e6ecfd504ee1bbda41d023f9e060bd3505ab3c161baa1d6d696cf75",
+      "bytes": 2547113
+    },
+    {
+      "path": "PDF/PROMPT/RAT Retrieval Augmented Thoughts Elicit Context-Aware Reasoning in Long-Horizon Generation.pdf",
+      "sha256": "72f1a13c0e7ae42a0095a86422c59846dadd30dbd1e5c90d5b9654cde862c170",
+      "bytes": 3152574
+    },
+    {
+      "path": "PDF/PROMPT/RECAST EXPANDING THE BOUNDARIES OF LLMS’ COMPLEX INSTRUCTION FOLLOWING WITH MULTI-CONSTRAINT DATA.pdf",
+      "sha256": "c49910a57b04f15d909307d4e4d8db5827dd42c6f190197c3146c24d5c3a0f16",
+      "bytes": 2683643
+    },
+    {
+      "path": "PDF/PROMPT/RECUBE Evaluating Repository-Level Context Utilization in Code Generation.pdf",
+      "sha256": "8e546553289ec0c2ca40fa45201bf74311dd26a4d5da112b1e422ebe40f03135",
+      "bytes": 1919940
+    },
+    {
+      "path": "PDF/PROMPT/RETRIEVE PROMPT THROUGH REVERSE ENGINEERING.pdf",
+      "sha256": "af950ebb3dff62451755f1c1f9abd07b50592d777e30f5fc874f6c51fccbb1e1",
+      "bytes": 310216
+    },
+    {
+      "path": "PDF/PROMPT/RFEVAL BENCHMARKING REASONING FAITHFULNESS UNDER COUNTERFACTUAL REASONING INTERVENTION IN LARGE REASONING MODELS.pdf",
+      "sha256": "8331eeb528f450997b8ed31cc29a51a9fbf745602dbaab5eee390eca8b2c4d83",
+      "bytes": 3200265
+    },
+    {
+      "path": "PDF/PROMPT/ROAD Reflective Optimization via Automated Debugging for Zero-Shot Agent Alignment.pdf",
+      "sha256": "84949998cf4b9d02abff37e71dd6fd5b7e158cf143b49ecf7d4c03fa30479e88",
+      "bytes": 789277
+    },
+    {
+      "path": "PDF/PROMPT/Re-Reading Improves Reasoning in Large Language Models.pdf",
+      "sha256": "255c50131f4b8a577ad78f03cb331baf680f4b40dad2fb303af3415a82b0d518",
+      "bytes": 2607946
+    },
+    {
+      "path": "PDF/PROMPT/ReWOO Decoupling Reasoning from Observations for Efficient Augmented Language Models.pdf",
+      "sha256": "1847bb42b9efb3a2860ca48edc962ee9c9b7d3e0359887ea596e1b23084de9ff",
+      "bytes": 2552313
+    },
+    {
+      "path": "PDF/PROMPT/Read As Human Compressing Context via Parallelizable Close Reading and Skimming.pdf",
+      "sha256": "b50fef566a17a01094c23c5a4c0be4103fe979005bb556a0a76352124d56c042",
+      "bytes": 3309561
+    },
+    {
+      "path": "PDF/PROMPT/Reason from Future Reverse Thought Chain Enhances LLM Reasoning.pdf",
+      "sha256": "e7f590da97e87388752a11496794f63901f6fad52b1d7e5411aeb7d3b3022177",
+      "bytes": 849393
+    },
+    {
+      "path": "PDF/PROMPT/Reasoning as an Attack Surface Adaptive Evolutionary CoT Jailbreaks for LLMs.pdf",
+      "sha256": "55d589fd16d74ffaf263ec099c2afcdc1bf6dbb962f61bf1e307ca0dfcaaa84d",
+      "bytes": 823596
+    },
+    {
+      "path": "PDF/PROMPT/Reasoning with Large Language Models, a Survey.pdf",
+      "sha256": "08394049f1aa6a13607739edc8cbfee1be4918ad62b52d8ddf07636c8294b59d",
+      "bytes": 7280461
+    },
+    {
+      "path": "PDF/PROMPT/Reasoning-Oriented Programming Chaining Semantic Gadgets to Jailbreak Large Vision Language Models.pdf",
+      "sha256": "3ec3846ec9bdeaba8aff940e69bf2123d54a067b567fe5adcd613e29a5d20814",
+      "bytes": 3292852
+    },
+    {
+      "path": "PDF/PROMPT/Recursive Self-Improvement in AI From Bounded Self-Refinement to Autonomous Research Loops.pdf",
+      "sha256": "0cc637f5492ed565fc9f80fa9a1b5772d3e3743a13ef5bc294c0c081b7142f93",
+      "bytes": 5035755
+    },
+    {
+      "path": "PDF/PROMPT/Reducing Hallucination in Enterprise AI Workflows via Hybrid Utility Minimum Bayes Risk (HUMBR).pdf",
+      "sha256": "27c4d154fa0cecb35595ee86709576e2121aae6e0a23c6ac31382fe25f555fb4",
+      "bytes": 812602
+    },
+    {
+      "path": "PDF/PROMPT/Reference-Guided Verdict LLMs-as-Judges in Automatic Evaluation of Free-Form QA.pdf",
+      "sha256": "a6d1e6105ee08314fcfc07d6c24bbf8a05eb1c935c71bae9d8d61d068af685e1",
+      "bytes": 1647040
+    },
+    {
+      "path": "PDF/PROMPT/Reliability without Validity A Systematic, Large-Scale Evaluation of LLM-as-a-Judge Models Across Agreement, Consistency, and Bias.pdf",
+      "sha256": "faacf577921eab7a38f1a7b04899b6db5acbb17434ff78cb8f9f25e3b87f3230",
+      "bytes": 780047
+    },
+    {
+      "path": "PDF/PROMPT/Rephrase and Respond Let Large Language Models Ask Better Questions for Themselves.pdf",
+      "sha256": "87ca294b1fff7c2d8ff24f6d4e76714bbb965d265170850b7628f84d120c0332",
+      "bytes": 3713121
+    },
+    {
+      "path": "PDF/PROMPT/Retcon- a Prompt-Based Technique for Precise Control of LLMs in Conversations.pdf",
+      "sha256": "ef9d57457c9136ed271fcce2f0aca942131ac130ace1aab816489240e8825db1",
+      "bytes": 264743
+    },
+    {
+      "path": "PDF/PROMPT/Reverse Prompt Engineering A Zero-Shot, Genetic Algorithm Approach to Language Model Inversion.pdf",
+      "sha256": "5638616518127a851a92ae736670fb3d46a5bb376e3ef5acc361dde3198f80c4",
+      "bytes": 7892526
+    },
+    {
+      "path": "PDF/PROMPT/Reverse Prompt Engineering v1.pdf",
+      "sha256": "a6e9ce870a0f593b0e155f20068c10f6894cfad5a8218a8077fc0bd9ffd30340",
+      "bytes": 4221547
+    },
+    {
+      "path": "PDF/PROMPT/Reverse Prompt Engineering.pdf",
+      "sha256": "fe61693a69e4db1dad5e775aa0f2cb56518de22157992b9698427886ed00aaa3",
+      "bytes": 7498767
+    },
+    {
+      "path": "PDF/PROMPT/Robust Reinforcement Learning for Deep Search.pdf",
+      "sha256": "6575f582d19a0101557466653df3c20a23c6877706b6a87388417a56d566017a",
+      "bytes": 5315924
+    },
+    {
+      "path": "PDF/PROMPT/Robust Retrieval Augmented Generation for Zero-shot Slot Filling.pdf",
+      "sha256": "94d9ea48a4d095b044da09bf7abc367c2d1c99839d28649bd144a0d27f93a197",
+      "bytes": 693463
+    },
+    {
+      "path": "PDF/PROMPT/Robustness of Prompting Enhancing Robustness of Large Language Models Against Prompt Attacks.pdf",
+      "sha256": "89e7814a375c517588a5ed0819619cd483e1b19281b0e62b951b0ee7f80e4a88",
+      "bytes": 803493
+    },
+    {
+      "path": "PDF/PROMPT/SALMON SELF-ALIGNMENT WITH INSTRUCTABLE REWARD MODELS.pdf",
+      "sha256": "1de94997fb242d2eb1bff80d0421906c04649f85e43bf2e606e20354834c629d",
+      "bytes": 1073567
+    },
+    {
+      "path": "PDF/PROMPT/SELF SELF-EVOLUTION WITH LANGUAGE FEEDBACK.pdf",
+      "sha256": "c6c357c26f9611c595ec4a213ca9562ce7f6d230adad0c77d87aaf363c1d02ba",
+      "bytes": 995074
+    },
+    {
+      "path": "PDF/PROMPT/SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS.pdf",
+      "sha256": "1a49ce0373afc89d2d6e97fb1aa8230f6b818c70590d732a3187f753f4df6aba",
+      "bytes": 10505941
+    },
+    {
+      "path": "PDF/PROMPT/SELF-DISCOVER Large Language Models Self-Compose Reasoning Structures.pdf",
+      "sha256": "a7e7c65754343960fb6eefc10aacc91b1d307f8fd1ceda0ee3db4ca99dddc9b7",
+      "bytes": 1262297
+    },
+    {
+      "path": "PDF/PROMPT/SELF-RAG LEARNING TO RETRIEVE, GENERATE, AND CRITIQUE THROUGH SELF-REFLECTION.pdf",
+      "sha256": "d9eaa1398abac0df67a9d0933a5bf8b6d9d83d2e72da2a486073cd842dd52978",
+      "bytes": 1405127
+    },
+    {
+      "path": "PDF/PROMPT/SELFDEFEND LLMs CanDefend Themselves against Jailbreaking in a Practical Manner.pdf",
+      "sha256": "529de6a7bd64884708cf9fbed2807c0b4a199a3f30ef67979feff9f7f53f45f2",
+      "bytes": 1533066
+    },
+    {
+      "path": "PDF/PROMPT/SGIC ASelf-Guided Iterative Calibration Framework for RAG.pdf",
+      "sha256": "060c186d34598e41199ca1940d04bfd4af8a6b7f20c1b09599449d17c6af99dc",
+      "bytes": 1525899
+    },
+    {
+      "path": "PDF/PROMPT/SHARING STATE BETWEEN PROMPTS AND PROGRAMS.pdf",
+      "sha256": "13f5b97d3525a690879c82d00ae50e6fb87d9d912d76a53b1707e2449925af88",
+      "bytes": 823227
+    },
+    {
+      "path": "PDF/PROMPT/SKELETON-OF-THOUGHT LARGE LANGUAGE MODELS CAN DO PARALLEL DECODING.pdf",
+      "sha256": "d49f38f3a22867054c56156528cf7474d6fcc1f3df09f75563ee75d604e3457d",
+      "bytes": 1148822
+    },
+    {
+      "path": "PDF/PROMPT/SMOOTHLLMDefending Large Language Models Against Jailbreaking Attacks.pdf",
+      "sha256": "1a34863cbec66628ca4abdaee9ca03a1473879496d42716788e018b6ca9aecfb",
+      "bytes": 1729873
+    },
+    {
+      "path": "PDF/PROMPT/SQL Injection Jailbreak A Structural Disaster of Large Language Models.pdf",
+      "sha256": "baf13817c850c053ec5dd3591f9ae490754c1662c3110510d46dcc642718ff4d",
+      "bytes": 1258921
+    },
+    {
+      "path": "PDF/PROMPT/STRATEGIC DEFLECTION DEFENDING LLMS FROM LOGIT MANIPULATION.pdf",
+      "sha256": "f9d627dcf9e6930a11c157114d7c5c49cdef6d7f27354d2bca9ccc1a96e21436",
+      "bytes": 4990616
+    },
+    {
+      "path": "PDF/PROMPT/STYLEBENCH EVALUATING THINKING STYLES IN LARGE LANGUAGE MODELS.pdf",
+      "sha256": "3c774e209270a54b5535cc95d1d08143cc4c1689a7d2aff67a52e96bfb6dd36f",
+      "bytes": 1439313
+    },
+    {
+      "path": "PDF/PROMPT/Salient Information Prompting to Steer Content in Prompt-based Abstractive Summarization.pdf",
+      "sha256": "a5ee6da3707b5d5796cbd78a4640304d63f5d0861db19b3512962f976648ca47",
+      "bytes": 435173
+    },
+    {
+      "path": "PDF/PROMPT/Same Input, Different Scores A Multi Model Study on the Inconsistency of LLM Judge.pdf",
+      "sha256": "17b86d18004bf6f500927ae519524fa3f6af4c2964246c670d4d53a232573be9",
+      "bytes": 1092958
+    },
+    {
+      "path": "PDF/PROMPT/Scalable Defense against In-the-wild Jailbreaking Attacks with Safety Context Retrieval.pdf",
+      "sha256": "88101f7fcafaf2e0633080ad1bf8e18d8c5c5e28473369bda358fe5a281e122d",
+      "bytes": 749648
+    },
+    {
+      "path": "PDF/PROMPT/Scaling Long-Horizon LLM Agent via Context-Folding.pdf",
+      "sha256": "2f6ef742c2799b931ef92337a2e3e899d1b8940f4fb10d94fca5b8e2353601fc",
+      "bytes": 3064656
+    },
+    {
+      "path": "PDF/PROMPT/Scaling Long-Horizon LLM Agents via Indexed Experience Memory.pdf",
+      "sha256": "7c6b1f5bab0154d5ec5d204b3ce44aaa79952f7c511fd598c626cda723262cce",
+      "bytes": 1353534
+    },
+    {
+      "path": "PDF/PROMPT/SciIntBench Measuring LLM Compliance with Research Integrity Norms Under Adversarial Framing.pdf",
+      "sha256": "c7e46c72b5de431159f3ce83f42736f06c028bb40b380879278a4913af2dbfe2",
+      "bytes": 4882103
+    },
+    {
+      "path": "PDF/PROMPT/Self-Contradictory Reasoning Evaluation and Detection.pdf",
+      "sha256": "683a09b4e1ef9392bb5cbee081caba07df9240f32f0e307e82e97a56dc96e723",
+      "bytes": 1063990
+    },
+    {
+      "path": "PDF/PROMPT/Self-Error-Instruct Generalizing from Errors for LLMs Mathematical Reasoning.pdf",
+      "sha256": "d6fb1c064c3189ec7fbd7bb884f9f5ec026d968486818b8c82a53a45210f499a",
+      "bytes": 896904
+    },
+    {
+      "path": "PDF/PROMPT/Self-Harmonized Chain of Thought.pdf",
+      "sha256": "9893d2ca6b4370f4c41012fb68bb1c69f52b88ef9be07ac6cd2a16659ff9baac",
+      "bytes": 575012
+    },
+    {
+      "path": "PDF/PROMPT/Signed-Prompt A New Approach to Prevent Prompt Injection Attacks Against LLM-Integrated Applications .pdf",
+      "sha256": "8b508cc07c4e188e0e054e3e174c25ee70ab4329d5232cde11d713cf6395400c",
+      "bytes": 556379
+    },
+    {
+      "path": "PDF/PROMPT/SimPersona Learning Discrete Buyer Personas from Raw Clickstreams for Grounded E-Commerce Agents.pdf",
+      "sha256": "12f7b5ddf9e76f4cbec2bb3ea115abaa198d60ac24a4c5e6d6f5c82b1eaad944",
+      "bytes": 11068708
+    },
+    {
+      "path": "PDF/PROMPT/Simple Prompt Injection Attacks Can Leak Personal Data Observed by LLM Agents During Task Execution.pdf",
+      "sha256": "d4f0751a1296c55642c19af40108088e3283335d93d5512062438b5cf2d78d56",
+      "bytes": 3352570
+    },
+    {
+      "path": "PDF/PROMPT/Skeleton-of-Thought Parallel Decoding.pdf",
+      "sha256": "77d85dd4e6419f91075574c384c409e787ba9837a2f7350d916289324719675c",
+      "bytes": 1188139
+    },
+    {
+      "path": "PDF/PROMPT/SkillMutator Benchmarking and Defending Language-and-Code Cross-modal Attacks on LLM Agent Skills.pdf",
+      "sha256": "ddcba3499de60ead32225ee785ef313c6aea81d4c78c4832b0639396a8128fa8",
+      "bytes": 860566
+    },
+    {
+      "path": "PDF/PROMPT/Smurfs Multi-Agent System using Context-Efficient DFSDT for Tool Planning.pdf",
+      "sha256": "7abaa4fabc078d797f7775afadf29e0f9a9ae1804b20a742d69e9985da00beb9",
+      "bytes": 3384228
+    },
+    {
+      "path": "PDF/PROMPT/SoK Robustness in Large Language Models against Jailbreak Attacks.pdf",
+      "sha256": "45bf1f9f858f554ddf2a9815739e1f036ff03d043cd0eee17c3a2ad432804c32",
+      "bytes": 4150009
+    },
+    {
+      "path": "PDF/PROMPT/SoK Systematizing LLM Prompt Security Taxonomies, Datasets, and Unified Evaluation of Attacks and Defenses.pdf",
+      "sha256": "5ed1ea89108158bd4a6de54699c487f49e1ac385226905f2d19741a156a3b378",
+      "bytes": 761385
+    },
+    {
+      "path": "PDF/PROMPT/Soft Self-Consistency Improves Language Model Agents.pdf",
+      "sha256": "887578cdcd53dcc4207507ab1e471a3310e220b45213c65de6814253bbed8962",
+      "bytes": 571310
+    },
+    {
+      "path": "PDF/PROMPT/Spotlight Your Instructions Instruction-following with Dynamic Attention Steering.pdf",
+      "sha256": "bedc215c027bf2ee063b9fecef5f8704d3c8c0f505ce4ae536857205e789868d",
+      "bytes": 1397089
+    },
+    {
+      "path": "PDF/PROMPT/Stealthy Jailbreak Attacks on Large Language Models via Benign Data Mirroring.pdf",
+      "sha256": "d80d3295708d2497af7f844f23ad0019cb11d74b397c5bf5d724dc97230aaa05",
+      "bytes": 927662
+    },
+    {
+      "path": "PDF/PROMPT/Steering Dialogue Dynamics for Robustness against Multi-turn Jailbreaking Attacks.pdf",
+      "sha256": "7a8fd938a0efe4ceff7266656bff98d53d92c02a27c634a13040cf258b8b92ab",
+      "bytes": 3264012
+    },
+    {
+      "path": "PDF/PROMPT/Step-Tagging Early-Stopping Toward controlling the generation of Language Reasoning Models through black-box step monitoring.pdf",
+      "sha256": "701b52305230e4d85df76ec361003c275b816e20a2b77bc99301f7582a5caabc",
+      "bytes": 1742035
+    },
+    {
+      "path": "PDF/PROMPT/Stop Hand-Holding Your Coding Agent Engineering the Loops that Replace Step-by-Step.pdf",
+      "sha256": "60633c7e03d3cf5c31f31bc642902ddfe0787e01a86e4b84e4ead55b9c32ebe7",
+      "bytes": 748530
+    },
+    {
+      "path": "PDF/PROMPT/Structured Chain-of-Thought Prompting for Code Generation.pdf",
+      "sha256": "b08e6cea562bc7aa784b1e013947e486ad0641fee38641098ef17f9159189c08",
+      "bytes": 844292
+    },
+    {
+      "path": "PDF/PROMPT/Survey of Automatic Prompt Engineering An Optimization.pdf",
+      "sha256": "b85f03302e50963a258716cec6acb6dcde2582850f2bc3e94bb85a6d1181e81d",
+      "bytes": 5752608
+    },
+    {
+      "path": "PDF/PROMPT/Swiss Cheese Model for AI Safety A Taxonomy and Reference Architecture for Multi-Layered Guardrails of Foundation Model Based Agents.pdf",
+      "sha256": "17df3a47c82b8663d66c1aca31915433a750eb3c348dfd6bde202c65898bd52b",
+      "bytes": 989583
+    },
+    {
+      "path": "PDF/PROMPT/System 2 Attention (is something you might need too).pdf",
+      "sha256": "ff012603af77c971fc74e136abaf329674b9a79ce15aca8d103d129bf509b08f",
+      "bytes": 589442
+    },
+    {
+      "path": "PDF/PROMPT/System 2 Reasoning Capabilities Are Nigh.pdf",
+      "sha256": "bc02b53cd01022d0d9106d16c4d19ce174b36fe629f9656fda091c63f5cd7839",
+      "bytes": 181094
+    },
+    {
+      "path": "PDF/PROMPT/TAKE A STEP BACK EVOKING REASONING VIA AB STRACTION IN LARGE LANGUAGE MODELS.pdf",
+      "sha256": "f5b336a04dd4353eb59f936670e707c8532001acd677a94330a0e65b875cd72f",
+      "bytes": 1031533
+    },
+    {
+      "path": "PDF/PROMPT/TCPO Thought-Centric Preference Optimization for Effective Embodied Decision-making.pdf",
+      "sha256": "e7102bdec25a1b26b87ad2bba3374df2aa2a5f7ee07a0c7eca99df57f046f211",
+      "bytes": 846395
+    },
+    {
+      "path": "PDF/PROMPT/Task-agnostic Prompt Compression with Context-aware Sentence Embedding and Reward-guided Task Descriptor.pdf",
+      "sha256": "2c48f6727c60aca8713ade8f70b4a9ad23a4d1701581019e9112632f1e638894",
+      "bytes": 1923975
+    },
+    {
+      "path": "PDF/PROMPT/Task-oriented Prompt Enhancement via Script Generation.pdf",
+      "sha256": "09ba151b101550df1b129632fb6fea37d0ef084f7464e923f250bdf02743fc08",
+      "bytes": 842820
+    },
+    {
+      "path": "PDF/PROMPT/Teaching-Inspired Integrated Prompting Framework A Novel Approach for Enhancing Reasoning in Large Language Models.pdf",
+      "sha256": "f20bdda3a6e190c2cdc126a7f2e64bd6c3f37a7b4c65fd427ad95c2df6d6f746",
+      "bytes": 898400
+    },
+    {
+      "path": "PDF/PROMPT/The Meta-Prompting Protocol Orchestrating LLMs via Adversarial Feedback Loops.pdf",
+      "sha256": "2361373cbb63e9dacf415dedf59e3102ee6bb16639bb6082198dbec151ac9c7e",
+      "bytes": 455617
+    },
+    {
+      "path": "PDF/PROMPT/The Necessity of Setting Temperature in LLM-as-a-Judge.pdf",
+      "sha256": "377d2331bb2949538e66c1b933ba43656d0ac407db97289f353d219002272f49",
+      "bytes": 10067472
+    },
+    {
+      "path": "PDF/PROMPT/The Prompt Report A Systematic Survey of Prompt Engineering Techniques.pdf",
+      "sha256": "06d9e15bc94457f08dfa24411ced93d626e981a2f805e98b5a0298e906b7c885",
+      "bytes": 3176422
+    },
+    {
+      "path": "PDF/PROMPT/The Rise and Potential of Large Language Model Based Agents A Survey.pdf",
+      "sha256": "5e3b2357ff942e1a0e084ae4af3327011a651cf1f155d108065c70af369e24ac",
+      "bytes": 6832174
+    },
+    {
+      "path": "PDF/PROMPT/The Role of Emotional Stimuli and Intensity in Shaping Large Language Model Behavior.pdf",
+      "sha256": "583a37fa2f7e56618a4ad7110581703b0992d762bd594cc47cd8ee03462d52e7",
+      "bytes": 445053
+    },
+    {
+      "path": "PDF/PROMPT/The Salami Slicing Threat Exploiting Cumulative Risks in LLM Systems.pdf",
+      "sha256": "5da4b96b0e59fb2e8fcbd75647308e7beb1b9bb9c99e175b3b6fde6d42e1ece5",
+      "bytes": 14371234
+    },
+    {
+      "path": "PDF/PROMPT/Think Before You Prune Selective Self-Generated Calibration for Pruning Large Reasoning Models.pdf",
+      "sha256": "ce0a2ef371ba14d0587c5a32772b63de589e40a5cb4bae89c6771b00dc9afa70",
+      "bytes": 385089
+    },
+    {
+      "path": "PDF/PROMPT/Think Big, Generate Quick LLM-to-SLM for Fast Autoregressive Decoding.pdf",
+      "sha256": "462d7313a3f2f330c611db4e332e9491857762530b557b46d5f06ef78e5d6028",
+      "bytes": 739134
+    },
+    {
+      "path": "PDF/PROMPT/Think Twice Before Trusting Self-Detection for Large Language Models through Comprehensive Answer Reflection.pdf",
+      "sha256": "707962fb3a357de422125c4828b245f87c1b7fbb8372a229b5659001bcf3f0f9",
+      "bytes": 732642
+    },
+    {
+      "path": "PDF/PROMPT/Think with Self-Decoupling and Self-Verification Automated RTL Design with Backtrack-ToT.pdf",
+      "sha256": "dff89108692ff672dc0684b826fb845e59bb28bf957a78827a8eb87140d75e99",
+      "bytes": 5306731
+    },
+    {
+      "path": "PDF/PROMPT/Thought calibration Efficient and confident test-time scaling.pdf",
+      "sha256": "4cf8d5229ced3ddfe55f696263e7617b5a9741e4a9cc9ab6f30e016ff6a35b40",
+      "bytes": 565545
+    },
+    {
+      "path": "PDF/PROMPT/Thread of Thought Unraveling Chaotic Contexts.pdf",
+      "sha256": "13fb63c5df18596073dbeae578debdba0692a764aaf6729e071f6eb667fc8c18",
+      "bytes": 1180729
+    },
+    {
+      "path": "PDF/PROMPT/Tool Documentation Enables Zero-Shot Tool-Usage with Large Language Models.pdf",
+      "sha256": "80d7e41d65d0cfc8fc65c0d74b0640d78cc4aaa8b8f54b949ab036881c2a5da0",
+      "bytes": 4716678
+    },
+    {
+      "path": "PDF/PROMPT/Tool Learning with Foundation Models.pdf",
+      "sha256": "889bebece19855d7743be3849828a11762ec5d18b77bb0deb4f332c1ac4447ea",
+      "bytes": 12805320
+    },
+    {
+      "path": "PDF/PROMPT/ToolQA A Dataset for LLM Question Answering with External Tools.pdf",
+      "sha256": "ebffe799d729df742800ef42660f9071b7c53b70fd4a5e6dc335b2e47331bdc9",
+      "bytes": 804930
+    },
+    {
+      "path": "PDF/PROMPT/Towards Better Chain-of-Thought Prompting Strategies A Survey.pdf",
+      "sha256": "a13885df983a33be388a658ac784b32ed8dbc20f08558e24ab990ffc2228b748",
+      "bytes": 533593
+    },
+    {
+      "path": "PDF/PROMPT/Towards Reasoning in Large Language Models A Survey.pdf",
+      "sha256": "46fc54b5d63dd05e1eb0c28e419330448305599e70eb20b36353a97654f409cb",
+      "bytes": 483206
+    },
+    {
+      "path": "PDF/PROMPT/Training language models to follow instructions with human feedback.pdf",
+      "sha256": "c1984bb50a5b90fddb895fdc3a0f72e5bc977148c9f63ef6040cbe7a3e1f0d98",
+      "bytes": 1797405
+    },
+    {
+      "path": "PDF/PROMPT/Trajectory-Level Redirection Attacks on Vision-Language-Action Models.pdf",
+      "sha256": "32f5ee2b5d7718fc15ac61d95ffc67e4ad0fd70017621e2a6713b30abab74a39",
+      "bytes": 20665519
+    },
+    {
+      "path": "PDF/PROMPT/Tree of Attacks Jailbreaking Black-Box LLMs Automatically.pdf",
+      "sha256": "b0ffafed56bef4937150dcf63ac5379cdc6aeedeac4a83b1af56512d92f9a496",
+      "bytes": 954746
+    },
+    {
+      "path": "PDF/PROMPT/Tree of Thoughts Deliberate Problem Solving with Large Language Models.pdf",
+      "sha256": "1f1a8cc4069ce2a5fa462d39405a7eda63b3145a310114662325439ba6859c84",
+      "bytes": 766323
+    },
+    {
+      "path": "PDF/PROMPT/UNIVERSAL SELF-CONSISTENCY FOR LARGE LANGUAGE MODEL GENERATION.pdf",
+      "sha256": "223e2d7727d3eaa890594dab24a64b2cd116cf760324d37c541a58bca7c3db10",
+      "bytes": 474568
+    },
+    {
+      "path": "PDF/PROMPT/UNLOCKING REASONING POTENTIAL IN LARGE LANGUAGE MODELS BY SCALING CODE-FORM PLANNING.pdf",
+      "sha256": "025c56090d59d6ed531ed34c2e8c2901b485d5b0bca5bf9673309b46ecfa57b4",
+      "bytes": 2315616
+    },
+    {
+      "path": "PDF/PROMPT/Uncertainty of Thoughts Uncertainty-Aware Planning Enhances Information Seeking in Large Language Models.pdf",
+      "sha256": "f87d7413120be1b4225de53be0eb2f768dba7b7bfe691d742cbd2472f0783d80",
+      "bytes": 1241501
+    },
+    {
+      "path": "PDF/PROMPT/Understanding LLM Reasoning for Abstractive Summarization.pdf",
+      "sha256": "bfd67f7c35c0a403d021c2365c2eaf7999b253146f2e27f68f4980808a67a231",
+      "bytes": 1717514
+    },
+    {
+      "path": "PDF/PROMPT/Universal and Transferable Adversarial Attacks on Aligned Language Models.pdf",
+      "sha256": "ab8745c2e3c6dfd939d5a590760bbae4682d92db010947cbb306688ad086bfd1",
+      "bytes": 4656473
+    },
+    {
+      "path": "PDF/PROMPT/Unleashing the Emergent Cognitive Synergy in Large Language Models A Task-Solving Agent through Multi-Persona Self-Collaboration.pdf",
+      "sha256": "47a5b6f7bc66ededc40dc0835c90c86e43a8b25729d7494ce665ebdac57abc78",
+      "bytes": 4438900
+    },
+    {
+      "path": "PDF/PROMPT/Unleashing the potential of prompt engineering for large language models.pdf",
+      "sha256": "47d1543e0f76cb85af73dd7a82c47890ba2e099751f327bef62bc54bba8c7ffb",
+      "bytes": 7034353
+    },
+    {
+      "path": "PDF/PROMPT/VOYAGER AnOpen-Ended Embodied Agent with Large Language Models.pdf",
+      "sha256": "769a4e33ddeeb73870849232eece49afe882c2d146362e33917ccb432ba0efb8",
+      "bytes": 18830859
+    },
+    {
+      "path": "PDF/PROMPT/When Generic Prompt Improvements Hurt.pdf",
+      "sha256": "63dff1efec95f6bd2521af84774b4c1a32c22ae25b0196a9d032df678899a436",
+      "bytes": 751165
+    },
+    {
+      "path": "PDF/PROMPT/When LLM MeetsDRLAdvancing Jailbreaking Efficiency via DRL-guided Search.pdf",
+      "sha256": "8b23d2e262e7d02b55f93a64ff4eda09cfbb5cc6a6cd54a2ca2cb5965f6b95ff",
+      "bytes": 2179151
+    },
+    {
+      "path": "PDF/PROMPT/When “Better” Prompts Hurt.pdf",
+      "sha256": "7d4cfe95e5fe67f15f3882e708dac8f0d374e287aacfb62879f4bcc981c8cda6",
+      "bytes": 642592
+    },
+    {
+      "path": "PDF/PROMPT/Where Do Reasoning Models Refuse.pdf",
+      "sha256": "c4631c01679e56de09a0f1e450f2c6eaff5fa83fabde080fd4f3c121dacbd3ca",
+      "bytes": 1774816
+    },
+    {
+      "path": "PDF/PROMPT/Where Instruction Hierarchy Breaks Diagnosing and Repairing Failures in Reasoning Language Models.pdf",
+      "sha256": "0c0780f6244558f08d4714956be2499f12aabb09ba2e8472f5d769e1b9f5c7b6",
+      "bytes": 1112082
+    },
+    {
+      "path": "PDF/PROMPT/Why Language Models Hallucinate.pdf",
+      "sha256": "b6a0d4e8de1b3add1044cbf00c59c92e0ca76c7deef5c944d76cb0f16db28950",
+      "bytes": 815337
+    },
+    {
+      "path": "PDF/PROMPT/XGRAG A GRAPH-NATIVE FRAMEWORK FOR EXPLAINING KG-BASED RETRIEVAL-AUGMENTED GENERATION.pdf",
+      "sha256": "f7e3c04a2c8c6697cdf624f4d10839a8bf022f4e40e39ef1dd5f560d77230de2",
+      "bytes": 979937
+    },
+    {
+      "path": "PDF/PROMPT/XGRAMMAR FLEXIBLE AND EFFICIENT STRUCTURED GENERATION ENGINE FOR LARGE LANGUAGE MODELS.pdf",
+      "sha256": "61e94a1a28bb6307250c4f82a9ff0dcd07273fed80011d6ba7535f388a8fa5f0",
+      "bytes": 790678
+    },
+    {
+      "path": "PDF/PROMPT/XML Prompting as Grammar-Constrained Interaction Fixed-Point Semantics, Convergence Guarantees, and Human-AI Protocols.pdf",
+      "sha256": "1e6c86e442f00d3876a3d78cfecd1a66b9c4a00d8403092cf2b84790eae715c7",
+      "bytes": 554848
+    },
+    {
+      "path": "PDF/PROMPT/YOU DON’T NEED PROMPT ENGINEERING ANYMORE THE PROMPTING INVERSION.pdf",
+      "sha256": "8a0757bc6ef7e5a9001b31b30b9dd838c66457dcaa2b8c255ac0cba24a475157",
+      "bytes": 305807
+    },
+    {
+      "path": "PDF/PROMPT/Zero-Shot Chain-of-Thought Reasoning Guided by Evolutionary Algorithms in Large Language Models.pdf",
+      "sha256": "55b22a7e0a48c307e9c3db0b36ee174542e58b91d0fd2ad32ca139b0d7341e55",
+      "bytes": 362117
+    },
+    {
+      "path": "PDF/PROMPT/eMoT evolving Memory-of-Thought via Symbolic Anchoring and Memory Corrosion.pdf",
+      "sha256": "02ec71568ae29da62f28998081256cedaead322425478e2d59188122bad6c010",
+      "bytes": 4326546
+    },
+    {
+      "path": "PDF/PoC/Cited but Not Verified Parsing and Evaluating Source Attribution in LLM Deep Research Agents.pdf",
+      "sha256": "db5b7b7e3d9ce9fc6d6713b60f65f0d81b07090ded2a28be7f541d1c290230b5",
+      "bytes": 1424589
+    },
+    {
+      "path": "PDF/PoC/DEEPSCIVERIFY Verifying Scientific Claim–Citation Alignment via LLM-Driven Evidence Escalation.pdf",
+      "sha256": "0d7f44f42705d8919edbc23c6484d49695666fce5c0dd799779556428515b982",
+      "bytes": 677626
+    },
+    {
+      "path": "PDF/PoC/Do LLM Attribution Metrics Transfer Auditing Retrieval-Augmented Generation Evaluation Across Datasets and Constructs.pdf",
+      "sha256": "9810a9d1b8d578ff29a5a6fd9a9ae35051112883fccbdc113b03479193b1da2e",
+      "bytes": 399864
+    },
+    {
+      "path": "PDF/PoC/Do You Need a Frontier Model as a Citation Verifier Benchmarking Rubric LLMs for Deep-Research Source Attribution.pdf",
+      "sha256": "947fc082439f4116e5b1371acbfc4315247560f6c1e09c11a072eee681a8dbb1",
+      "bytes": 372202
+    },
+    {
+      "path": "PDF/PoC/Forethought Verifiable Reasoning from Neurosymbolic Primitive Programming.pdf",
+      "sha256": "b23cf76c4d48ce2eed9a45c59064d7ff640ec90a4a7a3b87113f608043050d30",
+      "bytes": 436380
+    },
+    {
+      "path": "PDF/PoC/Proof of Concept Research.pdf",
+      "sha256": "7cd35d553df33e4f657eb4143a42ce6d1df81972e663d4fe94d09934168ccea8",
+      "bytes": 444355
+    },
+    {
+      "path": "PDF/PoC/Reproducible, Explainable, and Effective Evaluations of Agentic AI for Software Engineering.pdf",
+      "sha256": "d1aaa8f2fca1e79a42c04c586a46f953c7c6a107588156558a555c91fee7cb13",
+      "bytes": 552657
+    },
+    {
+      "path": "PDF/PoC/The Logic of Proof of Concept Research 2026.pdf",
+      "sha256": "ac623907390ca7fcd34da30f8f319d3feb7dc0d30554b65ad40e5d07acf2328e",
+      "bytes": 717706
+    },
+    {
+      "path": "PDF/PoC/The Search for Technosignatures a Review of Possibilities.pdf",
+      "sha256": "6366197b1295c33ebd7999b5bdcb04ff618533488350cc07bbf709129c83a489",
+      "bytes": 10325994
+    },
+    {
+      "path": "PDF/PoC/Think Through Uncertainty Improving Long-Form Generation Factuality via Reasoning Calibration.pdf",
+      "sha256": "349b3676c66c46f2dbf5b831e861c67f8928e7ad0a8045d6aaf7d45c8ae273a9",
+      "bytes": 1466571
+    },
+    {
+      "path": "PDF/PoC/Triadic Concept Analysis for Logic Interpretation of Simple Artificial Networks.pdf",
+      "sha256": "45bc769857f805b893ef6aa3daf49917aa39980e48682ca28d1446a97a17cb42",
+      "bytes": 2664042
+    },
+    {
+      "path": "PDF/PoC/TruncProof A Guardrail for LLM-based JSON Generation under Token-Length Constraints.pdf",
+      "sha256": "0f93aed05e45b3b31c00ffb5a80db6ce5692f9a36daaa57f2c407ead629ee83c",
+      "bytes": 621761
+    },
+    {
+      "path": "PDF/RAG/A Comprehensive Review of Deepfake Detection Techniques From Traditional Machine Learning to Advanced Deep Learning Architectures.pdf",
+      "sha256": "fd9fbd303193c502e2d02049721a3063f5365655a37fdd3175e9bc5563679a9a",
+      "bytes": 3126588
+    },
+    {
+      "path": "PDF/RAG/A Systematic Literature Review of Retrieval-Augmented Generation Techniques, Metrics, and Challenges.pdf",
+      "sha256": "af0963d7b7b0f7e2de4e0ad99bbb997e8dc0352e083a9b0cce9978181ed64d35",
+      "bytes": 2037808
+    },
+    {
+      "path": "PDF/RAG/A Unified Agentic Harness for MLLMs.pdf",
+      "sha256": "216931d7d622c3ab07d6e14ce60f50b6df6b9fa5e7c413aec333afe8d45c83d7",
+      "bytes": 14067903
+    },
+    {
+      "path": "PDF/RAG/AI4AI at Test-Time Strong-to-Weak Capability Transfer via Harnesses.pdf",
+      "sha256": "69f852cecf564599328118aa5419f94a118c893f770d7d58e3467f0cba4fcdcd",
+      "bytes": 1123067
+    },
+    {
+      "path": "PDF/RAG/Active Retrieval Augmented Generation.pdf",
+      "sha256": "2425bd04de6e082512ef576298ec24df770a7f576bb2c23d09b3fd498f716c52",
+      "bytes": 850866
+    },
+    {
+      "path": "PDF/RAG/Agentic Reasoning for Large Language Models.pdf",
+      "sha256": "edc82b75fe0496cb13bf8288aac941e4437dc136a82b2dce4a7ab55d130db916",
+      "bytes": 9857705
+    },
+    {
+      "path": "PDF/RAG/Agentic Retrieval-Augmented Generation (RAG) Taxonomy, Architectures, Evaluation, and Research Directions.pdf",
+      "sha256": "8b0453f1044655dc0144fc1f3904d5e6d8b4efb3531e918affe0fbccc0e2d34a",
+      "bytes": 2704278
+    },
+    {
+      "path": "PDF/RAG/Artificial Epistemic Authorities.pdf",
+      "sha256": "08b2eae6c0dd4fb0570d600b0530f1e1313e25f148251d1ec8ac1d04306b8b5f",
+      "bytes": 483998
+    },
+    {
+      "path": "PDF/RAG/Attention Is All You Need.pdf",
+      "sha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+      "bytes": 2215244
+    },
+    {
+      "path": "PDF/RAG/Automated AI Skill Generation via Expert Knowledge Distillation.pdf",
+      "sha256": "b748a078404345546599b57f0139d1a00eaad814ccbc22ab21dac0013a7ce6da",
+      "bytes": 385334
+    },
+    {
+      "path": "PDF/RAG/BERT Pre-training of Deep Bidirectional Transformers for Language Understanding.pdf",
+      "sha256": "5692a5514787a8c6727b4ff3b726a3385798bc68e12138d1d4af83947e2acf6e",
+      "bytes": 775166
+    },
+    {
+      "path": "PDF/RAG/BUILDING COOPERATIVE EMBODIED AGENTS MODULARLY WITH LARGE LANGUAGE MODELS.pdf",
+      "sha256": "7bda6e8b9064848ccd362ff6a13f637af571e43c7f852d2d86eaf8831fa5ea7e",
+      "bytes": 16991601
+    },
+    {
+      "path": "PDF/RAG/BarrierSteer LLM Safety via Learning Barrier Steering.pdf",
+      "sha256": "8389c2916c36a04437b7d009b14ac6bf1a73a83bc79932c9defe242f66480d6f",
+      "bytes": 2008784
+    },
+    {
+      "path": "PDF/RAG/Benchmarking LLM Agent Test-time Learning with Self-Evolving Memory.pdf",
+      "sha256": "ab99bebbc13f18150f888c43e27cde903751b3e5519de0104fe183af3bd46618",
+      "bytes": 3817139
+    },
+    {
+      "path": "PDF/RAG/Beyond RAG for Agent Memory.pdf",
+      "sha256": "dab7e73744bbf87bb27ba8b53258270775767057c759d623086e5ffbd6d44180",
+      "bytes": 2141574
+    },
+    {
+      "path": "PDF/RAG/Bilevel Autoresearch Meta-Autoresearching Itself.pdf",
+      "sha256": "a5f62dea12e54469e8e750ef5768c9ceb9b8468c0053405795f98fb65a822969",
+      "bytes": 624102
+    },
+    {
+      "path": "PDF/RAG/Block-regularized 5 × 2 Cross-validated McNemar’s Test for Comparing Two Classification Algorithms.pdf",
+      "sha256": "3b128b8ceb3dcf31a7b2c3390ffe7c9440b8be9db25525fae78a8cf8b8cec8ca",
+      "bytes": 681044
+    },
+    {
+      "path": "PDF/RAG/CAST Achieving Stable LLM-based Text Analysis for Data Analytics.pdf",
+      "sha256": "6082a14e196f20d2302a4c9441e55245a39fe1d65ee5907307334f92a7986ab8",
+      "bytes": 21500692
+    },
+    {
+      "path": "PDF/RAG/CLUST3.pdf",
+      "sha256": "f592650705eb47f29547dd59e9845737f253322d9e30d8da6fb9044484d3a0f8",
+      "bytes": 1846936
+    },
+    {
+      "path": "PDF/RAG/CUT THE CRAP AN ECONOMICAL COMMUNICATION PIPELINE FOR LLM-BASED MULTI-AGENT SYSTEMS.pdf",
+      "sha256": "f22167e93e36d6d8a8e38fbf23107959cced9e99b05fd559a3c09afa13c41678",
+      "bytes": 21130583
+    },
+    {
+      "path": "PDF/RAG/Classifier comparison using precision.pdf",
+      "sha256": "367c41863e7d9da93a5261448fa7dea72bf8480c697edb1f9493800dafd57bd6",
+      "bytes": 391862
+    },
+    {
+      "path": "PDF/RAG/Cluster-Norm for Unsupervised Probing of Knowledge.pdf",
+      "sha256": "ac46dddf052002bdbf5ae032158ac0c910c5dd1fe1ec9c18a47a6915f986b53b",
+      "bytes": 8887497
+    },
+    {
+      "path": "PDF/RAG/CodeSCM Causal Analysis for Multi-Modal Code Generation.pdf",
+      "sha256": "978423ad20825d803b8344a381cf5529e04625a0dee4a44243d3454cfe1851d3",
+      "bytes": 3132932
+    },
+    {
+      "path": "PDF/RAG/Cognitive Models and AI Algorithms Provide Templates.pdf",
+      "sha256": "e9fd87926d8f84826ac24dbbfaebb39d40d1ae1fbc191fc2395de0f5c134bb07",
+      "bytes": 434331
+    },
+    {
+      "path": "PDF/RAG/Combating Data Laundering in LLM Training.pdf",
+      "sha256": "18a05008e404077192882f537c44b6030625822f164847b45c892686dcced3d5",
+      "bytes": 1058138
+    },
+    {
+      "path": "PDF/RAG/Counterfactual Evaluation Reveals Hidden Capability Profiles in Clinical LLMs and Agents.pdf",
+      "sha256": "d3bd13fd85879bb6100c033e1ddffc79ae7abe30f8ef8f15e52d567809f402ff",
+      "bytes": 1879331
+    },
+    {
+      "path": "PDF/RAG/Deep Residual Learning for Image Recognition.pdf",
+      "sha256": "1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a",
+      "bytes": 819383
+    },
+    {
+      "path": "PDF/RAG/Defensive M2S Training Guardrail Models on Compressed Multi-turn Conversations.pdf",
+      "sha256": "92ad1f58654f3772ed45e57854bf667e58f4651dbb4ff9fc98e191cefea02a4a",
+      "bytes": 315938
+    },
+    {
+      "path": "PDF/RAG/Dependent Type Theory .pdf",
+      "sha256": "bfec7f802a21880d69e75cf15669259c88298327268e3e55c0017e48413cc32e",
+      "bytes": 335507
+    },
+    {
+      "path": "PDF/RAG/Detecting AI Coding Agents in Open Source A Validated Multi-Method Census of 180 Million Repositories.pdf",
+      "sha256": "17e6cf8e5f6b28aeeb4853b9671165bde35dec0de4c3306a4a252e9a2853e207",
+      "bytes": 2174154
+    },
+    {
+      "path": "PDF/RAG/Direct Preference Optimization Your Language Model is Secretly a Reward Model.pdf",
+      "sha256": "894386aafb8581f85644773b303dd7cd96377cafe5c23e1b6b442ac6f5884e7c",
+      "bytes": 929308
+    },
+    {
+      "path": "PDF/RAG/DualRAG v3.pdf",
+      "sha256": "c6bd0dab5d955df2e96eea9734cca7109df5989a180d38ac9edffbe6a4b12d54",
+      "bytes": 606738
+    },
+    {
+      "path": "PDF/RAG/Efficient RAG with Intent-Aware Retrieval and Semantics-Preserving Chunking.pdf",
+      "sha256": "6a4d78f5f780a8d2f9294012b24dab9ae958d52149394a24df908d6c08f42791",
+      "bytes": 1321330
+    },
+    {
+      "path": "PDF/RAG/Enhancing Literature Review Efficiency A Case Study on Using Fine-Tuned BERT for Classifying Focused Ultrasound-Related Articles.pdf",
+      "sha256": "b882fb8f48a7866a9a7f0af3dffeb0af67824524d967265f251ebc470163cf33",
+      "bytes": 2397752
+    },
+    {
+      "path": "PDF/RAG/Enhancing Q-Learning with Large Language Model Heuristics.pdf",
+      "sha256": "b47c05c45b99b7b4777874902d0c97587275144a2cf75c750823c0a1f35fd1dd",
+      "bytes": 6966421
+    },
+    {
+      "path": "PDF/RAG/Enhancing Retrieval-Augmented Generation.pdf",
+      "sha256": "ebdae856c584ee01eb22aa1e0ada60a4bddff20a8d28d17b3a6756bd76c5884b",
+      "bytes": 2022502
+    },
+    {
+      "path": "PDF/RAG/Epistemic Agency in the Age of Large Language Models Design Principles for Knowledge-Building AI.pdf",
+      "sha256": "2bfed0a345fd72c94b795d13ba03466cf180bf50e3e9409f30c180a609d12b97",
+      "bytes": 17398153
+    },
+    {
+      "path": "PDF/RAG/Explainable Generative AI A Two-Stage Review of Existing Techniques and Future Research Directions.pdf",
+      "sha256": "61812e833032ddb897033170d52fa19801fc37dcb88635465ad1a18c88301a8c",
+      "bytes": 1843332
+    },
+    {
+      "path": "PDF/RAG/Exploring Possible AI Trajectories Through 2030.pdf",
+      "sha256": "61d8c9150d21f7bc464431b7fa8a809f01d0ec0fd1d2fad1b0b973d973fc8e85",
+      "bytes": 3911709
+    },
+    {
+      "path": "PDF/RAG/FinVerBench Benchmark Validity and Calibration in Large Language Model Financial Statement Verification.pdf",
+      "sha256": "32dff1ee0a4177957b6225395eeca58c15b7ffd1114bbc7fc1066c3488aa9bd4",
+      "bytes": 1242239
+    },
+    {
+      "path": "PDF/RAG/From Illusion to Insight A Taxonomic Survey of Hallucination Mitigation Techniques in LLMs.pdf",
+      "sha256": "d83866bcd216f6d182ff1a1ce14107cd090a9f38924d8e2e92e58a9a158dd863",
+      "bytes": 7805516
+    },
+    {
+      "path": "PDF/RAG/Generating Structured Outputs from Language Models Benchmark and Studies.pdf",
+      "sha256": "912fe71a9c3756cbff3889240715afeb451f52afb9f67024b4e12c32aa60dafc",
+      "bytes": 3795160
+    },
+    {
+      "path": "PDF/RAG/Generative Agents Interactive Simulacra of Human Behavior.pdf",
+      "sha256": "1b31e77fb24d25d7598f2c49e955d12a28b95a6dabad34acdac40f44bfb7a139",
+      "bytes": 11947867
+    },
+    {
+      "path": "PDF/RAG/Graph-Augmented Reasoning Evolving Step-by-Step Knowledge Graph Retrieval for LLM Reasoning.pdf",
+      "sha256": "62b9c693c086deaa53e77f3def9f0c14be587026f2c467cb65ed34dd275a926d",
+      "bytes": 1061261
+    },
+    {
+      "path": "PDF/RAG/Group-Evolving Agents Open-Ended Self-Improvement via Experience Sharing.pdf",
+      "sha256": "967517dbde132a515386f9c8ac25969be2578658a7b9a7927c893751b009c3c4",
+      "bytes": 4331505
+    },
+    {
+      "path": "PDF/RAG/GroupRAG Cognitively Inspired Group-Aware Retrieval and Reasoning via Knowledge-Driven Problem Structuring.pdf",
+      "sha256": "ce1ebd516ca1672acc863cf47effd2abe4c9628da95edad3a9723c436f5c78da",
+      "bytes": 3096098
+    },
+    {
+      "path": "PDF/RAG/Guard Your Daggers and Traces On The Equational Properties of Guarded (Co-)recursion.pdf",
+      "sha256": "26dd511e04dc7609d5bb40ef4c3eefac19d9a7118a9394a9722b0ca4617c957f",
+      "bytes": 248752
+    },
+    {
+      "path": "PDF/RAG/HEAVYSKILL Heavy Thinking as the Inner Skill in Agentic Harness.pdf",
+      "sha256": "24a14ba9d844ec6de3d86c4e749e30d9c58125a4a0ee69b9fd8a9a0dc8731713",
+      "bytes": 1458489
+    },
+    {
+      "path": "PDF/RAG/Hallucination Mitigation in Large Language Model-Based Tool Recommendation A Cross-Provider Architectural Ablation Study Across Two Model Generations.pdf",
+      "sha256": "9e753ec8cb17e7d42cb704c36ec6727febd8f5fc543bb1eed445c3ffc7a1a00a",
+      "bytes": 1003589
+    },
+    {
+      "path": "PDF/RAG/HedraRAG v1.pdf",
+      "sha256": "92a8f50a4180cdcfbec15ef89ad19670bbcfab8aa6ee8ddfe77bbebb1aaa9718",
+      "bytes": 2904448
+    },
+    {
+      "path": "PDF/RAG/High-Resolution Image Synthesis with Latent Diffusion Models.pdf",
+      "sha256": "46ede043a8dc07ca1f0f445620523fe1ad8b2436bd83856a3835612a47e9f79e",
+      "bytes": 40842586
+    },
+    {
+      "path": "PDF/RAG/Highly accurate protein structure prediction with AlphaFold.pdf",
+      "sha256": "6eae057a9faf4f671c3101e0745ed704460c6d3dec77243dfd3a9f2d2ab68970",
+      "bytes": 3651992
+    },
+    {
+      "path": "PDF/RAG/HyperAgent Leveraging Hypergraphs for Topology Optimization in Multi-Agent Communication.pdf",
+      "sha256": "0026c0bb47106e14081940d6cb030aed7042e315f56e5e3c761f7d6e897e7d4d",
+      "bytes": 7159313
+    },
+    {
+      "path": "PDF/RAG/Imagine the Unseen World A Benchmark for Systematic Generalization in Visual World Models.pdf",
+      "sha256": "e8a00a8de3bbab79978108ae18f1af5f027be3db06e6333f63b00f91414e9550",
+      "bytes": 6516324
+    },
+    {
+      "path": "PDF/RAG/Information Representation Fairness in Long-Document Embeddings The Peculiar Interaction of Positional and Language Bias.pdf",
+      "sha256": "5669ffacd1fafb10bfd371630a28b94151dc219ffb14fe5dc9138a272f34f962",
+      "bytes": 11292162
+    },
+    {
+      "path": "PDF/RAG/Interval Replacements of Persistence Modules.pdf",
+      "sha256": "36447454066662b39a528741fb31e47488ceda1a321f1da8b958afe54b1d4ff7",
+      "bytes": 1249793
+    },
+    {
+      "path": "PDF/RAG/Is Feature Selection Secure against Training Data Poisoning.pdf",
+      "sha256": "1bc489d0a9723cfef1422097f028161841a41257f218663759548ff375fe5cb6",
+      "bytes": 1705721
+    },
+    {
+      "path": "PDF/RAG/KWAIYIIMATH TECHNICAL REPORT.pdf",
+      "sha256": "b5b3f951b3d1fca1cb3a0fb5d762501f5ce803a27ad7fb18781084d353b096b5",
+      "bytes": 996809
+    },
+    {
+      "path": "PDF/RAG/Kendig2015SciEngEthics.pdf",
+      "sha256": "10f6525f82d8ea41baded766f3fb32032934dda3d2fcd7e17a51d34c65474a65",
+      "bytes": 532776
+    },
+    {
+      "path": "PDF/RAG/Key-Point-Driven Data Synthesis with its Enhancement on Mathematical Reasoning.pdf",
+      "sha256": "b7ba05ee48c43b56a40726f0e3d29a80970d46df23d042db491001a1e4652005",
+      "bytes": 790140
+    },
+    {
+      "path": "PDF/RAG/KiRAG Knowledge-Driven Iterative Retriever for Enhancing Retrieval-Augmented Generation.pdf",
+      "sha256": "5059d3f7ca0296ee247d00c3414ed82d745543324ced4309eaf3135314478a71",
+      "bytes": 8710799
+    },
+    {
+      "path": "PDF/RAG/KiRAG v1.pdf",
+      "sha256": "5059d3f7ca0296ee247d00c3414ed82d745543324ced4309eaf3135314478a71",
+      "bytes": 8710799
+    },
+    {
+      "path": "PDF/RAG/LANDSCAPE OF THOUGHTS VISUALIZING THE REASONING PROCESS OF LARGE LANGUAGE MODELS.pdf",
+      "sha256": "75aee8b4597b62e61a54c8c8d0ba25fb623f4c445158fa73a262444a3c2b74ed",
+      "bytes": 45318000
+    },
+    {
+      "path": "PDF/RAG/LEARNING TO LEARN-AT-TEST-TIME.pdf",
+      "sha256": "52e0b6c56df18ccbcf7a55a8236c5de22d2d0771962e03a28abc302f8c9a11ea",
+      "bytes": 1692277
+    },
+    {
+      "path": "PDF/RAG/LYCHEEMEMORY V2 Efficient Long-Term Memory for LLM Agents via Semantic Segment-Level Consolidation.pdf",
+      "sha256": "910c2905cae3646ad646738da3267f79776ada3d9f8a3e2e93aac2df0de0b85c",
+      "bytes": 1192710
+    },
+    {
+      "path": "PDF/RAG/Latent-Augmented Discrete Diffusion Models.pdf",
+      "sha256": "63c5555c1266491371f3391671ffe3a4f08ee3075733c589fb5201ed7f2a5774",
+      "bytes": 1292698
+    },
+    {
+      "path": "PDF/RAG/Latent-space adversarial training with post-aware calibration for defending large language models against jailbreak attacks.pdf",
+      "sha256": "4a7fe37f868e4b6233835966c02cc816e3a777df6f66d1c7cb2d7eb30d5880d7",
+      "bytes": 1623025
+    },
+    {
+      "path": "PDF/RAG/Learning From Correctness Without Prompting Makes LLM Efficient Reasoner.pdf",
+      "sha256": "2e2c1864a7fbf6e3062159980529951af90b816e279be8e4cf821afe305fbb7b",
+      "bytes": 1535484
+    },
+    {
+      "path": "PDF/RAG/Learning to Keep a Promise Scaling Language Model Decoding Parallelism with Learned Asynchronous Decoding.pdf",
+      "sha256": "66c973c51a32bd1170cf195a1245a66f069767cf70b1a85efb0bcab2b2bb4a71",
+      "bytes": 1019831
+    },
+    {
+      "path": "PDF/RAG/Let’s Be Self-generated via Step by Step A Curriculum Learning Approach to Automated Reasoning with Large Language Models.pdf",
+      "sha256": "923dbb39d5a309beebcc666231b38317296c18beeec78f85c081af415e801e6a",
+      "bytes": 858967
+    },
+    {
+      "path": "PDF/RAG/LlamaFirewall An open source guardrail system for building secure AI agents.pdf",
+      "sha256": "8e5ce5dcf6fc4d2f18c436f7573d3e6427142f77363e23bf9e7ab3bc8e3fb3cc",
+      "bytes": 1274954
+    },
+    {
+      "path": "PDF/RAG/MAP Multi-user Personalization with Collaborative LLM-powered Agents.pdf",
+      "sha256": "bbb71f209f64a59de14ddcf3b064f09f8271e9c34dd66ab26133909e1c4fb3ab",
+      "bytes": 1562136
+    },
+    {
+      "path": "PDF/RAG/MASS-RAG Multi-Agent Synthesis Retrieval-Augmented Generation.pdf",
+      "sha256": "8746645bf0ff66346baa3caa9ffcc6340f139b5a8412f35ba8bf171cfc9b6ccc",
+      "bytes": 5876270
+    },
+    {
+      "path": "PDF/RAG/MITIGATE POSITION BIAS IN LARGE LANGUAGE MODELS VIA SCALING A SINGLE DIMENSION.pdf",
+      "sha256": "3f7b332185e0a717a75b8829de99c9dee70955582f16e478dffb7a9dd111b5d5",
+      "bytes": 5407651
+    },
+    {
+      "path": "PDF/RAG/ML-Tool-Bench Tool-Augmented Planning for ML Tasks.pdf",
+      "sha256": "5bc5d591f01ea640e05007d17c68aa30386465bfca19bd1c737fe9b317b93d28",
+      "bytes": 2175282
+    },
+    {
+      "path": "PDF/RAG/MRKL Systems A modular, neuro-symbolic architecture that combines large language models, external knowledge sources and discrete reasoning.pdf",
+      "sha256": "50496293f221729999f03d17867bd0b7a84dba7275196684a1aa6fe06cca7257",
+      "bytes": 766926
+    },
+    {
+      "path": "PDF/RAG/Macaron-V1 TowardsOpenContinualLearning with Self-Improvement and Mixture-of-LoRA.pdf",
+      "sha256": "795eb2936d46aab06c84f36be947fd326853bf6c0573d49942ad53196262001d",
+      "bytes": 4473615
+    },
+    {
+      "path": "PDF/RAG/Mastering the game of Go with deep neural networks and tree search.pdf",
+      "sha256": "78e710780bd334fe28a08562e1192658a218e00ccfd64df2efbed45597b9c79c",
+      "bytes": 1630106
+    },
+    {
+      "path": "PDF/RAG/MedDialBench Benchmarking LLM Diagnostic Robustness under Parametric Adversarial Patient Behaviors.pdf",
+      "sha256": "1358b6c7d1abd41308ab9230d0e12597e702731781970b397241bcc65bab29d2",
+      "bytes": 569831
+    },
+    {
+      "path": "PDF/RAG/MoGUAFrameworkfor Enhancing Safety of Open-Sourced LLMs While Preserving Their Usability.pdf",
+      "sha256": "cf072d5a0c09222d25f2571cce3b394f48e00790da373d570c2912df33404272",
+      "bytes": 1072442
+    },
+    {
+      "path": "PDF/RAG/Modular Pretraining Enables Access Control.pdf",
+      "sha256": "959ac837af0b066871c6576e4b31f388a68a51995cebebcc47ec8d69e2ba381b",
+      "bytes": 1095168
+    },
+    {
+      "path": "PDF/RAG/Multi-Source Knowledge Pruning for Retrieval-Augmented Generation A Benchmark and Empirical Study.pdf",
+      "sha256": "a11174922f732a32f365e4614375b9185e963502aed1e92f7f825d123a045f57",
+      "bytes": 1323580
+    },
+    {
+      "path": "PDF/RAG/N-Version Programming with Coding Agents.pdf",
+      "sha256": "cf9a8a18cfdd0afa0a02386e763c7f094e3def48e710727b62f149e4ac5fed40",
+      "bytes": 769794
+    },
+    {
+      "path": "PDF/RAG/NeuRel-Attack Neuron Relearning for Safety Disalignment in Large Language Models.pdf",
+      "sha256": "b0d58619a3931d61cf018bd82d14f6462868135e5874d41d5b050d81cac79067",
+      "bytes": 675734
+    },
+    {
+      "path": "PDF/RAG/OOM-RL Out-of-Money Reinforcement Learning.pdf",
+      "sha256": "329bf5f63894625a2f680870a17defa1dfba86ac0774bc86c3fc651209f89dd3",
+      "bytes": 661211
+    },
+    {
+      "path": "PDF/RAG/On Context Utilization in Summarization with Large Language Models.pdf",
+      "sha256": "d61d0ac082417b10682f4af9ed499ff3ff9a483c7e1cc56336af2bc2dc74b1e9",
+      "bytes": 4985177
+    },
+    {
+      "path": "PDF/RAG/POSITION BIAS CORRECTION IS INSUFFICIENT FOR ONE-PASS ATTENTION SORTING.pdf",
+      "sha256": "77fb2bb60a26f46bf032c80d4480a819ab1e2f106ed9b6a925778baca7fbb0b7",
+      "bytes": 1426902
+    },
+    {
+      "path": "PDF/RAG/Perovskite-LLMKnowledge-Enhanced Large Language Models for Perovskite Solar Cell Research.pdf",
+      "sha256": "793a9ab61286ec58475aece99df132dd391512555772d072338a7254c89c4181",
+      "bytes": 7727144
+    },
+    {
+      "path": "PDF/RAG/Positional Bias in Multimodal Embedding Models Do They Favor the Beginning, the Middle, or the End.pdf",
+      "sha256": "93b9a3566fee7a47aed82660a1a24cc60d797b197ddd78130e314b40b3144bae",
+      "bytes": 7769514
+    },
+    {
+      "path": "PDF/RAG/Prefilling-dLLM Predictive Prefilling for Long-Context Inference in Diffusion Language Models.pdf",
+      "sha256": "9f11dddc2cb06f7a546701efeb8f6079afc5f6e8a9e1775007ff882436a39fe4",
+      "bytes": 1693519
+    },
+    {
+      "path": "PDF/RAG/RAG VS FINE-TUNING PIPELINES, TRADEOFFS, AND A CASE STUDY ON AGRICULTURE.pdf",
+      "sha256": "0d14009d8b28062d838bb11ac5cdfb2a3ce5135511bfb4fe343037d3b2309010",
+      "bytes": 1786632
+    },
+    {
+      "path": "PDF/RAG/RL OF THOUGHTS NAVIGATING LLM REASONING WITH INFERENCE-TIME REINFORCEMENT LEARNING.pdf",
+      "sha256": "d06c95181953e940533d7196853d37fdad8cbc1aba074062a6469b45f46017eb",
+      "bytes": 5548281
+    },
+    {
+      "path": "PDF/RAG/Recursive Self-Improvement in AI From Bounded Self-Refinement to Autonomous Research Loops.pdf",
+      "sha256": "0cc637f5492ed565fc9f80fa9a1b5772d3e3743a13ef5bc294c0c081b7142f93",
+      "bytes": 5035755
+    },
+    {
+      "path": "PDF/RAG/RecursiveSynthesisforLong-HorizonTerminalTasks.pdf",
+      "sha256": "995acf8cd981a357da48c64235d9303252611c619cdec9a95d1f603ac70cfe43",
+      "bytes": 1249706
+    },
+    {
+      "path": "PDF/RAG/Reducing the Scope of Language Models.pdf",
+      "sha256": "5d52ebdbca1aeff62e90a407eb0189b0a9a62cdd6cdcb4f8c67de889d7003929",
+      "bytes": 1130234
+    },
+    {
+      "path": "PDF/RAG/Reflection Pretraining Enables Token-Level Self-Correction in Biological Sequence Models.pdf",
+      "sha256": "75c33a000edf4313a547afb81580d9e5a999b174a68fe4c91455d144f0a41e0e",
+      "bytes": 3420640
+    },
+    {
+      "path": "PDF/RAG/Resolution Diagnostics for Paired LLM Evaluation.pdf",
+      "sha256": "83a1d72e8c99d8cc6adc86a4d3268aae763ebba03122cc84ac0d7e0e26c27615",
+      "bytes": 616120
+    },
+    {
+      "path": "PDF/RAG/Rethinking Retrieval-Augmented Generation as a Cooperative Decision-Making Problem.pdf",
+      "sha256": "08c24b34ad305fb8509dcf6c75b5bb07541a62f6c1f2c42af1a9c584015b1922",
+      "bytes": 1872266
+    },
+    {
+      "path": "PDF/RAG/Rethinking the Bounds of LLM Reasoning Are Multi-Agent Discussions the Key.pdf",
+      "sha256": "aaf487941c5fb28df53d0f91c92be816bb4915010d1d638de76c473d6b4d5b76",
+      "bytes": 1299899
+    },
+    {
+      "path": "PDF/RAG/Retrieval-Augmented Generation (RAG) in Healthcare A Comprehensive Review.pdf",
+      "sha256": "a5b272d62a375b77263df4d12d2db33f176799a8c22886e2b5720ac6c7742d0b",
+      "bytes": 667104
+    },
+    {
+      "path": "PDF/RAG/Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.pdf",
+      "sha256": "7d9f878c23b460e4566aa4ec9201b1abfb3b8faefb2b1356e411cb90fef72a12",
+      "bytes": 891773
+    },
+    {
+      "path": "PDF/RAG/Retrieval-Augmented Generation for.pdf",
+      "sha256": "23e3249e9a1e75418d82efecab0ea8c4d033b89c93742f63208d47ce01f21233",
+      "bytes": 885323
+    },
+    {
+      "path": "PDF/RAG/Retrieval-Augmented Generation v2.pdf",
+      "sha256": "d41641dd543174f4d43594dfb71c77d56e6b15c49cf24bd4ff7f08e1680e686e",
+      "bytes": 2717167
+    },
+    {
+      "path": "PDF/RAG/RoutIR Fast Serving of Retrieval Pipelines for Retrieval-Augmented Generation.pdf",
+      "sha256": "832cd450dfb2516247f2af8a706372badbabd8ed9f59d935187cca22a63131b0",
+      "bytes": 386667
+    },
+    {
+      "path": "PDF/RAG/S2R Teaching LLMs to Self-verify and Self-correct via Reinforcement Learning.pdf",
+      "sha256": "58dd328e6407c48c23f82d0641fdcefb55717aa58ad8f46958bb8f3d473736fb",
+      "bytes": 1003452
+    },
+    {
+      "path": "PDF/RAG/SABER Benchmarking Operational Safety of LLM Coding Agents in Stateful Project Workspaces.pdf",
+      "sha256": "06a7a2e800e350995a785fe7b58b61c35f7e1227260cd8bf55e62ea075d545ef",
+      "bytes": 639488
+    },
+    {
+      "path": "PDF/RAG/SPECULATIVE RAG ENHANCING RETRIEVAL AUG MENTED GENERATION THROUGH DRAFTING.pdf",
+      "sha256": "663cfcee6f23e02db33dddeb735678394ca4bdb574f02aaea4b70e4b08da16cf",
+      "bytes": 925187
+    },
+    {
+      "path": "PDF/RAG/SWE-Bench ProMax Benchmarking Agents on Large-Scale Multilingual Code Refactoring.pdf",
+      "sha256": "7e5beb9aa569a19aa1a7758ba6be95bd7c14070f09c56cb8e2734553a4517d82",
+      "bytes": 851096
+    },
+    {
+      "path": "PDF/RAG/Scaling Data-Constrained Language Models.pdf",
+      "sha256": "4935b8dc51e0f4183bc7e66d87cbf5e0a776f6d97b44e992ff9c675b8ea5f3ec",
+      "bytes": 2160774
+    },
+    {
+      "path": "PDF/RAG/Scaling In-Context Demonstrations with Structured Attention.pdf",
+      "sha256": "3a151a5f92881bb104746053ee6064b82e026f0fd3909831724205d06ffe09a2",
+      "bytes": 606498
+    },
+    {
+      "path": "PDF/RAG/Scaling Long-Horizon LLM Agent via Context-Folding.pdf",
+      "sha256": "2f6ef742c2799b931ef92337a2e3e899d1b8940f4fb10d94fca5b8e2353601fc",
+      "bytes": 3064656
+    },
+    {
+      "path": "PDF/RAG/Scaling Long-Horizon LLM Agents via Indexed Experience Memory.pdf",
+      "sha256": "7c6b1f5bab0154d5ec5d204b3ce44aaa79952f7c511fd598c626cda723262cce",
+      "bytes": 1353534
+    },
+    {
+      "path": "PDF/RAG/SciIntegrity-Bench A Benchmark for Evaluating Academic Integrity in AI Scientist Systems.pdf",
+      "sha256": "eff114425b2136d207b921c066129799b8b636de5aa8d49906d9a8e35326c4bb",
+      "bytes": 2359112
+    },
+    {
+      "path": "PDF/RAG/SoK Agentic Retrieval-Augmented Generation (RAG) Taxonomy, Architectures, Evaluation, and Research Directions.pdf",
+      "sha256": "8b0453f1044655dc0144fc1f3904d5e6d8b4efb3531e918affe0fbccc0e2d34a",
+      "bytes": 2704278
+    },
+    {
+      "path": "PDF/RAG/Structured Agent Distillation for Large Language Model Agents.pdf",
+      "sha256": "35e4d26b1cb858a2ec3dba150b8975876326643aec67f106410b8c14feb158ba",
+      "bytes": 3703993
+    },
+    {
+      "path": "PDF/RAG/Synergizing RAG v2.pdf",
+      "sha256": "0412310ea1e970f487d0bd1c35c884e5aeab103b2c04ba665719bb500c7d24fb",
+      "bytes": 13871512
+    },
+    {
+      "path": "PDF/RAG/THE CONSENSUS GAME LANGUAGE MODEL GENERATION VIA EQUILIBRIUM SEARCH.pdf",
+      "sha256": "7ca95df011d2804ddd52d1b4bb8838476b15600fafd5d877c962dea562ca05e2",
+      "bytes": 528576
+    },
+    {
+      "path": "PDF/RAG/TRIAGE A web-based iterative analysis platform.pdf",
+      "sha256": "27d5833deb66d9b49131b417c3d33f3aaac676e79f8b9c536706e8010ca70e41",
+      "bytes": 5440945
+    },
+    {
+      "path": "PDF/RAG/TRIAGE Trustworthy Retrieval Instrumentation And Graph Evaluation.pdf",
+      "sha256": "da70055bf5808466603a85ffd6a1035f2b19f581a6bac8e23b1550f562e38793",
+      "bytes": 714955
+    },
+    {
+      "path": "PDF/RAG/Taxonomy and Consistency Analysis of Safety Benchmarks for AI Agents.pdf",
+      "sha256": "389e5a98621dde143fe1b8a4bf128d6da0214aa19ec71d5d565738702cf88a9c",
+      "bytes": 840487
+    },
+    {
+      "path": "PDF/RAG/Teaching Programming in the Age of Generative Artificial Intelligence Learning Gains and Pedagogical Integration in a Higher Education Context.pdf",
+      "sha256": "a19c66531b35a270c25eba7a7ee123fecdf33bcd3a434d710c422e3c009d0cb0",
+      "bytes": 2829188
+    },
+    {
+      "path": "PDF/RAG/The Denario project Deep knowledge AI agents for scientific discovery.pdf",
+      "sha256": "2d163b4280aa323a9e2882b6056bd99f3e7f1829d50cea662ea3c0472b8cba5a",
+      "bytes": 87230322
+    },
+    {
+      "path": "PDF/RAG/The Geometry of Harmful Intent Training-Free Anomaly Detection via Angular Deviation in LLM Residual Streams.pdf",
+      "sha256": "43c870d7ee21d403fa0c077792d6366753f4a98853bc834c34b6daac67f2c34d",
+      "bytes": 7869524
+    },
+    {
+      "path": "PDF/RAG/Thought-Level Beam Search for Reasoning.pdf",
+      "sha256": "caf448002fbe0d679a298b74e363d9dc91aa4f4397a193e708e9d623b42b4d6a",
+      "bytes": 6831074
+    },
+    {
+      "path": "PDF/RAG/Toolformer Language Models Can Teach Themselves to Use Tools.pdf",
+      "sha256": "6d7483d94653008e40c2058a1c22441c92e3713dae278b6361e8efc447c99522",
+      "bytes": 657966
+    },
+    {
+      "path": "PDF/RAG/Toward Epistemic Stability Engineering Consistent Procedures for Industrial LLM Hallucination Reduction.pdf",
+      "sha256": "9e4a8ae4cd1b10cb277eb217e06de035d0c6d431e0b86bcefe9343beab291ef7",
+      "bytes": 1592500
+    },
+    {
+      "path": "PDF/RAG/Towards Human-Like Interactive Speech Recognition with Agentic Correction and Semantic Evaluation.pdf",
+      "sha256": "16815d217b1e8ec06ea59b503fee3982a450bd32423db7670771d0a1b8e78e8e",
+      "bytes": 9501638
+    },
+    {
+      "path": "PDF/RAG/Training language models to follow instructions with human feedback.pdf",
+      "sha256": "c1984bb50a5b90fddb895fdc3a0f72e5bc977148c9f63ef6040cbe7a3e1f0d98",
+      "bytes": 1797405
+    },
+    {
+      "path": "PDF/RAG/Transformers Learn to Implement Multi-step Gradient Descent with Chain of Thought.pdf",
+      "sha256": "67022b6979e1b523756968cbcb26ee0fa9206116c2635d9d735818bbe8fb8c3d",
+      "bytes": 900745
+    },
+    {
+      "path": "PDF/RAG/VeRO An Evaluation Harness for Agents to Optimize Agents.pdf",
+      "sha256": "64fe6ffbfe5b1ddf61195108b5a7514e6d2d990a32b9bd2de4c829170c4f73fe",
+      "bytes": 2630513
+    },
+    {
+      "path": "PDF/RAG/VerifyBench A Systematic Benchmark for Evaluating Reasoning Verifiers Across Domains.pdf",
+      "sha256": "a11d9ed6dd0e91514f25fa9a94f35cbb30b83f6fc5659da6f4f7d60c3567b6c9",
+      "bytes": 2279900
+    },
+    {
+      "path": "PDF/RAG/VerlTool ARLT.pdf",
+      "sha256": "f9d1c0789b7325a05a94453f1641e5e5e489e08b329585722b70f3c92c26026e",
+      "bytes": 3084598
+    },
+    {
+      "path": "PDF/RAG/Your Pre-trained LLM is Secretly an Unsupervised Confidence Calibrator.pdf",
+      "sha256": "3e90d8fda8e505d0152ddcc5d86f83b9489cd4a7e04d429027189d677906e91e",
+      "bytes": 747919
+    },
+    {
+      "path": "PDF/RAG/unix-ctf Procedural Environments for Unix-Competence Reinforcement Learning.pdf",
+      "sha256": "e7d825122d6b81e910d75fe2d247247c07b700bea062e104c18967ba70f33521",
+      "bytes": 580144
+    },
+    {
+      "path": "PDF/RecursiveSynthesisforLong-HorizonTerminalTasks.pdf",
+      "sha256": "995acf8cd981a357da48c64235d9303252611c619cdec9a95d1f603ac70cfe43",
+      "bytes": 1249706
+    },
+    {
+      "path": "PDF/ResearchStudio-Idea An Evidence-Grounded Research-Ideation Skill Suite from ML Conference Outcomes.pdf",
+      "sha256": "5a3249e33ad1427d7c0acccac41d028cb0c117052fa25bb6a796cd02045cc24a",
+      "bytes": 2367496
+    },
+    {
+      "path": "PDF/SWE-Bench ProMax Benchmarking Agents on Large-Scale Multilingual Code Refactoring.pdf",
+      "sha256": "7e5beb9aa569a19aa1a7758ba6be95bd7c14070f09c56cb8e2734553a4517d82",
+      "bytes": 851096
+    },
+    {
+      "path": "PDF/Scaling Laws for Neural Language Models.pdf",
+      "sha256": "a41bd7877fd1a6bcbba096b2619618bd2f90e02488f2365644903eb2f7c6a494",
+      "bytes": 2493004
+    },
+    {
+      "path": "PDF/SkillOpt Executive Strategy for Self-Evolving Agent Skills.pdf",
+      "sha256": "87f7f0f323b1671e9202b3ebb1596e909e507c71ecd1b360b0075a5ee1727fe3",
+      "bytes": 879864
+    },
+    {
+      "path": "PDF/Spatial Memory Agent Experience-Grounded Procedure Memory for Spatial Intelligence.pdf",
+      "sha256": "f67da79cfc0890d5885191401da2cc4d7100a31d9a6be0df6b6c6d75104f05df",
+      "bytes": 17545894
+    },
+    {
+      "path": "PDF/Thought-Level Beam Search for Reasoning.pdf",
+      "sha256": "caf448002fbe0d679a298b74e363d9dc91aa4f4397a193e708e9d623b42b4d6a",
+      "bytes": 6831074
+    },
+    {
+      "path": "PDF/ZEP A TEMPORAL KNOWLEDGE GRAPH ARCHITECTURE FOR AGENT MEMORY.pdf",
+      "sha256": "d26f7eb599540e8b14d75e7efda58a07661abbb1b864e58323b5768475a15d42",
+      "bytes": 148771
+    },
+    {
+      "path": "PDF/pipeline/A Modular Methodology for LLM-Based Data Enrichment Pipeline Generation.pdf",
+      "sha256": "b34235d831a4cdf70008876fcbda2bccb872d1dca33f08958480e19f11f2c82c",
+      "bytes": 2271650
+    },
+    {
+      "path": "PDF/pipeline/A Multi-Agent LLM Defense Pipeline Against Prompt Injection Attacks.pdf",
+      "sha256": "70dd81c39df53da980c6f58743faa9b256a88f5fbb6c938f71141ea9f6648296",
+      "bytes": 322579
+    },
+    {
+      "path": "PDF/pipeline/A Survey of Pipeline Tools for Data Engineering.pdf",
+      "sha256": "25f8ccb8653e00568fa950d591f283e79f7715abd659b1e8e2512171f23669fc",
+      "bytes": 791845
+    },
+    {
+      "path": "PDF/pipeline/A Survey on Large Language Models for Recommendation.pdf",
+      "sha256": "495477e91b83104bb8e9d7bcad3c944269a9254ed5140be2f438c7cc42cf32e0",
+      "bytes": 2100078
+    },
+    {
+      "path": "PDF/pipeline/A Systematic Survey of Prompt Engineering in Large Language Models.pdf",
+      "sha256": "9333bb4e9e1f94ed0ce7a3d3af30ddf80eabbe5d087f6d1a4e8b77209bc81667",
+      "bytes": 319200
+    },
+    {
+      "path": "PDF/pipeline/A Unified, Modular Framework for Prompt Optimization.pdf",
+      "sha256": "04e882dcff7e61fc5fb5fdd9b7eedbb27b25c8bb440f72d50eb863060cfe0546",
+      "bytes": 695200
+    },
+    {
+      "path": "PDF/pipeline/A Word is Worth a Thousand Pictures Prompts as AI Design Material.pdf",
+      "sha256": "93f27101855e74c1a0515420e72f2d2e84f31833008df1f0db4fc1e8a609a225",
+      "bytes": 18927029
+    },
+    {
+      "path": "PDF/pipeline/A comprehensive taxonomy of prompt engineering techniques for large language models.pdf",
+      "sha256": "4d390ef78477c194d5d455d59664c427c52c725cc07c4d0f3386c5383186a05b",
+      "bytes": 3053415
+    },
+    {
+      "path": "PDF/pipeline/AI Chains Transparent and Controllable Human-AI Interaction by Chaining Large Language Model Prompts.pdf",
+      "sha256": "9eb80def4f825e618893935c620d7f51e874f332308f31cfd5be3fe244105c2c",
+      "bytes": 2709194
+    },
+    {
+      "path": "PDF/pipeline/AI-Driven Auto-Architecting of Scalable Cloud Pipelines Using Workflow Analytics and Meta-Learning.pdf",
+      "sha256": "d3467b642b7eaf64391ef158ba738edc6f8675878883fd07da1729938b0989ef",
+      "bytes": 1856036
+    },
+    {
+      "path": "PDF/pipeline/Adaptive Test-Time Compute Allocation for Reasoning LLMs via Constrained Policy Optimization.pdf",
+      "sha256": "20b685bf60808e141ee6eb5ef9f539d7535fb02d28acddc7158b62e4b326db24",
+      "bytes": 1252025
+    },
+    {
+      "path": "PDF/pipeline/AgentDyn A Dynamic Open-Ended Benchmark for Evaluating Prompt Injection Attacks of Real-World Agent Security System.pdf",
+      "sha256": "98d00d193ad458ff4bba27987ae5b1414a6e0b913ec8093569af3d571d099589",
+      "bytes": 722327
+    },
+    {
+      "path": "PDF/pipeline/AgentRedBench Dynamic Redteaming and Integration-Aware Defense for LLM Agents over SaaS Integrations.pdf",
+      "sha256": "5bc1f774244b9b7167221b1ed2fd0ec6a5c1cec46ea42e97e0d8dab94bdead9f",
+      "bytes": 833347
+    },
+    {
+      "path": "PDF/pipeline/An Industrial Evaluation of Automated CI_CD Pipeline Generation Framework.pdf",
+      "sha256": "790b70b3bc9a71e7756829e24410110e54a98728d9ce92c130d80738f74f96f8",
+      "bytes": 187742
+    },
+    {
+      "path": "PDF/pipeline/Architecting and Automating Data Pipelines.pdf",
+      "sha256": "75b48d937e6189705d634779e806c01455132a581ef3743e6fd635a48f3b6d4f",
+      "bytes": 1395697
+    },
+    {
+      "path": "PDF/pipeline/Augmenting Language Agents with Parametric Reflective Memory.pdf",
+      "sha256": "da65007d2f04bb7347c5dae5cf8ef3e5891a6236e6041e9e2ad9d02e7ac64363",
+      "bytes": 2862673
+    },
+    {
+      "path": "PDF/pipeline/Auto-Differentiating Any LLM Workflow A Farewell to Manual Prompting.pdf",
+      "sha256": "dd05da8498db0874c24fff0091fbd72c9e15d81042442f21dc0bff6799d4a863",
+      "bytes": 2011184
+    },
+    {
+      "path": "PDF/pipeline/AutoSurvey2 Empowering Researchers with Next Level Automated Literature Surveys.pdf",
+      "sha256": "a4ab3326464a010895ada1850a8a8d76f74a227e2933f3882810c4dd87d00414",
+      "bytes": 618680
+    },
+    {
+      "path": "PDF/pipeline/Budgeted Metacognitive Control for Test-Time Reasoning.pdf",
+      "sha256": "d6357f6d25a9ae833845b946eed49a703ae3735e9c130e91591dd9c8aa5c1be8",
+      "bytes": 9393487
+    },
+    {
+      "path": "PDF/pipeline/CHATINJECT ABUSING CHAT TEMPLATES FOR PROMPT INJECTION IN LLM AGENTS.pdf",
+      "sha256": "5663314dea6dbc4e91f801b5bb29b0564f45cdc87b54bc2c6f7f242442e4f76a",
+      "bytes": 822670
+    },
+    {
+      "path": "PDF/pipeline/CLEV LLM-Based Evaluation Through Lightweight Efficient Voting for Free-Form Question-Answering.pdf",
+      "sha256": "c373f57ef9db0918505bd7d4742b8ea65ae564100e81e57a92ba5b346c3c7989",
+      "bytes": 758685
+    },
+    {
+      "path": "PDF/pipeline/COCO Cognitive Operating System with Continuous Oversight for Multi-Agent Workflow Reliability.pdf",
+      "sha256": "218268b8f488a3875f30fbed21984ad88338874dfe3daf6b8ae04d754d6c1a21",
+      "bytes": 4274069
+    },
+    {
+      "path": "PDF/pipeline/Can You Trust LLM Judgments Reliability of LLM-as-a-Judge.pdf",
+      "sha256": "34a4a0872964a5562f84b76dc4206ec31325a19a518b1b06aec6346190ccb400",
+      "bytes": 356611
+    },
+    {
+      "path": "PDF/pipeline/Cascading Hallucination in Agentic RAG The CHARM Framework for Detection and Mitigation.pdf",
+      "sha256": "bbe43fc55945d7837474c49e2058d5d5ec8e45611191517a25c5935b8ca5dc2d",
+      "bytes": 973533
+    },
+    {
+      "path": "PDF/pipeline/ChainBuddy An AI Agent System for Generating LLM Pipelines.pdf",
+      "sha256": "0c252b37c3db68de63c8f76f65f488617a8dac41ef57cd8b666b91ac04be62e0",
+      "bytes": 4443679
+    },
+    {
+      "path": "PDF/pipeline/CompactPrompt A Unified Pipeline for Prompt and Data Compression in LLM Workflows.pdf",
+      "sha256": "0476edd5eaf6cb488ba16b5d20fb0d41e98b3cca517084838f497ebccc688686",
+      "bytes": 2404107
+    },
+    {
+      "path": "PDF/pipeline/Data pipelines from zero to solid.pdf",
+      "sha256": "f47d13c86e6ea2b762d934ef0ebd5ecd80cadde16c68d8548ded7efa939e2856",
+      "bytes": 612398
+    },
+    {
+      "path": "PDF/pipeline/Diagnosis-Driven Automatic Repair for Agentic Workflow via Symbolic Inference.pdf",
+      "sha256": "44d4eb06df3722e242b94dc9f1e0394ead1222bdffae8e4c8969bcf910e9a807",
+      "bytes": 1469142
+    },
+    {
+      "path": "PDF/pipeline/DonΓÇÖt Generate, Classify! Low-Latency Prompt Optimization with Structured Complementary Prompt.pdf",
+      "sha256": "0541c8843f2240129731e61836e970ae03b99bb8b3e98b27eba1a256e0cdf035",
+      "bytes": 4248437
+    },
+    {
+      "path": "PDF/pipeline/ENHANCING ZERO-SHOT LLM RECOMMENDATIONS VIA SEMANTICS AND COLLABORATIVE SIGNALS.pdf",
+      "sha256": "223a36f9d06c1eaa2564a9ec76cb4615516b88eaa387ecce2333f9c27402810e",
+      "bytes": 628915
+    },
+    {
+      "path": "PDF/pipeline/End-to-End Data Pipelines.pdf",
+      "sha256": "6b14a7e2ffe6e831b2cd7d244795323bdbcb68d330d76f415809011717e15f96",
+      "bytes": 660908
+    },
+    {
+      "path": "PDF/pipeline/Enhancing DevOps Pipeline Efficiency Through Modern Practices.pdf",
+      "sha256": "97e2a7965541261733a5b302193080463e83d8ff8747bda99853e76aca10a53c",
+      "bytes": 423266
+    },
+    {
+      "path": "PDF/pipeline/Evidence-Grounded Ensemble Diagnosis of 802.11 Packet Captures A Multi-Stage Pipeline with Deterministic Reliability Scoring.pdf",
+      "sha256": "4c7fc6d97eeb98d79e25f83de61e9c3b8ce6e2464e884d358ee89a37a6acc0c3",
+      "bytes": 470323
+    },
+    {
+      "path": "PDF/pipeline/FAPO Fully Automated Prompt Optimization of Multi-Step LLM Pipelines.pdf",
+      "sha256": "6b9330aa4365d8e7d06f41141cfb04297c8ffe79adfc5a1785fb53d1ae8522d1",
+      "bytes": 984142
+    },
+    {
+      "path": "PDF/pipeline/Failure Modes in LLM Systems A System-Level Taxonomy for Reliable AI Applications.pdf",
+      "sha256": "4846f92b887930b4e34925700fbadddc0d8543b398979c85051c47fe2269f145",
+      "bytes": 707734
+    },
+    {
+      "path": "PDF/pipeline/Farsight Fostering Responsible AI Awareness During AI.pdf",
+      "sha256": "1f07e3277c6f6fbfdb4d78ecd4545c212ef6abbce21983463242534392da4ade",
+      "bytes": 10108236
+    },
+    {
+      "path": "PDF/pipeline/From software architecture models to pipelines.pdf",
+      "sha256": "bc5c745ce17581823b2dfdd919a8b9caa028e416a8987c1a227c25e84b60584e",
+      "bytes": 1211749
+    },
+    {
+      "path": "PDF/pipeline/Group-Evolving Agents Open-Ended Self-Improvement via Experience Sharing.pdf",
+      "sha256": "967517dbde132a515386f9c8ac25969be2578658a7b9a7927c893751b009c3c4",
+      "bytes": 4331505
+    },
+    {
+      "path": "PDF/pipeline/Improving Sequential Recommendations with LLMs.pdf",
+      "sha256": "fea25718e79697dacd57e00a49a2a0f859c1deca2a170140b0f518fe9c0ea308",
+      "bytes": 3219042
+    },
+    {
+      "path": "PDF/pipeline/Large Language Model Prompt Datasets An In-depth Analysis and Insights.pdf",
+      "sha256": "fc0994607a7a0e6303d980a29c4f1829e6bcb8c8b05c59248b886b73cec36b6f",
+      "bytes": 2092030
+    },
+    {
+      "path": "PDF/pipeline/LlamaFirewall An open source guardrail system for building secure AI agents.pdf",
+      "sha256": "8e5ce5dcf6fc4d2f18c436f7573d3e6427142f77363e23bf9e7ab3bc8e3fb3cc",
+      "bytes": 1274954
+    },
+    {
+      "path": "PDF/pipeline/Machine Learning Pipeline for Software Engineering.pdf",
+      "sha256": "05a100df42dedd013665aa41f534eb71b735ce7c36317f097c0fc283880ed103",
+      "bytes": 837003
+    },
+    {
+      "path": "PDF/pipeline/Making Prompts First-Class Citizens for Adaptive LLM Pipelines.pdf",
+      "sha256": "c37ce9823837c2f4d29aec2fd54c4508642d7dbacf89d8a26a91a6f132eb6c67",
+      "bytes": 519195
+    },
+    {
+      "path": "PDF/pipeline/Mastering Data Pipeline Frameworks A Comprehensive Guide.pdf",
+      "sha256": "7414eb8fe1562906bcaef14336c25e459963fd323ce01253c88de1a30fe03a73",
+      "bytes": 206759
+    },
+    {
+      "path": "PDF/pipeline/Meta Prompting for AI Systems.pdf",
+      "sha256": "d5e561b3fcd3aaee03c4651cada1400c0ce792e202a3a4ca424ec139e252486f",
+      "bytes": 843766
+    },
+    {
+      "path": "PDF/pipeline/Mining Hidden Prompt Engineering Patterns with Formal Concept Analysis and Association Rules.pdf",
+      "sha256": "5794757457459531ce764abbce2b9748055cf37f1ba4ab63f68102fd4fa3ffc6",
+      "bytes": 586737
+    },
+    {
+      "path": "PDF/pipeline/MoGraphGPT Creating Interactive Scenes Using Modular LLM and Graphical Control.pdf",
+      "sha256": "df422bc89af114b1ea08923e7a063cf400051356e6def34da84c0f0fe0ebc6dc",
+      "bytes": 7131219
+    },
+    {
+      "path": "PDF/pipeline/Necessary but Not Sufficient Temperature Control and Reproducibility in LLM-as-Judge Safety Evaluations.pdf",
+      "sha256": "5482b5c79dc89aa1c2855193a6a7c906a7be5263a22c0e6680c3da44fa5c7cfd",
+      "bytes": 465605
+    },
+    {
+      "path": "PDF/pipeline/NeuroAgent LLM Agents for Multimodal Neuroimaging Analysis and Research Lujia ZhongΓÇá1,2, Yihao XiaΓÇá1, Jianwei ZhangΓÇá1,2, Shuo huang1,3, Jiaxin Yue1,2, Mingyang Xia.pdf",
+      "sha256": "0ce034e934a6e0bc8edd4db180eabdca5b25b78f78a2f0d7c2d0fcba5766b453",
+      "bytes": 4901547
+    },
+    {
+      "path": "PDF/pipeline/On Meta-Prompting.pdf",
+      "sha256": "984c42de0762b731301b56dff0fa57451bd00e9c8aa20b59d7a587c96516f3cb",
+      "bytes": 486080
+    },
+    {
+      "path": "PDF/pipeline/Optimal Software Pipelining using an SMT-Solver.pdf",
+      "sha256": "17338cc8c9d22b39fb2fca8ae3c987432ccecd6296da8014bfc7cf6f12b7deca",
+      "bytes": 385799
+    },
+    {
+      "path": "PDF/pipeline/PI-Hunter Automated Red-Teaming for Exposing and Localizing Prompt Injections.pdf",
+      "sha256": "9de5f2fec8c2084efbc0087dabf42f9cb555f9ba8eda149421ac52d59810e6e0",
+      "bytes": 1543599
+    },
+    {
+      "path": "PDF/pipeline/PISmith Reinforcement Learning-based Red Teaming for Prompt Injection Defenses.pdf",
+      "sha256": "8785f058eb535827656e65451a7857f40dbfd58d0beaad159f8ac73c2f487f58",
+      "bytes": 577476
+    },
+    {
+      "path": "PDF/pipeline/Parallel Reasoning via BradleyΓÇôTerry Aggregation.pdf",
+      "sha256": "8cd57fd86e59f307dfa1080638c65cab0627a6a4f1ed1bd8b3f17aaa8187b9ac",
+      "bytes": 472071
+    },
+    {
+      "path": "PDF/pipeline/Pipeline Maestro Intelligent Orchestration of Build, Test and Deploy in CI_CD Systems.pdf",
+      "sha256": "cda7a6e16895b837bbe0b715fb62f2ce05a44d8ef0907ad7abb144fc277fecb1",
+      "bytes": 167073
+    },
+    {
+      "path": "PDF/pipeline/Pipeline architecture The assembly line of modern processors.pdf",
+      "sha256": "29c7012481b05cc0de0a15ff409549b5529ce5c69947190a66a56321f3e3d970",
+      "bytes": 529380
+    },
+    {
+      "path": "PDF/pipeline/PlanCompiler A Deterministic Compilation Architecture for Structured Multi-Step LLM Pipelines.pdf",
+      "sha256": "21e296f797d130a59942c5b76721c9412727f30e7eaea5ff9023b0d65ae1d723",
+      "bytes": 540671
+    },
+    {
+      "path": "PDF/pipeline/Problem Elaboration Prompting Im- proves Mathematical Reasoning in Large Language Models.pdf",
+      "sha256": "c6e2edadd4fefc94526dc54fa8c548093748e138270381f7681b59a1fe5269a6",
+      "bytes": 944513
+    },
+    {
+      "path": "PDF/pipeline/Prompt Chaining Pipelines and Task Specific System Prompts.pdf",
+      "sha256": "6d05f48b4479ba58d3f40dcaf71423eaef06e48eb81aea1c0d652beb29b20184",
+      "bytes": 191243
+    },
+    {
+      "path": "PDF/pipeline/Prompt2DAG A Modular Methodology for LLM-Based Data Enrichment Pipeline Generation.pdf",
+      "sha256": "b34235d831a4cdf70008876fcbda2bccb872d1dca33f08958480e19f11f2c82c",
+      "bytes": 2271650
+    },
+    {
+      "path": "PDF/pipeline/PromptArmor Simple yet Effective Prompt Injection Defenses.pdf",
+      "sha256": "6575ed46e6ca62a2cffd1d3e4889eb1393b120e2d3b78cfa4fbafd9cec7a271d",
+      "bytes": 468196
+    },
+    {
+      "path": "PDF/pipeline/Prompting Large Language Models for Recommendation with Semantic and Collaborative Data.pdf",
+      "sha256": "c4c08a388abb8414bcbc0d68a3626445edbb7f4b9159509aa683ebf098ab74b9",
+      "bytes": 7493805
+    },
+    {
+      "path": "PDF/pipeline/Prompting Large Language Models for Recommender Systems A Comprehensive Framework and Empirical Analysis  .pdf",
+      "sha256": "715239e051ab7cc75847ef58bd0da63390a687e20600bd0436fcd590c16131cc",
+      "bytes": 1775488
+    },
+    {
+      "path": "PDF/pipeline/Prompting Large Language Models for Recommender Systems A Comprehensive Framework and Empirical Analysis.pdf",
+      "sha256": "715239e051ab7cc75847ef58bd0da63390a687e20600bd0436fcd590c16131cc",
+      "bytes": 1775488
+    },
+    {
+      "path": "PDF/pipeline/Recursive Self-Improvement in AI From Bounded Self-Refinement to Autonomous Research Loops.pdf",
+      "sha256": "0cc637f5492ed565fc9f80fa9a1b5772d3e3743a13ef5bc294c0c081b7142f93",
+      "bytes": 5035755
+    },
+    {
+      "path": "PDF/pipeline/RecursiveSelf-ImprovementinAISystems_MathematicalFoundationsGovernanceMechanismsandExistentialConsiderations.pdf",
+      "sha256": "83857888fe415848aa1d18ff936aa7829c9d305504a2d582edfc27d7746cc926",
+      "bytes": 188369
+    },
+    {
+      "path": "PDF/pipeline/Reference-Guided Verdict LLMs-as-Judges in Automatic Evaluation of.pdf",
+      "sha256": "a6d1e6105ee08314fcfc07d6c24bbf8a05eb1c935c71bae9d8d61d068af685e1",
+      "bytes": 1647040
+    },
+    {
+      "path": "PDF/pipeline/Reinforcement Learning for Dynamic Workflow Optimization in CI_CD Pipelines.pdf",
+      "sha256": "1a26bcdc49beeb835b191c739abe1990e99144febe2f3120c56b926e0ee46473",
+      "bytes": 694281
+    },
+    {
+      "path": "PDF/pipeline/Reliability without Validity A Systematic, Large-Scale Evaluation of LLM-as-a-Judge Models Across Agreement, Consistency, and Bias.pdf",
+      "sha256": "faacf577921eab7a38f1a7b04899b6db5acbb17434ff78cb8f9f25e3b87f3230",
+      "bytes": 780047
+    },
+    {
+      "path": "PDF/pipeline/Rethinking Software Engineering in the Foundation Model Era.pdf",
+      "sha256": "4dee8267b4d49761ff0be776e8ae93459e04288536926da34cafadc150c110a5",
+      "bytes": 960504
+    },
+    {
+      "path": "PDF/pipeline/SELF-REFERENTIAL SELF-IMPROVEMENT VIA PROMPT EVOLUTION.pdf",
+      "sha256": "0e5b44b77d345581509bb58b009fa7fef9928bf8c090b2a056e8916f25d974a0",
+      "bytes": 819158
+    },
+    {
+      "path": "PDF/pipeline/Same_Input_Different_Scores_A_Multi_Model_Study_on.pdf",
+      "sha256": "17b86d18004bf6f500927ae519524fa3f6af4c2964246c670d4d53a232573be9",
+      "bytes": 1092958
+    },
+    {
+      "path": "PDF/pipeline/Scaling Inference Compute with Repeated Sampling.pdf",
+      "sha256": "33889c6cb265ae11ed67e50070d3a31cd894036d8c9b404212a38df1783e8884",
+      "bytes": 989958
+    },
+    {
+      "path": "PDF/pipeline/Self Improving AI with Harness & Weight Updates.pdf",
+      "sha256": "3f75a62487a5fb3fc2db8d06b78e6f6d598fc46b446cdfa9e205c33fb41de265",
+      "bytes": 993538
+    },
+    {
+      "path": "PDF/pipeline/Smarter AI Through Prompt Engineering.pdf",
+      "sha256": "11972c6bf10d8d1e1e9241f4af5482ac3c123a18c361b37fc821a830cbe72360",
+      "bytes": 385494
+    },
+    {
+      "path": "PDF/pipeline/StepFinder A Temporal Semantic Framework for Failure Attribution in Multi-Agent Systems.pdf",
+      "sha256": "117c24a7ede81588fd8a8fc12798d2a99459728545b5478b951b61ae1545e340",
+      "bytes": 3622386
+    },
+    {
+      "path": "PDF/pipeline/System Prompt Optimization with Meta-Learning.pdf",
+      "sha256": "fcf53078f0534ca0f4323680203af8baeb36b354a87cb46dc21d2a53b0190c8d",
+      "bytes": 1342405
+    },
+    {
+      "path": "PDF/pipeline/THE SIX SIGMA AGENT ACHIEVING ENTERPRISE- GRADE RELIABILITY IN LLM SYSTEMS THROUGH CONSENSUS-DRIVEN DECOMPOSED EXECUTION.pdf",
+      "sha256": "25f324ae4fbc9dd6a33f6a0489a4d88d169d6dacdd08e9f432696d65781eb107",
+      "bytes": 581408
+    },
+    {
+      "path": "PDF/pipeline/TOWARDS NEXT GENERATION DATA ENGINEERING PIPELINES.pdf",
+      "sha256": "565a97dedfef2d9d86ed9c63fddc07194311f91e3a9c17bf72aefeec753a6a8d",
+      "bytes": 1468444
+    },
+    {
+      "path": "PDF/pipeline/Taxonomy and Consistency Analysis of Safety Benchmarks for AI Agents.pdf",
+      "sha256": "389e5a98621dde143fe1b8a4bf128d6da0214aa19ec71d5d565738702cf88a9c",
+      "bytes": 840487
+    },
+    {
+      "path": "PDF/pipeline/The Evolution And Modernization Of Data Pipeline Architectures.pdf",
+      "sha256": "f6c44d85ee70dcb1d2d957105a488bf671487287e8ab1f156cb82361e1d73810",
+      "bytes": 172823
+    },
+    {
+      "path": "PDF/pipeline/The Future Remembers.pdf",
+      "sha256": "0957893e636ef210d560ec2a6b077807b6cfe2c397dd0edd98ce9bc031467026",
+      "bytes": 309063
+    },
+    {
+      "path": "PDF/pipeline/The Necessity of Setting Temperature in LLM-as-a-Judge.pdf",
+      "sha256": "377d2331bb2949538e66c1b933ba43656d0ac407db97289f353d219002272f49",
+      "bytes": 10067472
+    },
+    {
+      "path": "PDF/pipeline/Traceability and Accountability in Role-Specialized Multi-Agent LLM Pipelines.pdf",
+      "sha256": "5450ce57efd0c771e0793789a1597b42b26773b9c1edd7e6945e2f2c3ec30a3c",
+      "bytes": 1277924
+    },
+    {
+      "path": "PDF/pipeline/Trinity Synchronizing Verbal, Nonverbal, and Visual Channels to Support Academic Oral Presentation Delivery.pdf",
+      "sha256": "07df2baacac428ab81a1f323897b60ec409565c9575284e266c1d39bb55f6a2e",
+      "bytes": 36501299
+    },
+    {
+      "path": "PDF/pipeline/Uncertainty of Thoughts Uncertainty-Aware Planning Enhances Information Seeking in Large Language Models.pdf",
+      "sha256": "f87d7413120be1b4225de53be0eb2f768dba7b7bfe691d742cbd2472f0783d80",
+      "bytes": 1241501
+    },
+    {
+      "path": "PDF/pipeline/Unleashing the potential of prompt engineering for large language models.pdf",
+      "sha256": "9e817934064941709d5e31766b3fd18e39b1a23b7064517f411d4ec4fddfbf36",
+      "bytes": 7035493
+    },
+    {
+      "path": "PDF/pipeline/VerifyMAS Hypothesis Verification for Failure Attribution in LLM Multi-Agent Systems.pdf",
+      "sha256": "b4ee52ecafd74fa95aac1955268ea007b116c44482108c1a0f1040e67288ed2f",
+      "bytes": 2592223
+    },
+    {
+      "path": "PDF/pipeline/Where LLM Agents Fail and How They can Learn From Failures.pdf",
+      "sha256": "5dea81aa176cf3993123c46f2cef3e70c49a4fe5f2a5c6794c4b9fbc8f532a6b",
+      "bytes": 2355661
+    },
+    {
+      "path": "PDF/s1 Simple test-time scaling.pdf",
+      "sha256": "598932c9f96849cd52495d8b3e12ba4d224e41d5588d2278a78f76c744d8a3bc",
+      "bytes": 1480533
+    }
+  ]
+}

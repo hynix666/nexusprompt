@@ -1,0 +1,20 @@
+{
+  "_comment": [
+    "Provider/model fingerprints this repository has seen and accepted.",
+    "",
+    "Read by scripts/check-fingerprint.mjs against the fingerprints persisted in run",
+    "bundles under .promptnexus/runs/. A provider reporting a fingerprint that is not",
+    "listed here fails the build and names the baseline suite to re-run.",
+    "",
+    "The watch is EMPTY and that is currently correct: no run in this repository has",
+    "ever reached a provider, so nothing has been observed and nothing can be pinned.",
+    "check:fingerprint reports 'not armed' rather than 'OK' while that is true, because",
+    "a guard with zero coverage that prints OK is worse than no guard.",
+    "",
+    "Pin the first real observation with `node scripts/check-fingerprint.mjs --write`,",
+    "then treat every later change as what it is: a regression you did not introduce.",
+    "Accepting a new fingerprint means re-running the named baseline suite and comparing,",
+    "not appending a string."
+  ],
+  "watch": {}
+}

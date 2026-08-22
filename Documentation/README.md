@@ -76,7 +76,7 @@ A vertical slice — one stage end to end — plus the machinery that checks it.
 | Provider adapters | `local-proxy` | + `hosted-server` |
 | Storage adapters | `storage-local` (run bundles) | + `storage-db` |
 | Shells | `cli` | + `pipeline-ui`, `toolkit-ui` |
-| Technique catalog | 180 records behind a pure registry — 172 frozen, 8 added to close the ensembling gap, 8 citation titles corrected at the import boundary; validated against both the JSON contract and the frozen XSD | 15 scattered coverage gaps |
+| Technique catalog | 195 records behind a pure registry — 172 frozen, 23 added to close the ensembling gap, 8 citation titles corrected at the import boundary; validated against both the JSON contract and the frozen XSD | 15 scattered coverage gaps |
 | CI | none — `npm run verify` runs locally | full pipeline |
 
 Verified by: `npm run verify` (boundaries → typecheck → source freeze → 111 tests → differential oracle against the frozen linter).

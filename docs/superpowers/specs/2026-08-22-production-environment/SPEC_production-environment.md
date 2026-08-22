@@ -270,10 +270,19 @@ Each lands as its own reviewed change with a `contracts/CHANGELOG.md` entry, bef
 
 Each phase carries entry criteria and **one falsifiable prediction**. Every part ships its check *with* the capability, never after — the encoded fix for the "guarantee written but not wired" class.
 
-### Phase α — the free wins (Parts 0, 1, 9)
+### Phase α — the free wins (Parts 0, 1, 9) · **LANDED 22 August 2026**
 
 **Entry:** none. All three have no inbound dependencies.
 **Prediction:** `check:counts` fails on its first run against the current tree, at ≥3 sites. *If it passes, I have mis-measured and the audit is wrong.*
+
+**Result: prediction held, and understated the defect.** The first run reported **15 false counts across 6 documents** plus one stale pin — not 3. Beyond the three the audit named, it found `records_added` stated as 8 where 23 were added (in two documents), `Documentation/` described as 26 Markdown files where there are 31, and the corpus described as 906 MB in `.gitignore` where it measures 2,079. `IMPLEMENTATION_PLAN.md`'s **prose contradicted its own machine-checked JSON block** — the document `check:plan` reads, in a claim `check:plan` does not check.
+
+Two design corrections were forced during the build, both recorded in the code:
+
+- **`check:corpus` shipped with one mode, not two.** It was designed with a fast inventory default and a `--deep` re-hash, on a measurement saying hashing 2 GB cost 11 seconds. That number was an artifact of 661 `sha256sum` process spawns; through one Node process it is **1.4 s**. The whole fast/deep split existed to excuse a weakness that was not there, so it was deleted rather than shipped — declining to add a seventh guard narrower than its name.
+- **The first mutation probe was broken, and the control caught it.** All ten probes returned exit −1, including the no-op control, because `npm.cmd` does not resolve through `execFileSync` here. Running the checker files under the probe's own node fixed it. This is the second time in this repository a probe instrument, not the code, was the thing that was wrong.
+
+**Verified:** 460 tests (+23), `verify` exit 0, **10 of 10 mutation probes** caught with clean controls at both ends.
 
 ### Phase β — the inner loop (Part 4)
 

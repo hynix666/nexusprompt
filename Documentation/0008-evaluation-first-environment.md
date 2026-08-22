@@ -9,9 +9,9 @@ Accepted — 17 August 2026. Constrains the pipeline, the catalog, and the contr
 
 ## Context
 
-The documented design treats prompt authoring as the product: eleven stages produce a compiled prompt, sixteen gates lint it, a catalog of 180 techniques advises on construction. Evaluation appears as a testing concern.
+The documented design treats prompt authoring as the product: eleven stages produce a compiled prompt, sixteen gates lint it, a catalog of 195 techniques advises on construction. Evaluation appears as a testing concern.
 
-Four measured results, from the 673-paper corpus read against this project, say that ordering is backwards.
+Four measured results, from the 599-document corpus read against this project, say that ordering is backwards.
 
 | Finding | Measurement | Source |
 |---|---|---|
@@ -108,7 +108,7 @@ Suite structure follows the MVES shape the corpus supplies — *application cate
 
 Three ordering rules are load-bearing:
 
-- **Deterministic detectors run before judges.** A judge call is expensive, biased, and itself needs evaluating; anything a verifier can settle must not reach one. The catalog's `verification_status` field already partitions techniques this way (`verifier-checkable` 137, `judge-checkable` 8, `unverifiable-by-text` 35) — that partition is the routing rule.
+- **Deterministic detectors run before judges.** A judge call is expensive, biased, and itself needs evaluating; anything a verifier can settle must not reach one. The catalog's `verification_status` field already partitions techniques this way (`verifier-checkable` 151, `judge-checkable` 10, `unverifiable-by-text` 34) — that partition is the routing rule.
 - **The judge is never the model under test.** Same-model judging is a known limitation, and the judge's own agreement, bias, and adversarial robustness are measurable properties that belong in the registry alongside it.
 - **Perturbations are part of the suite, not a separate exercise.** Optimizers evaluated only on clean, well-formed inputs collapse under minor perturbation; a suite without perturbed variants overstates every result it reports.
 
@@ -198,4 +198,4 @@ The design scales because of where the boundaries fall, not because of a framewo
 4. [ ] Wire gate verdicts into the `compile` reducer as a bounded control signal, and measure the effect against the suite from item 2.
 5. [ ] Add the `provider_model_fingerprint` watch. It is the cheapest item here and covers the failure class offline evaluation structurally cannot.
 6. [ ] Record the significance protocol per suite type before running comparisons that anyone will cite.
-7. [ ] Only then extend the catalog with measured-evidence fields, and backfill the 180 records honestly — most will carry none, and should say so.
+7. [ ] Only then extend the catalog with measured-evidence fields, and backfill the 195 records honestly — most will carry none, and should say so.
