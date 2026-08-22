@@ -17,12 +17,15 @@ import { Orchestrator } from "../../../application/src/orchestrator.js";
 import type { PipelineRunOptions } from "../../../application/src/pipeline.js";
 import { LocalProxyProvider } from "../../../adapters/provider-local-proxy/src/index.js";
 import { LocalRevisionStore } from "../../../adapters/storage-local/src/index.js";
+import { LocalEvidenceStore } from "../../../adapters/evidence-local/src/index.js";
 import type { EventSink } from "../../../contracts/index.js";
 
 export interface CompositionOptions {
   sink: EventSink;
   /** Where run bundles are retained. Defaults to `.promptnexus/runs` under cwd. */
   runsDir?: string;
+  /** Where evidence is retained. Defaults to `.promptnexus/evidence` under cwd. */
+  evidenceDir?: string;
 }
 
 const defaultRunsDir = (opts: CompositionOptions) =>
@@ -53,4 +56,18 @@ export function composePipeline(opts: CompositionOptions): PipelineRunOptions {
     store: new LocalRevisionStore(defaultRunsDir(opts)),
     sink: opts.sink,
   };
+}
+
+/**
+ * The evidence plane.
+ *
+ * A separate directory from `runs/` because the two have different lifetimes on purpose:
+ * `storage-local` keeps eight run bundles and evicts the ninth, while evidence is
+ * append-only and never evicted. Pointing them at one directory would put a retention
+ * policy in front of the records a promotion cites.
+ */
+export function composeEvidence(opts: CompositionOptions): LocalEvidenceStore {
+  return new LocalEvidenceStore(
+    opts.evidenceDir ?? join(process.cwd(), ".promptnexus", "evidence"),
+  );
 }

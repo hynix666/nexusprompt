@@ -14,7 +14,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 {
   "gates": { "ported": 16, "source_total": 16 },
   "stages": { "built": 11, "target": 11 },
-  "contracts": { "schemas": 13 },
+  "contracts": { "schemas": 14 },
   "adapters": ["provider-local-proxy", "storage-local", "evidence-local"],
   "shells": ["cli"],
   "catalog": { "records_imported": 195, "records_available": 172, "records_added": 23 },
@@ -24,10 +24,11 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
     "import:catalog", "check:catalog", "check:xsd", "check:depth", "check:stages", "eval", "eval:compare", "eval:adversarial",
-    "check:corpus", "check:counts", "check:fingerprint"
+    "check:corpus", "check:counts", "check:fingerprint",
+    "check:sizing", "check:matrix", "docs:matrix"
   ],
   "planned_commands": [
-    "verify:gates", "trace:view", "docs:matrix", "verify:hash",
+    "verify:gates", "trace:view", "verify:hash",
     "scaffold:gate", "scaffold:technique", "catalog:validate", "parity"
   ]
 }
@@ -39,7 +40,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
 
 ```
                         built          target
-contracts   ████████████████████       13 schemas — 11 validated against real values, 2 awaiting a judge and a promotion path
+contracts   ████████████████████       14 schemas — all 14 validated against values a real run produced
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
@@ -121,7 +122,7 @@ Read with the limit above attached: 16 of 16 means every gate is *compared*, not
 
 **Built so far.** The deterministic path runs end to end as `npm run eval`, inside `npm run verify`:
 
-- **Contracts.** Eleven of thirteen schemas are now validated against values a real run produced. `judge-verdict` and `baseline` remain in `contracts/pending-implementation.json` because a judge adapter and a promotion path do not exist — and the stale rule means those entries fail the moment either does.
+- **Contracts.** All fourteen schemas are validated against values a real run produced, and `contracts/pending-implementation.json` is empty. `judge-verdict` left it in Phase δ when the judge adapter landed; `baseline` left it in Phase ε when the release pipeline did, and `promotion` was written with its producer. Landing each schema first did what ADR-0002 promises — `baseline`'s `superseded_by` turned out to be unwritable, which is only discoverable by trying to write one.
 - **Core, pure.** `eval/detectors.ts` is a detector registry, and `eval/compare.ts` is the comparator: exact-binomial McNemar rather than the chi-square approximation, since a smoke suite lives exactly where the approximation misbehaves. `inconclusive` and `refused` are reachable verdicts, and alpha is Bonferroni-corrected by the declared family size.
 - **Application.** `eval.ts` owns the effects and pins the provider per case, so the suite is offline, deterministic and free.
 - **A suite.** `eval/compile-smoke.json`, eight cases, each naming the failure mode it exists to catch.

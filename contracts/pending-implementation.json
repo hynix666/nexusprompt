@@ -21,14 +21,8 @@
     "validated in test/contract-conformance.test.ts against values a real run emitted.",
     "The two below remain because a judge adapter and a promotion path do not exist yet.",
     "",
-    "judge-verdict was removed on 22 August 2026: the judge adapter exists (application/src/judge.ts, guarded by core/src/eval/judge-policy.ts) and test/contract-conformance.test.ts now validates a verdict it produced. Landing the schema first worked exactly as intended -- runs, disagreement_rate, position_randomized and a declared agreement threshold were mandatory before anyone wrote a judge that would otherwise have omitted them."
+    "judge-verdict was removed on 22 August 2026: the judge adapter exists (application/src/judge.ts, guarded by core/src/eval/judge-policy.ts) and test/contract-conformance.test.ts now validates a verdict it produced. Landing the schema first worked exactly as intended -- runs, disagreement_rate, position_randomized and a declared agreement threshold were mandatory before anyone wrote a judge that would otherwise have omitted them.",
+    "baseline was removed on 22 August 2026: the release pipeline exists (application/src/release.ts, gated by core/src/release/promote.ts) and test/contract-conformance.test.ts validates a record freezeBaseline wrote. The list is now empty, and that is the intended terminal state rather than a milestone -- every schema on disk is validated against a value the running system produced. Landing baseline first did the work ADR-0002 promises: it surfaced that superseded_by could never be written, because the evidence plane has no update method, which is only discoverable by trying to write one."
   ],
-  "pending": [
-    {
-      "schema": "baseline",
-      "reason": "Written by the release pipeline when a run is promoted to a frozen reference. The evaluation pipeline produces runs now, but no promotion path exists and none should until an anchor suite does.",
-      "produced_by": "release pipeline — promote step",
-      "adr": "0008"
-    }
-  ]
+  "pending": []
 }

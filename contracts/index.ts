@@ -596,7 +596,47 @@ export interface Baseline {
   run_id: string;
   frozen_at: string;
   lineage: "benchmark" | "development";
-  superseded_by?: string | null;
+  /**
+   * The baseline this one replaces, written forward on the NEW record. 1.0.0 had a backward
+   * `superseded_by` that could never be set: the evidence plane has no `update`, so marking
+   * an old record would have required overwriting it — the thing its own description
+   * promised never happens.
+   */
+  supersedes?: string | null;
+}
+
+/** What a promotion asserted, and why each term of the conjunction held. */
+export interface PromotionCondition {
+  held: boolean;
+  /** Required in both directions: "why it was allowed" is as auditable as "why it was not". */
+  detail: string;
+}
+
+/**
+ * A configuration made current, or a previous one restored.
+ *
+ * Promotion is a label repoint rather than a rebuild, so rollback is the same record
+ * travelling the other way and carries the evidence pointers of the promotion it reverses.
+ * Every field but the timestamps is a pointer, because the failure this contract exists to
+ * prevent is a capability claim with no run behind it.
+ */
+export interface Promotion {
+  promotion_id: string;
+  kind: "promote" | "rollback";
+  configuration_id: string;
+  eval_run_id: string;
+  baseline_id: string;
+  comparison_id: string;
+  supersedes?: string | null;
+  promoted_at: string;
+  promoted_by: string;
+  conditions: {
+    significance: PromotionCondition;
+    no_regression: PromotionCondition;
+    within_budget: PromotionCondition;
+    judge_calibration: PromotionCondition;
+    detector_equalization: PromotionCondition;
+  };
 }
 
 export interface Comparison {
@@ -621,6 +661,20 @@ export interface Comparison {
     correction?: "none" | "bonferroni" | "holm" | "benjamini-hochberg";
     p_value?: number | null;
     confidence_interval?: [number, number] | null;
+    /**
+     * Units the two runs disagreed on. This is the exact sample size of a paired binary
+     * test — concordant units contribute nothing — so 3,400 cases with 4 disagreements is
+     * a test with n=4.
+     */
+    discordant?: number;
+    /**
+     * The smallest p any arrangement of those discordant units could have produced,
+     * `2 * 0.5^d`. A design property, not observed power: nothing here is computed from
+     * the p-value, so it carries information the p-value does not.
+     */
+    min_attainable_p?: number | null;
+    /** Whether `min_attainable_p` clears alpha. False means the test could not have rejected. */
+    attainable?: boolean | null;
   };
   /**
    * Derived from both runs' measured recall, never supplied. Replaced a boolean in 1.0.0

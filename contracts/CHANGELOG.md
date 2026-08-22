@@ -16,6 +16,80 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-22 (Phase ε)
+
+### `promotion` **1.0.0** (new)
+
+The record that a configuration was made current. Every field but the timestamps is a
+pointer, because the failure this contract exists to prevent is a claim with no run behind
+it — `CAPABILITY_MATRIX.md` asserting a capability that no `EvalRun` ever measured.
+
+`conditions` stores all five verdicts *and their reasons*, in both directions. A conjunction
+whose satisfied terms are not written down degrades into a rubber stamp the first time one of
+them silently stops being checked — which is the exact shape of the seven guards this
+repository has already found narrower than their names.
+
+`kind: "promote" | "rollback"` rather than a separate rollback contract: promotion is a label
+repoint, so rollback is the same record travelling the other way. A rollback carries the
+evidence pointers of the promotion it reverses, so the record says what was believed at the
+time instead of erasing it.
+
+### `baseline` 1.0.0 → **2.0.0** (major)
+
+**Removed** `superseded_by`. **Added** `supersedes`.
+
+`superseded_by` could never be written. It is a backward pointer, set on an *existing*
+baseline when a later one replaces it — and `EvidenceStore` has no `update` method, by a
+design decision recorded in its own doc comment ("immutability expressed by the absence of a
+mutator"). `LocalEvidenceStore.put` opens with the `wx` flag, so the write fails in the
+syscall.
+
+The field's own description said "Baselines are append-only; superseding is recorded, never
+overwritten" — while the only way to set it was to overwrite the record it lived on. The
+description was right and the field contradicted it. Reversing the direction makes the
+description true: the new baseline names the one it replaces, and reading a chain is a walk
+backwards from the newest record rather than a mutation of the oldest.
+
+Major, and free to take now: `baseline` is the last entry in `pending-implementation.json`
+and has no producer. After the release pipeline writes its first record this becomes a
+migration.
+
+### `comparison` 2.1.0 → **2.2.0** (minor)
+
+**Added** `protocol.discordant`, `protocol.min_attainable_p`, `protocol.attainable`.
+
+`compile-smoke.json`'s comment block has said since it was written that "resolving a
+difference takes six flips, not one." Six is exactly right — the exact two-sided binomial
+has a hard floor at `2 × 0.5^d`, so five discordant pairs bottom out at p = 0.0625 and no
+arrangement of them clears 0.05. That number lived in a JSON comment and no code knew it.
+
+`eval/pipeline-smoke.json` has five cases. **No comparison run on it can ever be
+significant**, and until now the comparator reported that as `p=0.0625 does not clear
+alpha=0.05` — indistinguishable from a suite that looked and found nothing.
+
+These three fields are derived, never supplied, for the same reason `equalization` became
+derived in 2.0.0: a guard the caller fills in is a guard the caller can satisfy. Note that
+`min_attainable_p` is **not** observed power, which is a monotone function of the p-value and
+carries no information; it is the support of the test statistic, a property of the design.
+
+### `eval-suite` 2.0.0 → **2.0.1** (patch)
+
+Description only, no shape change.
+
+`resolution.detectable_delta` meant three different things in three places. The schema
+described it statistically and quoted the `z²/(2Δ²)` sizing rule; every suite instance sets it
+to score granularity, and `compile-smoke.json` says outright that it "is not the same thing as
+the suite's statistical power"; the comparator used it as the floor below which a delta is
+inconclusive. The instances and the consumer agreed with each other. The schema was the one
+that was wrong, so the schema is what changed.
+
+Both floors are real and both are now enforced, in the place each belongs: granularity stays
+declared on the suite, and statistical resolution is derived by the comparator from alpha and
+the observed discordance — because a declared statistical resolution is precisely the number
+that drifted.
+
+---
+
 ## 2026-08-22 (Phase δ)
 
 ### `eval-suite` 1.0.0 → **2.0.0** (major)

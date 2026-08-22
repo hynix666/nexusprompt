@@ -25,6 +25,8 @@ I1 Core performs no effect · I2 Core never *receives* one — `decide → invok
 
 437 tests · 2,720 differential verdicts · 16/16 gates · 11/11 stages · 13 schemas (2 without producers) · **0 provider calls ever made by an eval run** · **0 promotions** · **0 baselines** · 599 independent research sources · 19 commits, no remote.
 
+*As of Phase ε:* 623 tests · **14 schemas, none without producers** · 0 provider calls · 0 promotions · 0 baselines · 26 commits, still no remote. The three zeros are unchanged and are the point: the release gate is built, armed, and has never fired.
+
 ### Source discipline
 
 Internal corpus: 599 documents under `PDF/`, unpinned and unmanifested — the *less* verified of the two inputs, against `sources/`'s 420 hash-pinned files. **599 is an upper bound** on independent sources: content hashing catches byte-identical duplicates, not the same paper under two filenames or a v1/v2 pair `[AUDIT D]`. External sources are cited with identifiers verified at retrieval, not from memory.
@@ -201,6 +203,8 @@ No `update`, no `delete`. Immutability is expressed by the absence of a mutator,
 **Gate.** The comparator returns `refused` when the suite is clustered and the declared protocol assumes independence. **This extends an existing mechanism rather than inventing one** `[AUDIT C-1]`: `compare()` already refuses when two runs' `probe_corpus_version` differ, at `core/src/eval/compare.ts:85`. A reviewer can check the new refusal against a working precedent.
 **Threat model.** The tempting bug is to keep reporting a number with a caveat. A caveat is not a refusal — I-2's JSON-enforcement case is precisely a confident wrong finding produced by an unequalized instrument, and it came with caveats.
 **Honest limit, stated rather than worked around.** `requiredAnchorSize(0.02)` ≈ **3,400 items**; the largest suite here has **14**. **This repository cannot currently certify a 2-percentage-point improvement, and must say so instead of reporting one** `[AUDIT C-7]`. Paired differences are a free variance reduction and are used wherever practicable, which lowers the required n but does not close a 240× gap.
+
+> **Corrected in Phase ε, and the gap is wider than this paragraph says.** ≈3,400 is the rule's output with a one-sided z, 50% power and a 50% discordance rate — three assumptions it never stated. Honestly powered the figure is **≈9,800**, so the gap is nearer 700×. The sharper limit needs no assumptions at all: fewer than **six** discordant units cannot reach α = 0.05 under any arrangement, which is a property of the design rather than of the data. `requiredAnchorSize` is retained and deprecated because three documents cite its output; `requiredPairedSize` takes power and discordance as arguments so no caller can inherit an assumption without writing it down.
 **Tests.** Planted 2-point difference at declared anchor size → detected; below it → **not** detected (the must-not-fire half). Clustered suite + independence protocol → `refused`. Known-clustered fixture → cluster-adjusted interval strictly wider than naive.
 
 ### Part 8 — Pipeline C, release
@@ -342,14 +346,62 @@ The prediction spoke of intervals; this comparator reports p-values, so it was t
 
 **Verified:** 582 tests (+39), `verify` exit 0, **14 of 14 mutation probes** — after one survivor exposed a fixture too uniform to discriminate: every row in a cluster shared a pass value, so a broken accumulator produced the right answer by accident. Third time a probe has found one of my own tests unable to fail, and the third time for the same reason.
 
-### Phase ε — promotion (Part 8)
+### Phase ε — promotion (Part 8) · **LANDED 22 August 2026**
 
 **Entry:** δ complete **and** an anchor suite meeting its own declared resolvable delta. Below that the promotion gate can be satisfied but certifies nothing `[AUDIT C-7]`.
 **Prediction:** the first promotion attempt is refused, by one of the five conditions. *A first attempt that passes all five suggests the gate is not armed.*
 
+**Result: the entry criterion could not be met, because it named a quantity that did not exist.** "A suite meeting its own declared resolvable delta" assumes `resolution.detectable_delta` is a resolvable delta. It is not, and never was in any instance. Every suite here sets it to exactly `1/n` — its *score granularity* — and `compile-smoke.json` says so outright in its own comment block: *"It is not the same thing as the suite's statistical power."* The schema said the opposite, quoting the `z²/(2Δ²)` sizing rule inside the description of that very field. The comparator then used the declared figure as the floor below which a delta is inconclusive.
+
+So the field meant three different things in three places, and the two that agreed were the instances and the consumer. **The schema was the one that was wrong**, and it is what changed (`eval-suite` **2.0.1**, description only). Granularity stays declared on the suite; statistical resolution is now *derived*, on the same principle that made `equalization` derived in `comparison` 2.0.0 — a guard the caller fills in is a guard the caller can satisfy.
+
+**The sizing rule itself is optimistic by 2.9×, in three compounding steps.** `n ≳ z²/(2Δ²)` is the conditional McNemar rule with three parameters pinned and none of them written down: a **one-sided** z used to size a test the comparator runs two-sided; **power at 50%**, because the general form's `(z_α + z_β)²` carries no `z_β` here; and **discordance at 50%**, the most favourable value available. `check:sizing` prints the decomposition on every run:
+
+```
+as quoted: one-sided z, 50% power, p_d=0.5     3382 items
+two-sided z, as the test is actually run       4802 items
+...and at 80% power                            9812 items
+```
+
+The corrected form `n ≳ (z_α + z_β)²·p_d / Δ²` was checked against something outside this repository: τ²-bench reports 114 paired tasks as resolving roughly 15 percentage points, which the new rule reproduces at a discordance rate near a third. The old rule returns 61 for the same target. That cross-check is a test, not a remark — a formula that only agrees with itself is not evidence.
+
+**The sharper instrument is exact and assumes nothing at all.** Under McNemar the statistic is binomial(d, 0.5), so the smallest two-sided p-value *any* arrangement of d discordant units can produce is `2·0.5^d`. At α = 0.05 that clears only from **six** upward. `eval/compile-smoke.json` has carried the sentence *"resolving a difference takes six flips, not one"* since it was written; the number lived in a JSON comment and no code knew it.
+
+This is not the discredited post-hoc power calculation — nothing here is computed from the p-value. It is the support of the test statistic, which is a property of the design.
+
+**Three consequences, each a live finding:**
+
+- **`eval/pipeline-smoke.json` has five cases, so no comparison run on it can ever be significant.** Until now that reported as `p=0.0625 does not clear alpha=0.05` — indistinguishable from a suite that looked carefully and found nothing. `check:sizing` failed on its first run naming exactly this, and the fact is now recorded in `scripts/suite-sizing-acknowledgments.json` under the same stale rule as the divergence allowlist: the entry pins the case count and **fails as stale the moment the suite reaches six**.
+- **Multiplicity correction can move the bar out of a suite's reach entirely.** At a family of 100, α = 0.0005 needs twelve discordant units; an eleven-case suite has eleven. A hundred comparisons against it is not a stricter search, it is a search that cannot return anything — and it would have reported a hundred honest-looking "inconclusive" verdicts while doing so.
+- **Phase δ's headline number was the floor of its own range.** That phase reported the clustered analysis of its fixture as `p = 0.25` and called it inconclusive. `minAttainableP(3)` is exactly 0.25: with three discordant clusters, 0.25 was the smallest value that design could produce, whatever the data said. The comparator was reporting its own lower bound as a measurement. **Phase δ's finding was correct and understated** — the honest contrast is not "improved versus inconclusive" but *improved versus a design that could not have answered.*
+
+**Part 8 landed as specified, with the five conditions intact:**
+
+- **`promotion` 1.0.0**, every field but the timestamps a pointer, and `conditions` recording all five verdicts *with their reasons, in both directions*. A conjunction whose satisfied terms are not written down degrades into a rubber stamp the first time one of them silently stops being checked.
+- **Two preconditions ahead of the five**, mirroring the comparator's "instrument before measurement": `Baseline.lineage` must be `benchmark`, and the evidence pointers must refer to one another consistently. `lineage` has existed since 1.0.0 and **nothing had ever read it**.
+- **Rollback is the same record travelling the other way**, carrying the pointers of the promotion it reverses rather than fresh ones, so the record says what was believed at the time instead of erasing it. No conditions are re-evaluated: requiring evidence to go back would mean a bad promotion could not be undone without first producing the evidence that would have prevented it.
+- **`CAPABILITY_MATRIX.md` is generated**, and `check:matrix` fails the build when the committed file is not what the repository produces — Part 8's named threat model. Its `Producers` and `Consumers` columns were *dropped*: deriving them needs a registration record nothing writes, and the hand-written draft got exactly that wrong by listing pure Core modules under "Implementing Adapters". A generated table with two honest columns beats five where three are guesses.
+
+**`baseline` 1.0.0 → 2.0.0: `superseded_by` could never be written.** It is a backward pointer, set on an *existing* record when a later one replaces it — and `EvidenceStore` has no `update`, by a decision recorded in its own doc comment. Its description promised baselines are "append-only; superseding is recorded, never overwritten" while being the one field whose use required overwriting. The description was right; the field is reversed to `supersedes`. Free to take today and a migration tomorrow, which is precisely what landing a schema before its producer is *for*.
+
+**`contracts/pending-implementation.json` is now empty**, and that is the terminal state rather than a milestone: all fourteen schemas are validated against values the running system produced.
+
+**Also closed:** judge calibration now expires on a **declared cadence**, not only on a contract change. The old rule caught a judge whose model, rubric or template changed and missed the commoner case entirely — nothing changed, and the calibration is eight months old. Reported practice puts judge drift at 60–90 days with monthly re-calibration, so `Calibration.max_age_days` is required and deliberately undefaulted, like `Budget.on_exceed`.
+
+**The prediction is not yet evaluable, for the same reason Phase γ's second half was not.** No run has ever been persisted from a real evaluation, so no *real* promotion attempt has been made — `promptnexus evidence` reports an empty plane and says so in those words. What did happen is one level down and in the predicted direction: **the first thing the new sizing guard did on its first run was refuse**, naming `pipeline-smoke`. The gate is armed and every one of its refusals is exercised; it has never fired in anger.
+
+**Verified:** 623 tests (+41), **31 of 31 mutation probes** caught — after four survivors exposed real gaps in my own tests: a fixture where clusters *and* rows were both above the floor, so counting the wrong one was invisible; no assertion on the underpowered message; no test at all for the new cadence rule; and a matrix fixture where *every* schema was covered, which made a hard-coded `validated: true` indistinguishable from a derived one. **That last is the fourth time a fixture here has been too uniform to discriminate.** Two further survivors were errors in the probe itself, the sharper one being a mutation that disabled a rule *and* planted the data that rule catches — which asserts only that removing a guard removes its verdict.
+
+**`npm run verify` is red on `check:corpus`, and not because of this work.** The 661-file `PDF/` corpus moved to `Documents/PDF/` — outside the repository — between sessions. Every file is intact and the manifest is untouched; the manifest pins a relative root of `PDF`, which no longer resolves. Left failing by decision rather than repaired by loosening the check, which is the option that would have cost the guard its meaning.
+
 ### Phase ζ — routing, then optimization (Parts 10, 11)
 
-**Entry for 10:** ε complete. **Entry for 11:** an anchor meeting `n₀ ≳ z²/(2Δ²)` for the declared target, outside the optimizer's write surface, proven by probe; plus a Goodhart alarm on the generalization ratio. **Not scheduled.**
+**Entry for 10:** ε complete — **met as of 22 August 2026.** Routing is now the next schedulable work: policy pure in Core, selection in Application, no new layer, and evaluated on quality *and* cost under the same `EvalRun` protocol as any configuration.
+
+**Entry for 11:** an anchor meeting `requiredPairedSize(Δ, {alpha, power, discordanceRate})` for the declared target — **not** the `n₀ ≳ z²/(2Δ²)` this line used to name, which Phase ε showed understates by ≈2.9× and hides its assumptions — held outside the optimizer's write surface and proven so by probe; plus a Goodhart alarm on the generalization ratio. **Not scheduled.**
+
+Phase ε strengthens the argument for leaving 11 unscheduled rather than weakening it. The optimizer's whole premise is that a search can distinguish candidates, and the exact floor says a suite of five cannot distinguish anything at all while the largest here resolves ~53 percentage points. An optimizer pointed at these suites would be selecting on noise it is structurally unable to detect as noise — and Bonferroni over a hundred candidates raises the required discordant count to twelve, above what any suite here can supply. The bar is now a number the build prints rather than a judgement call.
+
 **Prediction:** none offered. Predicting an optimizer's effect before the evaluator that would measure it exists is the error the whole ordering is designed to prevent.
 
 ---
@@ -371,7 +423,10 @@ A register with closing conditions, not a disclaimer.
 | **Nothing has ever called a real provider.** `ANTHROPIC_API_KEY` is unset and no `ant` profile exists, so the live half of Phase γ did not run. `cache_read_tokens` is on the contract and is populated by nothing; whether the compiled prefix actually caches is unknown, and `usd` is arithmetic over *estimated* tokens. | A key, then one 100-trial run whose second identical request reports a non-zero cache read. Until then, no number this system produces is evidence about spend or about a model. |
 | **599 is an upper bound**, not the independent-source count. | Title/DOI-level dedup over extracted first pages. |
 | **Significance protocol for graded and free-form metrics.** `bootstrap-ci` is named, not specified. | First suite that needs it, recorded per ADR-0008's *to revisit*. |
-| **Judge calibration cadence.** Practice says monthly; nothing here re-calibrates. | A judge exists and a calibration job runs against a gold set with an alert on κ drop. |
+| ~~**Judge calibration cadence.** Practice says monthly; nothing here re-calibrates.~~ **Enforcement closed 22 August 2026**: `Calibration.max_age_days` is required and undefaulted, and `admitJudge` refuses with `expired-calibration` when nothing changed but the measurement is old. Re-calibrating still requires a judge and a gold set. | A calibration job runs against a gold set with an alert on κ drop. |
+| **The `PDF/` corpus has moved outside the repository.** All 661 files are intact at `Documents/PDF/`; the manifest pins a relative root of `PDF`, so `check:corpus` fails and `npm run verify` is red. Left failing by decision — the alternatives were an absolute root that makes the pin machine-specific, or an env-var override that would be a seventh guard looser than its name. | The corpus returns to `PDF/`, or a portable way to name its location that does not weaken the hash pin. |
+| **`detectable_delta` is granularity, and three documents still read it as resolution.** The schema is corrected (`eval-suite` 2.0.1) and the comparator now derives the statistical floor, but prose elsewhere in `Documentation/` may still conflate the two. | A pass over `Documentation/` for the conflation, or a `check:counts` pin that catches it. |
+| **No suite here can resolve anything below ~53 percentage points.** `check:sizing` prints the figure for every suite on every run. This is not a defect to fix by editing a number; it is the size of the suites. | An anchor suite exists. Its size is `requiredPairedSize(target, {alpha, power, discordanceRate})` with all three written down. |
 
 ---
 

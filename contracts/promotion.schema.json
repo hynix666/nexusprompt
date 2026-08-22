@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/promotion/1.0.0",
+  "title": "Promotion",
+  "description": "A record that a configuration was made current, or that a previous one was restored. Promotion is a label repoint, not a rebuild -- so rollback is a repoint too, and both are the same record shape with a different direction. Every field except the timestamps is a pointer: a promotion that cannot name the run justifying it is not a promotion, it is an assertion.",
+  "type": "object",
+  "required": [
+    "promotion_id", "kind", "configuration_id", "eval_run_id",
+    "baseline_id", "comparison_id", "promoted_at", "promoted_by", "conditions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "promotion_id": { "type": "string", "minLength": 1 },
+    "kind": {
+      "enum": ["promote", "rollback"],
+      "description": "rollback carries the same evidence pointers as the promotion it reverses, so the record says what was believed at the time rather than erasing it."
+    },
+    "configuration_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "eval_run_id": { "type": "string", "minLength": 1 },
+    "baseline_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The baseline the candidate was measured against. Must be on the benchmark lineage; a development baseline may not certify anything."
+    },
+    "comparison_id": { "type": "string", "minLength": 1 },
+    "supersedes": {
+      "type": ["string", "null"],
+      "description": "The promotion this one replaces. Written forward, on the NEW record, because evidence is immutable and the old record cannot be edited to point at its successor."
+    },
+    "promoted_at": { "type": "string", "minLength": 1 },
+    "promoted_by": { "type": "string", "minLength": 1 },
+    "conditions": {
+      "description": "The five conditions, each recorded with its verdict and the reason. A promotion stores why it was allowed, not merely that it was: a conjunction whose satisfied terms are not written down degrades into a rubber stamp the first time one of them silently stops being checked.",
+      "type": "object",
+      "required": ["significance", "no_regression", "within_budget", "judge_calibration", "detector_equalization"],
+      "additionalProperties": false,
+      "properties": {
+        "significance": { "$ref": "#/definitions/condition" },
+        "no_regression": { "$ref": "#/definitions/condition" },
+        "within_budget": { "$ref": "#/definitions/condition" },
+        "judge_calibration": { "$ref": "#/definitions/condition" },
+        "detector_equalization": { "$ref": "#/definitions/condition" }
+      }
+    }
+  },
+  "definitions": {
+    "condition": {
+      "type": "object",
+      "required": ["held", "detail"],
+      "additionalProperties": false,
+      "properties": {
+        "held": { "type": "boolean" },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why it held or did not. Required in both directions -- 'why it was allowed' is as auditable as 'why it was refused'."
+        }
+      }
+    }
+  }
+}

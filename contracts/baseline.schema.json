@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/baseline/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/baseline/2.0.0",
   "title": "Baseline",
   "description": "A frozen reference a candidate is measured against, held on a lineage separate from the one being changed. A baseline that drifts with the working branch is not a baseline: benchmark campaigns run on frozen seeds while development continues elsewhere.",
   "type": "object",
@@ -13,11 +13,11 @@
     "frozen_at": { "type": "string", "minLength": 1 },
     "lineage": {
       "enum": ["benchmark", "development"],
-      "description": "benchmark is frozen and may certify a promotion. development may not — an optimizer must never be able to promote its own candidate."
+      "description": "benchmark is frozen and may certify a promotion. development may not -- an optimizer must never be able to promote its own candidate."
     },
-    "superseded_by": {
+    "supersedes": {
       "type": ["string", "null"],
-      "description": "Set when a later baseline replaces this one. Baselines are append-only; superseding is recorded, never overwritten."
+      "description": "The baseline this one replaces, written FORWARD on the new record. 1.0.0 had superseded_by, a backward pointer, whose own description promised baselines are append-only and never overwritten -- while setting it required overwriting the record it lived on. The evidence plane has no update method, so that field could never be written after creation and the lineage it described could never be built. Reading a chain now means walking supersedes backwards from the newest record, which is a query rather than a mutation."
     }
   }
 }

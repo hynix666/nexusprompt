@@ -1,0 +1,33 @@
+{
+  "_comment": [
+    "Suites too small for the exact test to ever produce a significant comparison.",
+    "",
+    "Read by scripts/check-sizing.ts. Under McNemar the statistic is binomial(d, 0.5) over",
+    "the d discordant units, so the smallest two-sided p-value any arrangement can reach is",
+    "2 * 0.5^d. At alpha 0.05 that clears only from six units upward. A suite with fewer",
+    "cases than that cannot reject, whatever its outcomes are.",
+    "",
+    "Such a suite is not necessarily wrong -- a five-case gate suite is a perfectly good",
+    "gate. What is wrong is leaving the fact unrecorded, because the comparator's",
+    "'inconclusive' then means two different things in the same report: 'we looked and saw",
+    "no difference' and 'we could not have seen one'.",
+    "",
+    "Two rules, matching divergence-allowlist.json and catalog-known-defects.json:",
+    "  - an entry with no reason, or whose pinned case count no longer matches, fails;",
+    "  - an entry for a suite that has since grown to or past the floor is STALE and fails,",
+    "    so an acknowledgment cannot outlive the defect it records.",
+    "",
+    "An anchor suite may never appear here. An anchor exists to certify a promotion, and one",
+    "that cannot attain significance certifies nothing -- check:sizing refuses to accept an",
+    "acknowledgment for it."
+  ],
+  "acknowledged": [
+    {
+      "suite_id": "pipeline-smoke",
+      "cases": 5,
+      "reason": "Five cases, below the floor of six, so no comparison run on this suite can ever be significant at alpha 0.05. That is acceptable for what it is: pipeline-smoke exists to gate pipeline SHAPE -- depth plans, skips, partial degradation, the gate-feedback loop -- where each case is a pass/fail assertion read on its own, not a sample contributing to a rate. It was built in Phase gamma to close the gap that no suite could observe runPipeline at all, and it closed it. Growing it to six purely to clear the floor would add a case to satisfy a statistic rather than to ask a question. The comparator now refuses rather than reporting 'inconclusive' on it, which is the outcome this entry exists to make legible.",
+      "recorded": "2026-08-22",
+      "closes_when": "the suite reaches six cases because six pipeline behaviours are worth asserting, at which point this entry fails as stale and must be removed"
+    }
+  ]
+}

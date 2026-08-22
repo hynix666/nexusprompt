@@ -291,15 +291,65 @@ describe("compare", () => {
   });
 
   it("returns inconclusive rather than rounding toward a decision", () => {
-    // One flip each way — a real difference in the score, no evidence behind it.
-    const r = compare({ ...base, candidate: outcomes("1100"), baseline: outcomes("1010") });
+    /**
+     * Four flips one way, three the other — a real difference in the score with no evidence
+     * behind it. Twelve cases rather than four: with four, the exact test's smallest
+     * attainable p is 0.125 and the comparison is refused for being unanswerable before the
+     * outcomes matter. Testing "inconclusive" needs a design that could have said otherwise.
+     */
+    const r = compare({ ...base, candidate: outcomes("000111110000"), baseline: outcomes("111100000000") });
     expect(r.verdict).toBe("inconclusive");
+    expect(r.protocol.discordant).toBe(7);
+    expect(r.protocol.attainable).toBe(true);
+    expect(r.refusal_reason).toContain("does not clear alpha");
   });
 
   it("returns inconclusive when the two runs agree on every case", () => {
-    const r = compare({ ...base, candidate: outcomes("1010"), baseline: outcomes("1010") });
+    const r = compare({ ...base, candidate: outcomes("10100100"), baseline: outcomes("10100100") });
     expect(r.verdict).toBe("inconclusive");
     expect(r.refusal_reason).toContain("agree on every case");
+  });
+
+  it("names an underpowered result as such, not as an absence of difference", () => {
+    /**
+     * Eight cases, disagreeing on two. The design could have rejected — eight units clears
+     * the floor — but the two discordant units it actually produced bottom out at p = 0.5.
+     *
+     * Both of these are "inconclusive", and they mean opposite things: "we looked and the
+     * runs did not separate" versus "they did separate, and this test could not have called
+     * any such separation significant". Collapsing them is how a suite's weakness gets
+     * reported as a configuration's equivalence.
+     */
+    const r = compare({ ...base, candidate: outcomes("11000000"), baseline: outcomes("10100000") });
+    expect(r.verdict).toBe("inconclusive");
+    expect(r.protocol.discordant).toBe(2);
+    expect(r.protocol.attainable).toBe(false);
+    expect(r.refusal_reason).toContain("could not have called any such difference");
+    expect(r.refusal_reason).not.toContain("does not clear alpha");
+  });
+
+  it("refuses a suite too small for the exact test to ever reject", () => {
+    /**
+     * The floor is a property of the design, not of the data. Under McNemar the statistic is
+     * binomial(d, 0.5), so d discordant units bottom out at 2 * 0.5^d; five of them reach
+     * 0.0625 and stop. A four-case suite cannot produce a significant result whatever the
+     * outcomes are, and saying "inconclusive" would credit it with a look it never took.
+     *
+     * `eval/compile-smoke.json` has carried the sentence "resolving a difference takes six
+     * flips, not one" in its comment block since it was written. This is that sentence, as code.
+     */
+    const r = compare({ ...base, candidate: outcomes("1111"), baseline: outcomes("0000") });
+    expect(r.verdict).toBe("refused");
+    expect(r.refusal_reason).toContain("No outcome this comparison could produce");
+    expect(r.delta).toBeNull();
+  });
+
+  it("reports the discordant count and the design floor on every comparison", () => {
+    const r = compare({ ...base, candidate: outcomes("111111111111"), baseline: outcomes("000000000000") });
+    // 12 discordant units: the exact sample size of the test, not the 12 cases by coincidence.
+    expect(r.protocol.discordant).toBe(12);
+    expect(r.protocol.min_attainable_p).toBeCloseTo(2 * Math.pow(0.5, 12), 12);
+    expect(r.protocol.attainable).toBe(true);
   });
 
   it("returns inconclusive when the delta is below the suite's declared resolution", () => {
@@ -311,15 +361,40 @@ describe("compare", () => {
   });
 
   it("corrects alpha for multiplicity, so an optimizer cannot win by volume", () => {
-    // The same evidence that clears a standalone comparison must not clear one of 100.
-    const evidence = { candidate: outcomes("11111111111"), baseline: outcomes("00000000000") };
+    /**
+     * The same evidence that clears a standalone comparison must not clear one of 100.
+     * Fourteen cases split 12 up / 2 down: p = 0.0129, which clears 0.05 alone and not the
+     * corrected 0.0005 — while leaving the design capable at both, so the verdict turns on
+     * the evidence rather than on the suite's size.
+     */
+    const evidence = { candidate: outcomes("11111111111100"), baseline: outcomes("00000000000011") };
     const alone = compare({ ...base, ...evidence });
     const inFamily = compare({ ...base, ...evidence, comparisons_in_family: 100 });
 
     expect(alone.verdict).toBe("improved");
     expect(inFamily.verdict).toBe("inconclusive");
+    expect(inFamily.protocol.attainable).toBe(true);
     expect(inFamily.protocol.correction).toBe("bonferroni");
     expect(inFamily.protocol.alpha).toBeCloseTo(0.0005, 6);
+  });
+
+  it("refuses when multiplicity correction pushes the floor past the suite size", () => {
+    /**
+     * Correction does not merely raise the bar, it can move it out of the suite's reach.
+     * At alpha 0.0005 the exact test needs twelve discordant units before any arrangement
+     * clears it; an eleven-case suite has eleven. Running a hundred comparisons against a
+     * suite this size is not a stricter search, it is a search that cannot return anything —
+     * and reporting a hundred "inconclusive" verdicts would look like a hundred honest looks.
+     */
+    const r = compare({
+      ...base,
+      candidate: outcomes("11111111111"),
+      baseline: outcomes("00000000000"),
+      comparisons_in_family: 100,
+    });
+    expect(r.verdict).toBe("refused");
+    expect(r.refusal_reason).toContain("11 independent unit(s)");
+    expect(r.refusal_reason).toContain("at least 12");
   });
 
   it("defaults to bonferroni whenever a family is declared", () => {
@@ -666,15 +741,29 @@ describe("perturbations", () => {
 /* ── clustered significance ────────────────────────────────────────────────── */
 
 /** Four briefs, five rows each: one base plus four preserving variants. Four clusters, 20 rows. */
-function clusteredOutcomes(flippedClusters: number): { candidate: CaseOutcome[]; baseline: CaseOutcome[] } {
+/**
+ * Briefs observed through five perturbation variants each.
+ *
+ * `regressedClusters` exists because a fixture in which every discordant cluster points the
+ * same way cannot separate "significant" from "the most extreme result this design admits".
+ * With d one-directional signs the exact p IS the design floor, 2 * 0.5^d — so a test built
+ * that way asserts a number the fixture could not have failed to produce.
+ */
+function clusteredOutcomes(
+  flippedClusters: number,
+  totalClusters = 4,
+  regressedClusters = 0,
+): { candidate: CaseOutcome[]; baseline: CaseOutcome[] } {
   const candidate: CaseOutcome[] = [];
   const baseline: CaseOutcome[] = [];
-  for (let cluster = 0; cluster < 4; cluster++) {
+  for (let cluster = 0; cluster < totalClusters; cluster++) {
+    const improves = cluster < flippedClusters;
+    const regresses = cluster >= flippedClusters && cluster < flippedClusters + regressedClusters;
     for (let v = 0; v < 5; v++) {
       const case_id = `brief-${cluster}::v${v}`;
       const cluster_id = `brief-${cluster}`;
-      baseline.push({ case_id, cluster_id, passed: false });
-      candidate.push({ case_id, cluster_id, passed: cluster < flippedClusters });
+      baseline.push({ case_id, cluster_id, passed: regresses });
+      candidate.push({ case_id, cluster_id, passed: improves });
     }
   }
   return { candidate, baseline };
@@ -770,8 +859,15 @@ describe("significance protocol is checked against the data's structure", () => 
     detectors: [{ detector_id: "output-nonempty", substrates: 4, probes_run: 4, probes_detected: 4, recall: 1 }],
   };
 
+  /**
+   * Eight briefs, six improved and two regressed, five variants each.
+   *
+   * Eight rather than four: the exact test needs six discordant units before ANY arrangement
+   * clears 0.05, so a four-brief fixture is refused as unanswerable and the clustered path is
+   * never reached. Six-and-two rather than six-and-zero for the reason in `clusteredOutcomes`.
+   */
   const input = (protocol: "exact-mcnemar" | "clustered-paired" | "bootstrap-ci", clustered: boolean) => {
-    const { candidate, baseline } = clusteredOutcomes(3);
+    const { candidate, baseline } = clusteredOutcomes(6, 8, 2);
     const strip = (rows: CaseOutcome[]) =>
       clustered ? rows : rows.map(({ case_id, passed }) => ({ case_id, passed }));
     return {
@@ -809,23 +905,52 @@ describe("significance protocol is checked against the data's structure", () => 
     const r = compare(input("clustered-paired", true));
     expect(r.verdict).not.toBe("refused");
     expect(r.protocol.test).toBe("clustered-paired");
-    // Four independent questions behind the verdict, not twenty rows.
-    expect(r.protocol.effective_n).toBe(4);
+    // Eight independent questions behind the verdict, not forty rows.
+    expect(r.protocol.effective_n).toBe(8);
+    expect(r.protocol.discordant).toBe(8);
   });
 
   it("reaches the opposite verdict from the naive test on identical data", () => {
     /**
-     * The whole point, end to end. Twenty rows over four briefs, three of which improved.
+     * The whole point, end to end. Forty rows over eight briefs, six improved and two worse.
      *
-     * Declared as unclustered, the comparator sees fifteen one-directional flips and reports
-     * an improvement. Declared honestly, it sees three improved questions out of four and
-     * declines to call it. Same outcomes, same code, opposite conclusions — and the second
-     * is the correct one.
+     * Declared as unclustered, the comparator sees forty rows with thirty flips one way and
+     * ten the other, and reports a decisive improvement. Declared honestly, it sees six
+     * improved questions out of eight — p = 0.289 — and declines to call it. Same outcomes,
+     * same code, opposite conclusions, and the second is the correct one.
      */
     const naive = compare(input("exact-mcnemar", false));
     const honest = compare(input("clustered-paired", true));
     expect(naive.verdict).toBe("improved");
     expect(honest.verdict).toBe("inconclusive");
+  });
+
+  it("refuses on CLUSTERS below the floor even when rows are far above it", () => {
+    /**
+     * The distinction the whole clustering argument rests on, at the level of the floor.
+     *
+     * Four briefs perturbed five ways is twenty rows and four questions. Twenty rows clears
+     * the six-unit floor comfortably; four questions does not. Counting rows here would
+     * restore exactly the anticonservatism clustering exists to remove — the design would be
+     * declared capable on the strength of repeated looks at the same four questions.
+     *
+     * This is Phase δ's fixture, and its result is now sharper than Phase δ recorded. That
+     * run reported p = 0.25 for the clustered analysis and called it inconclusive; 0.25 is
+     * precisely `minAttainableP(3)`, the smallest value a three-discordant design can
+     * produce. The comparator was reporting the floor of its own range as a measurement.
+     */
+    const { candidate, baseline } = clusteredOutcomes(3);
+    const r = compare({
+      comparison_id: "cmp-1", candidate_run_id: "run-c", baseline_id: "run-b",
+      candidate, baseline,
+      suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 }, significance_protocol: "clustered-paired" },
+      comparisons_in_family: 1, alpha: 0.05,
+      candidateRecall: recall, baselineRecall: recall, suiteDetectorIds: ["output-nonempty"],
+    });
+    expect(candidate).toHaveLength(20);
+    expect(r.verdict).toBe("refused");
+    expect(r.refusal_reason).toContain("4 independent unit(s)");
+    expect(r.refusal_reason).toContain("at least 6");
   });
 
   it("refuses bootstrap-ci rather than silently substituting a binary test", () => {

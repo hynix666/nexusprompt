@@ -45,6 +45,20 @@ export interface Calibration {
   threshold: number;
   measured_at: string;
   reference: string;
+  /**
+   * How long this calibration stays evidence, in days.
+   *
+   * Staleness relative to the judge's contract was the only rule until now, and it misses the
+   * commonest case entirely: a judge whose model id, rubric and template never changed, whose
+   * calibration is nonetheless eight months old. Reported practice is that judges drift within
+   * 60-90 days as the production distribution moves under them, and that re-calibration is a
+   * monthly cadence rather than an event triggered by an edit.
+   *
+   * Required, and deliberately not defaulted. A default here would be a cadence nobody chose,
+   * inherited silently by every rubric — the same failure as `Budget.on_exceed`, where both
+   * behaviours are defensible and picking one for the caller is the bug.
+   */
+  max_age_days: number;
 }
 
 export interface JudgeAdmission {
@@ -57,6 +71,7 @@ export interface JudgeAdmission {
     | "verifier-checkable"
     | "no-calibration"
     | "stale-calibration"
+    | "expired-calibration"
     | "below-threshold"
     | "uncorrected-agreement";
 }
@@ -76,8 +91,17 @@ export function admitJudge(input: {
   /** The technique class of the case. Verifier-checkable cases must never reach a judge. */
   verification_status: VerificationStatus;
   calibration?: Calibration | null;
+  /**
+   * The moment to judge staleness against, as an ISO date.
+   *
+   * Passed in rather than read: Core may not touch the clock (ADR-0001), and a purity harness
+   * that traps `Date.now` would catch it if it tried. Cadence is therefore something the
+   * Application supplies, which is also what makes "was this admissible last Tuesday?"
+   * answerable from stored evidence.
+   */
+  now: string;
 }): JudgeAdmission {
-  const { judge, candidate_family, verification_status, calibration } = input;
+  const { judge, candidate_family, verification_status, calibration, now } = input;
 
   if (judge.judge_family === candidate_family) {
     return {
@@ -123,6 +147,23 @@ export function admitJudge(input: {
     };
   }
 
+  /**
+   * A calibration older than its declared cadence describes a judge that may still be running
+   * and may no longer behave the way it was measured. Unlike the contract check above, nothing
+   * has to have CHANGED for this to fire — the point is that drift needs no edit to happen.
+   */
+  const ageDays = (Date.parse(now) - Date.parse(calibration.measured_at)) / 86_400_000;
+  if (Number.isFinite(ageDays) && ageDays > calibration.max_age_days) {
+    return {
+      admit: false,
+      code: "expired-calibration",
+      reason:
+        `calibration is ${Math.floor(ageDays)} days old against a declared cadence of ` +
+        `${calibration.max_age_days} — the judge contract has not changed, but a judge drifts ` +
+        `without being edited as the distribution under it moves`,
+    };
+  }
+
   if (calibration.value < calibration.threshold) {
     return {
       admit: false,
@@ -132,7 +173,13 @@ export function admitJudge(input: {
     };
   }
 
-  return { admit: true, code: "ok", reason: `calibrated ${calibration.metric} ${calibration.value}` };
+  return {
+    admit: true,
+    code: "ok",
+    reason:
+      `calibrated ${calibration.metric} ${calibration.value}, measured ${calibration.measured_at} ` +
+      `(${Math.max(0, Math.floor(ageDays))}d old, cadence ${calibration.max_age_days}d)`,
+  };
 }
 
 /**

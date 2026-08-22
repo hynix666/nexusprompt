@@ -23,7 +23,10 @@ import { runGates } from "../core/src/gates/registry.js";
 import { listTechniques } from "../core/src/catalog/registry.js";
 import { runSuite, configurationId } from "../application/src/eval.js";
 import { compare } from "../core/src/eval/compare.js";
+import { LocalEvidenceStore } from "../adapters/evidence-local/src/index.js";
+import { freezeBaseline, promote } from "../application/src/release.js";
 import type {
+  EvalRun,
   GenerationRequest,
   ObservabilityEvent,
   PipelineCommand,
@@ -78,6 +81,8 @@ const validators: Record<string, ValidateFunction> = {
   "eval-run": ajv.compile(load("eval-run")),
   "comparison": ajv.compile(load("comparison")),
   "judge-verdict": ajv.compile(load("judge-verdict")),
+  "baseline": ajv.compile(load("baseline")),
+  "promotion": ajv.compile(load("promotion")),
 };
 
 const report = (v: ValidateFunction, value: unknown) => {
@@ -466,8 +471,12 @@ describe("evaluation plane, against values the suite actually produced", () => {
       comparison_id: "cmp-1",
       candidate_run_id: "a",
       baseline_id: "b",
-      candidate: [{ case_id: "c0", passed: true }, { case_id: "c1", passed: true }],
-      baseline: [{ case_id: "c0", passed: true }, { case_id: "c1", passed: false }],
+      // Eight cases, disagreeing on one. Two would be refused outright: the exact test needs
+      // six discordant units before any arrangement clears 0.05, so a two-case comparison is
+      // unanswerable rather than inconclusive, and this case exists to keep INCONCLUSIVE
+      // reachable in the schema.
+      candidate: Array.from({ length: 8 }, (_, i) => ({ case_id: `c${i}`, passed: true })),
+      baseline: Array.from({ length: 8 }, (_, i) => ({ case_id: `c${i}`, passed: i !== 1 })),
       suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const },
       comparisons_in_family: 1,
       alpha: 0.05,
@@ -525,8 +534,9 @@ describe("evaluation plane, against values the suite actually produced", () => {
       calibration: {
         metric: "cohens-kappa", value: 0.82, threshold: 0.6,
         measured_at: "2026-08-20T00:00:00.000Z", reference: "gold-set-v1",
+        max_age_days: 30,
       },
-    }, "2026-08-19T00:00:00.000Z");
+    }, "2026-08-19T00:00:00.000Z", "2026-08-22T00:00:00.000Z");
 
     expect(report(validators["judge-verdict"], verdict)).toBe(true);
     expect(verdict.judge_family).not.toBe("family-under-test");
@@ -650,5 +660,126 @@ describe("schema coverage", () => {
     const v = ajv.compile({ type: "object", required: ["x"] });
     expect(v({})).toBe(false);
     expect(v({ x: 1 })).toBe(true);
+  });
+});
+
+/**
+ * The release plane, against records the promotion path actually wrote.
+ *
+ * `baseline` was the last entry in `contracts/pending-implementation.json`, carried since the
+ * schema landed as "written by the release pipeline when a run is promoted... but no promotion
+ * path exists and none should until an anchor suite does." The path exists now. The exemption
+ * is removed and both schemas are held to the same standard as every other here: a value the
+ * running system produced, validated, plus a broken one that must be rejected.
+ *
+ * Landing `baseline` before its producer worked exactly as ADR-0002 intends — and it also
+ * surfaced the defect that `superseded_by` could never be written, which is the kind of thing
+ * only found by trying to write one.
+ */
+describe("release plane, against records the promotion path wrote", () => {
+  const CONFIG_ID = "b".repeat(64);
+  const AT = "2026-08-22T12:00:00.000Z";
+  let releaseSeq = 0;
+
+  const evalRun = (id: string, passed: number): EvalRun => ({
+    run_id: id,
+    configuration_id: CONFIG_ID,
+    suite_id: "compile-smoke",
+    suite_version: "2.0.0",
+    aggregate: { cases: 14, passed, score: passed / 14 },
+    cost: { tokens_in: 10, tokens_out: 5, provider_calls: 14, cache_hits: 0, usd: 0.01, budget_exceeded: false },
+    provenance: { source: "contract conformance" },
+  });
+
+  const seeded = async () => {
+    // Under the suite's own temp root, which afterAll already removes. A unique subdirectory
+    // per call because the evidence plane refuses a second write under the same id, and two
+    // of these cases deliberately promote the same promotion_id.
+    const dir = join(root, `release-${releaseSeq++}`);
+    const store = new LocalEvidenceStore(dir);
+    await store.put({ kind: "eval-run", id: "run-c", created_at: AT, body: evalRun("run-c", 13) });
+    await store.put({ kind: "eval-run", id: "run-b", created_at: AT, body: evalRun("run-b", 8) });
+    await store.put({
+      kind: "comparison", id: "cmp", created_at: AT,
+      body: {
+        comparison_id: "cmp", candidate_run_id: "run-c", baseline_id: "base", verdict: "improved",
+        refusal_reason: null, delta: 5 / 14,
+        protocol: {
+          test: "mcnemar", trials: 1, alpha: 0.05, comparisons_in_family: 1, correction: "none",
+          p_value: 0.0009, effective_n: 14, discordant: 10, min_attainable_p: 2 * 0.5 ** 10, attainable: true,
+        },
+        equalization: {
+          equalized: true, max_gap: 0, gap_bound: 1 / 14, effective_recall: 1,
+          adjusted_resolution: 1 / 14, per_detector: [],
+        },
+      },
+    });
+    return store;
+  };
+
+  it("baseline validates a record freezeBaseline wrote", async () => {
+    const store = await seeded();
+    const baseline = await freezeBaseline(store, {
+      baseline_id: "base", run_id: "run-b", lineage: "benchmark", frozen_at: AT,
+    });
+    expect(report(validators["baseline"], baseline)).toBe(true);
+    // The configuration id is copied off the run rather than supplied, so a baseline cannot
+    // name a configuration that never produced it.
+    expect(baseline.configuration_id).toBe(CONFIG_ID);
+  });
+
+  it("rejects a baseline carrying 1.0.0's superseded_by", () => {
+    /**
+     * The field 2.0.0 removed. It could never be written: setting it means editing an
+     * existing record, and the evidence plane has no update — its own description promised
+     * baselines are "append-only; superseding is recorded, never overwritten" while being
+     * the one field that required overwriting.
+     */
+    const legacy = {
+      baseline_id: "base", configuration_id: CONFIG_ID, run_id: "run-b",
+      frozen_at: AT, lineage: "benchmark", superseded_by: "base-0",
+    };
+    expect(validators["baseline"](legacy)).toBe(false);
+  });
+
+  it("promotion validates a record the gate produced", async () => {
+    const store = await seeded();
+    await freezeBaseline(store, { baseline_id: "base", run_id: "run-b", lineage: "benchmark", frozen_at: AT });
+    const { promotion } = await promote(store, {
+      promotion_id: "promo", run_id: "run-c", baseline_id: "base", comparison_id: "cmp",
+      promoted_at: AT, promoted_by: "contract-conformance", suiteGranularity: 1 / 14,
+    });
+    expect(promotion).not.toBeNull();
+    expect(report(validators["promotion"], promotion)).toBe(true);
+    // Every one of the five is on the record, with a reason, in the affirmative direction.
+    for (const c of Object.values(promotion!.conditions)) {
+      expect(c.held).toBe(true);
+      expect(typeof c.detail).toBe("string");
+    }
+  });
+
+  it("rejects a promotion whose conditions omit one of the five", async () => {
+    const store = await seeded();
+    await freezeBaseline(store, { baseline_id: "base", run_id: "run-b", lineage: "benchmark", frozen_at: AT });
+    const { promotion } = await promote(store, {
+      promotion_id: "promo", run_id: "run-c", baseline_id: "base", comparison_id: "cmp",
+      promoted_at: AT, promoted_by: "contract-conformance", suiteGranularity: 1 / 14,
+    });
+    const partial = JSON.parse(JSON.stringify(promotion)) as Record<string, Record<string, unknown>>;
+    delete partial.conditions.detector_equalization;
+    // A conjunction missing a term is not a weaker promotion, it is an unreadable one.
+    expect(validators["promotion"](partial)).toBe(false);
+  });
+
+  it("rejects a condition recorded without a reason", async () => {
+    const store = await seeded();
+    await freezeBaseline(store, { baseline_id: "base", run_id: "run-b", lineage: "benchmark", frozen_at: AT });
+    const { promotion } = await promote(store, {
+      promotion_id: "promo", run_id: "run-c", baseline_id: "base", comparison_id: "cmp",
+      promoted_at: AT, promoted_by: "contract-conformance", suiteGranularity: 1 / 14,
+    });
+    const bare = JSON.parse(JSON.stringify(promotion)) as Record<string, Record<string, Record<string, unknown>>>;
+    bare.conditions.within_budget = { held: true };
+    expect(validators["promotion"](bare)).toBe(false);
   });
 });

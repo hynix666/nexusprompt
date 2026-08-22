@@ -81,7 +81,13 @@ export class GuardedJudge {
    * nullable result would silently record "no verdict" as "no problem", and this is the one
    * place in the evaluation plane where a missing check produces a confident wrong number.
    */
-  async grade(req: GradeRequest, contract_changed_at: string): Promise<JudgeVerdict> {
+  /**
+   * `now` is supplied by the caller, never read here, so that calibration staleness is
+   * decided by a value the Application owns. Core cannot touch the clock and this class
+   * sits above it, but taking the timestamp as an argument is also what makes a stored
+   * verdict re-checkable: "was this admissible when it was produced?" has an answer.
+   */
+  async grade(req: GradeRequest, contract_changed_at: string, now: string): Promise<JudgeVerdict> {
     const identity: JudgeIdentity = {
       judge_id: this.inner.judge_id,
       judge_family: this.inner.judge_family,
@@ -95,6 +101,7 @@ export class GuardedJudge {
       candidate_family: req.candidate_family,
       verification_status: req.verification_status,
       calibration: req.calibration,
+      now,
     });
     if (!admission.admit) {
       throw new JudgeRefused(admission.code, `Judge refused (${admission.code}): ${admission.reason}`);

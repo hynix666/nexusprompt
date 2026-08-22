@@ -13,6 +13,7 @@ import { checkStages } from "../scripts/check-stages.mjs";
 import { checkCorpus, buildManifest } from "../scripts/check-corpus.mjs";
 import { checkCounts } from "../scripts/check-counts.mjs";
 import { checkFingerprint } from "../scripts/check-fingerprint.mjs";
+import { collect, render } from "../scripts/generate-capability-matrix.mjs";
 
 /**
  * Must-fire cases for the three checker scripts.
@@ -1072,5 +1073,85 @@ describe("check-depth-budget prices gate-feedback rounds", () => {
       end_to_end_target: 0.9, per_stage_floor: 0.995, max_feedback_rounds: -1,
     }));
     expect(checkDepthBudget(root).fatalCode).toBe(2);
+  });
+});
+/* ── docs:matrix ──────────────────────────────────────────────────────────── */
+
+/**
+ * A fixture repository with THREE schemas, only two of which the conformance suite covers.
+ *
+ * The real tree has every schema covered, which is why a probe that replaced the derived
+ * `validated` flag with a hard-coded `true` survived: with nothing uncovered, "always
+ * covered" is indistinguishable from "correctly covered". This is the fourth time in this
+ * project a fixture has been found too uniform to discriminate, and the fix is the same each
+ * time — make the fixture contain the case the guard exists to catch.
+ */
+function matrixRepo(): string {
+  const root = mkroot("pnx-matrix-");
+  const schema = (name: string, version: string) =>
+    write(root, `contracts/${name}.schema.json`, JSON.stringify({
+      $id: `https://promptnexus.dev/contracts/${name}/${version}`,
+      title: name,
+      type: "object",
+    }));
+  schema("covered-one", "1.0.0");
+  schema("covered-two", "2.1.0");
+  schema("orphan", "1.0.0");
+
+  write(root, "contracts/pending-implementation.json", JSON.stringify({ pending: [] }));
+  write(root, "test/contract-conformance.test.ts", [
+    'expect(report(validators["covered-one"], v)).toBe(true);',
+    'expect(report(validators["covered-two"], v)).toBe(true);',
+  ].join("\n"));
+  write(root, "adapters/storage-local/package.json", "{}");
+  write(root, "adapters/evidence-local/package.json", "{}");
+  return root;
+}
+
+describe("docs:matrix", () => {
+  it("derives coverage from the conformance suite rather than asserting it", () => {
+    const state = collect(matrixRepo());
+    const byName = Object.fromEntries(state.schemas.map((s) => [s.name, s]));
+    expect(byName["covered-one"].validated).toBe(true);
+    expect(byName["covered-two"].validated).toBe(true);
+    // The one the suite never mentions. A generator that hard-coded coverage would say true.
+    expect(byName["orphan"].validated).toBe(false);
+  });
+
+  it("renders an uncovered schema loudly, not as a blank cell", () => {
+    const md = render(collect(matrixRepo()));
+    expect(md).toContain("**UNCOVERED**");
+    expect(md).toContain("**2 of 3** schemas are validated");
+  });
+
+  it("reads each schema's version from its own $id", () => {
+    const md = render(collect(matrixRepo()));
+    expect(md).toContain("| `covered-two` | 2.1.0 |");
+  });
+
+  it("counts adapters from the tree", () => {
+    const state = collect(matrixRepo());
+    expect(state.adapters).toEqual(["evidence-local", "storage-local"]);
+  });
+
+  it("reports an empty evidence plane as zero, and says what zero means", () => {
+    const md = render(collect(matrixRepo()));
+    expect(md).toContain("| `promotion` | 0 |");
+    expect(md).toContain("No promotion has ever been recorded");
+  });
+
+  it("counts evidence records that are actually on disk", () => {
+    const root = matrixRepo();
+    write(root, ".promptnexus/evidence/promotion/p1.json", "{}");
+    write(root, ".promptnexus/evidence/eval-run/r1.json", "{}");
+    write(root, ".promptnexus/evidence/eval-run/r2.json", "{}");
+    const state = collect(root);
+    expect(state.evidence.promotion).toBe(1);
+    expect(state.evidence["eval-run"]).toBe(2);
+    expect(render(state)).not.toContain("No promotion has ever been recorded");
+  });
+
+  it("marks the output as generated, so a hand-editor is warned before the build is", () => {
+    expect(render(collect(matrixRepo()))).toContain("GENERATED FILE — do not edit by hand");
   });
 });

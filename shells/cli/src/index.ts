@@ -17,7 +17,8 @@
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { lint, listPortedGates, worstVerdict } from "../../../application/src/lint.js";
-import { composeOrchestrator, composePipeline } from "./composition-root.js";
+import { composeEvidence, composeOrchestrator, composePipeline } from "./composition-root.js";
+import { current } from "../../../application/src/release.js";
 import { runPipeline } from "../../../application/src/pipeline.js";
 import type { ObservabilityEvent, PipelineCommand } from "../../../contracts/index.js";
 
@@ -30,6 +31,45 @@ const C = {
 };
 
 const paint = (v: string) => (v === "PASS" ? C.pass(v) : v === "WARN" ? C.warn(v) : C.fail(v));
+
+/**
+ * What the evidence plane holds, and what is currently promoted.
+ *
+ * Reports zero as zero. "No promotion has ever been recorded" is a true and useful thing for
+ * this command to say — the release gate exists and is tested against each of its five
+ * conditions, and it has never been run against a real evaluation because no run here has
+ * ever reached a provider. A command that hid that behind an empty table would be the same
+ * mistake `CAPABILITY_MATRIX.md` made for months.
+ */
+async function cmdEvidence(): Promise<number> {
+  const store = composeEvidence({ sink: { emit() {} } });
+  const kinds = ["eval-run", "comparison", "baseline", "promotion"] as const;
+
+  console.log("evidence plane\n");
+  let total = 0;
+  for (const kind of kinds) {
+    const rows = await store.list(kind);
+    total += rows.length;
+    console.log(`  ${kind.padEnd(12)} ${String(rows.length).padStart(4)}`);
+    for (const r of rows.slice(0, 5)) console.log(`      ${C.dim(r.created_at)}  ${r.id}`);
+    if (rows.length > 5) console.log(`      ${C.dim(`... and ${rows.length - 5} more`)}`);
+  }
+
+  const now = await current(store);
+  console.log(
+    now === null
+      ? "\n  current: nothing has ever been promoted."
+      : `\n  current: ${now.configuration_id.slice(0, 12)} via ${now.promotion_id} (${now.kind}), ` +
+        `run ${now.eval_run_id}, comparison ${now.comparison_id}`,
+  );
+  if (total === 0) {
+    console.log(
+      "\n  The plane is empty. The release gate is built and tested; it has never been run\n" +
+      "  against a real evaluation, because no run here has reached a provider.",
+    );
+  }
+  return 0;
+}
 
 async function cmdLint(file: string): Promise<number> {
   const text = await readFile(file, "utf8");
@@ -193,6 +233,9 @@ async function main(): Promise<void> {
   if (cmd === "pipeline" && argv[1] && !argv[1].startsWith("--")) {
     process.exit(await cmdPipeline(argv[1], argv));
   }
+  if (cmd === "evidence") {
+    process.exit(await cmdEvidence());
+  }
   if (cmd === "gates") {
     for (const g of listPortedGates()) console.log(`  ${g.id}  ${C.dim(g.version)}`);
     process.exit(0);
@@ -203,6 +246,7 @@ async function main(): Promise<void> {
   promptnexus run --stage compile <f>  run one pipeline stage end to end
   promptnexus pipeline <file>          run the full pipeline over a brief
   promptnexus gates                    list registered gates
+  promptnexus evidence                 what the evidence plane holds, and what is current
 
 pipeline options:
   --stakes LOW|MEDIUM|HIGH|SAFETY-CRITICAL   selects depth (default MEDIUM)

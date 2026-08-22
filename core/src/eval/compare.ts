@@ -20,6 +20,7 @@
  */
 
 import type { Comparison, EvalSuite, DetectorRecallBlock } from "../../../contracts/index.js";
+import { attainable, floorDiscordant, legacyAnchorSize, minAttainableP } from "./sizing.js";
 
 export interface CaseOutcome {
   case_id: string;
@@ -302,6 +303,35 @@ export function compare(input: CompareInput): Comparison {
     );
   }
 
+  /**
+   * Can this design produce a significant result AT ALL?
+   *
+   * Under McNemar the statistic is binomial(d, 0.5) over the d discordant units, so the
+   * smallest two-sided p-value any arrangement can reach is `2 * 0.5^d`. With fewer
+   * independent units than that floor requires, every possible outcome of this comparison is
+   * non-significant before a single case is scored.
+   *
+   * This is checked against the INDEPENDENT UNIT count, not the row count, which is why it
+   * sits after the clustering check: five briefs perturbed into twenty rows can still only
+   * ever contribute five signs, and clustering is precisely the thing that shrinks the
+   * number that matters here.
+   *
+   * Reported as a refusal rather than as `inconclusive` because the two mean opposite things
+   * to anyone reading the result. `inconclusive` says the evidence did not separate the
+   * configurations; this says no evidence could have. A promotion gate that cannot tell them
+   * apart will read "we could not have seen anything" as "we looked and saw nothing".
+   */
+  const floor = floorDiscordant(correctedAlpha);
+  if (clusters < floor) {
+    return refuse(
+      `this suite has ${clusters} independent unit(s); the exact two-sided test needs at least ` +
+      `${floor} discordant unit(s) to reach alpha=${correctedAlpha.toFixed(4)}, so its smallest ` +
+      `attainable p-value is ${minAttainableP(clusters).toFixed(4)}. No outcome this comparison ` +
+      `could produce would be significant. Reporting "inconclusive" here would credit the suite ` +
+      `with a look it never took.`,
+    );
+  }
+
   const candScore = paired.filter((o) => o.passed).length / paired.length;
   const baseScore = baseline.filter((o) => o.passed).length / baseline.length;
   const delta = candScore - baseScore;
@@ -338,6 +368,11 @@ export function compare(input: CompareInput): Comparison {
     p_value: p,
     /** The number of INDEPENDENT units the p-value rests on, which is not the case count. */
     effective_n: clusters,
+    /** The exact sample size of the test: concordant units carry no information. */
+    discordant,
+    /** Smallest p any arrangement of these discordant units could reach. Not observed power. */
+    min_attainable_p: minAttainableP(discordant),
+    attainable: attainable(discordant, correctedAlpha),
   };
 
   // A suite cannot evidence a difference it was never sized to see, and a blunter instrument
@@ -364,7 +399,12 @@ export function compare(input: CompareInput): Comparison {
       verdict: "inconclusive",
       refusal_reason: discordant === 0
         ? "no discordant pairs — the two runs agree on every case"
-        : `p=${p.toFixed(4)} does not clear alpha=${correctedAlpha.toFixed(4)}`,
+        : !attainable(discordant, correctedAlpha)
+          ? `only ${discordant} discordant unit(s), whose smallest attainable p is ` +
+            `${minAttainableP(discordant).toFixed(4)} — above alpha=${correctedAlpha.toFixed(4)}. ` +
+            `The two runs did differ; this test could not have called any such difference ` +
+            `significant, so this is a statement about the suite and not about the configurations.`
+          : `p=${p.toFixed(4)} does not clear alpha=${correctedAlpha.toFixed(4)}`,
       delta, protocol, equalization,
     };
   }
@@ -378,37 +418,19 @@ export function compare(input: CompareInput): Comparison {
 }
 
 /**
- * The anchor sizing rule, as a function rather than a remark: resolving a true gap of
- * `delta` at one-sided confidence `1 - epsilon` needs roughly z^2 / (2 delta^2) items.
- * At epsilon 0.05 and two percentage points that is about 3,400 — three orders of
- * magnitude above a suite that runs in seconds, which is why smoke and anchor are
- * different objects rather than the same one at different sizes.
+ * The anchor sizing rule, kept as a function and now honest about what it assumes.
+ *
+ * `n ≳ z² / (2Δ²)` is the conditional McNemar rule with power pinned at 50% and the
+ * discordance rate pinned at 50%, neither of which it states. At Δ = 0.02 it returns ≈3,400,
+ * which is the number three documents in this repository quote. The same target at 80% power
+ * needs ≈9,800.
+ *
+ * The implementation now lives in `sizing.ts` alongside the general form, so the two rules
+ * cannot drift apart and a caller can see which assumptions it is inheriting. Kept exported
+ * because the ≈3,400 figure is cited and a citation should resolve to running code.
+ *
+ * @deprecated Prefer `requiredPairedSize`, which takes power and discordance as arguments.
  */
 export function requiredAnchorSize(detectableDelta: number, confidence = 0.95): number {
-  const z = zOneSided(1 - confidence);
-  return Math.ceil((z * z) / (2 * detectableDelta * detectableDelta));
-}
-
-/** Inverse normal CDF (Acklam's rational approximation), one-sided upper tail. */
-function zOneSided(epsilon: number): number {
-  const p = 1 - epsilon;
-  const a = [-39.6968302866538, 220.946098424521, -275.928510446969, 138.357751867269, -30.6647980661472, 2.50662827745924];
-  const b = [-54.4760987982241, 161.585836858041, -155.698979859887, 66.8013118877197, -13.2806815528857];
-  const c = [-0.00778489400243029, -0.322396458041136, -2.40075827716184, -2.54973253934373, 4.37466414146497, 2.93816398269878];
-  const d = [0.00778469570904146, 0.32246712907004, 2.445134137143, 3.75440866190742];
-  const pl = 0.02425;
-  if (p < pl) {
-    const q = Math.sqrt(-2 * Math.log(p));
-    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-           ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
-  }
-  if (p > 1 - pl) {
-    const q = Math.sqrt(-2 * Math.log(1 - p));
-    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
-  }
-  const q = p - 0.5;
-  const r = q * q;
-  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
-         (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  return legacyAnchorSize(detectableDelta, confidence);
 }

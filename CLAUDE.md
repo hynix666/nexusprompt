@@ -52,12 +52,17 @@ Consequences worth knowing before proposing changes:
 - **Local storage retains run bundles, not entries.** Eight complete runs, kept or evicted whole. The source's entry-based cap of 8 could not hold a nine-stage run, and the pipeline has since grown to eleven — any entry-based bound is a hostage to stage count.
 - **`freshness` and `status` on a `RevisionEntry` are independent.** A revision can be `SUCCEEDED` and `STALE` simultaneously.
 - **Observability carries keyed hashes only.** No prompt bodies, ever — the sink rejects rather than truncates. Fingerprints are keyed because bare digests of short prompts are correlatable.
+- **`resolution.detectable_delta` is score granularity — `1/n` — not statistical resolution.** These are different floors and both are enforced. Granularity is declared on the suite and pinned by `check:sizing`; the statistical floor is *derived* by the comparator and never declared, because a declared one is exactly the number that drifted. The schema conflated them until `eval-suite` 2.0.1.
+- **Six discordant units is a hard floor, not a heuristic.** Under McNemar the statistic is binomial(d, 0.5), so `2·0.5^d` is the smallest two-sided p any arrangement can produce; five units bottom out at 0.0625. A suite below the floor gets `refused`, not `inconclusive` — "we could not have seen anything" and "we looked and saw nothing" must not collapse into one verdict. Multiplicity correction raises the floor, and can raise it past the suite's size.
+- **Sizing an anchor takes three arguments, not one.** `requiredAnchorSize` (deprecated, kept because three documents cite its ≈3,400) pins a one-sided z, 50% power, and a 50% discordance rate, and states none of them; the honest figure at 80% power is ≈9,800. Use `requiredPairedSize(delta, {alpha, power, discordanceRate})`.
+- **Promotion is a label repoint, so rollback is one too.** Same record, `kind: "rollback"`, carrying the pointers of the promotion it reverses. Rollback re-evaluates no conditions on purpose: a bad promotion must be undoable without first producing the evidence that would have prevented it.
+- **The evidence plane has no `update`, and that is load-bearing.** It is why `Baseline.supersedes` points *forward* from the new record (1.0.0's backward `superseded_by` could never be written), and why "what is current?" is a query over the promotion list rather than a stored pointer.
 
 ## Documentation conventions
 
 - **Contract-first is a rule, not an aspiration.** A schema change lands as its own reviewed PR with a version bump and changelog entry, before any code implementing it.
 - **ADRs are amended, not rewritten.** `0005` amends `0001`; `0006` amends `0004`. The original text stays; the Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about current shape, **`ARCHITECTURE.md` is authoritative**.
-- **`CAPABILITY_MATRIX.md` asserts nothing.** Its generator is unbuilt. The file is explicitly labeled illustrative; never cite it as evidence a capability exists.
+- **`CAPABILITY_MATRIX.md` is generated — do not hand-edit it.** `npm run docs:matrix` writes it and `npm run check:matrix` fails the build when the committed file is not what the repository produces. It derives coverage by reading which validators `test/contract-conformance.test.ts` actually exercises, so it cannot claim more than the suite provides. It has no `Producers`/`Consumers` columns on purpose: nothing writes a registration record, and the hand-written version got exactly those wrong.
 - Start from `Documentation/README.md` — it carries the reading order, the ADR index, and the current open items.
 
 ## Known-unresolved items
@@ -85,11 +90,16 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 | `npm test` | Vitest: projects `core`, `application`, `adapters`, `shells`, `contracts`. |
 | `npm run check:corpus` | Re-hashes all 661 PDFs under `PDF/` against `scripts/corpus-manifest.json` and prints the deduplicated count. ~1.4s. |
 | `npm run check:counts` | Re-derives every pinned number in the docs from the repo. Caught 15 wrong counts across 6 files on its first run. |
+| `npm run check:sizing` | What each suite can actually resolve. Fails when a suite's `detectable_delta` drifts from `1/n`, when an `anchor` cannot attain significance, or when a suite below the exact floor is not acknowledged. Prints the anchor-sizing decomposition. |
+| `npm run docs:matrix` | Regenerates `Documentation/CAPABILITY_MATRIX.md` from the tree. |
+| `npm run check:matrix` | Fails when the committed matrix is not what the repository produces. |
 | `npm run check:fingerprint` | Watches for the provider swapping the model under you. Reports "not armed" until a run reaches a provider. |
 | `npm run differential` | The oracle — ported gates vs. the frozen Python linter. Needs Python. |
 | `npm run cli` | `promptnexus lint\|run\|gates`. |
 
-**These are target state and do not exist:** `npm run verify:gates`, `npm run adversarial`, `npm run trace:view`, `docs:matrix`, `verify:hash`, `scaffold:gate`, `scaffold:technique`. Treat them as unbuilt, not as scripts to restore.
+**These are target state and do not exist:** `npm run verify:gates`, `npm run adversarial`, `npm run trace:view`, `verify:hash`, `scaffold:gate`, `scaffold:technique`. Treat them as unbuilt, not as scripts to restore.
+
+**`npm run verify` is currently red on `check:corpus`, and not because of the code.** The 661-file `PDF/` corpus moved to `~/Documents/PDF` — outside this directory — so the manifest's relative root no longer resolves. Every file is intact and every hash still matches at the new location. Do not "fix" this by regenerating the manifest with `--write`: that would silently accept the disappearance of the evidence base. Either move the corpus back or decide how to name its location without weakening the pin.
 
 **There is no CI service** — no `.github/`, no pipeline. Documents describing "CI stages" describe intent. The intended order is meaningful and `npm run verify` follows it: boundaries and schema validation first, then Core tests, then Application, adapters, cross-shell parity, adversarial corpus, build-hash reproducibility last.
 
