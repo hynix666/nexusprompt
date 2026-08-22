@@ -19,15 +19,11 @@
     "Five of the original seven entries have been removed because the evaluation pipeline",
     "now produces them: configuration, eval-suite, eval-case, eval-run and comparison are",
     "validated in test/contract-conformance.test.ts against values a real run emitted.",
-    "The two below remain because a judge adapter and a promotion path do not exist yet."
+    "The two below remain because a judge adapter and a promotion path do not exist yet.",
+    "",
+    "judge-verdict was removed on 22 August 2026: the judge adapter exists (application/src/judge.ts, guarded by core/src/eval/judge-policy.ts) and test/contract-conformance.test.ts now validates a verdict it produced. Landing the schema first worked exactly as intended -- runs, disagreement_rate, position_randomized and a declared agreement threshold were mandatory before anyone wrote a judge that would otherwise have omitted them."
   ],
   "pending": [
-    {
-      "schema": "judge-verdict",
-      "reason": "Emitted by the judge adapter, which does not exist. Landing it first was deliberate: it makes runs, disagreement_rate, position_randomized and a declared agreement threshold mandatory before anyone writes a judge that would otherwise omit them.",
-      "produced_by": "judge adapter",
-      "adr": "0008"
-    },
     {
       "schema": "baseline",
       "reason": "Written by the release pipeline when a run is promoted to a frozen reference. The evaluation pipeline produces runs now, but no promotion path exists and none should until an anchor suite does.",

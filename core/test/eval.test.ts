@@ -91,7 +91,7 @@ describe("detectors", () => {
 
 /* ── the comparator ───────────────────────────────────────────────────────── */
 
-const suite = { resolution: { detectable_delta: 0.01, confidence: 0.95 } };
+const suite = { resolution: { detectable_delta: 0.01, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const };
 const outcomes = (spec: string) =>
   spec.split("").map((ch, i) => ({ case_id: `c${i}`, passed: ch === "1" }));
 
@@ -185,7 +185,7 @@ describe("compare", () => {
     const coarse = compare({ ...base, candidate: outcomes("11"), baseline: outcomes("10") });
     const fine = compare({
       ...base, candidate: outcomes("11"), baseline: outcomes("10"),
-      suite: { resolution: { detectable_delta: 0.005, confidence: 0.95 } },
+      suite: { resolution: { detectable_delta: 0.005, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const },
     });
     expect(coarse.equalization.gap_bound).toBe(0.01);
     expect(fine.equalization.gap_bound).toBe(0.005);
@@ -198,7 +198,7 @@ describe("compare", () => {
       candidateRecall: recallBlock({ d: 1, e: 0.75 }),
       baselineRecall: recallBlock({ d: 0.75, e: 1 }),
       suiteDetectorIds: ["d", "e"],
-      suite: { resolution: { detectable_delta: 0.5, confidence: 0.95 } },
+      suite: { resolution: { detectable_delta: 0.5, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const },
     });
     expect(r.equalization.effective_recall).toBeCloseTo(0.75, 6);
     // 0.5 / 0.75 — a blunter instrument must show a larger observed difference.
@@ -215,7 +215,7 @@ describe("compare", () => {
     // 1 of 12 flips = 0.0833. Declared resolution 0.05 would report it; at recall 0.25 the
     // adjusted resolution is 0.2, and the suite correctly declines to pronounce.
     const evidence = { candidate: outcomes("111111111111"), baseline: outcomes("111111111110") };
-    const suite12 = { resolution: { detectable_delta: 0.05, confidence: 0.95 } };
+    const suite12 = { resolution: { detectable_delta: 0.05, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const };
     const sharp = compare({ ...base, ...evidence, suite: suite12 });
     const blunt = compare({
       ...base, ...evidence, suite: suite12,
@@ -249,7 +249,7 @@ describe("compare", () => {
       //         12 genuine passes           12 genuine failures
       candidate: outcomes("111111111111" + "111111000000"), // 6 of 12 observed
       baseline: outcomes("111111111111" + "000000000000"), // 12 of 12 observed
-      suite: { resolution: { detectable_delta: 0.05, confidence: 0.95 } },
+      suite: { resolution: { detectable_delta: 0.05, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const },
     };
 
     const blind = compare({ ...base, ...artifact }); // pretend both detectors were equal
@@ -304,7 +304,7 @@ describe("compare", () => {
 
   it("returns inconclusive when the delta is below the suite's declared resolution", () => {
     // A suite that can only see 0.5 must not pronounce on a difference of 1/12.
-    const coarse = { resolution: { detectable_delta: 0.5, confidence: 0.95 } };
+    const coarse = { resolution: { detectable_delta: 0.5, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const };
     const r = compare({ ...base, suite: coarse, candidate: outcomes("111111111111"), baseline: outcomes("111111111110") });
     expect(r.verdict).toBe("inconclusive");
     expect(r.refusal_reason).toContain("resolution");
@@ -570,5 +570,267 @@ describe("cost accrual", () => {
   it("does not judge a dollar budget it cannot measure", () => {
     const spent = { ...emptyCost(), usd: null, provider_calls: 5 };
     expect(exceeds(spent, { on_exceed: "refuse", max_usd: 0.01 })).toBe(false);
+  });
+});
+
+/* ── perturbations ─────────────────────────────────────────────────────────── */
+
+import {
+  listPerturbations, getPerturbation, expandCase, expandCases, countClusters, clusterOf,
+} from "../src/eval/perturbations.js";
+import { clusteredPaired, type CaseOutcome } from "../src/eval/compare.js";
+
+const baseCase = (id = "brief-1"): EvalCase => ({
+  case_id: id,
+  input: { brief: "A support assistant for a billing team that answers refund questions." },
+  expectation: { kind: "none" },
+  failure_mode: "constraint-violation",
+  detector_ids: ["output-nonempty"],
+});
+
+const PRESERVING = listPerturbations().filter((p) => p.expectation_preserving).map((p) => p.id);
+
+describe("perturbations", () => {
+  it("are deterministic under a seed", () => {
+    // No Math.random anywhere — the purity harness would fail the suite if there were, which
+    // is precisely why these live in Core.
+    const a = expandCase(baseCase(), { kinds: PRESERVING, seed: 42 });
+    const b = expandCase(baseCase(), { kinds: PRESERVING, seed: 42 });
+    expect(a).toEqual(b);
+  });
+
+  it("produce different variants under different seeds", () => {
+    const a = expandCase(baseCase(), { kinds: ["typo"], seed: 1 })[1].input.brief;
+    const b = expandCase(baseCase(), { kinds: ["typo"], seed: 999 })[1].input.brief;
+    expect(a).not.toBe(b);
+  });
+
+  it("keep the base case first and unchanged", () => {
+    // Expansion adds evidence; it never replaces it.
+    const out = expandCase(baseCase(), { kinds: PRESERVING, seed: 7 });
+    expect(out[0].case_id).toBe("brief-1");
+    expect(out[0].input.brief).toBe(baseCase().input.brief);
+  });
+
+  it("actually change the brief", () => {
+    // A perturbation that returns its input is a case counted twice, and would deflate every
+    // cluster-level difference by adding a guaranteed tie.
+    for (const p of listPerturbations()) {
+      const [, variant] = expandCase(baseCase(), { kinds: [p.id], seed: 3 });
+      expect(variant.input.brief, p.id).not.toBe(baseCase().input.brief);
+    }
+  });
+
+  it("put expectation-preserving variants in their base case's cluster", () => {
+    const out = expandCase(baseCase(), { kinds: PRESERVING, seed: 5 });
+    expect(out.every((c) => clusterOf(c) === "brief-1")).toBe(true);
+    expect(countClusters(out)).toBe(1);
+  });
+
+  it("give a non-preserving variant its own cluster", () => {
+    // `truncate` asks a different question. Pooling it with the base would put two different
+    // questions under one estimate — the exact error clustering exists to avoid, committed
+    // while claiming to avoid it.
+    const out = expandCase(baseCase(), { kinds: ["truncate"], seed: 5 });
+    expect(countClusters(out)).toBe(2);
+    expect(getPerturbation("truncate")!.expectation_preserving).toBe(false);
+  });
+
+  it("refuse an unknown perturbation rather than skipping it", () => {
+    // A silent skip would report coverage the suite does not have.
+    expect(() => expandCase(baseCase(), { kinds: ["nonexistent"], seed: 1 })).toThrow(/Unknown perturbation/);
+  });
+
+  it("record what produced each variant", () => {
+    const [, variant] = expandCase(baseCase(), { kinds: ["homoglyph"], seed: 11 });
+    expect(variant.perturbation).toEqual({ of_case_id: "brief-1", kind: "homoglyph", seed: 11 });
+    expect(variant.case_id).toBe("brief-1::homoglyph");
+  });
+
+  it("substitute homoglyphs that read identically but are different code points", () => {
+    const [, variant] = expandCase(baseCase(), { kinds: ["homoglyph"], seed: 2 });
+    expect(variant.input.brief).not.toBe(baseCase().input.brief);
+    // Same length: one code point swapped for one code point, so nothing about the text's
+    // shape changes — only its bytes.
+    expect([...variant.input.brief].length).toBe([...baseCase().input.brief].length);
+  });
+
+  it("counts independent units, not rows", () => {
+    const cases = [baseCase("a"), baseCase("b"), baseCase("c")];
+    const expanded = expandCases(cases, { kinds: PRESERVING, seed: 1 });
+    expect(expanded).toHaveLength(3 * (1 + PRESERVING.length));
+    expect(countClusters(expanded)).toBe(3);
+  });
+});
+
+/* ── clustered significance ────────────────────────────────────────────────── */
+
+/** Four briefs, five rows each: one base plus four preserving variants. Four clusters, 20 rows. */
+function clusteredOutcomes(flippedClusters: number): { candidate: CaseOutcome[]; baseline: CaseOutcome[] } {
+  const candidate: CaseOutcome[] = [];
+  const baseline: CaseOutcome[] = [];
+  for (let cluster = 0; cluster < 4; cluster++) {
+    for (let v = 0; v < 5; v++) {
+      const case_id = `brief-${cluster}::v${v}`;
+      const cluster_id = `brief-${cluster}`;
+      baseline.push({ case_id, cluster_id, passed: false });
+      candidate.push({ case_id, cluster_id, passed: cluster < flippedClusters });
+    }
+  }
+  return { candidate, baseline };
+}
+
+describe("clustered significance", () => {
+  it("counts clusters, not rows", () => {
+    const { candidate, baseline } = clusteredOutcomes(3);
+    const r = clusteredPaired(candidate, baseline);
+    expect(r.clusters).toBe(4);
+    expect(r.discordant).toBe(3);
+  });
+
+  it("is strictly less significant than the naive test on the same data", () => {
+    /**
+     * Phase δ's falsifiable prediction, in the form this comparator supports.
+     *
+     * Three briefs improve, each observed through five perturbation variants. The naive test
+     * sees fifteen one-directional discordant pairs and reports p ≈ 6e-5 — a decisive
+     * result. The clustered test sees three improved questions out of four and reports
+     * p = 0.25, which is not significant at any conventional level.
+     *
+     * Both numbers are computed from identical data. The first is wrong, and it is wrong in
+     * the direction that manufactures a promotion.
+     */
+    const { candidate, baseline } = clusteredOutcomes(3);
+
+    let b = 0, c = 0;
+    const was = new Map(baseline.map((o) => [o.case_id, o.passed]));
+    for (const o of candidate) {
+      if (o.passed && !was.get(o.case_id)) b++;
+      else if (!o.passed && was.get(o.case_id)) c++;
+    }
+    const naive = mcnemar(b, c);
+    const clustered = clusteredPaired(candidate, baseline);
+
+    expect(naive.discordant).toBe(15);
+    expect(clustered.discordant).toBe(3);
+    expect(clustered.p).toBeGreaterThan(naive.p);
+    expect(naive.p).toBeLessThan(0.05);        // the naive test would promote this
+    expect(clustered.p).toBeGreaterThan(0.05); // the honest one does not
+  });
+
+  it("aggregates every row in a cluster, not just the last one", () => {
+    /**
+     * A cluster whose rows DISAGREE, which the uniform fixture above cannot produce.
+     *
+     * A mutation that looked up slots by `case_id` while storing them by `cluster_id` — so
+     * each cluster kept only its final row — survived the whole suite, because every row in
+     * a cluster shared a pass value and the last row therefore spoke for all five. The
+     * fixture could not detect what the assertion claimed to check. Third time a probe has
+     * found that, and always the same cause: a fixture too uniform to discriminate.
+     *
+     * Here the candidate improves four rows of five and regresses the last. The cluster
+     * genuinely improved (0.8 vs 0.0); reading only the final row would call it a tie.
+     */
+    const candidate: CaseOutcome[] = [];
+    const baseline: CaseOutcome[] = [];
+    for (let v = 0; v < 5; v++) {
+      candidate.push({ case_id: `b::v${v}`, cluster_id: "b", passed: v < 4 });
+      baseline.push({ case_id: `b::v${v}`, cluster_id: "b", passed: false });
+    }
+
+    const r = clusteredPaired(candidate, baseline);
+    expect(r.clusters).toBe(1);
+    expect(r.discordant).toBe(1);   // the cluster improved; last-row-only would say 0
+  });
+
+  it("agrees with the naive test when nothing is clustered", () => {
+    // An unclustered suite must behave exactly as it did before clustering existed.
+    const candidate: CaseOutcome[] = [
+      { case_id: "a", passed: true }, { case_id: "b", passed: true }, { case_id: "c", passed: false },
+    ];
+    const baseline: CaseOutcome[] = [
+      { case_id: "a", passed: false }, { case_id: "b", passed: false }, { case_id: "c", passed: false },
+    ];
+    expect(clusteredPaired(candidate, baseline).p).toBeCloseTo(mcnemar(2, 0).p, 12);
+  });
+
+  it("treats a tied cluster as contributing nothing, like a concordant pair", () => {
+    const { candidate, baseline } = clusteredOutcomes(0);
+    const r = clusteredPaired(candidate, baseline);
+    expect(r.discordant).toBe(0);
+    expect(r.p).toBe(1);
+  });
+});
+
+/* ── the comparator refuses a protocol that does not match the data ─────────── */
+
+describe("significance protocol is checked against the data's structure", () => {
+  const recall: DetectorRecallBlock = {
+    probe_corpus_version: "1.0.0",
+    detectors: [{ detector_id: "output-nonempty", substrates: 4, probes_run: 4, probes_detected: 4, recall: 1 }],
+  };
+
+  const input = (protocol: "exact-mcnemar" | "clustered-paired" | "bootstrap-ci", clustered: boolean) => {
+    const { candidate, baseline } = clusteredOutcomes(3);
+    const strip = (rows: CaseOutcome[]) =>
+      clustered ? rows : rows.map(({ case_id, passed }) => ({ case_id, passed }));
+    return {
+      comparison_id: "cmp-1",
+      candidate_run_id: "run-c",
+      baseline_id: "run-b",
+      candidate: strip(candidate),
+      baseline: strip(baseline),
+      suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 }, significance_protocol: protocol },
+      comparisons_in_family: 1,
+      alpha: 0.05,
+      candidateRecall: recall,
+      baselineRecall: recall,
+      suiteDetectorIds: ["output-nonempty"],
+    };
+  };
+
+  it("refuses exact-mcnemar on clustered data", () => {
+    // A caveat beside a p-value gets the p-value quoted and the caveat dropped, so this
+    // returns no number at all — the same shape as the recall-mismatch refusal it mirrors.
+    const r = compare(input("exact-mcnemar", true));
+    expect(r.verdict).toBe("refused");
+    expect(r.refusal_reason).toContain("independent cluster");
+    expect(r.delta).toBeNull();
+    expect(r.protocol.p_value).toBeNull();
+  });
+
+  it("accepts exact-mcnemar when the data really is unclustered", () => {
+    const r = compare(input("exact-mcnemar", false));
+    expect(r.verdict).not.toBe("refused");
+    expect(r.protocol.test).toBe("mcnemar");
+  });
+
+  it("runs the clustered test when the suite declares it", () => {
+    const r = compare(input("clustered-paired", true));
+    expect(r.verdict).not.toBe("refused");
+    expect(r.protocol.test).toBe("clustered-paired");
+    // Four independent questions behind the verdict, not twenty rows.
+    expect(r.protocol.effective_n).toBe(4);
+  });
+
+  it("reaches the opposite verdict from the naive test on identical data", () => {
+    /**
+     * The whole point, end to end. Twenty rows over four briefs, three of which improved.
+     *
+     * Declared as unclustered, the comparator sees fifteen one-directional flips and reports
+     * an improvement. Declared honestly, it sees three improved questions out of four and
+     * declines to call it. Same outcomes, same code, opposite conclusions — and the second
+     * is the correct one.
+     */
+    const naive = compare(input("exact-mcnemar", false));
+    const honest = compare(input("clustered-paired", true));
+    expect(naive.verdict).toBe("improved");
+    expect(honest.verdict).toBe("inconclusive");
+  });
+
+  it("refuses bootstrap-ci rather than silently substituting a binary test", () => {
+    const r = compare(input("bootstrap-ci", false));
+    expect(r.verdict).toBe("refused");
+    expect(r.refusal_reason).toContain("not implemented");
   });
 });

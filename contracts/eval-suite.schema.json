@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/eval-suite/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/eval-suite/2.0.0",
   "title": "EvalSuite",
   "description": "A named, versioned set of cases with a declared job. The kind field is load-bearing: a suite small enough to run in seconds cannot certify a promotion, and a suite large enough to certify one cannot gate every change. Conflating them yields either a suite nobody runs or a promotion nobody can justify.",
   "type": "object",
-  "required": ["suite_id", "version", "kind", "case_ids", "resolution"],
+  "required": ["suite_id", "version", "kind", "case_ids", "resolution", "significance_protocol"],
   "additionalProperties": false,
   "properties": {
     "suite_id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
@@ -24,6 +24,10 @@
         "confidence": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
         "sized_for": { "type": ["integer", "null"], "minimum": 1 }
       }
+    },
+    "significance_protocol": {
+      "description": "The test this suite's outcomes may be subjected to, declared before any comparison is run. exact-mcnemar assumes INDEPENDENT paired binary outcomes; a suite whose cases are grouped by perturbation violates that assumption, and cluster-adjusted standard errors run materially larger than naive ones. The comparator refuses rather than reporting a number when the declared protocol does not match the data's structure -- a caveat beside a p-value gets the p-value quoted and the caveat dropped.",
+      "enum": ["exact-mcnemar", "clustered-paired", "bootstrap-ci"]
     },
     "derived_from": { "type": ["string", "null"], "description": "For adversarial suites: the suite these cases perturb." }
   }

@@ -174,8 +174,9 @@ export const CONTRACT_VERSIONS = {
   "revision-entry": "1.3.0",
   "observability-event": "1.2.0",
   "eval-run": "1.1.0",
-  comparison: "2.0.0",
+  comparison: "2.1.0",
   configuration: "1.2.0",
+  "judge-verdict": "1.1.0",
 } as const;
 
 export interface ExecutionProvenance {
@@ -240,6 +241,53 @@ export interface RevisionStore {
 export interface CacheStore {
   get(key: string): Promise<GenerationResult | null>;
   put(key: string, value: GenerationResult): Promise<void>;
+}
+
+/* ── Judge protocol ───────────────────────────────────────────────────────── */
+
+export interface JudgeRequest {
+  request_id: string;
+  rubric_id: string;
+  /** The rubric and judge-prompt template as sent, hashed. A silently edited rubric is otherwise indistinguishable from a model that changed its mind. */
+  rubric_hash: string;
+  /** The output being graded. Untrusted: it is the model's own text and may contain rubric-shaped instructions. */
+  candidate: string;
+  /** Candidate order, randomized by the caller. Position bias above 0.10 was measured in judges whose test-retest exceeded 0.95. */
+  position_randomized: boolean;
+  runs: number;
+}
+
+export interface JudgeVerdict {
+  verdict: string | number | boolean;
+  rationale: string | null;
+  judge_id: string;
+  judge_family: string;
+  rubric_id: string;
+  rubric_hash: string | null;
+  runs: number;
+  disagreement_rate: number;
+  position_randomized: boolean;
+  bias_panel?: {
+    verbosity_delta?: number | null;
+    format_delta?: number | null;
+    self_preference_delta?: number | null;
+    measured_at?: string | null;
+  } | null;
+  agreement?: {
+    metric: "cohens-kappa" | "krippendorff-alpha" | "scotts-pi";
+    value: number;
+    threshold: number;
+    measured_at: string;
+    reference?: string;
+    benchmark?: string;
+  } | null;
+}
+
+/** The port. The judge is an effect, so it lives behind the Application like any provider. */
+export interface JudgeTransport {
+  readonly judge_id: string;
+  readonly judge_family: string;
+  grade(req: JudgeRequest): Promise<JudgeVerdict>;
 }
 
 /* ── Evidence plane ───────────────────────────────────────────────────────── */
@@ -453,7 +501,25 @@ export interface EvalCase {
   failure_mode: FailureMode;
   detector_ids: string[];
   perturbation?: { of_case_id: string; kind: string; seed: number } | null;
+  /**
+   * The independent unit this case belongs to.
+   *
+   * Written by the perturbation expander, never by a suite author: author-assigned
+   * clustering would make every downstream confidence figure depend on how someone chose to
+   * group cases, so two suites with identical cases could report different certainty.
+   * Absent means the case is its own cluster, which is what an unperturbed case is.
+   */
+  cluster_id?: string;
 }
+
+/**
+ * Which test may be applied to this suite's outcomes.
+ *
+ * `exact-mcnemar` assumes independent paired binary outcomes. `clustered-paired` does not,
+ * and is required once perturbations group cases. Declaring it per suite discharges
+ * ADR-0008's open item: record the protocol before running comparisons anyone will cite.
+ */
+export type SignificanceProtocol = "exact-mcnemar" | "clustered-paired" | "bootstrap-ci";
 
 export interface EvalSuite {
   suite_id: string;
@@ -463,6 +529,11 @@ export interface EvalSuite {
   case_ids: string[];
   /** What difference this suite can detect. A suite that declares none cannot evidence "no change". */
   resolution: { detectable_delta: number; confidence: number; sized_for?: number | null };
+  /**
+   * Declared before any comparison runs, per ADR-0008's open item. The comparator refuses
+   * when this does not match the data's structure rather than reporting a caveated number.
+   */
+  significance_protocol: SignificanceProtocol;
   derived_from?: string | null;
 }
 
@@ -536,7 +607,13 @@ export interface Comparison {
   refusal_reason?: string | null;
   delta: number | null;
   protocol: {
-    test: "mcnemar" | "paired-bootstrap" | "5x2cv-paired-t" | "none";
+    test: "mcnemar" | "clustered-paired" | "paired-bootstrap" | "5x2cv-paired-t" | "none";
+    /**
+     * Independent units behind the p-value, which is NOT the case count once perturbations
+     * group cases. A comparison that reported 70 rows and 14 questions as the same number
+     * would be anticonservative in a way nothing downstream could detect.
+     */
+    effective_n?: number;
     trials: number;
     /** Alpha AFTER multiplicity correction. An optimizer generates comparisons by construction. */
     alpha: number;

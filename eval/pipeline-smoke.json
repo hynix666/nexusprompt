@@ -33,17 +33,30 @@
       "detectable_delta": 0.2,
       "confidence": 0.95,
       "sized_for": null
-    }
+    },
+    "significance_protocol": "exact-mcnemar"
   },
   "cases": [
     {
       "case_id": "full-run-produces-a-prompt",
-      "input": { "brief": "A support assistant for a SaaS billing team." },
+      "input": {
+        "brief": "A support assistant for a SaaS billing team."
+      },
       "brief": "A support assistant for a SaaS billing team.",
-      "context": { "depth": "STANDARD", "stakes": "HIGH", "testMessage": "How do I get a refund?" },
-      "expectation": { "kind": "none" },
-      "failure_mode": "silent-degradation",
-      "detector_ids": ["output-nonempty", "gates-ran", "provenance-complete"],
+      "context": {
+        "depth": "STANDARD",
+        "stakes": "HIGH",
+        "testMessage": "How do I get a refund?"
+      },
+      "expectation": {
+        "kind": "none"
+      },
+      "failure_mode": "constraint-violation",
+      "detector_ids": [
+        "output-nonempty",
+        "gates-ran",
+        "provenance-complete"
+      ],
       "stubs": {
         "deconstruct": "Core Objective: answer billing questions accurately.",
         "calibrate": "Chosen profile: MEDIUM.",
@@ -58,36 +71,64 @@
     },
     {
       "case_id": "partial-degradation-is-labelled",
-      "input": { "brief": "A triage assistant." },
+      "input": {
+        "brief": "A triage assistant."
+      },
       "brief": "A triage assistant.",
-      "context": { "depth": "STANDARD", "stakes": "HIGH" },
-      "expectation": { "kind": "none" },
-      "failure_mode": "silent-degradation",
-      "detector_ids": ["demo-labelled-when-degraded"],
+      "context": {
+        "depth": "STANDARD",
+        "stakes": "HIGH"
+      },
+      "expectation": {
+        "kind": "none"
+      },
+      "failure_mode": "hallucination",
+      "detector_ids": [
+        "demo-labelled-when-degraded"
+      ],
       "stubs": {
         "deconstruct": "Core Objective: triage inbound reports."
       }
     },
     {
       "case_id": "partial-degradation-does-not-fabricate",
-      "input": { "brief": "A triage assistant." },
+      "input": {
+        "brief": "A triage assistant."
+      },
       "brief": "A triage assistant.",
-      "context": { "depth": "STANDARD", "stakes": "HIGH" },
-      "expectation": { "kind": "none" },
-      "failure_mode": "fabrication",
-      "detector_ids": ["no-fabrication-when-degraded"],
+      "context": {
+        "depth": "STANDARD",
+        "stakes": "HIGH"
+      },
+      "expectation": {
+        "kind": "none"
+      },
+      "failure_mode": "hallucination",
+      "detector_ids": [
+        "no-fabrication-when-degraded"
+      ],
       "stubs": {
         "deconstruct": "Core Objective: triage inbound reports."
       }
     },
     {
       "case_id": "shallow-depth-still-produces-output",
-      "input": { "brief": "A changelog summariser." },
+      "input": {
+        "brief": "A changelog summariser."
+      },
       "brief": "A changelog summariser.",
-      "context": { "depth": "TINY", "stakes": "LOW" },
-      "expectation": { "kind": "none" },
-      "failure_mode": "silent-degradation",
-      "detector_ids": ["output-nonempty", "gates-ran"],
+      "context": {
+        "depth": "TINY",
+        "stakes": "LOW"
+      },
+      "expectation": {
+        "kind": "none"
+      },
+      "failure_mode": "planning-collapse",
+      "detector_ids": [
+        "output-nonempty",
+        "gates-ran"
+      ],
       "stubs": {
         "deconstruct": "Core Objective: summarise changelogs.",
         "calibrate": "Chosen profile: LOW.",
@@ -98,17 +139,29 @@
     },
     {
       "case_id": "reflexive-run-stays-within-its-cap",
-      "input": { "brief": "A safety-critical intake assistant." },
+      "input": {
+        "brief": "A safety-critical intake assistant."
+      },
       "brief": "A safety-critical intake assistant.",
       "context": {
         "depth": "COMPREHENSIVE",
         "stakes": "SAFETY-CRITICAL",
-        "gateOptions": { "safetyTier": true },
-        "topology": { "kind": "reflexive", "max_iterations": 2 }
+        "gateOptions": {
+          "safetyTier": true
+        },
+        "topology": {
+          "kind": "reflexive",
+          "max_iterations": 2
+        }
       },
-      "expectation": { "kind": "none" },
-      "failure_mode": "silent-degradation",
-      "detector_ids": ["output-nonempty", "gates-ran"],
+      "expectation": {
+        "kind": "none"
+      },
+      "failure_mode": "cost-driven-degradation",
+      "detector_ids": [
+        "output-nonempty",
+        "gates-ran"
+      ],
       "stubs": {
         "deconstruct": "Core Objective: intake safety reports.",
         "calibrate": "Chosen profile: HIGH.",

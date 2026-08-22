@@ -16,6 +16,60 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-22 (Phase δ)
+
+### `eval-suite` 1.0.0 → **2.0.0** (major)
+
+**Added** `significance_protocol`, **required**.
+
+Major because a suite without it no longer validates, and that is deliberate. ADR-0008 left
+"record the significance protocol per suite type before running comparisons that anyone will
+cite" open; an optional field would have left it open. Every existing suite declares
+`exact-mcnemar`, which is correct for all three of them today and stops being correct the
+moment a perturbation expansion is applied to any of them.
+
+### `eval-case` 1.0.0 → **1.2.0** (minor, twice)
+
+**Added** `cluster_id`. **Enumerated** `failure_mode`.
+
+`cluster_id` is written by the perturbation expander and never by a suite author: clustering
+assigned by hand would make every downstream confidence figure depend on how someone chose to
+group cases, so two suites with identical cases could report different certainty. Absent means
+the case is its own cluster, which is what an unperturbed case is — so nothing existing changes.
+
+`failure_mode` was an unconstrained string in the schema while the TypeScript binding
+enumerated fifteen modes. Two invented modes validated cleanly against the contract that is
+supposed to be authoritative over the type. Now they do not.
+
+### `comparison` 2.0.0 → **2.1.0** (minor)
+
+**Added** `clustered-paired` to the test enum, and `effective_n`.
+
+`effective_n` is the number of INDEPENDENT units behind a p-value, which stops equalling the
+case count the moment perturbations group cases. Seventy rows over fourteen briefs is fourteen
+questions asked five ways; reporting the seventy is what makes a p-value smaller than the
+evidence supports, in the direction that manufactures a promotion.
+
+### `judge-verdict` 1.0.0 → **1.1.0** (minor)
+
+**Added** `judge_family` (required) and `bias_panel`. **Made** `agreement.measured_at` required.
+
+`judge_id` was a free-form string, so "the judge is never the model under test" — listed under
+ADR-0008's Enforcement — could not be checked by anything. Current practice names five judge
+biases; this schema mandated position randomization and chance-corrected agreement, covering
+two, and had no field for verbosity, format or self-preference. A verdict could satisfy every
+requirement and come from a judge that rewards length.
+
+`measured_at` was optional, which made the staleness rule unenforceable: an agreement figure
+with no date cannot be checked against the judge contract's last change.
+
+**Removed** the `judge-verdict` entry from `pending-implementation.json`. The adapter exists and
+the schema now has a conformance case. Landing the schema first worked as intended — `runs`,
+`disagreement_rate`, `position_randomized` and a declared threshold were mandatory before
+anyone wrote a judge that would otherwise have omitted them.
+
+---
+
 ## 2026-08-22
 
 ### `configuration` 1.0.0 → **1.1.0** (minor)

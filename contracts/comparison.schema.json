@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/comparison/2.0.0",
+  "$id": "https://promptnexus.dev/contracts/comparison/2.1.0",
   "title": "Comparison",
   "description": "The verdict of one run against a baseline. `inconclusive` is a first-class outcome: with stochastic decoding a single run pair cannot distinguish improvement from noise, and rounding toward a decision manufactures exactly the false confidence this subsystem exists to prevent.",
   "type": "object",
@@ -23,7 +23,11 @@
       "properties": {
         "test": {
           "description": "Named per suite type and recorded, not improvised per comparison. Consensus practice for paired binary outcomes on a shared prompt set is McNemar on the discordant pairs, or 5x2 cross-validation with a modified paired t-test; graded and free-form metrics use a paired bootstrap over resamples of the prompt set. Different outcome types need different tests, and the choice is part of the result.",
-          "enum": ["mcnemar", "paired-bootstrap", "5x2cv-paired-t", "none"]
+          "enum": ["mcnemar", "clustered-paired", "paired-bootstrap", "5x2cv-paired-t", "none"]
+        },
+        "effective_n": {
+          "description": "Independent units behind the p-value. Once perturbations group cases this is smaller than the case count -- 70 rows over 14 briefs is 14 questions asked five ways, and treating it as 70 makes every p-value smaller than the evidence supports.",
+          "type": "integer", "minimum": 0
         },
         "trials": { "type": "integer", "minimum": 1 },
         "alpha": {

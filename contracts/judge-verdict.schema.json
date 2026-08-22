@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/judge-verdict/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/judge-verdict/1.1.0",
   "title": "JudgeVerdict",
   "description": "A grader's output, carrying enough about the grader to be readable as evidence. The largest systematic evaluation to date — 21 judges, nine providers, ~541,000 judgments — found reliability and validity come apart: test-retest above 0.95 coexisted with severe position bias in two production-deployed judges. A verdict without its audit is a number of unknown meaning.",
   "type": "object",
-  "required": ["verdict", "judge_id", "rubric_id", "runs", "disagreement_rate", "position_randomized"],
+  "required": ["verdict", "judge_id", "judge_family", "rubric_id", "runs", "disagreement_rate", "position_randomized"],
   "additionalProperties": false,
   "properties": {
     "verdict": { "type": ["string", "number", "boolean"] },
@@ -13,6 +13,21 @@
       "description": "Never the model under test. Self-grading is a cycle in the grading order, and a cycle does not merely risk reward hacking — it constructs it.",
       "type": "string",
       "minLength": 1
+    },
+    "judge_family": {
+      "description": "The judge model's family, which judge_id alone cannot express. Without it \"the judge is never the model under test\" is unenforceable: nothing can compare a free-form id against the configuration being graded. Self-preference -- a judge scoring its own family's output measurably higher -- is one of the five named biases and the only one that invalidates a verdict outright.",
+      "type": "string", "minLength": 1
+    },
+    "bias_panel": {
+      "description": "Current practice names five judge biases: position, verbosity, self-preference, format, and calibration drift. This schema already mandated position randomization and chance-corrected agreement, which covers two of them; the other three had no field, so a verdict could satisfy every requirement and still come from a judge that rewards length. A null or absent delta means UNMEASURED, never measured-and-zero.",
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "verbosity_delta": { "type": ["number", "null"], "description": "Score difference attributable to response length alone. Mitigated by length-normalization or a length penalty in the rubric." },
+        "format_delta": { "type": ["number", "null"], "description": "Score difference attributable to output format rather than content." },
+        "self_preference_delta": { "type": ["number", "null"], "description": "Score difference between this judge's own family and others on equivalent content." },
+        "measured_at": { "type": ["string", "null"] }
+      }
     },
     "rubric_id": { "type": "string", "minLength": 1 },
     "rubric_hash": {
@@ -38,7 +53,7 @@
     "agreement": {
       "type": ["object", "null"],
       "description": "Chance-corrected agreement against a reference. Exact match is not admissible: it does not correct for chance and overstates discriminative ability by 33-41 percentage points against Cohen's kappa on the same data.",
-      "required": ["metric", "value", "threshold"],
+      "required": ["metric", "value", "threshold", "measured_at"],
       "additionalProperties": false,
       "properties": {
         "metric": { "enum": ["cohens-kappa", "krippendorff-alpha", "scotts-pi"] },
@@ -50,7 +65,7 @@
           "maximum": 1
         },
         "reference": { "type": "string", "description": "The human-annotated set agreement was measured against." },
-        "measured_at": { "type": ["string", "null"], "description": "Re-calibration is required whenever the judge model, rubric, or template changes; a stale calibration is not evidence about the judge now running." },
+        "measured_at": { "type": "string", "minLength": 1, "description": "Now REQUIRED when agreement is present. Re-calibration is required whenever the judge model, rubric, or template changes, and an agreement figure with no date cannot be checked against that -- so an optional date made the staleness rule unenforceable." },
         "benchmark": {
           "type": "string",
           "description": "Named, because judge rankings shift by up to 14 positions across benchmarks. Validation on one benchmark does not transfer to another."

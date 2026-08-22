@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Ajv, type ValidateFunction } from "ajv";
+import { GuardedJudge } from "../application/src/judge.js";
 import addFormatsImport from "ajv-formats";
 
 /**
@@ -76,6 +77,7 @@ const validators: Record<string, ValidateFunction> = {
   "eval-case": ajv.compile(load("eval-case")),
   "eval-run": ajv.compile(load("eval-run")),
   "comparison": ajv.compile(load("comparison")),
+  "judge-verdict": ajv.compile(load("judge-verdict")),
 };
 
 const report = (v: ValidateFunction, value: unknown) => {
@@ -466,7 +468,7 @@ describe("evaluation plane, against values the suite actually produced", () => {
       baseline_id: "b",
       candidate: [{ case_id: "c0", passed: true }, { case_id: "c1", passed: true }],
       baseline: [{ case_id: "c0", passed: true }, { case_id: "c1", passed: false }],
-      suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 } },
+      suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const },
       comparisons_in_family: 1,
       alpha: 0.05,
       candidateRecall: recall(1),
@@ -483,13 +485,69 @@ describe("evaluation plane, against values the suite actually produced", () => {
       comparison_id: "cmp-2", candidate_run_id: "a", baseline_id: "b",
       candidate: [{ case_id: "c0", passed: true }],
       baseline: [{ case_id: "c0", passed: false }],
-      suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 } },
+      suite: { resolution: { detectable_delta: 0.01, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const },
       comparisons_in_family: 1, alpha: 0.05,
       candidateRecall: null, baselineRecall: null, suiteDetectorIds: ["d"],
     });
     expect(report(validators["comparison"], cmp)).toBe(true);
     expect(cmp.verdict).toBe("refused");
     expect(cmp.equalization.max_gap).toBeNull();
+  });
+
+
+  /**
+   * judge-verdict, produced by the guarded judge rather than hand-written.
+   *
+   * `contracts/pending-implementation.json` carried this schema as "emitted by the judge
+   * adapter, which does not exist" from the day it landed. The adapter exists now, so the
+   * exemption is removed and the schema is held to the same standard as every other: a value
+   * the running system produced, validated, plus a broken one that must be rejected.
+   */
+  it("judge-verdict validates a verdict the guarded judge produced", async () => {
+    const inner = {
+      judge_id: "conformance-judge",
+      judge_family: "other-family",
+      async grade(req: any) {
+        return {
+          verdict: "PASS", rationale: null,
+          judge_id: "conformance-judge", judge_family: "other-family",
+          rubric_id: req.rubric_id, rubric_hash: req.rubric_hash,
+          runs: req.runs, disagreement_rate: 0.0, position_randomized: req.position_randomized,
+        };
+      },
+    };
+    const verdict = await new GuardedJudge(inner as any).grade({
+      candidate: "# SYSTEM PROMPT\n\nScope: billing only.",
+      rubric_id: "helpfulness-v2",
+      rubric_template: "Grade the candidate. Return PASS or FAIL.",
+      candidate_family: "family-under-test",
+      verification_status: "judge-checkable",
+      calibration: {
+        metric: "cohens-kappa", value: 0.82, threshold: 0.6,
+        measured_at: "2026-08-20T00:00:00.000Z", reference: "gold-set-v1",
+      },
+    }, "2026-08-19T00:00:00.000Z");
+
+    expect(report(validators["judge-verdict"], verdict)).toBe(true);
+    expect(verdict.judge_family).not.toBe("family-under-test");
+  });
+
+  it("judge-verdict rejects an agreement with no measurement date", () => {
+    // measured_at became required in 1.1.0: an agreement figure with no date cannot be
+    // checked against the judge contract's last change, so the staleness rule was
+    // unenforceable while it was optional.
+    expect(validators["judge-verdict"]({
+      verdict: "PASS", judge_id: "j", judge_family: "f", rubric_id: "r",
+      runs: 3, disagreement_rate: 0, position_randomized: true,
+      agreement: { metric: "cohens-kappa", value: 0.8, threshold: 0.6 },
+    })).toBe(false);
+  });
+
+  it("judge-verdict rejects a verdict that does not say which family judged it", () => {
+    expect(validators["judge-verdict"]({
+      verdict: "PASS", judge_id: "j", rubric_id: "r",
+      runs: 3, disagreement_rate: 0, position_randomized: true,
+    })).toBe(false);
   });
 
   it("comparison rejects a verdict outside the four", () => {

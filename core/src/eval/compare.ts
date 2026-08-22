@@ -24,6 +24,11 @@ import type { Comparison, EvalSuite, DetectorRecallBlock } from "../../../contra
 export interface CaseOutcome {
   case_id: string;
   passed: boolean;
+  /**
+   * The independent unit this outcome belongs to. Absent means the case is its own cluster,
+   * so an unperturbed suite behaves exactly as it did before clustering existed.
+   */
+  cluster_id?: string;
 }
 
 export interface CompareInput {
@@ -32,7 +37,7 @@ export interface CompareInput {
   baseline_id: string;
   candidate: readonly CaseOutcome[];
   baseline: readonly CaseOutcome[];
-  suite: Pick<EvalSuite, "resolution">;
+  suite: Pick<EvalSuite, "resolution" | "significance_protocol">;
   /** How many comparisons this one belongs to. 1 means a standalone comparison. */
   comparisons_in_family: number;
   /** Nominal significance level, before correction. */
@@ -175,6 +180,67 @@ export function mcnemar(b: number, c: number): { p: number; discordant: number }
   return { p: exactTwoSided(b, c), discordant: b + c };
 }
 
+/** The independent unit an outcome belongs to. Absent means the case is its own cluster. */
+export const clusterOf = (o: CaseOutcome): string => o.cluster_id ?? o.case_id;
+
+/**
+ * The paired test, applied at the level of the independent unit.
+ *
+ * ── Why this exists ──────────────────────────────────────────────────────────
+ *
+ * `mcnemar` above treats every case as independent. That is correct for an unperturbed
+ * suite and wrong the moment perturbations ship, because the expansion is `cases ×
+ * perturbations` — a within-case product, which is the definition of clustered data. Four
+ * variants of one brief are four looks at one question, not four questions, and counting
+ * them as four inflates the sample by the perturbation factor. Standard errors computed
+ * that way run materially smaller than cluster-adjusted ones, so every p-value is
+ * anticonservative and the error is invisible in the output.
+ *
+ * ── Why a cluster-level sign test rather than a robust variance estimator ────
+ *
+ * Analysing at the level of the cluster is the conservative, assumption-light form, and it
+ * stays EXACT: each cluster contributes one signed difference, and the same exact binomial
+ * that powers McNemar is applied to those signs. A sandwich estimator would need a large
+ * number of clusters to be trustworthy, and a smoke suite has fourteen. This repository
+ * already prefers exact methods over asymptotic ones for that reason.
+ *
+ * The cost is stated rather than elided: aggregating discards within-cluster information
+ * and therefore has less power than a correctly-specified model would. Less power is the
+ * right direction to err — it produces "inconclusive", not a confident wrong sign.
+ */
+export function clusteredPaired(
+  candidate: readonly CaseOutcome[],
+  baseline: readonly CaseOutcome[],
+): { p: number; discordant: number; clusters: number } {
+  const rate = (rows: readonly CaseOutcome[]) => {
+    const byCluster = new Map<string, { passed: number; n: number }>();
+    for (const o of rows) {
+      const slot = byCluster.get(clusterOf(o)) ?? { passed: 0, n: 0 };
+      slot.n += 1;
+      if (o.passed) slot.passed += 1;
+      byCluster.set(clusterOf(o), slot);
+    }
+    return byCluster;
+  };
+
+  const cand = rate(candidate);
+  const base = rate(baseline);
+
+  let better = 0;   // clusters where the candidate scored higher
+  let worse = 0;    // clusters where the baseline did
+  for (const [cluster, c] of cand) {
+    const b = base.get(cluster);
+    if (!b) continue;
+    const cScore = c.passed / c.n;
+    const bScore = b.passed / b.n;
+    // Ties contribute nothing, exactly as concordant pairs do in McNemar.
+    if (cScore > bScore) better += 1;
+    else if (cScore < bScore) worse += 1;
+  }
+
+  return { p: exactTwoSided(better, worse), discordant: better + worse, clusters: cand.size };
+}
+
 export function compare(input: CompareInput): Comparison {
   const {
     comparison_id, candidate_run_id, baseline_id, candidate, baseline,
@@ -208,26 +274,70 @@ export function compare(input: CompareInput): Comparison {
     );
   }
 
-  let b = 0; // candidate passed, baseline failed
-  let c = 0; // candidate failed, baseline passed
-  for (const o of paired) {
-    const was = baseById.get(o.case_id)!;
-    if (o.passed && !was) b++;
-    else if (!o.passed && was) c++;
+  /**
+   * The declared protocol is checked against the data's actual structure.
+   *
+   * A suite whose cases are grouped by perturbation violates the independence `exact-mcnemar`
+   * assumes, and the resulting p-value is anticonservative — smaller than it should be, in
+   * the direction that manufactures significance. Reporting the number with a caveat is not
+   * a mitigation: the number gets quoted and the caveat gets dropped. So this refuses, on
+   * the same principle as the recall-mismatch refusal above, which it deliberately mirrors.
+   */
+  const clusters = new Set(paired.map(clusterOf)).size;
+  const isClustered = clusters < paired.length;
+  const declared = suite.significance_protocol;
+
+  if (isClustered && declared === "exact-mcnemar") {
+    return refuse(
+      `suite declares exact-mcnemar but its ${paired.length} case(s) form only ${clusters} independent ` +
+      `cluster(s) — perturbation variants are repeated looks at one question, not separate questions. ` +
+      `An independence-assuming test on clustered data reports a p-value smaller than the evidence supports. ` +
+      `Declare clustered-paired.`,
+    );
+  }
+  if (declared === "bootstrap-ci") {
+    return refuse(
+      "bootstrap-ci is declared but not implemented — graded and free-form metrics need it and no " +
+      "suite here produces them yet. Refusing rather than silently substituting a test for binary outcomes.",
+    );
   }
 
   const candScore = paired.filter((o) => o.passed).length / paired.length;
   const baseScore = baseline.filter((o) => o.passed).length / baseline.length;
   const delta = candScore - baseScore;
 
-  const { p, discordant } = mcnemar(b, c);
+  let p: number;
+  let discordant: number;
+  let test: "mcnemar" | "clustered-paired";
+
+  if (declared === "clustered-paired") {
+    const r = clusteredPaired(paired, baseline);
+    p = r.p;
+    discordant = r.discordant;
+    test = "clustered-paired";
+  } else {
+    let b = 0; // candidate passed, baseline failed
+    let c = 0; // candidate failed, baseline passed
+    for (const o of paired) {
+      const was = baseById.get(o.case_id)!;
+      if (o.passed && !was) b++;
+      else if (!o.passed && was) c++;
+    }
+    const r = mcnemar(b, c);
+    p = r.p;
+    discordant = r.discordant;
+    test = "mcnemar";
+  }
+
   const protocol = {
-    test: "mcnemar" as const,
+    test,
     trials: 1,
     alpha: correctedAlpha,
     comparisons_in_family,
     correction,
     p_value: p,
+    /** The number of INDEPENDENT units the p-value rests on, which is not the case count. */
+    effective_n: clusters,
   };
 
   // A suite cannot evidence a difference it was never sized to see, and a blunter instrument
