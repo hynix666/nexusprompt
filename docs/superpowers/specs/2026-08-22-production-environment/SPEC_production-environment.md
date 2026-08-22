@@ -321,10 +321,26 @@ Three things landed differently from the spec, all recorded in the code:
 
 **Verified:** 543 tests (+60), `verify` exit 0, **13 of 13 mutation probes** caught — after one survivor exposed a vacuous pass: a projection reporting `demo_mode: false` on a degraded run made every degradation detector pass, because those detectors are *conditional on that flag*. An instrument cannot also be what verifies itself.
 
-### Phase δ — measurement you can defend (Parts 5, 6, 7)
+### Phase δ — measurement you can defend (Parts 5, 6, 7) · **LANDED 22 August 2026**
 
 **Entry:** γ complete. **Parts 6 and 7 land together** — perturbations without clustered statistics produce anticonservative p-values from day one.
 **Prediction:** cluster-adjusted intervals are strictly wider than naive on the same data. *If they are equal, the expansion is not producing the clusters it is designed to produce and Part 6 is broken.*
+
+**Result: held, and the gap is not marginal.** Twenty rows over four briefs, three of which improved. Declared unclustered, the comparator sees fifteen one-directional discordant pairs and reports **p ≈ 6 × 10⁻⁵** — a decisive improvement. Declared honestly, it sees **three improved questions out of four** and reports **p = 0.25**. Same code, same outcomes, opposite verdicts, and the naive one would have promoted.
+
+The prediction spoke of intervals; this comparator reports p-values, so it was tested in that form. Recorded rather than quietly restated.
+
+**Landed:**
+
+- **Part 6.** Five seeded perturbations, four expectation-preserving and one deliberately not. `cluster_id` is written by the expander and never by a suite author — hand-assigned clustering would make every downstream confidence figure depend on how someone chose to group cases. A non-preserving variant gets its *own* cluster, because it asks a different question and pooling it would commit the exact error clustering exists to prevent.
+- **Part 7.** `eval-suite` **2.0.0** makes `significance_protocol` required, discharging ADR-0008's open item — an optional field would have left it open. The comparator **refuses** `exact-mcnemar` on clustered data rather than reporting a caveated number, mirroring the recall-mismatch refusal that already existed. `comparison` 2.1.0 adds `effective_n`, the count of independent units behind a p-value.
+- **Part 5, offline.** `judge-verdict` **1.1.0** adds `judge_family` — without it, ADR-0008's "the judge is never the model under test" could not be checked by anything — plus a `bias_panel` for the three of five named biases that had no field, and `measured_at` required with `agreement`, which is what makes the staleness rule enforceable. All three Enforcement rules ship **with** the adapter. `judge-verdict` left `pending-implementation.json`: the adapter exists and a conformance case validates a verdict it produced.
+
+**Threat model neither prior phase named, now handled** `[AUDIT omission 1]`: a judge's input *contains the model's own output*, so grading is prompt injection with the attacker already inside the loop. The candidate is fenced with a content-derived nonce it cannot predict, and the judge prompt runs through `DELIMITER_ENTROPY` — a gate built for compiled prompts, pointed at a new surface — before it is sent.
+
+**Also fixed in passing:** `eval-case`'s `failure_mode` was an unconstrained string in the schema while the TypeScript binding enumerated fifteen modes, so two invented modes validated cleanly against the contract that is supposed to be authoritative over the type.
+
+**Verified:** 582 tests (+39), `verify` exit 0, **14 of 14 mutation probes** — after one survivor exposed a fixture too uniform to discriminate: every row in a cluster shared a pass value, so a broken accumulator produced the right answer by accident. Third time a probe has found one of my own tests unable to fail, and the third time for the same reason.
 
 ### Phase ε — promotion (Part 8)
 
@@ -349,6 +365,8 @@ A register with closing conditions, not a disclaimer.
 | **`markStale` has zero callers and zero tests**; cascades by array position where the design says lineage. | `parent_revision_ids` is populated and the cascade follows it. Designed 21 Aug; unbuilt. |
 | **Does per-stage validation actually mitigate the depth cliff?** The strongest untested hypothesis here. I-3 measured *unvalidated* chains. | Phase γ makes it measurable. If false, eleven stages is the wrong shape and this is the finding that would say so. |
 | **Is gate-message text sufficient reflective feedback?** | Not settled by Phase β. The mechanism works and is capped; whether it *improves* anything is unmeasured. |
+| **No judge has ever graded anything.** Part 5's policy, refusals, fencing and contract are built and tested against a scripted judge; a live one needs the same provider key Phase γ lacks. No `bias_panel` field has ever been populated by measurement. | A key, then a calibration run against 100–300 human-labelled traces with inter-annotator agreement reported alongside judge-to-human agreement. |
+| **`bootstrap-ci` is declared and refused.** Graded and free-form metrics need it; the comparator returns `refused` rather than substituting a binary test. | The first suite that produces a non-binary metric. |
 | ~~**No suite measures pipeline behaviour.**~~ **Closed 22 August 2026** by `eval/pipeline-smoke.json`, which drives `runPipeline`. Depth plans, skips, partial degradation and the gate-feedback loop are now measurable. | — |
 | **Nothing has ever called a real provider.** `ANTHROPIC_API_KEY` is unset and no `ant` profile exists, so the live half of Phase γ did not run. `cache_read_tokens` is on the contract and is populated by nothing; whether the compiled prefix actually caches is unknown, and `usd` is arithmetic over *estimated* tokens. | A key, then one 100-trial run whose second identical request reports a non-zero cache read. Until then, no number this system produces is evidence about spend or about a model. |
 | **599 is an upper bound**, not the independent-source count. | Title/DOI-level dedup over extracted first pages. |
