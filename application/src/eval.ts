@@ -20,10 +20,16 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Orchestrator } from "./orchestrator.js";
 import { scoreCase, casePassed } from "../../core/src/eval/detectors.js";
+import { estimateTokens } from "../../core/src/gates/lint-primitives.js";
 import { measureRecall } from "../../core/src/eval/probes.js";
+import {
+  admitRun, cacheKey, plannedCalls, isDeterministic, emptyCost, accrue, hit, exceeds,
+} from "../../core/src/eval/budget.js";
+import { CachingProvider, MemoryCacheStore } from "./cache.js";
 import type {
   EvalCase, EvalRun, EvalSuite, Score, Configuration, PipelineOutcome,
   GenerationRequest, GenerationResult, ProviderFailure, ProviderTransport, RevisionStore, EventSink,
+  CacheStore,
 } from "../../contracts/index.js";
 
 /** What a case pins the provider to return. Absent means the provider fails, degrading the run. */
@@ -53,12 +59,23 @@ export type StubbedCase = EvalCase & {
 class PinnedProvider implements ProviderTransport {
   readonly provider_id = "pinned-stub";
   calls = 0;
+  /**
+   * One entry per call that REACHED this provider, `undefined` where the call failed.
+   *
+   * A failed call is still a call: it consumed a request, and on a real provider it can
+   * consume tokens too. Recording only successes under-counted `provider_calls` by exactly
+   * the number of cases the suite pins to failure — two of fourteen here — which is the
+   * kind of quiet under-count a budget is supposed to prevent, appearing in the budget's
+   * own accounting.
+   */
+  readonly usages: Array<{ prompt_tokens: number; completion_tokens: number } | undefined> = [];
   constructor(private stub: CaseStub) {}
   setStub(stub: CaseStub) { this.stub = stub; }
 
   async generate(req: GenerationRequest): Promise<GenerationResult | ProviderFailure> {
     this.calls++;
     if (this.stub.fail || this.stub.content === undefined) {
+      this.usages.push(undefined);
       return {
         request_id: req.request_id,
         category: "UNAVAILABLE",
@@ -70,12 +87,28 @@ class PinnedProvider implements ProviderTransport {
         provider_id: this.provider_id,
       };
     }
+    /**
+     * Token counts are ESTIMATED, from the same `estimateTokens` the TOKEN_BUDGET gate uses.
+     *
+     * A pinned provider has no real usage to report, and reporting nothing would make the
+     * cost block unmeasurable rather than merely approximate. Estimating is honest here and
+     * labelled as such — but a run against this provider must never be read as evidence
+     * about spend, only about whether the accounting works. `cache_read_tokens` is
+     * deliberately absent rather than zero: a stub has no prompt cache, and a zero would be
+     * indistinguishable from a real provider whose cache is silently invalidated.
+     */
+    const usage = {
+      prompt_tokens: estimateTokens(`${req.system ?? ""}\n${req.messages.map((m) => m.content).join("\n")}`),
+      completion_tokens: estimateTokens(this.stub.content),
+    };
+    this.usages.push(usage);
     return {
       request_id: req.request_id,
       content: this.stub.content,
       provider_id: this.provider_id,
       model_id: "pinned",
       finish_reason: "end_turn",
+      usage,
     };
   }
 
@@ -102,6 +135,18 @@ export interface RunSuiteOptions {
   sink?: EventSink;
   /** Selects `variant_stubs[variant]` per case, falling back to `stub`. Absent runs the baseline. */
   variant?: string;
+  /**
+   * Independent repetitions of every case. Default 1.
+   *
+   * Under stochastic decoding each trial is its own provider call, because that is the
+   * whole point of repeating. Under deterministic decoding they collapse to one call and
+   * the rest are cache hits — honestly, since the answer cannot differ.
+   */
+  trials?: number;
+  /** Absent means no caching: every trial reaches the provider. */
+  cache?: CacheStore;
+  /** USD per million tokens. Absent leaves `cost.usd` null rather than claiming zero. */
+  rate?: { in: number; out: number } | null;
 }
 
 export interface SuiteResult {
@@ -119,9 +164,43 @@ export function configurationId(c: Omit<Configuration, "configuration_id">): str
 
 export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
   const { suite, cases, configuration } = opts;
-  const provider = new PinnedProvider({});
+  const pinned = new PinnedProvider({});
   const events: unknown[] = [];
   let tick = 0;
+
+  const trials = Math.max(1, opts.trials ?? 1);
+  const decoding = configuration.decoding;
+
+  /**
+   * Admission happens before anything is spent, and refuses rather than truncating midway.
+   *
+   * A partially executed suite is not an `EvalRun`: its aggregate would be a score over
+   * whichever cases happened to fit, published under the name of a suite that means
+   * something else. The planned count is the UNCACHED worst case, because a budget that
+   * assumes a warm cache authorises a spend it cannot bound on a cold one — and the cold
+   * run is the one right after a configuration changes.
+   */
+  const planned = plannedCalls(suite.case_ids.length, trials, decoding);
+  const admission = admitRun({ budget: configuration.budget, plannedCalls: planned });
+  if (!admission.admit) {
+    throw new Error(
+      `Suite "${suite.suite_id}" ${admission.reason}.\n` +
+        `  Raise the budget on the configuration, or run a smaller suite. Nothing was spent.`,
+    );
+  }
+
+  // The trial index belongs in the key only when the configuration is stochastic; Core
+  // owns that rule so a cache cannot quietly make a repeated-trial protocol look like a
+  // single-sample one.
+  let currentCase = "";
+  let currentTrial = 0;
+  const caching = opts.cache
+    ? new CachingProvider(pinned, {
+        cache: opts.cache,
+        keyFor: () => cacheKey(configuration.configuration_id, currentCase, currentTrial, decoding),
+      })
+    : null;
+  const provider: ProviderTransport & { calls?: number } = caching ?? pinned;
 
   const orchestrator = new Orchestrator({
     provider,
@@ -153,19 +232,38 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
       continue;
     }
 
-    provider.setStub(stubFor(kase));
-    const outcome = await orchestrator.run({
-      command_id: `eval-${case_id}`,
-      run_id: `eval-${case_id}`,
-      stage_id: "compile",
-      input: kase.input,
-      config_fingerprint: configuration.configuration_id,
-    });
+    pinned.setStub(stubFor(kase));
+    currentCase = case_id;
 
-    const scores = scoreCase(kase, outcome);
+    /**
+     * Every trial is scored. Under deterministic decoding they are identical by
+     * construction and the extra ones are cache hits; under stochastic decoding they are
+     * separate calls, which is the only way a spread means anything.
+     *
+     * The case is recorded once, from the FIRST trial, so `aggregate.cases` still counts
+     * cases rather than executions. Reporting 14 cases × 100 trials as 1,400 cases would
+     * inflate every denominator in the run.
+     */
+    let firstScores: Score[] | null = null;
+    for (let trial = 0; trial < trials; trial++) {
+      currentTrial = trial;
+      const outcome = await orchestrator.run({
+        command_id: `eval-${case_id}-t${trial}`,
+        run_id: `eval-${case_id}-t${trial}`,
+        stage_id: "compile",
+        input: kase.input,
+        config_fingerprint: configuration.configuration_id,
+      });
+      const scores = scoreCase(kase, outcome);
+      if (firstScores === null) {
+        firstScores = scores;
+        outcomes.push(outcome);
+      }
+    }
+
+    const scores = firstScores ?? [];
     const passed = casePassed(scores);
     allScores.push(...scores);
-    outcomes.push(outcome);
     perCase.push({ case_id, passed, failure_mode: kase.failure_mode, scores });
 
     const slot = (byFailureMode[kase.failure_mode] ??= { cases: 0, passed: 0 });
@@ -174,6 +272,25 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
   }
 
   const passedCount = perCase.filter((c) => c.passed).length;
+
+  /**
+   * Cost, measured rather than declared.
+   *
+   * `provider_calls` and `cache_hits` come from the caching decorator, which counts what it
+   * actually did. `usd` stays null unless a rate was supplied: a run whose provider reported
+   * no usage must not print a dollar figure, because zero reads as free and null reads as
+   * unmeasured, and those take different paths downstream.
+   *
+   * `budget_exceeded` was a required field holding the literal `false` since the schema
+   * landed, because nothing could enforce it. It is now computed from what was spent.
+   */
+  const cost = (() => {
+    let c = emptyCost();
+    for (const u of pinned.usages) c = accrue(c, u, opts.rate ?? null);
+    for (let i = 0; i < (caching?.hits ?? 0); i++) c = hit(c);
+    if (!opts.rate) c = { ...c, usd: null };
+    return { ...c, budget_exceeded: exceeds(c, configuration.budget) };
+  })();
 
   const run: EvalRun = {
     run_id: randomUUID(),
@@ -186,14 +303,7 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
       score: perCase.length ? passedCount / perCase.length : 0,
       by_failure_mode: byFailureMode,
     },
-    cost: {
-      tokens_in: 0,
-      tokens_out: 0,
-      provider_calls: provider.calls,
-      cache_hits: 0,
-      usd: 0,
-      budget_exceeded: false,
-    },
+    cost,
     latency_ms: null,
     // Measured against this run's own outcomes, in this configuration's own output format.
     // Recall is a property of (detector, configuration), so a block measured elsewhere would

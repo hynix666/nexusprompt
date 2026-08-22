@@ -60,7 +60,20 @@ export interface GenerationResult {
   provider_id: string;
   model_id: string;
   finish_reason: string;
-  usage?: { prompt_tokens?: number; completion_tokens?: number };
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    /**
+     * Tokens served from the provider's prompt cache.
+     *
+     * The only way to tell a working cache from a silently invalidated one: if this is
+     * zero across repeated identical prefixes, something in the prefix is varying — a
+     * timestamp, a request id, an unsorted key. Estimating it would hide exactly the
+     * failure it exists to expose.
+     */
+    cache_read_tokens?: number;
+    cache_write_tokens?: number;
+  };
   timings_ms?: { total?: number };
 }
 
@@ -162,7 +175,7 @@ export const CONTRACT_VERSIONS = {
   "observability-event": "1.2.0",
   "eval-run": "1.1.0",
   comparison: "2.0.0",
-  configuration: "1.1.0",
+  configuration: "1.2.0",
 } as const;
 
 export interface ExecutionProvenance {
@@ -173,6 +186,9 @@ export interface ExecutionProvenance {
 }
 
 /* ── Revision / storage protocol ──────────────────────────────────────────── */
+
+/** Where a record is retained, and therefore what the retention bound means for it. */
+export type RetentionScope = "LOCAL_BUNDLE" | "DB" | "EXPORT";
 
 /** SKIPPED: deliberately not run. Without it a bundle cannot tell a skip from a truncated run. */
 export type RevisionStatus = "SUCCEEDED" | "DEMO" | "FAILED" | "CANCELLED" | "SKIPPED";
@@ -194,7 +210,7 @@ export interface RevisionEntry {
   status: RevisionStatus;
   provider_used: string | null;
   execution_provenance: ExecutionProvenance;
-  retention_scope: "LOCAL_BUNDLE" | "DB" | "EXPORT";
+  retention_scope: RetentionScope;
 }
 
 export interface RunBundleSummary {
@@ -209,6 +225,72 @@ export interface RevisionStore {
   getRun(run_id: string): Promise<RevisionEntry[]>;
   listRecent(limit: number): Promise<RunBundleSummary[]>;
   markStale(run_id: string, from_stage_id: StageId): Promise<void>;
+}
+
+/* ── Execution plane ──────────────────────────────────────────────────────── */
+
+/**
+ * A content-addressed cache for generations.
+ *
+ * Keys come from `core/src/eval/budget.ts`, which decides whether the trial index is part
+ * of the key. That decision is not the adapter's: a cache that chose its own key policy
+ * could make a stochastic protocol look deterministic, which is the failure the key rule
+ * exists to prevent.
+ */
+export interface CacheStore {
+  get(key: string): Promise<GenerationResult | null>;
+  put(key: string, value: GenerationResult): Promise<void>;
+}
+
+/* ── Evidence plane ───────────────────────────────────────────────────────── */
+
+/**
+ * What the evidence plane holds.
+ *
+ * `EvalRun`, `Comparison` and `Baseline` had schemas and no home: runs were computed and
+ * discarded. A plane that computes evidence and does not retain it cannot answer "is this
+ * better than last month", which is the only question the system exists to answer.
+ */
+export type EvidenceKind = "eval-run" | "comparison" | "baseline" | "promotion";
+
+export interface EvidenceRecord {
+  kind: EvidenceKind;
+  /** Unique within its kind. The store refuses a second write under the same pair. */
+  id: string;
+  created_at: string;
+  /** The contract-validated body — an EvalRun, Comparison, Baseline or Promotion. */
+  body: unknown;
+}
+
+export interface EvidenceSummary {
+  kind: EvidenceKind;
+  id: string;
+  created_at: string;
+}
+
+export interface EvidenceFilter {
+  /** ISO timestamp; records created strictly before it are excluded. */
+  since?: string;
+  limit?: number;
+}
+
+/**
+ * Deliberately has no `update` and no `delete`.
+ *
+ * Immutability is expressed by the absence of a mutator rather than by a convention
+ * someone has to honour. "A re-run is a new run; runs are never edited" is then a property
+ * of the interface, and an adapter that wanted to violate it would have to add a method.
+ *
+ * This is the same reasoning that keeps `RevisionEntry` free of prompt bodies: a rule the
+ * type system enforces cannot be forgotten under deadline, and comparison across time
+ * requires that yesterday's number cannot be edited.
+ */
+export interface EvidenceStore {
+  readonly retention_scope: RetentionScope;
+  /** Rejects a duplicate `(kind, id)` rather than overwriting. */
+  put(record: EvidenceRecord): Promise<void>;
+  get(kind: EvidenceKind, id: string): Promise<EvidenceRecord | null>;
+  list(kind: EvidenceKind, filter?: EvidenceFilter): Promise<EvidenceSummary[]>;
 }
 
 /* ── Technique catalog ────────────────────────────────────────────────────── */
@@ -342,6 +424,16 @@ export interface Configuration {
   };
   retrieval_config?: Record<string, unknown> | null;
   tool_config?: Record<string, unknown> | null;
+  /**
+   * What this configuration may spend, enforced BEFORE dispatch rather than reported after.
+   * `on_exceed` has no default: both behaviours are defensible and the silent choice between
+   * them is the failure mode. See `core/src/eval/budget.ts`.
+   */
+  budget?: {
+    max_provider_calls?: number | null;
+    max_usd?: number | null;
+    on_exceed: "refuse" | "truncate_suite";
+  } | null;
   gate_set_ref?: string | null;
   router_policy_ref?: string | null;
 }

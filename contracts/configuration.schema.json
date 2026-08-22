@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/configuration/1.1.0",
+  "$id": "https://promptnexus.dev/contracts/configuration/1.2.0",
   "title": "Configuration",
   "description": "The versioned artifact. A prompt alone is not a unit of version, comparison, or recommendation: its effectiveness inverts across model generations, and the same is true of pipeline depth and topology across throughput. Everything that can move the measured result belongs here, and configuration_id is the content hash of the rest.",
   "type": "object",
@@ -45,6 +45,17 @@
     },
     "retrieval_config": { "type": ["object", "null"] },
     "tool_config": { "type": ["object", "null"] },
+    "budget": {
+      "description": "What this configuration may spend, enforced BEFORE dispatch rather than observed after. Cost-driven degradation -- truncation, weaker-model fallback, aggressive caching -- degrades correctness without triggering any alert, which makes a budget a correctness constraint and not an economic one. on_exceed has no default because both behaviours are defensible and a silent choice between them is the failure mode.",
+      "type": ["object", "null"],
+      "required": ["on_exceed"],
+      "additionalProperties": false,
+      "properties": {
+        "max_provider_calls": { "type": ["integer", "null"], "minimum": 0 },
+        "max_usd": { "type": ["number", "null"], "minimum": 0 },
+        "on_exceed": { "enum": ["refuse", "truncate_suite"] }
+      }
+    },
     "gate_set_ref": { "type": ["string", "null"], "description": "Gates constrain a search; they are never a term in its objective. An optimizer that can move this is optimizing its own examiner." },
     "router_policy_ref": { "type": ["string", "null"] }
   }

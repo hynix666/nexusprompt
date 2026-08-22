@@ -15,7 +15,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "gates": { "ported": 16, "source_total": 16 },
   "stages": { "built": 11, "target": 11 },
   "contracts": { "schemas": 13 },
-  "adapters": ["provider-local-proxy", "storage-local"],
+  "adapters": ["provider-local-proxy", "storage-local", "evidence-local"],
   "shells": ["cli"],
   "catalog": { "records_imported": 195, "records_available": 172, "records_added": 23 },
   "sources": { "frozen_files": 420 },

@@ -8,7 +8,7 @@ Mostly documentation, plus **one vertical slice that really runs**. It holds:
 
 - `Documentation/` — 31 Markdown files describing the *target* architecture of the PromptNexus Unified Platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists.
 - `sources/` — 420 files extracted from five archives, frozen and SHA-256-verified against `sources/MANIFEST.json`. Read from these; never write into them.
-- A working slice: `contracts/`, `core/` (16 of 16 gates, 11 pipeline stages), `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `shells/cli`, `scripts/`, `test/`.
+- A working slice: `contracts/`, `core/` (16 of 16 gates, 11 pipeline stages), `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `adapters/evidence-local`, `shells/cli`, `scripts/`, `test/`.
 - Four source archives (still zipped) and `SystemPromptBuilderPipeline.tsx`, loose on disk. **That copy is stale** (nine stages); the current one is inside `~/Downloads/Compressed/files_3.zip` and has eleven.
 
 `npm install && npm run verify` works and takes about ten seconds. **Use `npm`, not `pnpm`** — pnpm is not installed and the workspace is defined with npm workspaces, though much of the documentation still says `pnpm`.

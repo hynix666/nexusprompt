@@ -430,3 +430,145 @@ describe("anchor sizing", () => {
     expect(requiredAnchorSize(0.5)).toBeLessThan(10);
   });
 });
+
+/* ── budget and the cache key ──────────────────────────────────────────────── */
+
+import {
+  isDeterministic, cacheKey, plannedCalls, admitRun, accrue, hit, exceeds, emptyCost,
+} from "../src/eval/budget.js";
+
+describe("isDeterministic", () => {
+  it.each([
+    ["temperature 0", { temperature: 0 }, true],
+    ["temperature 0.7", { temperature: 0.7 }, false],
+    ["temperature 1", { temperature: 1 }, false],
+    ["null temperature with a seed", { temperature: null, seed: 7 }, true],
+    ["null temperature with no seed", { temperature: null }, false],
+    ["null temperature with a null seed", { temperature: null, seed: null }, false],
+  ])("%s", (_name, decoding, expected) => {
+    expect(isDeterministic(decoding)).toBe(expected);
+  });
+
+  it("does not treat a deprecated temperature as greedy decoding", () => {
+    // A null temperature records that the provider REMOVED the parameter, which newer
+    // frontier models have done. That is the absence of a control, not a promise of
+    // determinism, and reading it as one would make the cache collapse trials that can
+    // still differ.
+    expect(isDeterministic({ temperature: null })).toBe(false);
+  });
+});
+
+describe("cacheKey", () => {
+  const DET = { temperature: 0 };
+  const STOCH = { temperature: 0.7 };
+
+  it("omits the trial index when decoding is deterministic", () => {
+    expect(cacheKey("cfg", "case-1", 0, DET)).toBe(cacheKey("cfg", "case-1", 41, DET));
+  });
+
+  it("includes the trial index when decoding is stochastic", () => {
+    // The correction to ADR-0008. Keyed on (config, case) alone, trials 2..100 are cache
+    // hits of trial 1 — one sample reported as a hundred, with a measured variance of
+    // exactly zero. The cache would not make a repeated-trial protocol affordable, it
+    // would make it not a protocol.
+    expect(cacheKey("cfg", "case-1", 0, STOCH)).not.toBe(cacheKey("cfg", "case-1", 1, STOCH));
+  });
+
+  it("separates configurations and cases regardless of decoding", () => {
+    expect(cacheKey("a", "c", 0, DET)).not.toBe(cacheKey("b", "c", 0, DET));
+    expect(cacheKey("a", "c1", 0, DET)).not.toBe(cacheKey("a", "c2", 0, DET));
+  });
+});
+
+describe("plannedCalls", () => {
+  it("counts one call per case when decoding is deterministic, however many trials", () => {
+    expect(plannedCalls(14, 100, { temperature: 0 })).toBe(14);
+  });
+
+  it("counts every trial when decoding is stochastic", () => {
+    expect(plannedCalls(14, 100, { temperature: 0.7 })).toBe(1400);
+  });
+});
+
+describe("admitRun", () => {
+  const budget = (over = {}) => ({ on_exceed: "refuse" as const, max_provider_calls: 100, ...over });
+
+  it("admits when no budget is declared, and says so", () => {
+    const a = admitRun({ plannedCalls: 9_999 });
+    expect(a.admit).toBe(true);
+    expect(a.reason).toContain("no budget declared");
+  });
+
+  it("admits within budget", () => {
+    expect(admitRun({ budget: budget(), plannedCalls: 50 }).admit).toBe(true);
+  });
+
+  it("refuses BEFORE dispatch rather than stopping midway", () => {
+    // A partially executed suite is not an EvalRun: its aggregate would be a score over
+    // whichever cases happened to fit, published under the name of a suite that means
+    // something else.
+    const a = admitRun({ budget: budget(), plannedCalls: 101 });
+    expect(a.admit).toBe(false);
+    expect(a.allowedCalls).toBe(0);
+    expect(a.reason).toContain("refused before dispatch");
+  });
+
+  it("truncates instead when the configuration asked for that", () => {
+    const a = admitRun({ budget: budget({ on_exceed: "truncate_suite" }), plannedCalls: 500 });
+    expect(a.admit).toBe(true);
+    expect(a.allowedCalls).toBe(100);
+  });
+
+  it("bounds by dollars as well as calls", () => {
+    const a = admitRun({ budget: { on_exceed: "refuse", max_usd: 1 }, plannedCalls: 1, estimatedUsd: 5 });
+    expect(a.admit).toBe(false);
+    expect(a.reason).toContain("max_usd");
+  });
+
+  it("does not bound by dollars when the spend cannot be estimated", () => {
+    // An unmeasurable estimate must not be treated as zero. Refusing on an unknown would
+    // block every run against a provider that reports no usage; admitting on it silently is
+    // what `budget_exceeded` catches after the fact.
+    expect(admitRun({ budget: { on_exceed: "refuse", max_usd: 1 }, plannedCalls: 1 }).admit).toBe(true);
+  });
+
+  it("gives a reason whether or not it admitted", () => {
+    expect(admitRun({ budget: budget(), plannedCalls: 1 }).reason).toBeTruthy();
+    expect(admitRun({ budget: budget(), plannedCalls: 999 }).reason).toBeTruthy();
+  });
+});
+
+describe("cost accrual", () => {
+  it("sums usage and counts calls", () => {
+    let c = emptyCost();
+    c = accrue(c, { prompt_tokens: 100, completion_tokens: 20 }, { in: 3, out: 15 });
+    c = accrue(c, { prompt_tokens: 50, completion_tokens: 10 }, { in: 3, out: 15 });
+    expect(c.tokens_in).toBe(150);
+    expect(c.tokens_out).toBe(30);
+    expect(c.provider_calls).toBe(2);
+    expect(c.usd).toBeCloseTo((150 / 1e6) * 3 + (30 / 1e6) * 15, 12);
+  });
+
+  it("reports null dollars rather than zero when no rate is known", () => {
+    // Zero reads as free; null reads as unmeasured, and those take different paths.
+    expect(accrue(emptyCost(), { prompt_tokens: 10 }, null).usd).toBeNull();
+  });
+
+  it("counts a cache hit without counting a provider call", () => {
+    const c = hit(emptyCost());
+    expect(c.cache_hits).toBe(1);
+    expect(c.provider_calls).toBe(0);
+  });
+
+  it("detects a spend past the declared budget", () => {
+    const spent = { ...emptyCost(), provider_calls: 11 };
+    expect(exceeds(spent, { on_exceed: "refuse", max_provider_calls: 10 })).toBe(true);
+    expect(exceeds(spent, { on_exceed: "refuse", max_provider_calls: 11 })).toBe(false);
+    expect(exceeds(spent, null)).toBe(false);
+  });
+
+  it("does not judge a dollar budget it cannot measure", () => {
+    const spent = { ...emptyCost(), usd: null, provider_calls: 5 };
+    expect(exceeds(spent, { on_exceed: "refuse", max_usd: 0.01 })).toBe(false);
+  });
+});

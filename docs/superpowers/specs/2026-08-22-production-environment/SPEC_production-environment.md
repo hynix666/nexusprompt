@@ -301,10 +301,25 @@ Three things landed differently from the spec, all recorded in the code:
 
 **Verified:** 483 tests (+23), `verify` exit 0, **11 of 11 mutation probes** caught after two of my own tests were found unable to fail — a fixture whose WARN was a PASS, and a mutation that changed a critique's heading where only the whole string mattered.
 
-### Phase γ — evidence and execution (Parts 2, 3)
+### Phase γ — evidence and execution (Parts 2, 3) · **LANDED 22 August 2026, offline half only**
 
 **Entry:** β complete; a provider key available; budget enforcement written before the first real call `[AUDIT C-3]`.
 **Prediction:** first real 100-trial run completes with `provider_calls` under 40% of `cases × trials`, and `cache_read_input_tokens > 0` on the second identical request. *If cache reads are zero, a silent prefix invalidator exists and Part 3's caching claim is void.*
+
+**Status: no provider key is available, so the live half did not run.** `ANTHROPIC_API_KEY` is unset and no `ant` profile exists. The first half of the prediction was verified against pinned stubs — a 100-trial run makes `CACHEABLE + FAILING × 100` calls instead of `14 × 100`, well under 40%. **The second half is untested and stays untested**: nothing here has ever spoken to a real provider, so whether the compiled prefix actually caches is unknown. `cache_read_tokens` exists on the contract and is never populated by anything.
+
+**Built and verified offline:**
+
+- **Part 2, the evidence plane.** `EvidenceStore` with no `update` and no `delete` — immutability expressed by the absence of a mutator rather than by convention — plus `adapters/evidence-local`, which writes with the `wx` flag so a duplicate fails in the syscall rather than in a check. No read-modify-write, so there is no cycle to interleave; `storage-local` does one per append, eleven times a run, and two concurrent runs there already race. A parameterized conformance suite scans `adapters/` and **fails if an implementation exists that it does not exercise**, so coverage is asserted rather than printed.
+- **Part 3, the execution plane.** Budget admitted before dispatch (`refuse` or `truncate_suite`, no default), cost measured rather than declared, and caching at the provider boundary so the authoring pipeline gets it too.
+- **The pipeline suite β proved was missing.** `eval/pipeline-smoke.json` drives `runPipeline`, so the depth plan, skips, partial degradation and the gate-feedback loop are measurable for the first time. Phase β's mechanism now has a suite that can see it.
+
+**Two corrections to this specification, both found by building:**
+
+- **ADR-0008's cache key is wrong, and so was §3 of this document.** The key `(config_hash, case_hash)` cannot both be correct and "what makes 100-trial protocols affordable". A repeated-trial protocol exists *because* decoding is stochastic; keyed on config and case alone, trials 2–100 are cache hits of trial 1 — one sample reported as a hundred, with a measured variance of exactly zero and a confident interval around it. The key now includes the trial index exactly when the configuration is stochastic, and caching pays across *runs* instead. Same shape as the detector-recall finding: an instrument whose sensitivity depends on the configuration will invert the conclusion. Here the instrument is the cache.
+- **Failures are never cached, so caching cannot make a failing case cheaper.** A `ProviderFailure` is a statement about the provider at a moment; caching one turns a transient outage into a permanent answer, and — because demo mode maps a classified failure to a placeholder — would pin a run to `⟦WORKFLOW DEMO — no model⟧` for as long as the cache lived. The consequence is worth stating: a suite full of failing cases stays expensive to repeat.
+
+**Verified:** 543 tests (+60), `verify` exit 0, **13 of 13 mutation probes** caught — after one survivor exposed a vacuous pass: a projection reporting `demo_mode: false` on a degraded run made every degradation detector pass, because those detectors are *conditional on that flag*. An instrument cannot also be what verifies itself.
 
 ### Phase δ — measurement you can defend (Parts 5, 6, 7)
 
@@ -334,7 +349,8 @@ A register with closing conditions, not a disclaimer.
 | **`markStale` has zero callers and zero tests**; cascades by array position where the design says lineage. | `parent_revision_ids` is populated and the cascade follows it. Designed 21 Aug; unbuilt. |
 | **Does per-stage validation actually mitigate the depth cliff?** The strongest untested hypothesis here. I-3 measured *unvalidated* chains. | Phase γ makes it measurable. If false, eleven stages is the wrong shape and this is the finding that would say so. |
 | **Is gate-message text sufficient reflective feedback?** | Not settled by Phase β. The mechanism works and is capped; whether it *improves* anything is unmeasured. |
-| **No suite measures pipeline behaviour.** `compile-smoke` runs the single-stage Orchestrator against pinned stubs, so Pipeline B currently prices detectors and stage-level guarantees only. Any change to the pipeline's shape — gate feedback, topology, depth — is invisible to every suite that exists. | A suite whose cases drive `runPipeline`. This is the first thing Phase γ should build, ahead of a live provider: without it, a real model makes pipeline changes expensive to run and still impossible to score. |
+| ~~**No suite measures pipeline behaviour.**~~ **Closed 22 August 2026** by `eval/pipeline-smoke.json`, which drives `runPipeline`. Depth plans, skips, partial degradation and the gate-feedback loop are now measurable. | — |
+| **Nothing has ever called a real provider.** `ANTHROPIC_API_KEY` is unset and no `ant` profile exists, so the live half of Phase γ did not run. `cache_read_tokens` is on the contract and is populated by nothing; whether the compiled prefix actually caches is unknown, and `usd` is arithmetic over *estimated* tokens. | A key, then one 100-trial run whose second identical request reports a non-zero cache read. Until then, no number this system produces is evidence about spend or about a model. |
 | **599 is an upper bound**, not the independent-source count. | Title/DOI-level dedup over extracted first pages. |
 | **Significance protocol for graded and free-form metrics.** `bootstrap-ci` is named, not specified. | First suite that needs it, recorded per ADR-0008's *to revisit*. |
 | **Judge calibration cadence.** Practice says monthly; nothing here re-calibrates. | A judge exists and a calibration job runs against a gold set with an alert on κ drop. |

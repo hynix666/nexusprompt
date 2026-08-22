@@ -31,6 +31,29 @@ description is now a constraint.
 Minor rather than major: no configuration that validated before and was *not* reflexive breaks,
 and a reflexive one without a cap was never valid in intent.
 
+### `configuration` 1.1.0 → **1.2.0** (minor)
+
+**Added** `budget`.
+
+`eval-run.cost.budget_exceeded` has been a required field since the schema landed and has
+always held the literal `false`, because no configuration could declare a budget and nothing
+could enforce one. ADR-0008 says budget "belongs in the request contract and is enforced, not
+observed afterwards"; this is the half of that sentence that was missing.
+
+`on_exceed` is required and has no default. Refusing before dispatch and truncating the suite
+are both defensible, and a silent choice between them is the failure mode — a partially
+executed suite is not an `EvalRun`, because its aggregate is a score over whichever cases
+happened to fit, published under the name of a suite that means something else.
+
+### `GenerationResult.usage` — **additive**, no schema (TypeScript port only)
+
+**Added** `cache_read_tokens` and `cache_write_tokens`.
+
+The only way to tell a working prompt cache from a silently invalidated one. Current provider
+guidance is explicit that a zero cache-read across repeated identical prefixes means something
+in the prefix is varying — a timestamp, a request id, an unsorted key. Estimating the figure
+would hide exactly the failure it exists to expose, so it is reported or absent, never guessed.
+
 ### `revision-entry` 1.2.0 → **1.3.0** (minor)
 
 **Added** `feedback_round`. **Clarified** `stage_attempt`.
