@@ -158,10 +158,11 @@ export const CONTRACT_VERSIONS = {
   "gate-result": "1.3.0",
   "provider-failure": "1.0.0",
   "pipeline-outcome": "1.0.0",
-  "revision-entry": "1.2.0",
-  "observability-event": "1.1.0",
+  "revision-entry": "1.3.0",
+  "observability-event": "1.2.0",
   "eval-run": "1.1.0",
   comparison: "2.0.0",
+  configuration: "1.1.0",
 } as const;
 
 export interface ExecutionProvenance {
@@ -187,6 +188,8 @@ export interface RevisionEntry {
   input_hash: string;
   output_hash: string;
   gate_results: GateResult[];
+  /** Which gate-feedback round produced this. Absent or 0 is the first pass. */
+  feedback_round?: number;
   freshness: Freshness;
   status: RevisionStatus;
   provider_used: string | null;
@@ -284,7 +287,9 @@ export type EventType =
   | "REVISION_PERSISTED"
   | "HEALTH_CHECK"
   /** A stage did not run, deliberately. Distinct from DEGRADE: nothing failed. */
-  | "STAGE_SKIPPED";
+  | "STAGE_SKIPPED"
+  /** A gate FAIL was routed back to an earlier stage as feedback, within the declared cap. */
+  | "GATE_FEEDBACK";
 
 export interface ObservabilityEvent {
   event_id: string;

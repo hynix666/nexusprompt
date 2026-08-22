@@ -54,17 +54,34 @@ export function checkDepthBudget(root = process.cwd()) {
     return { fatalCode: 2, fatal: `${BUDGET}: target must be in (0,1) and floor in (0,1]` };
   }
 
-  const achievable = Math.pow(floor, depth);
+  /**
+   * A reflexive run is deeper than the plan.
+   *
+   * Gate feedback routes a FAIL back to `refine`, which then re-runs `lint`, so every
+   * permitted round is TWO more stage executions against the same budget. Checking the
+   * plan length alone would leave the guard measuring a depth the system no longer has —
+   * a rule stated more broadly than implemented, which is the class this repository keeps
+   * finding. The cap is therefore derived from this arithmetic rather than chosen: raising
+   * `max_feedback_rounds` fails this check unless the floor or the target moves.
+   */
+  const rounds = budget.max_feedback_rounds ?? 0;
+  if (!Number.isInteger(rounds) || rounds < 0) {
+    return { fatalCode: 2, fatal: `${BUDGET}: max_feedback_rounds must be a non-negative integer` };
+  }
+  const STAGES_PER_ROUND = 2; // refine, then lint again
+  const worstDepth = depth + rounds * STAGES_PER_ROUND;
+
+  const achievable = Math.pow(floor, worstDepth);
   // The per-stage reliability the declared depth and target actually demand.
-  const required = Math.pow(target, 1 / depth);
+  const required = Math.pow(target, 1 / worstDepth);
   // How much deeper the pipeline could go at the declared floor before missing target.
-  const headroom = Math.floor(Math.log(target) / Math.log(floor)) - depth;
+  const headroom = Math.floor(Math.log(target) / Math.log(floor)) - worstDepth;
 
   return {
     ok: achievable >= target,
     fatalCode: null,
     fatal: null,
-    depth, target, floor, achievable, required, headroom,
+    depth, worstDepth, rounds, target, floor, achievable, required, headroom,
     status: budget.status ?? "unknown",
   };
 }
@@ -78,7 +95,10 @@ function main() {
     return r.fatalCode;
   }
 
-  const head = `check:depth — ${r.depth} stages · floor ${pct(r.floor)}/stage · target ${pct(r.target)} end to end`;
+  // Name the worst-case depth, not the plan length. Reporting "11 stages" beside numbers
+  // computed for 17 executions is a header that disagrees with its own arithmetic.
+  const loop = r.rounds ? ` +${r.rounds} feedback round(s) → ${r.worstDepth} worst case` : "";
+  const head = `check:depth — ${r.depth} stages${loop} · floor ${pct(r.floor)}/stage · target ${pct(r.target)} end to end`;
 
   if (r.ok) {
     console.log(`${head} — OK`);
@@ -95,6 +115,9 @@ function main() {
   console.error(`    · raise per_stage_floor to ${pct(r.required)} and show the stages can hold it`);
   console.error(`    · lower end_to_end_target to ${pct(r.achievable)} and say so where users read it`);
   console.error(`    · reduce depth — the deepest pipeline this floor supports is ${Math.floor(Math.log(r.target) / Math.log(r.floor))} stages`);
+  if (r.rounds) {
+    console.error(`    · lower max_feedback_rounds from ${r.rounds} — every round costs two executions`);
+  }
   return 1;
 }
 

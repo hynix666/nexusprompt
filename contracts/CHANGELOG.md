@@ -16,6 +16,45 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-22
+
+### `configuration` 1.0.0 → **1.1.0** (minor)
+
+**Enforced** `max_iterations` for reflexive topologies, via `if`/`then`.
+
+The field's description already said "Required for reflexive topologies. The recorded hazard
+for verification loops is unbounded retry with no termination rule." Nothing enforced it, so a
+reflexive configuration with no termination rule validated cleanly — a rule stated more broadly
+than implemented, which is one of the three defect classes this repository keeps finding. The
+description is now a constraint.
+
+Minor rather than major: no configuration that validated before and was *not* reflexive breaks,
+and a reflexive one without a cap was never valid in intent.
+
+### `revision-entry` 1.2.0 → **1.3.0** (minor)
+
+**Added** `feedback_round`. **Clarified** `stage_attempt`.
+
+Gate feedback re-executes `refine` and `lint`, so a bundle now holds each of them more than
+once. Without a marker the second pair is distinguishable only by position — the same gap
+`SKIPPED` closed one entry below, in mirror image: a bundle that is *longer* than the plan with
+no record of why.
+
+`stage_attempt` was left alone deliberately. It counts provider attempts within one execution,
+which was a deliberate earlier fix ("hardcoding 1 made a revision claim one attempt and mean
+three"), and re-pointing it at executions would have silently undone that. Two meanings for one
+field is how the ambiguity started; the description now says which one this is.
+
+### `observability-event` 1.1.0 → **1.2.0** (minor)
+
+**Added** `GATE_FEEDBACK` to the `event_type` enum.
+
+Routing a gate FAIL back to `refine` is neither a skip nor a degradation — nothing failed and
+nothing was omitted. Reusing `DEGRADE` would have made every reflexive run look like a
+degraded one, and `STAGE_DECISION` would have lost the reason.
+
+---
+
 ## 2026-08-18
 
 ### `revision-entry` 1.1.0 → **1.2.0** (minor)

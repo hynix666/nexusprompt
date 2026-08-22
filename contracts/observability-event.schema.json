@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/observability-event/1.1.0",
+  "$id": "https://promptnexus.dev/contracts/observability-event/1.2.0",
   "title": "ObservabilityEvent",
   "description": "Redacted operational event. Carries keyed hashes only; a payload containing a prompt body is rejected by the sink, not truncated.",
   "type": "object",
@@ -9,7 +9,8 @@
   "properties": {
     "event_id": { "type": "string", "minLength": 1 },
     "event_type": {
-      "enum": ["PIPELINE_COMMAND_RECEIVED", "STAGE_DECISION", "PROVIDER_CALL_STARTED", "PROVIDER_CALL_SUCCEEDED", "PROVIDER_CALL_FAILED", "DEGRADE", "REVISION_PERSISTED", "HEALTH_CHECK", "STAGE_SKIPPED"]
+      "enum": ["PIPELINE_COMMAND_RECEIVED", "STAGE_DECISION", "PROVIDER_CALL_STARTED", "PROVIDER_CALL_SUCCEEDED", "PROVIDER_CALL_FAILED", "DEGRADE", "REVISION_PERSISTED", "HEALTH_CHECK", "STAGE_SKIPPED",
+        "GATE_FEEDBACK"]
     },
     "run_id": { "type": "string" },
     "parent_event_id": { "type": ["string", "null"] },

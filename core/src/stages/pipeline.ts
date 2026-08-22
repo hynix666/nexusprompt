@@ -50,6 +50,17 @@ export interface PipelineContext {
   testMessage?: string;
   gateOptions?: GateOptions;
 
+  /**
+   * The pipeline shape, from `Configuration.topology`.
+   *
+   * `reflexive` is what turns gate verdicts from a terminal report into a control signal.
+   * The default is sequential — omitting this runs exactly the pipeline that ran before
+   * gate feedback existed, byte for byte.
+   */
+  topology?: { kind: "sequential" | "parallel-merge" | "hierarchical" | "reflexive"; max_iterations?: number | null };
+  /** Gate-feedback rounds already spent. Part of the context because Core decides on it. */
+  feedbackRounds?: number;
+
   spec?: string;
   calibration?: string;
   prompt?: string;
@@ -258,3 +269,114 @@ export const resolveDepth = (ctx: Pick<PipelineContext, "depth" | "stakes">): st
 /** The stages to run for a whole context, resolving depth from stakes when it is unset. */
 export const planForContext = (ctx: Pick<PipelineContext, "depth" | "stakes">): readonly PipelineStage[] =>
   planFor(resolveDepth(ctx));
+
+/* ── Gate feedback: verdicts as a control signal ──────────────────────────── */
+
+/**
+ * What Core decides when `lint` has finished.
+ *
+ * `retry: false` always carries a `reason`, because "the loop did not run" has several
+ * causes and a run that cannot say which one is not auditable. This mirrors `lint` itself
+ * reporting a null status rather than PASS when it had nothing to check.
+ */
+export interface FeedbackDecision {
+  retry: boolean;
+  reason: string;
+  /** Where the Application should resume. Only meaningful when `retry`. */
+  resumeAt?: StageId;
+  patch?: ContextPatch;
+}
+
+/**
+ * Render failing gates as a critique `refine` already knows how to consume.
+ *
+ * `refine`'s template asks the model to resolve every item in a numbered, ID-prefixed
+ * critique, and treats gate items as mandatory. Gate verdicts are already exactly that
+ * shape — an id and a message per finding — so feedback needs a formatter, not a new
+ * contract between the two stages.
+ *
+ * Only FAILs are included. A WARN is a finding, not a defect the loop should spend a
+ * provider call resolving, and `statusOf` already draws that line: GATE_FAIL is a FAIL,
+ * DEGRADED is anything else.
+ */
+export function formatGateCritique(results: readonly GateResult[]): string {
+  const failures = results.filter((r) => r.verdict === "FAIL");
+  return [
+    "GATE FAILURES from the linter. Each is mandatory — resolve every one.",
+    "",
+    ...failures.map((f, i) => `${i + 1}. G-${f.gate_id}: ${f.message}`),
+  ].join("\n");
+}
+
+/**
+ * Decide whether a gate FAIL should route back to `refine`.
+ *
+ * This is ADR-0008's action item 4, and it is the same `decide → invoke → reduce` split as
+ * everywhere else: choosing to loop is a pure function of the context, so it lives here;
+ * re-walking the plan is the Application's job.
+ *
+ * The gates are already pure, typed and deterministic — only the decision to act on them
+ * was missing. Their messages are TEXT, not a scalar, which is what makes this the cheap
+ * end of reflective optimization rather than a retry counter: the model is told what failed
+ * and why, not merely that something did.
+ *
+ * Five reasons not to loop, each returned by name:
+ *
+ *  - the topology is not reflexive — the default, and the byte-for-byte previous behaviour;
+ *  - the cap is spent, or was never declared. An unbounded verification loop is the
+ *    recorded hazard, so an absent `max_iterations` means zero rounds, never infinite ones;
+ *  - the gates did not FAIL. A WARN is not a defect worth a provider call;
+ *  - the plan has no `refine` or no `lint` — TINY and MINIMAL depths omit them, and a loop
+ *    that jumps to a stage the depth plan excluded would silently deepen a shallow run;
+ *  - the prompt is a demo placeholder. Refining a placeholder produces a clean-looking
+ *    artifact from output no model made, which is exactly the laundering the demo marker
+ *    exists to prevent — the same guard the six generating stages already carry.
+ */
+export function decideGateFeedback(
+  ctx: PipelineContext,
+  plan: readonly PipelineStage[],
+): FeedbackDecision {
+  if (ctx.topology?.kind !== "reflexive") {
+    return { retry: false, reason: "topology is not reflexive" };
+  }
+
+  const cap = ctx.topology.max_iterations ?? 0;
+  const spent = ctx.feedbackRounds ?? 0;
+  if (spent >= cap) {
+    return {
+      retry: false,
+      reason: cap === 0
+        ? "no max_iterations declared, so no rounds are permitted"
+        : `feedback cap reached (${spent} of ${cap})`,
+    };
+  }
+
+  if (ctx.lintStatus !== "GATE_FAIL") {
+    return { retry: false, reason: `lint status is ${ctx.lintStatus ?? "null"}, not GATE_FAIL` };
+  }
+
+  const has = (id: StageId) => plan.some((s) => s.id === id);
+  if (!has("refine") || !has("lint")) {
+    return { retry: false, reason: "this depth plan omits refine or lint" };
+  }
+
+  if (isDemoArtifact(ctx.prompt)) {
+    return { retry: false, reason: "the prompt is a demo placeholder — nothing real to refine" };
+  }
+
+  const failures = (ctx.gate_results ?? []).filter((r) => r.verdict === "FAIL");
+  if (failures.length === 0) {
+    // GATE_FAIL with no FAIL in the results would mean lint and this disagree.
+    return { retry: false, reason: "no FAIL verdicts to feed back" };
+  }
+
+  return {
+    retry: true,
+    reason: `${failures.length} gate failure(s), round ${spent + 1} of ${cap}`,
+    resumeAt: "refine",
+    patch: {
+      critique: formatGateCritique(ctx.gate_results ?? []),
+      feedbackRounds: spent + 1,
+    },
+  };
+}

@@ -1022,3 +1022,55 @@ describe("check-fingerprint", () => {
     expect(checkFingerprint(root).ok).toBe(true);
   });
 });
+
+/* ── check-depth-budget: gate feedback deepens the pipeline ────────────────── */
+
+describe("check-depth-budget prices gate-feedback rounds", () => {
+  /**
+   * A reflexive run is deeper than its plan. Each permitted round re-runs `refine` and then
+   * `lint` — two executions — so checking the plan length alone would leave the guard
+   * measuring a depth the system no longer has. That makes the cap DERIVED: raising
+   * max_feedback_rounds fails the build unless the floor or the target moves.
+   */
+  const budgetRepo = (stages: number, target: number, floor: number, rounds?: number) => {
+    const root = mkroot("pnx-depth-fb-");
+    const names = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta",
+                   "theta", "iota", "kappa", "lambda", "mu", "nu", "xi"];
+    const ids = names.slice(0, stages).map((n) => `  "${n}",`).join("\n");
+    write(root, "contracts/index.ts", `export const STAGE_IDS = [\n${ids}\n] as const;\n`);
+    write(root, "contracts/reliability-budget.json", JSON.stringify({
+      end_to_end_target: target, per_stage_floor: floor, status: "declared-not-measured",
+      ...(rounds === undefined ? {} : { max_feedback_rounds: rounds }),
+    }));
+    return root;
+  };
+
+  it("counts two executions per round, not one", () => {
+    const r = checkDepthBudget(budgetRepo(11, 0.9, 0.995, 3));
+    expect(r.depth).toBe(11);
+    expect(r.worstDepth).toBe(17);   // 11 + 3 × 2
+    expect(r.ok).toBe(true);          // 0.995^17 ≈ 0.9184
+  });
+
+  it("fails when the rounds push the worst case past the target", () => {
+    // 0.995^23 ≈ 0.8911, below 0.90. The plan is unchanged at 11 stages — only the loop
+    // moved, which is exactly the drift this arithmetic exists to catch.
+    const r = checkDepthBudget(budgetRepo(11, 0.9, 0.995, 6));
+    expect(r.ok).toBe(false);
+    expect(r.worstDepth).toBe(23);
+  });
+
+  it("treats an absent cap as zero rounds, never as unlimited", () => {
+    const r = checkDepthBudget(budgetRepo(11, 0.9, 0.995));
+    expect(r.rounds).toBe(0);
+    expect(r.worstDepth).toBe(11);
+  });
+
+  it("refuses a nonsense cap rather than coercing it", () => {
+    const root = budgetRepo(11, 0.9, 0.995);
+    write(root, "contracts/reliability-budget.json", JSON.stringify({
+      end_to_end_target: 0.9, per_stage_floor: 0.995, max_feedback_rounds: -1,
+    }));
+    expect(checkDepthBudget(root).fatalCode).toBe(2);
+  });
+});

@@ -284,10 +284,22 @@ Two design corrections were forced during the build, both recorded in the code:
 
 **Verified:** 460 tests (+23), `verify` exit 0, **10 of 10 mutation probes** caught with clean controls at both ends.
 
-### Phase β — the inner loop (Part 4)
+### Phase β — the inner loop (Part 4) · **LANDED 22 August 2026**
 
 **Entry:** Phase α green.
 **Prediction:** gate feedback changes the smoke suite score by a *measurable* amount whose **sign I do not predict**. I-2 says improvements are not monotonic; predicting the sign would be the mistake this repository documents three times.
+
+**Result: the prediction could not be evaluated, and the reason is a finding.** `eval/compile-smoke.json` does not run the pipeline. Every case calls `orchestrator.run({ stage_id: "compile" })` — the **single-stage** path — against a pinned provider stub. It measures the compile stage's honesty properties, which is what it was built for and what its name says; it cannot observe a `refine → lint` loop because it never reaches either stage. So Pipeline B, as built, measures **detectors and stage-level guarantees, not pipeline behaviour**, and no suite here can currently price a change to the pipeline's shape. Recorded in §6 with a closing condition.
+
+What *was* measured: the mechanism end to end, through `runPipeline` with a scripted provider (7 Application cases, 12 Core cases), and its cost — exactly two stage executions per round, pinned by a test so an inserted stage cannot silently invalidate the depth arithmetic.
+
+Three things landed differently from the spec, all recorded in the code:
+
+- **No new `Configuration.gate_feedback` field.** The contract already carried the mechanism: `topology.kind: "reflexive"` with `max_iterations`, described as *"Required for reflexive topologies. The recorded hazard for verification loops is unbounded retry with no termination rule."* Adding a second cap for one loop is how contradictory configuration happens. What the schema lacked was **enforcement** — the requirement was prose, not a rule — so `configuration` 1.1.0 adds the `if`/`then` that makes the description true.
+- **The cap is derived, not chosen.** Each round re-runs `refine` then `lint`, so `check:depth` now prices a round at two executions: 11 stages → 17 worst case at 3 rounds (91.84%, above the 90% target), and 6 rounds fails the build at 89.11%. "Why 3?" is answered by arithmetic.
+- **`stage_attempt` was left alone.** It counts provider attempts within one execution — a deliberate earlier fix — so re-pointing it at executions would have silently undone that. `revision-entry` 1.3.0 adds `feedback_round` instead, because a bundle that is *longer* than its plan with no record of why is the mirror image of the gap `SKIPPED` closed.
+
+**Verified:** 483 tests (+23), `verify` exit 0, **11 of 11 mutation probes** caught after two of my own tests were found unable to fail — a fixture whose WARN was a PASS, and a mutation that changed a critique's heading where only the whole string mattered.
 
 ### Phase γ — evidence and execution (Parts 2, 3)
 
@@ -321,7 +333,8 @@ A register with closing conditions, not a disclaimer.
 | **Keyed fingerprints documented, bare `sha256` in code** `[AUDIT C-4]`. | The event port holds a deployment-scoped key and `orchestrator.ts` uses it. Out of scope here, in scope for the observability change that follows. |
 | **`markStale` has zero callers and zero tests**; cascades by array position where the design says lineage. | `parent_revision_ids` is populated and the cascade follows it. Designed 21 Aug; unbuilt. |
 | **Does per-stage validation actually mitigate the depth cliff?** The strongest untested hypothesis here. I-3 measured *unvalidated* chains. | Phase γ makes it measurable. If false, eleven stages is the wrong shape and this is the finding that would say so. |
-| **Is gate-message text sufficient reflective feedback?** | Phase β measures it. |
+| **Is gate-message text sufficient reflective feedback?** | Not settled by Phase β. The mechanism works and is capped; whether it *improves* anything is unmeasured. |
+| **No suite measures pipeline behaviour.** `compile-smoke` runs the single-stage Orchestrator against pinned stubs, so Pipeline B currently prices detectors and stage-level guarantees only. Any change to the pipeline's shape — gate feedback, topology, depth — is invisible to every suite that exists. | A suite whose cases drive `runPipeline`. This is the first thing Phase γ should build, ahead of a live provider: without it, a real model makes pipeline changes expensive to run and still impossible to score. |
 | **599 is an upper bound**, not the independent-source count. | Title/DOI-level dedup over extracted first pages. |
 | **Significance protocol for graded and free-form metrics.** `bootstrap-ci` is named, not specified. | First suite that needs it, recorded per ADR-0008's *to revisit*. |
 | **Judge calibration cadence.** Practice says monthly; nothing here re-calibrates. | A judge exists and a calibration job runs against a gold set with an alert on κ drop. |

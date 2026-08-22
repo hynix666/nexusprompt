@@ -107,6 +107,12 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
   const stakes = flag("stakes") ?? "MEDIUM";
   const events: ObservabilityEvent[] = [];
 
+  // `--reflexive` with no number means one round; the flag is opt-in either way.
+  const reflexiveFlag = argv.indexOf("--reflexive");
+  const reflexive = reflexiveFlag === -1
+    ? undefined
+    : Math.max(1, Number.parseInt(flag("reflexive") ?? "", 10) || 1);
+
   const result = await runPipeline(
     {
       command_id: randomUUID(),
@@ -119,6 +125,13 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
         // binding. Passing neither runs the full eleven.
         depth: flag("depth"),
         testMessage: flag("test") ?? "Hello — can you help me with something?",
+        // Opt-in. Without it the run is sequential and identical to what ran before gate
+        // feedback existed; with it a gate FAIL routes back to `refine`, capped. The cap
+        // is bounded by the depth budget, which check:depth enforces — every round is two
+        // more stage executions.
+        ...(reflexive === undefined ? {} : {
+          topology: { kind: "reflexive" as const, max_iterations: reflexive },
+        }),
       },
     },
     { ...composePipeline({ sink: { emit: (e) => events.push(e) } }), coreBuildHash: "cli" },
@@ -133,6 +146,13 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
   const mark = (s: string) =>
     s === "SUCCEEDED" ? C.pass("ok  ") : s === "SKIPPED" ? C.dim("skip") : s === "DEMO" ? C.warn("demo") : C.fail("FAIL");
   for (const s of plan) console.log(`  ${mark(s.status)} ${s.stage_id}`);
+
+  const rounds = result.context.feedbackRounds ?? 0;
+  if (rounds) {
+    console.log(
+      C.dim(`\n${rounds} gate-feedback round(s) — a gate FAIL routed back to refine, capped at ${reflexive}.`),
+    );
+  }
 
   if (result.context.lint) console.log(`\n${result.context.lint}`);
 
@@ -188,6 +208,9 @@ pipeline options:
   --stakes LOW|MEDIUM|HIGH|SAFETY-CRITICAL   selects depth (default MEDIUM)
   --depth  TINY|MINIMAL|STANDARD|COMPREHENSIVE   overrides the stakes mapping
   --test   "<message>"                       the turn the preview stage tries
+  --reflexive [N]                            route a gate FAIL back to refine, at most N
+                                             times (default 1). Each round costs two more
+                                             stage executions against the depth budget.
 
 Stakes selects depth: LOW runs six of eleven stages, SAFETY-CRITICAL all eleven.
 Without ANTHROPIC_API_KEY the run degrades and every stage says so — that is the

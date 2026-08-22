@@ -22,10 +22,19 @@
     "",
     "Neither number is measured yet. They are declared targets, and the evaluation",
     "pipeline (ADR-0008) is what will replace them with observations. Until then this",
-    "check constrains the design, not the system."
+    "check constrains the design, not the system.",
+    "",
+    "`max_feedback_rounds` bounds the reflexive loop ADR-0008 adds to Pipeline A: a gate",
+    "FAIL routes back to `refine`, which then re-runs `lint`. Every round is therefore TWO",
+    "more stage executions against the same budget, and the cap is derived from that rather",
+    "than chosen: 11 stages at the 99.5% floor reach 94.64%, three rounds add six executions",
+    "for 17 total and 91.84%, and a fourth would reach 19 for 90.93% -- still inside target,",
+    "but the headroom left for a twelfth STAGE would be gone. check:depth enforces the",
+    "worst case, so raising this cap fails the build unless the floor or the target moves."
   ],
   "end_to_end_target": 0.9,
   "per_stage_floor": 0.995,
   "status": "declared-not-measured",
-  "measured_by": "ADR-0008 evaluation pipeline — not yet built"
+  "measured_by": "ADR-0008 evaluation pipeline — not yet built",
+  "max_feedback_rounds": 3
 }

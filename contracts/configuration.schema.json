@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/configuration/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/configuration/1.1.0",
   "title": "Configuration",
   "description": "The versioned artifact. A prompt alone is not a unit of version, comparison, or recommendation: its effectiveness inverts across model generations, and the same is true of pipeline depth and topology across throughput. Everything that can move the measured result belongs here, and configuration_id is the content hash of the rest.",
   "type": "object",
@@ -32,6 +32,11 @@
       "type": "object",
       "required": ["kind", "stages"],
       "additionalProperties": false,
+      "if": { "properties": { "kind": { "const": "reflexive" } }, "required": ["kind"] },
+      "then": {
+        "required": ["max_iterations"],
+        "properties": { "max_iterations": { "type": "integer", "minimum": 1 } }
+      },
       "properties": {
         "kind": { "enum": ["sequential", "parallel-merge", "hierarchical", "reflexive"] },
         "stages": { "type": "array", "items": { "type": "string" }, "minItems": 1 },

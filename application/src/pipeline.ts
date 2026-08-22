@@ -15,7 +15,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import {
-  planForContext, type PipelineContext, type PipelineStage,
+  planForContext, decideGateFeedback, type PipelineContext, type PipelineStage,
 } from "../../core/src/stages/pipeline.js";
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { invokeWithRetry } from "./invoke.js";
@@ -122,8 +122,23 @@ export async function runPipeline(
 
   emit("PIPELINE_COMMAND_RECEIVED", { component: "application/pipeline" });
 
-  for (const stage of planForContext(ctx)) {
+  /**
+   * An index walk, not a for-of, because the plan is no longer necessarily walked once.
+   *
+   * A reflexive topology routes a gate FAIL back to `refine`, so the runner has to be able
+   * to move backwards. Core decides whether and where (`decideGateFeedback`); this loop only
+   * follows, which is the same division as `shouldSkip` and `planForContext`.
+   *
+   * `plan` is hoisted out of the loop deliberately. Recomputing it per iteration would let a
+   * context patch silently change the plan mid-run, and the depth budget is computed against
+   * one plan.
+   */
+  const plan = planForContext(ctx);
+
+  for (let i = 0; i < plan.length; i++) {
+    const stage = plan[i];
     const inputHash = sha256(JSON.stringify({ id: stage.id, ctx: redactForHash(ctx) }));
+    const feedbackRound = ctx.feedbackRounds ?? 0;
 
     /**
      * A skip is persisted, not merely evented.
@@ -139,7 +154,7 @@ export async function runPipeline(
       const revision = buildRevision({
         run_id, stage_id: stage.id, inputHash,
         outputText: "", status: "SKIPPED", provider: null, gate_results: [],
-        now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null,
+        now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null, feedbackRound,
       });
       await opts.store.append(revision);
       revision_ids.push(revision.revision_id);
@@ -164,7 +179,7 @@ export async function runPipeline(
       const revision = buildRevision({
         run_id, stage_id: stage.id, inputHash,
         outputText: "", status: "FAILED", provider: null, gate_results: [],
-        now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null,
+        now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null, feedbackRound,
       });
       await opts.store.append(revision);
       revision_ids.push(revision.revision_id);
@@ -184,12 +199,38 @@ export async function runPipeline(
         run_id, stage_id: stage.id, inputHash,
         outputText: summarize(stage.id, ctx), status: "SUCCEEDED", provider: null,
         gate_results: stage.id === "lint" ? (ctx.gate_results ?? []) : [],
-        now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null,
+        now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null, feedbackRound,
       });
       await opts.store.append(revision);
       revision_ids.push(revision.revision_id);
       stages.push({ stage_id: stage.id, status: "SUCCEEDED", revision_id: revision.revision_id, output_hash: revision.output_hash });
       emit("REVISION_PERSISTED", { component: `core/stages/${stage.id}`, output_hash: revision.output_hash });
+
+      /**
+       * Gate verdicts as a control signal — ADR-0008 action item 4.
+       *
+       * The verdicts are already computed, pure and typed; only acting on them was missing.
+       * Core owns the whole decision, including the cap and every reason not to loop, so this
+       * branch cannot quietly acquire a second policy. The revision above is persisted BEFORE
+       * the jump, so a bundle records the failing lint that caused the retry rather than only
+       * the passing one that ended it.
+       */
+      if (stage.id === "lint") {
+        const feedback = decideGateFeedback(ctx, plan);
+        emit("GATE_FEEDBACK", {
+          component: "core/stages/lint",
+          verdict: feedback.reason,
+          input_hash: inputHash,
+        });
+        if (feedback.retry) {
+          ctx = { ...ctx, ...(feedback.patch ?? {}) };
+          const target = plan.findIndex((s) => s.id === feedback.resumeAt);
+          // Core already refused to retry when the plan lacks the target, so this is
+          // belt-and-braces — but a -1 here would restart the whole run, and a silent
+          // infinite loop is the one failure this feature must not introduce.
+          if (target >= 0) { i = target - 1; continue; }
+        }
+      }
       continue;
     }
 
@@ -258,7 +299,7 @@ export async function runPipeline(
       provider: degraded ? null : (outcome as GenerationResult).provider_id,
       fingerprint: degraded ? null : `${(outcome as GenerationResult).provider_id}:${(outcome as GenerationResult).model_id}`,
       gate_results: [],
-      now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null,
+      now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null, feedbackRound,
     });
     await opts.store.append(revision);
     revision_ids.push(revision.revision_id);
@@ -323,6 +364,7 @@ function buildRevision(a: {
   run_id: string; stage_id: StageId; inputHash: string; outputText: string;
   status: RevisionEntry["status"]; provider: string | null; fingerprint?: string | null; attempts?: number;
   gate_results: GateResult[]; now: () => Date; coreBuildHash: string; configFingerprint: string | null;
+  feedbackRound?: number;
 }): RevisionEntry {
   const provenance: ExecutionProvenance = {
     core_build_hash: a.coreBuildHash,
@@ -336,8 +378,10 @@ function buildRevision(a: {
     stage_id: a.stage_id,
     parent_revision_ids: [],
     timestamp: a.now().toISOString(),
-    // The real count. Hardcoding 1 made a revision claim one attempt and mean three.
+    // Provider attempts within THIS execution. The real count — hardcoding 1 made a
+    // revision claim one attempt and mean three. Re-executions are `feedback_round`.
     stage_attempt: a.attempts ?? 1,
+    feedback_round: a.feedbackRound ?? 0,
     input_hash: a.inputHash,
     output_hash: sha256(a.outputText),
     gate_results: a.gate_results,

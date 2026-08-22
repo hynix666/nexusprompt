@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/revision-entry/1.2.0",
+  "$id": "https://promptnexus.dev/contracts/revision-entry/1.3.0",
   "title": "RevisionEntry",
   "description": "One stage execution. freshness and status are independent: a revision can be SUCCEEDED and STALE at once.",
   "type": "object",
@@ -12,7 +12,14 @@
     "stage_id": { "type": "string" },
     "parent_revision_ids": { "type": "array", "items": { "type": "string" } },
     "timestamp": { "type": "string", "format": "date-time" },
-    "stage_attempt": { "type": "integer", "minimum": 1 },
+    "stage_attempt": {
+      "description": "Provider attempts made during THIS execution of the stage, not executions of the stage. A retried call reports 3 here; hardcoding 1 once made a revision claim one attempt and mean three. Re-executions are counted by feedback_round.",
+      "type": "integer", "minimum": 1
+    },
+    "feedback_round": {
+      "description": "Which gate-feedback round produced this revision. 0 or absent is the first pass. A reflexive run re-executes refine and lint, so a bundle holds each of them more than once; without this field the second pair is distinguishable only by position, which is the same gap SKIPPED was added to close in mirror image. Bounded by reliability-budget.json max_feedback_rounds, because every extra round is two more stages against the depth budget.",
+      "type": "integer", "minimum": 0
+    },
     "input_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "output_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "gate_results": { "type": "array" },

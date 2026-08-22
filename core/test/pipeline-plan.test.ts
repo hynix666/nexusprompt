@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
   PIPELINE, DEPTH_PLAN, DEPTH_OF, planFor, planForContext, resolveDepth,
+  decideGateFeedback, type PipelineContext,
 } from "../src/stages/pipeline.js";
+import { DEMO_MARKER } from "../src/stages/stage-kit.js";
+import { isClean } from "../src/stages/critique.js";
+import type { GateResult } from "../../contracts/index.js";
 import { STAGE_IDS } from "../../contracts/index.js";
 
 /**
@@ -87,5 +91,95 @@ describe("depth resolution", () => {
 
   it("the registry matches STAGE_IDS in order", () => {
     expect(PIPELINE.map((s) => s.id)).toEqual([...STAGE_IDS]);
+  });
+});
+
+/* ── gate feedback: the decision, not the loop ─────────────────────────────── */
+
+/**
+ * `decideGateFeedback` is where ADR-0008's action item 4 actually lives. The loop in the
+ * Application only follows it, so every reason NOT to retry is tested here, under the
+ * purity harness — a decision that reached a clock or a random number would fail rather
+ * than pass unnoticed.
+ */
+
+const gate = (gate_id: string, verdict: "PASS" | "WARN" | "FAIL"): GateResult => ({
+  gate_id, verdict, message: `${gate_id} said something`, gate_version: "1.0.0",
+  message_code: `${gate_id}.test`, input_hash: "0".repeat(64), location: null,
+});
+
+const failing = (over: Partial<PipelineContext> = {}): PipelineContext => ({
+  brief: "b",
+  prompt: "# SYSTEM PROMPT\n\nreal compiled output",
+  lintStatus: "GATE_FAIL",
+  // TOKEN_SPAM is a WARN, not a PASS, deliberately. With a PASS here the "only FAILs are
+  // fed back" test could not fail: a mutation widening the filter to `!== "PASS"` would
+  // still have excluded it, and the probe caught exactly that — the fixture was unable to
+  // detect what the assertion claimed to check.
+  gate_results: [gate("GUARDRAIL_GAP", "FAIL"), gate("TOKEN_SPAM", "WARN")],
+  topology: { kind: "reflexive", max_iterations: 2 },
+  ...over,
+});
+
+const FULL = planFor("COMPREHENSIVE");
+
+describe("decideGateFeedback", () => {
+  it("routes a gate FAIL back to refine, carrying the failures as a critique", () => {
+    const d = decideGateFeedback(failing(), FULL);
+    expect(d.retry).toBe(true);
+    expect(d.resumeAt).toBe("refine");
+    expect(d.patch?.feedbackRounds).toBe(1);
+    expect(d.patch?.critique).toContain("GUARDRAIL_GAP");
+  });
+
+  it("feeds back only FAILs, never WARNs", () => {
+    // A WARN is a finding, not a defect worth a provider call. `statusOf` draws the same
+    // line one layer down: GATE_FAIL is a FAIL, DEGRADED is anything else.
+    const d = decideGateFeedback(failing(), FULL);
+    expect(d.patch?.critique).not.toContain("TOKEN_SPAM");
+  });
+
+  it("produces a critique refine will not mistake for a pass", () => {
+    // If the formatted feedback ever equalled the pass sentinel, refine would skip it and
+    // the loop would spin at full cost producing nothing. This is the load-bearing
+    // interaction between two stages that were written years apart in source terms.
+    const d = decideGateFeedback(failing(), FULL);
+    expect(isClean(d.patch!.critique!)).toBe(false);
+  });
+
+  it.each([
+    ["the topology is not reflexive", { topology: undefined }, "not reflexive"],
+    ["reflexive with no cap declared", { topology: { kind: "reflexive" as const } }, "no max_iterations"],
+    ["the cap is already spent", { feedbackRounds: 2 }, "cap reached"],
+    ["the gates did not FAIL", { lintStatus: "DEGRADED" as const }, "not GATE_FAIL"],
+    ["lint has not run", { lintStatus: null }, "not GATE_FAIL"],
+    ["the prompt is a demo placeholder", { prompt: `${DEMO_MARKER}\nplaceholder` }, "demo placeholder"],
+    ["GATE_FAIL with no FAIL verdicts", { gate_results: [gate("X", "WARN")] }, "no FAIL verdicts"],
+  ])("declines when %s, and says why", (_name, over, reason) => {
+    const d = decideGateFeedback(failing(over), FULL);
+    expect(d.retry).toBe(false);
+    expect(d.reason).toContain(reason);
+  });
+
+  it("declines when the depth plan omits refine or lint", () => {
+    // TINY runs six of eleven. A loop that jumped to a stage the plan excluded would
+    // silently deepen a run the caller asked to keep shallow.
+    const tiny = planFor("TINY");
+    expect(tiny.some((s) => s.id === "refine")).toBe(false);
+    const d = decideGateFeedback(failing(), tiny);
+    expect(d.retry).toBe(false);
+    expect(d.reason).toContain("omits refine or lint");
+  });
+
+  it("counts rounds up to the cap and then stops", () => {
+    const rounds: number[] = [];
+    let ctx = failing();
+    for (let i = 0; i < 5; i++) {
+      const d = decideGateFeedback(ctx, FULL);
+      if (!d.retry) break;
+      rounds.push(d.patch!.feedbackRounds!);
+      ctx = { ...ctx, ...d.patch };
+    }
+    expect(rounds).toEqual([1, 2]);
   });
 });
