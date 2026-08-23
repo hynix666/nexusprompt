@@ -98,6 +98,7 @@ placeholder. Output is never fabricated when a model was unreachable, and the
 | `npm run check:matrix` | Fails when the committed capability matrix is not what the repo produces |
 | `npm run check:fingerprint` | Fails the build when a provider swaps the model underneath you |
 | `npm run differential` | The ported gates against the frozen Python linter, verdict for verdict |
+| `npm run eval:pipeline` | Runs the eleven-stage pipeline against a pipeline suite |
 | `npm run eval -- --live` | Runs a suite against the real provider. Needs `ANTHROPIC_API_KEY`; not part of `verify` |
 | `npm run check:anchor` | Regenerates the anchor suite and fails if the committed file differs |
 | `npm run eval:anchor` | Runs the anchor through the real comparator and prints the verdict |

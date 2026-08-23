@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { runPipelineSuite, stageOf, type PipelineEvalCase } from "../src/pipeline-eval.js";
+import { runPipelineSuite, stageOf, isPipelineCase, type PipelineEvalCase } from "../src/pipeline-eval.js";
 import { STAGE_IDS } from "../../contracts/index.js";
 
 /**
@@ -123,5 +123,63 @@ describe("stage routing", () => {
       request_id: "r", run_id: "r", messages: [{ role: "user", content: "anything at all" }],
       model_policy: { preferred_models: [], allow_fallback: false },
     })).toBe("preview");
+  });
+});
+
+/**
+ * The two suite kinds must not be runnable by each other's runner.
+ *
+ * `run-eval.ts --suite eval/pipeline-smoke.json` reported 5/5 passing and 5 provider calls
+ * for five cases that each describe an eleven-stage run. It drove the compile stage alone,
+ * ignored every per-stage stub, and fell back to a pinned failure for each case — so the
+ * detectors conditional on `demo_mode` passed vacuously. Green, and measuring something other
+ * than its own name.
+ */
+describe("a suite cannot be run by the wrong runner", () => {
+  it("recognises a real pipeline case", () => {
+    const cases = JSON.parse(readFileSync("eval/pipeline-smoke.json", "utf8")).cases;
+    expect(cases.every(isPipelineCase)).toBe(true);
+  });
+
+  it("rejects a single-stage case", () => {
+    // The must-not-fire half: if this returned true, `run-eval` would refuse the suite it is
+    // actually for, and `eval:pipeline` would accept one it cannot run.
+    const cases = JSON.parse(readFileSync("eval/compile-smoke.json", "utf8")).cases;
+    expect(cases.some(isPipelineCase)).toBe(false);
+  });
+
+  it("keys on the brief, not on a truthy field or a filename", () => {
+    expect(isPipelineCase({ brief: "a support bot" })).toBe(true);
+    expect(isPipelineCase({ stub: { content: "x" } })).toBe(false);
+    // A non-string brief is not a brief. `{ brief: true }` would slip through a truthiness
+    // check and then fail deep inside runPipeline with something unrecognisable.
+    expect(isPipelineCase({ brief: true })).toBe(false);
+    expect(isPipelineCase({ brief: "" })).toBe(true);
+    expect(isPipelineCase(null)).toBe(false);
+    expect(isPipelineCase(undefined)).toBe(false);
+  });
+});
+
+describe("the pipeline suite reports what only a pipeline run can", () => {
+  it("executes many stages per case, not one", async () => {
+    /**
+     * The number that exposed the false green. Five cases through the single-stage runner
+     * make five provider calls; through the pipeline they make 27 across 52 stage executions.
+     */
+    const cases = JSON.parse(readFileSync("eval/pipeline-smoke.json", "utf8")).cases;
+    const { perCase } = await runPipelineSuite({ cases });
+    const stages = perCase.reduce((n, c) => n + c.stages.length, 0);
+    expect(stages).toBeGreaterThan(perCase.length * 5);
+    expect(perCase.every((c) => c.providerCalls >= 1)).toBe(true);
+  });
+
+  it("shows a feedback round costing two extra stage executions", async () => {
+    // check:depth prices a round at two executions. The reflexive case is where that
+    // arithmetic becomes observable rather than declared: 11 + 2 = 13.
+    const cases = JSON.parse(readFileSync("eval/pipeline-smoke.json", "utf8")).cases;
+    const { perCase } = await runPipelineSuite({ cases });
+    const reflexive = perCase.find((c) => c.feedbackRounds > 0);
+    expect(reflexive).toBeDefined();
+    expect(reflexive!.stages.length).toBe(11 + 2 * reflexive!.feedbackRounds);
   });
 });

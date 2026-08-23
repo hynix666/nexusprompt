@@ -21,6 +21,7 @@
 import { readFileSync } from "node:fs";
 import { runSuite, configurationId, type StubbedCase } from "../application/src/eval.js";
 import { MemoryCacheStore } from "../application/src/cache.js";
+import { isPipelineCase } from "../application/src/pipeline-eval.js";
 // Naming a concrete adapter is what a composition root is for.
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
 import { compare } from "../core/src/eval/compare.js";
@@ -87,6 +88,30 @@ async function main(): Promise<number> {
     data = JSON.parse(readFileSync(SUITE, "utf8"));
   } catch (err) {
     console.error(`eval: cannot read ${SUITE} — ${(err as Error).message}`);
+    return 2;
+  }
+
+  /**
+   * Refuse a suite this runner cannot actually run.
+   *
+   * `--suite eval/pipeline-smoke.json` used to report **5/5 passing and 5 provider calls** for
+   * a suite whose five cases each describe an eleven-stage run. It was driving the
+   * single-stage orchestrator, ignoring the per-stage `stubs` completely, and falling back to
+   * a pinned failure for every case — so the detectors that are conditional on `demo_mode`
+   * passed vacuously. A green result measuring something other than what its name says is the
+   * defect this repository exists to catch, and it was living in the evaluation runner.
+   *
+   * The discriminator is the case shape, not the filename: a pipeline case carries a `brief`
+   * and per-stage `stubs`, a single-stage case carries one `stub`.
+   */
+  const pipelineCases = data.cases.filter(isPipelineCase);
+  if (pipelineCases.length > 0) {
+    console.error(
+      `eval: ${SUITE} holds ${pipelineCases.length} case(s) with a \`brief\` and per-stage stubs.\n` +
+      "  That is a pipeline suite, and this runner drives the SINGLE-STAGE orchestrator. It\n" +
+      "  would report a score for the compile stage alone while ignoring every other stage.\n\n" +
+      `    npm run eval:pipeline -- --suite ${SUITE}`,
+    );
     return 2;
   }
 

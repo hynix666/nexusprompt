@@ -197,3 +197,22 @@ export async function runPipelineSuite(opts: {
 
 /** Exported so a caller can build a run id without importing crypto. */
 export const newRunId = () => randomUUID().replace(/-/g, "").slice(0, 16);
+
+/**
+ * Is this a pipeline case or a single-stage one?
+ *
+ * The two suite kinds are structurally different — a pipeline case carries a `brief` and
+ * per-stage `stubs`, a single-stage case carries one `stub` — and running one through the
+ * other's runner produces a score for something other than what the suite is named after.
+ *
+ * `run-eval.ts --suite eval/pipeline-smoke.json` did exactly that: it reported 5/5 passing
+ * and 5 provider calls for five cases that each describe an eleven-stage run, driving the
+ * compile stage alone and falling back to a pinned failure for every case, so the detectors
+ * conditional on `demo_mode` passed vacuously.
+ *
+ * One predicate rather than one per script: the two runners must not be able to disagree
+ * about which suites they can run, or the gap between their answers is where a suite gets
+ * silently accepted by the wrong one.
+ */
+export const isPipelineCase = (c: unknown): boolean =>
+  typeof c === "object" && c !== null && typeof (c as { brief?: unknown }).brief === "string";
