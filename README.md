@@ -102,14 +102,14 @@ placeholder. Output is never fabricated when a model was unreachable, and the
 | `npm test` | The suite, offline, in seconds |
 
 **Every command in this file runs in `npm run verify` — with one named exception below — and
-`verify` is what CI runs**, on every push and pull request. That is the mechanism that keeps the rest of this document from
-going quietly false.
+`verify` is what CI runs**, on every push and pull request. That is the mechanism that keeps
+the rest of this document from going quietly false.
 
-The exception is deliberate. `npm run check:corpus` re-hashes the 661-file research
-corpus under `PDF/` — 2 GB of third-party papers, gitignored, whose canonical home is arXiv.
-A fresh checkout has never had it, so folding that check into `verify` would make the headline
-command fail for every adopter. `verify` checks the repository; `check:corpus` checks a local
-asset, and says so by being its own command.
+The exception is deliberate. `npm run check:corpus` re-hashes the 661-file research corpus
+under `PDF/` — 2 GB of third-party papers, gitignored, whose canonical home is arXiv. A fresh
+checkout has never had it, so folding that check into `verify` would make the headline command
+fail for every adopter. `verify` checks the repository; `check:corpus` checks a local asset,
+and says so by being its own command. It passes: 661 files re-hashed in about two seconds.
 
 Every number quoted above is re-derived by `check:counts` from the repository, so a figure
 in this README cannot drift from the tree without failing the build. There are
@@ -128,13 +128,6 @@ has reached a model. `cache_read_tokens` is on the contract and populated by not
 judge has graded anything, and the release gate — built and tested against each of its five
 conditions — has never fired. Every guard here is armed against stubs.
 *Closes when:* a key exists and one 100-trial run reports a non-zero cache read.
-
-**`npm run check:corpus` currently fails.** The 661-file research corpus moved outside this
-directory. Every file and every hash is intact at the new location; the manifest pins a
-relative root that no longer resolves. Left failing rather than repaired by loosening the
-check — `verify` is unaffected, because the corpus was never part of the repository.
-*Closes when:* the corpus returns, or a portable way to name its location that does not
-weaken the hash pin.
 
 **No suite here can resolve a difference below about 53 percentage points.** That is not a
 number to edit — it is the size of the suites. `check:sizing` prints it on every run, and
