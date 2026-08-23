@@ -102,7 +102,7 @@ placeholder. Output is never fabricated when a model was unreachable, and the
 | `npm test` | The suite, offline, in seconds |
 
 **Every command in this file runs in `npm run verify` — with one named exception below — and
-`verify` is what CI runs.** That is the mechanism that keeps the rest of this document from
+`verify` is what CI runs**, on every push and pull request. That is the mechanism that keeps the rest of this document from
 going quietly false.
 
 The exception is deliberate. `npm run check:corpus` re-hashes the 661-file research
@@ -141,10 +141,6 @@ number to edit — it is the size of the suites. `check:sizing` prints it on eve
 the comparator refuses rather than reporting a p-value a design could never have produced.
 *Closes when:* an anchor suite exists, sized by `requiredPairedSize` with alpha, power and
 discordance all written down.
-
-**There is no git remote.** All work exists on one machine. This blocks the release-truth
-phase and makes the reviewed-commit requirement impossible to satisfy.
-*Closes when:* a remote exists and the branch is pushed.
 
 **Two stricter compiler flags are measured and not yet adopted.** `strict` is on, along with
 `noUnusedLocals`, `noUnusedParameters` and `noImplicitOverride` — each cost zero or near-zero

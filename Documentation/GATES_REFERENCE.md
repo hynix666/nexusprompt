@@ -43,7 +43,7 @@ Each gate has a stable `gate_id` and an independently incremented `gate_version`
 
 A new gate needs: the pure function in `core/gates/`, a fixture test, at least one property test asserting an invariant, a `GateResult`-compliant return shape, and an entry in `scripts/ported-gates.json` so the differential oracle knows to compare it.
 
-**Nothing enforces the property-test requirement.** This line previously said CI did; there is no CI in this repository. What does run is `npm run verify`, locally: boundary check, typecheck, source-freeze check, tests, then the oracle. It will not notice a missing property test.
+**Nothing enforces the property-test requirement.** This line previously said CI did. CI now exists (23 August 2026) and runs `npm run verify` on every push — boundary check, typecheck, source-freeze check, tests, then the oracle — but *that* is still what runs, and it will not notice a missing property test. The requirement remains a review convention.
 
 A `scripts/new-gate.ts` generator to scaffold all four is **planned, not built** — it exists in no source archive, despite earlier drafts of this document and `CONTRIBUTING.md` instructing contributors to use it. Write the files by hand until it does, and keep the checklist above as the review standard.
 

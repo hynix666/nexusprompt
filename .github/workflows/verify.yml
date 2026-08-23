@@ -11,9 +11,10 @@
 # headline command fail for every adopter. It is a check on a local asset, and it has its own
 # command.
 #
-# This workflow has never executed: the repository has no remote. It is committed so that the
-# day a remote exists, the check is already the one the README describes rather than one
-# written afterwards to match whatever was passing.
+# First executed 23 August 2026, against hynix666/nexusprompt, and green on the first run:
+# `npm ci` plus the full `verify` on a clean Ubuntu checkout. That is what makes the guards
+# real rather than local habit -- before it, every check depended on someone remembering to
+# run them on one machine.
 name: verify
 
 on:
@@ -27,16 +28,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
 
       # The differential oracle shells out to the frozen Python linter. Without Python the
       # oracle cannot run, and an oracle that silently skips is worse than none — ADR-0007.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 

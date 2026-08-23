@@ -77,7 +77,7 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 
    It ships with **zero entries and that is correct** — both ported gates are faithful. Do not add the `CLAIM_DISCIPLINE` / `guarantee-free` case ADR-0007 names as a candidate: the source shares that false positive, so there is no divergence, and the entry would fail the stale rule immediately. Entries carry their demonstration inline (fixtures are frozen and cannot take new cases; generated case ids move with `--n`), and pin **both** verdicts, so a change in the shape of a divergence is a new decision. `also_matches` broadens one entry across a systematic difference.
 
-   Still open and larger than it looks: **there is no git remote.** All work exists on one machine, and it is why Phase 7 (CI, release truth) is blocked rather than merely undone.
+   ~~Still open and larger than it looks: **there is no git remote.**~~ **Closed 23 August 2026** — `origin` is `git@github.com:hynix666/nexusprompt.git` (private), and `.github/workflows/verify.yml` ran green on its first push. Phase 7 is unblocked.
 2. **The "nineteen target properties" are fifteen.** Searched for across every archive including the v5 framework document; no enumeration of nineteen exists. The count is corrected in `ARCHITECTURE.md`. Do not invent four to make the arithmetic work.
 3. **`storage-db` revision persistence is new work, not a port.** The inherited Drizzle schema (MySQL) has `users` and `promptAssets` and no revisions table. The revision schema needs designing and should land as a reviewed migration before either storage adapter is built.
 4. **Neither scaffolding generator exists.** `scripts/new-gate.ts` and `scripts/new-technique.py` were never written. Build them or write gate/technique files by hand — but don't tell contributors to use them.
@@ -105,7 +105,7 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 
 **`npm run verify` is currently red on `check:corpus`, and not because of the code.** The 661-file `PDF/` corpus moved to `~/Documents/PDF` — outside this directory — so the manifest's relative root no longer resolves. Every file is intact and every hash still matches at the new location. Do not "fix" this by regenerating the manifest with `--write`: that would silently accept the disappearance of the evidence base. Either move the corpus back or decide how to name its location without weakening the pin.
 
-**There is no CI service** — no `.github/`, no pipeline. Documents describing "CI stages" describe intent. The intended order is meaningful and `npm run verify` follows it: boundaries and schema validation first, then Core tests, then Application, adapters, cross-shell parity, adversarial corpus, build-hash reproducibility last.
+**CI runs `npm run verify` on every push and pull request** (`.github/workflows/verify.yml`), first executed 23 August 2026 and green. The stage order is meaningful and `verify` follows it: boundaries and schema validation first, then Core tests, then Application, adapters, cross-shell parity, adversarial corpus, reproducibility last. **`check:corpus` is deliberately outside `verify`** — it re-hashes 2 GB of gitignored PDFs, so it can never pass on a clean checkout; it is a local-asset check with its own command. Older documents saying "there is no CI" predate this.
 
 ## Two guards, and what each one actually covers
 

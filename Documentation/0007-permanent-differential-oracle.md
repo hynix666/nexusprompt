@@ -129,7 +129,7 @@ Covered in the options table above. Worth restating one rejection: **parity is r
 
 ## Action items
 
-1. [x] ~~Add the oracle to the CI pipeline~~ — added to `npm run verify`, positioned last. There is no CI service to add it to; that remains open and is now stated plainly in `DEVELOPMENT_AND_TESTING.md` rather than implied to exist.
+1. [x] ~~Add the oracle to the CI pipeline~~ — added to `npm run verify`, positioned last. *(Amended 23 August 2026: a CI service now exists. `.github/workflows/verify.yml` runs `npm run verify` on every push and PR, so the oracle runs there too — including the Python setup it needs, without which it would skip, and a silently skipping oracle is worse than none.)*
 2. [x] **Add a divergence allowlist** — `scripts/divergence-allowlist.json`, enforced by `scripts/differential.ts`. **It ships with zero entries, which is the correct state:** both ported gates are faithful. The candidate this item named — `CLAIM_DISCIPLINE` flagging `guarantee-free` on a hyphen boundary — is *not* an instance, because the source shares that false positive and the port is right to keep it. An entry for it would be stale on arrival.
 
    Two additions to the `{gate, case, reason, adr}` sketch above, both forced by building it:

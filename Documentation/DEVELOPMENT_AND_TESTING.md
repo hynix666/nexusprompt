@@ -80,7 +80,7 @@ npm run scaffold:technique -- --source "<citation>"
 
 **Neither generator exists yet.** They appear in no source archive, despite earlier drafts of this document and `CONTRIBUTING.md` instructing contributors to use them rather than hand-write files. They are worth building — pre-wiring the contract shape and a stub test is exactly how the property-test requirement stops being a review-time argument — but until then, write the files by hand.
 
-**Nothing enforces the property-test requirement either.** This paragraph used to claim that "a gate without a property test fails the Core stage." There is no Core stage; there is no CI. Both ported gates do have property tests, and `CLAIM_DISCIPLINE` only got one after an audit noticed it had no test file at all while `GATES_REFERENCE.md` asserted every gate had both. Until something checks it, treat the requirement as a review convention.
+**Nothing enforces the property-test requirement either.** This paragraph used to claim that "a gate without a property test fails the Core stage." There is no Core stage. *(CI arrived 23 August 2026 and runs `npm run verify`; it still does not check for property tests, so the sentence's point stands — the requirement is unenforced, not merely un-CI'd.)* Both ported gates do have property tests, and `CLAIM_DISCIPLINE` only got one after an audit noticed it had no test file at all while `GATES_REFERENCE.md` asserted every gate had both. Until something checks it, treat the requirement as a review convention.
 
 What a new gate *is* checked against: `scripts/ported-gates.json` must list it, or `npm run differential` refuses to run — see [ADR-0007](./0007-permanent-differential-oracle.md).
 
