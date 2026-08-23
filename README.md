@@ -137,8 +137,14 @@ Set the key yourself; nothing in this repository asks for it, stores it, or prin
 
 ```bash
 export ANTHROPIC_API_KEY='<your key>'   # bash/zsh; PowerShell: $env:ANTHROPIC_API_KEY = '...'
-npm run eval -- --live
+npm run eval -- --live --trials 100 --max-calls 1400
 ```
+
+`--max-calls` is **required** for a live run, with no default. `admitRun` returns
+"no budget declared" and admits everything when a configuration carries no budget, so
+without the flag the first real run would have been the unbounded one. It refuses before
+dispatch and reports "nothing was spent" — 14 cases x 100 trials is 1,400 calls, and the
+plan is printed before the money moves, not after.
 
 A live run sends the suite's briefs to `api.anthropic.com` and spends money. The host is
 hard-coded against a frozen allowlist, so it goes there and nowhere else.

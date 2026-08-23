@@ -43,6 +43,40 @@ const DEGRADED = "degraded-prompt";
  */
 const LIVE = process.argv.includes("--live");
 
+const flagValue = (name: string): string | undefined => {
+  const i = process.argv.indexOf(`--${name}`);
+  return i === -1 ? undefined : process.argv[i + 1];
+};
+
+const intFlag = (name: string): number | undefined => {
+  const raw = flagValue(name);
+  if (raw === undefined) return undefined;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isInteger(n) || n < 1) {
+    console.error(`eval: --${name} must be a positive integer, got ${JSON.stringify(raw)}.`);
+    process.exit(2);
+  }
+  return n;
+};
+
+const TRIALS = intFlag("trials") ?? 1;
+
+/**
+ * A live run must declare what it may spend, and there is no default.
+ *
+ * Phase γ's entry criterion was "budget enforcement written before the first real call".
+ * `admitRun` has existed since then and this composition root never declared a budget, so the
+ * FIRST live run would have been the unbounded one — `admitRun` would have returned
+ * "no budget declared" and admitted all 1,400 calls of a 100-trial suite. A guard that exists
+ * and is not wired is the defect this repository keeps finding, and it was sitting in the one
+ * place where the cost of missing it is measured in money.
+ *
+ * Requiring the flag rather than defaulting it: both a generous default and a stingy one are
+ * defensible, so picking either for the caller is the bug — the same reasoning that makes
+ * `Budget.on_exceed` mandatory.
+ */
+const MAX_CALLS = intFlag("max-calls");
+
 const SUITE = process.argv.includes("--suite")
   ? process.argv[process.argv.indexOf("--suite") + 1]
   : "eval/compile-smoke.json";
@@ -65,6 +99,15 @@ async function main(): Promise<number> {
     tool_config: null,
     gate_set_ref: "scripts/ported-gates.json",
     router_policy_ref: null,
+    /**
+     * Enforced by `admitRun` before anything is spent, and refusing rather than truncating:
+     * a partially executed suite is not an EvalRun, because its aggregate would be a score
+     * over whichever cases happened to fit, published under the name of a suite that means
+     * something else.
+     */
+    budget: MAX_CALLS === undefined
+      ? null
+      : { max_provider_calls: MAX_CALLS, max_usd: null, on_exceed: "refuse" as const },
   };
   const configuration: Configuration = { configuration_id: configurationId(base), ...base };
 
@@ -106,28 +149,77 @@ async function main(): Promise<number> {
     return 2;
   }
 
+  /**
+   * An unbounded live run is refused by construction.
+   *
+   * `admitRun` returns "no budget declared" and admits everything when `budget` is null, so
+   * without this the first real 100-trial run would have been the unbounded one — 1,400 calls
+   * with nothing able to stop them. Phase γ's entry criterion was "budget enforcement written
+   * before the first real call"; the enforcement existed and nothing declared a budget for it
+   * to enforce.
+   */
+  if (LIVE && MAX_CALLS === undefined) {
+    console.error(
+      "eval --live: no budget declared.\n\n" +
+      `  This run would make up to ${data.suite.case_ids.length * TRIALS} provider call(s) ` +
+      "with nothing able to stop it.\n" +
+      "  Say what it may spend:\n\n" +
+      `    npm run eval -- --live --trials ${TRIALS} --max-calls ${data.suite.case_ids.length * TRIALS}\n\n` +
+      "  There is no default on purpose. A generous one and a stingy one are both defensible,\n" +
+      "  so choosing either for you is the bug — the same reason Budget.on_exceed is mandatory.",
+    );
+    return 2;
+  }
+
   const liveWiring = LIVE
     ? { provider: new LocalProxyProvider(), cache: new MemoryCacheStore() }
     : {};
 
-  const { run, perCase } = await runSuite({
-    suite: data.suite, cases: data.cases, configuration, ...liveWiring,
-  });
+  /**
+   * The plan is printed before anything is spent, not after.
+   *
+   * A cost report that only appears once the money is gone is a receipt, not a control. This
+   * is the number `admitRun` is about to check, shown while it can still be cancelled.
+   */
+  if (LIVE) {
+    console.log(
+      `\n  live run — ${data.suite.case_ids.length} case(s) x ${TRIALS} trial(s) = ` +
+      `up to ${data.suite.case_ids.length * TRIALS} provider call(s)\n` +
+      `    budget      ${MAX_CALLS === undefined ? "NONE DECLARED" : MAX_CALLS + " call(s), refuse on exceed"}\n` +
+      `    destination api.anthropic.com (hard-coded, frozen allowlist)\n`,
+    );
+  }
+
+  /**
+   * A budget refusal is an expected outcome, not a crash.
+   *
+   * `runSuite` throws so a caller cannot ignore it, which is right. Presenting that as an
+   * unhandled stack trace is not: "refused before dispatch, nothing was spent" is the guard
+   * working exactly as designed, and it should read that way.
+   */
+  let result: Awaited<ReturnType<typeof runSuite>>;
+  try {
+    result = await runSuite({
+      suite: data.suite, cases: data.cases, configuration, trials: TRIALS, ...liveWiring,
+    });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (message.includes("refused before dispatch")) {
+      console.error(`\neval: ${message}`);
+      return 2;
+    }
+    throw err;
+  }
+  const { run, perCase } = result;
 
   if (LIVE) {
     const c = run.cost;
     console.log(
-      `
-  live provider — ${run.provenance.provider}
-` +
-      `    provider calls  ${c.provider_calls}
-` +
-      `    cache hits      ${c.cache_hits ?? 0}
-` +
-      `    tokens          ${c.tokens_in} in / ${c.tokens_out} out
-` +
-      `    usd             ${c.usd === null ? "unmeasured (no rate supplied)" : c.usd}
-` +
+      `\n  live provider — ${run.provenance.provider}\n` +
+      `    provider calls  ${c.provider_calls}\n` +
+      `    cache hits      ${c.cache_hits ?? 0}\n` +
+      `    tokens          ${c.tokens_in} in / ${c.tokens_out} out\n` +
+      `    usd             ${c.usd === null ? "unmeasured (no rate supplied)" : c.usd}\n` +
       `    budget exceeded ${c.budget_exceeded}`,
     );
   }
