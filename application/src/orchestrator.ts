@@ -24,7 +24,7 @@ import type {
 } from "../../contracts/index.js";
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { invokeWithRetry as sharedInvoke } from "./invoke.js";
-import { decide, reduce, STAGE_ID } from "../../core/src/stages/compile.js";
+import { decide, reduce } from "../../core/src/stages/compile.js";
 
 export interface OrchestratorOptions {
   provider: ProviderTransport;

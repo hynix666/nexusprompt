@@ -134,6 +134,54 @@
       "pattern": "([\\d,]+) files extracted from five archives",
       "resolver": "sources.frozen_files",
       "reason": "Third currently-true pin. Also the number CLAUDE.md is most likely to be trusted on without checking."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d[\\d,]*) versioned JSON Schemas",
+      "resolver": "contracts.schemas",
+      "reason": "The README's tree table. A reader counting schemas is deciding whether the contract set is small enough to read, so a stale figure changes a judgement."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d[\\d,]*) contracts,",
+      "resolver": "contracts.schemas",
+      "reason": "Restated in the README's headline figures. Two statements of one number are two chances to be wrong, which is what this file exists for."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d[\\d,]*) gates,",
+      "resolver": "gates.ported",
+      "reason": "The gate count is the most-cited figure in the project and was wrong in four documents before check:counts existed."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d[\\d,]*) stages,",
+      "resolver": "stages.built",
+      "reason": "The pipeline grew from nine stages to eleven mid-project; a loose copy in a README is exactly how the old number survives."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d[\\d,]*) catalog records",
+      "resolver": "catalog.records",
+      "reason": "Stated as 180 in four documents while the registry held 195. The README must not become the fifth."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d[\\d,]*) corpus documents",
+      "resolver": "corpus.unique_documents",
+      "reason": "599 unique documents, not the 661 files or the 673 that three documents claimed."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d[\\d,]*) frozen",
+      "resolver": "sources.frozen_files",
+      "reason": "Appears three times in the README with three different phrasings. Every occurrence must agree, which is the rule that catches a partial edit."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d[\\d,]*)-file research corpus",
+      "resolver": "corpus.files",
+      "reason": "The file count and the document count differ by 62 byte-identical duplicates; stating only one of them is how 599 got rounded up."
     }
   ]
 }

@@ -4,6 +4,19 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
+    // Three flags beyond `strict`, all measured before being turned on: each cost zero or
+    // near-zero to adopt. `noUnusedLocals` immediately found seven dead imports, which is the
+    // same class of defect a manual scan had just found in `sizing.ts` -- worth having a
+    // compiler do rather than a person.
+    //
+    // Two more were measured and NOT adopted, with the cost recorded rather than the decision
+    // hidden: `exactOptionalPropertyTypes` (25 errors) and `noUncheckedIndexedAccess`
+    // (208 errors). Both are real improvements; neither is a change to make at the end of a
+    // session, and an unmeasured "we should turn these on someday" is how they never get
+    // turned on. The numbers are the entry criteria.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
     "noEmit": true,
     // ajv-formats is CJS with `export =`; without interop its default import is not
     // callable under NodeNext. Vitest's transform already does this at runtime, so

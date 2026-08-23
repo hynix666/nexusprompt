@@ -4,11 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this directory actually is
 
+**The product is NexusPrompt.** The `promptnexus` name survives in contract `$id` hosts and under `sources/` on purpose — see ADR-0009. Do not "fix" it with a global replace: `sources/` is frozen and `verify:sources` will fail, and renaming a `$id` is a major version bump per schema.
+
 Mostly documentation, plus **one vertical slice that really runs**. It holds:
 
-- `Documentation/` — 31 Markdown files describing the *target* architecture of the PromptNexus Unified Platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists.
+- `Documentation/` — 32 Markdown files describing the *target* architecture of the platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists.
 - `sources/` — 420 files extracted from five archives, frozen and SHA-256-verified against `sources/MANIFEST.json`. Read from these; never write into them.
 - A working slice: `contracts/`, `core/` (16 of 16 gates, 11 pipeline stages), `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `adapters/evidence-local`, `shells/cli`, `scripts/`, `test/`.
+- `LLM/` — an 811 MB int4 ONNX model and tokenizer, gitignored. **Not wired to anything, and not wire-able as dropped**: it is an ONNX Runtime GenAI export missing `genai_config.json`, so the architecture parameters needed to drive generation are absent. Do not guess them — a wrong value produces fluent garbage, which is the one failure demo mode exists to make impossible.
 - Four source archives (still zipped) and `SystemPromptBuilderPipeline.tsx`, loose on disk. **That copy is stale** (nine stages); the current one is inside `~/Downloads/Compressed/files_3.zip` and has eleven.
 
 `npm install && npm run verify` works and takes about ten seconds. **Use `npm`, not `pnpm`** — pnpm is not installed and the workspace is defined with npm workspaces, though much of the documentation still says `pnpm`.
@@ -24,6 +27,7 @@ The documentation's "source lineage" table maps to these files. Read from them; 
 | `Prompt-Nexus.zip` | v5 spec/linter | `promptnexus-v5/prompt_lint.py`, `framework_v5_7_0_core.md`, `fixtures.json`, `differential.mjs`, `REVIEW-promptnexus-v6.md` |
 | `systempromptbuilder.zip` | GitHub multi-user product | `server/hostedProviders.ts` + its tests, `drizzle/schema.ts`, `server/storage.ts`, `server/referenceContext.ts`; includes a `.git/` directory |
 | `System-Prompt-Builder-final-*.zip` | final-package pipeline UI | `client/`, `server/`, and a `docs/` tree that is the **direct ancestor of `Documentation/`** — compare when tracing why a doc says what it says |
+| `PromptNexus-6.2.zip` | v6.2 hardened spec + statistical validation | `promptnexus_v6_hardened_specification.md`, `STATISTICAL_VALIDATION_REPORT.md`, `check_gonogo.py`, `ledger.yaml`, `ci.yml`. **Targets a different deployment** — Kafka topics, a Rust orchestrator, DAPH stage schemas — so most of it does not apply here. Two parts do: its MDE table lists **9,812** items for a two-point effect and **4,802** at its own MDE, which are the figures `check:sizing` prints, reached independently from an unpaired two-group framing. Its Blocker 2 fix — never report `DECORATIVE_CONFIRMED`, only `DECORATIVE_BELOW_DETECTION` — is the same distinction the comparator's attainability refusal makes. |
 | `filesZ.zip` | filesZ toolkit + catalog | `catalog.js`, `PromptNexus.jsx`, `test_app_scope.py`, plus two nested tarballs: `promptnexus-v5.tar.gz` and `promptnexus-catalog-v1.20.0-ci-complete.tar.gz` (the 172-record catalog and its CI tooling) |
 
 **The newest copy of each artifact is outside this directory.** `~/Downloads/Compressed/files_4.zip` holds the latest `prompt_lint.py` (16 gates), `fixtures.json`, and `PromptNexus.jsx`. `~/Downloads/Compressed/files_3.zip` holds the latest pipeline component — **eleven** stages, adding `Cost Estimate` and `Tone Check` — plus a `System-Prompt-Builder-updated.zip` whose `docs/` never mention either new stage. Check mtimes and compare drops before trusting any count.

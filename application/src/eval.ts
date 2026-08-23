@@ -23,9 +23,9 @@ import { scoreCase, casePassed } from "../../core/src/eval/detectors.js";
 import { estimateTokens } from "../../core/src/gates/lint-primitives.js";
 import { measureRecall } from "../../core/src/eval/probes.js";
 import {
-  admitRun, cacheKey, plannedCalls, isDeterministic, emptyCost, accrue, hit, exceeds,
+  admitRun, cacheKey, plannedCalls, emptyCost, accrue, hit, exceeds,
 } from "../../core/src/eval/budget.js";
-import { CachingProvider, MemoryCacheStore } from "./cache.js";
+import { CachingProvider } from "./cache.js";
 import type {
   EvalCase, EvalRun, EvalSuite, Score, Configuration, PipelineOutcome,
   GenerationRequest, GenerationResult, ProviderFailure, ProviderTransport, RevisionStore, EventSink,

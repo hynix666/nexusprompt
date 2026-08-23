@@ -23,7 +23,7 @@ const CLI = join(process.cwd(), "shells/cli/src/index.ts");
  * tsx by absolute path, run through this process's own node.
  *
  * `npx tsx` resolves from the working directory, and these tests deliberately run in a
- * temp directory so each gets its own `.promptnexus` bundle store — so npx found no tsx
+ * temp directory so each gets its own `.nexusprompt` bundle store — so npx found no tsx
  * and every case failed with an empty stdout and a null exit status.
  */
 const TSX = join(process.cwd(), "node_modules/tsx/dist/cli.mjs");
@@ -48,12 +48,12 @@ function runCli(args: string[]): { code: number; out: string; cwd: string } {
 }
 
 const bundleOf = (cwd: string) => {
-  const dir = join(cwd, ".promptnexus", "runs");
+  const dir = join(cwd, ".nexusprompt", "runs");
   const file = readdirSync(dir)[0];
   return JSON.parse(readFileSync(join(dir, file), "utf8")) as Array<Record<string, string>>;
 };
 
-describe("promptnexus pipeline", () => {
+describe("nexusprompt pipeline", () => {
   it("runs six stages at LOW stakes and eleven at SAFETY-CRITICAL", () => {
     // Depth derived from stakes, through the Shell. This binding existed in Core and was
     // never called until the pipeline was wired up here.
@@ -101,7 +101,7 @@ describe("promptnexus pipeline", () => {
   it("prints usage and exits 2 when given no command", () => {
     const { code, out } = runCli([]);
     expect(code).toBe(2);
-    expect(out).toContain("promptnexus pipeline <file>");
+    expect(out).toContain("nexusprompt pipeline <file>");
     expect(out).toContain("--stakes");
   }, 120_000);
 });

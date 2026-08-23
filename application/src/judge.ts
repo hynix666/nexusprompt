@@ -24,7 +24,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { admitJudge, type Calibration, type JudgeIdentity, type VerificationStatus } from "../../core/src/eval/judge-policy.js";
 import { runGates } from "../../core/src/gates/registry.js";
-import type { JudgeRequest, JudgeTransport, JudgeVerdict } from "../../contracts/index.js";
+import type { JudgeTransport, JudgeVerdict } from "../../contracts/index.js";
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 

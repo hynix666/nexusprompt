@@ -22,14 +22,14 @@ import type { EventSink } from "../../../contracts/index.js";
 
 export interface CompositionOptions {
   sink: EventSink;
-  /** Where run bundles are retained. Defaults to `.promptnexus/runs` under cwd. */
+  /** Where run bundles are retained. Defaults to `.nexusprompt/runs` under cwd. */
   runsDir?: string;
-  /** Where evidence is retained. Defaults to `.promptnexus/evidence` under cwd. */
+  /** Where evidence is retained. Defaults to `.nexusprompt/evidence` under cwd. */
   evidenceDir?: string;
 }
 
 const defaultRunsDir = (opts: CompositionOptions) =>
-  opts.runsDir ?? join(process.cwd(), ".promptnexus", "runs");
+  opts.runsDir ?? join(process.cwd(), ".nexusprompt", "runs");
 
 export function composeOrchestrator(opts: CompositionOptions): Orchestrator {
   return new Orchestrator({
@@ -68,6 +68,6 @@ export function composePipeline(opts: CompositionOptions): PipelineRunOptions {
  */
 export function composeEvidence(opts: CompositionOptions): LocalEvidenceStore {
   return new LocalEvidenceStore(
-    opts.evidenceDir ?? join(process.cwd(), ".promptnexus", "evidence"),
+    opts.evidenceDir ?? join(process.cwd(), ".nexusprompt", "evidence"),
   );
 }

@@ -1,1 +1,6 @@
-{ "name": "@promptnexus/core", "private": true, "type": "module", "main": "src/index.ts" }
+{
+  "name": "@nexusprompt/core",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts"
+}

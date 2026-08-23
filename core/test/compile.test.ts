@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { decide, reduce, DEMO_MARKER, STAGE_ID } from "../src/stages/compile.js";
+import { decide, reduce, STAGE_ID } from "../src/stages/compile.js";
 import { listGates } from "../src/gates/registry.js";
 import type { GenerationResult, ProviderFailure } from "../../contracts/index.js";
 

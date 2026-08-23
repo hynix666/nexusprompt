@@ -15,8 +15,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import {
-  planForContext, decideGateFeedback, type PipelineContext, type PipelineStage,
-} from "../../core/src/stages/pipeline.js";
+  planForContext, decideGateFeedback, type PipelineContext } from "../../core/src/stages/pipeline.js";
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { invokeWithRetry } from "./invoke.js";
 import type {

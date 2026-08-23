@@ -19,7 +19,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "shells": ["cli"],
   "catalog": { "records_imported": 195, "records_available": 172, "records_added": 23 },
   "sources": { "frozen_files": 420 },
-  "ci": { "configured": false },
+  "ci": { "configured": true },
   "commands": [
     "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
     "differential", "cli", "check:plan", "check:citations", "check:citations:online",
@@ -44,10 +44,10 @@ contracts   ████████████████████       1
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
-adapters    ██████████▒▒▒▒▒▒▒▒▒▒       2 of 4 (hosted-server, storage-db absent)
+adapters    ███████████████▒▒▒▒▒       3 of 5 (hosted-server, storage-db absent)
 shells      ███████▒▒▒▒▒▒▒▒▒▒▒▒▒       1 of 3 — cli now runs the full pipeline
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
-release     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒       no CI, no matrix generator, no build hash
+release     █████████████▒▒▒▒▒▒▒       gate + matrix generator + CI workflow; never executed, no build hash
 ```
 
 The slice is deliberately the *riskiest* path through the system rather than the easiest: a provider failure reaching a Core reduction and coming back out as labelled demo output. That is the mechanism the whole design exists to protect, and it works.
@@ -239,7 +239,7 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 ### Phase 7 — Release truth
 
-**Entry condition:** a git remote exists. **Currently blocked** — `git remote -v` is empty, so there is nowhere for CI to run. This is a real blocker, not an undone task, and it is why every "CI enforces…" sentence in this documentation set has been rewritten to say what actually runs.
+**Entry condition:** a git remote exists. **Currently blocked** — `git remote -v` is empty, so there is nowhere for CI to run. `ci.configured` reads `true` as of 22 August 2026 because `check:plan` derives it from the presence of a `.github` directory, and a workflow now exists. That is a narrower fact than it sounds: **the workflow has never run.** Configured and executed are different states, and only the first is checkable from inside this repository. This is a real blocker, not an undone task, and it is why every "CI enforces…" sentence in this documentation set has been rewritten to say what actually runs.
 
 **Scope.** CI pipeline in the documented stage order; the `CAPABILITY_MATRIX.md` generator; the trace viewer; build-hash stamping and the reproducibility check.
 
@@ -263,7 +263,7 @@ Four documents cite "Phase 5" meaning the capability-matrix generator, from a nu
 | R2 | A gate port deliberately improves on the source, disagrees forever, and the oracle gets deleted | High once Phase 2 starts | Severe — loses R1's mitigation | Divergence allowlist with a mandatory reason | **Mitigated, 18 Aug 2026.** `scripts/divergence-allowlist.json`, enforced by the oracle; zero entries, which is correct. Drilled through 11 states including a stale entry and an entry too narrow for a systematic divergence — both refuse. The candidate this row named is not one: the source shares that false positive |
 | R3 | Cross-language arithmetic divergence in the three numeric gates | Medium | Medium — wrong verdicts, silently | Explicit `floor(x*100+0.5)/100`; no ambient tokenizer | Open — mitigation is documented, not yet exercised |
 | R4 | Documentation drifts from the code again | High — it has, repeatedly | High — it is the project's recurring defect | Machine-checked status block; `npm run check:plan` in `verify`; README status table | **Mitigated for numbers.** Prose remains unchecked |
-| R5 | No CI, so every guard depends on someone running `npm run verify` | Certain today | Medium under solo execution; high with contributors | `npm run verify` is one command and runs in ~10 s | Open — blocked on a remote (R8) |
+| R5 | CI is **configured but has never executed** — no remote, so every guard still depends on someone running `npm run verify` locally | Certain today | Medium under solo execution; high with contributors | `.github/workflows/verify.yml` runs `verify:ci`, and is committed so the check exists before the remote does rather than being written afterwards to match whatever passed | Open — blocked on a remote (R8) |
 | R6 | `storage-db` revision persistence is treated as a port when it is new design | Medium | Medium — a migration written under time pressure | Named as new work; schema lands as a reviewed migration first | Open, flagged |
 | R7 | Stage templates are taken from the stale nine-stage copy on disk | Medium — the stale copy is the one in the repo | High — two stages silently missing | Phase 3 begins by extracting and freezing the eleven-stage component | Open, flagged |
 | R8 | No git remote; work exists only on this machine | Certain today | Severe — total loss on disk failure | None currently | **Open. Highest unaddressed operational risk in the project.** |

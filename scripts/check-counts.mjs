@@ -66,6 +66,13 @@ export function resolvers(root = process.cwd()) {
   const corpus = () => readJson(at("scripts/corpus-manifest.json"));
 
   return {
+    /**
+     * Schemas on disk. Pinned because the README quotes it as a headline figure and
+     * `check:plan` derives the same number independently — two checkers reading the same
+     * directory is what makes the count hard to state wrongly in a third place.
+     */
+    "contracts.schemas": () =>
+      readdirSync(at("contracts")).filter((f) => f.endsWith(".schema.json")).length,
     "catalog.records": () => catalog().length,
     "catalog.frozen_records": frozenRecords,
     "catalog.records_added": () => catalog().length - frozenRecords(),

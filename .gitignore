@@ -1,6 +1,10 @@
 node_modules/
 dist/
 *.zip
+.nexusprompt/
+# The pre-ADR-0009 runtime directory. Kept ignored rather than deleted: it holds run
+# bundles the CLI wrote under the old name, and an ignore rule is cheaper than a migration
+# for data nothing reads.
 .promptnexus/
 
 # Literature corpora. Third-party published papers, read against the project but

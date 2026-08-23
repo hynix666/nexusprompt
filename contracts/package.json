@@ -1,1 +1,5 @@
-{ "name": "@promptnexus/contracts", "private": true, "type": "module" }
+{
+  "name": "@nexusprompt/contracts",
+  "private": true,
+  "type": "module"
+}

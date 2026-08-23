@@ -47,12 +47,16 @@
  * knew it until this module.
  */
 
-/** Two-sided normal quantile, |z| such that P(|Z| > z) = p. */
-const Z_TWO_SIDED_05 = 1.959963984540054;
-/** One-sided normal quantile at 0.05, kept for the legacy rule's arithmetic. */
+/**
+ * One-sided normal quantile at 0.05 — the constant the legacy rule was written around.
+ *
+ * The only literal quantile here. `zAlpha` and `zPower` compute theirs from `normalQuantile`,
+ * so a two-sided and an 80%-power constant used to sit beside this one referenced by nothing
+ * but an exported `QUANTILES` bag, which existed for a test that was never written. Both are
+ * deleted: the figures they documented are pinned by `sizing.test.ts` asserting on function
+ * OUTPUTS, which catches more than a constant compared against itself would.
+ */
 const Z_ONE_SIDED_05 = 1.6448536269514722;
-/** Normal quantile at 80% power. */
-const Z_POWER_80 = 0.8416212335729143;
 
 export interface SizingAssumptions {
   /** Significance level, after any multiplicity correction. */
@@ -198,6 +202,3 @@ export function legacyAnchorSize(detectableDelta: number, confidence = 0.95): nu
   const z = confidence === 0.95 ? Z_ONE_SIDED_05 : normalQuantile(confidence);
   return Math.ceil((z * z) / (2 * detectableDelta * detectableDelta));
 }
-
-/** Exported so a test can assert the constants are the ones the comments claim. */
-export const QUANTILES = { Z_TWO_SIDED_05, Z_ONE_SIDED_05, Z_POWER_80 } as const;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GuardedJudge, JudgeRefused, buildJudgePrompt, fenceCandidate } from "../src/judge.js";
+import { GuardedJudge, buildJudgePrompt, fenceCandidate } from "../src/judge.js";
 import { admitJudge, measuredBiases, unmeasuredBiases, NAMED_BIASES } from "../../core/src/eval/judge-policy.js";
 import type { JudgeRequest, JudgeTransport, JudgeVerdict } from "../../contracts/index.js";
 

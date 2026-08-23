@@ -1,0 +1,47 @@
+# The mechanism that keeps README.md from going quietly false.
+#
+# Every command documented in the README runs here, in the order `verify` defines: boundaries
+# and schemas first, then Core, then Application, adapters, the evaluation suites, and the
+# differential oracle last.
+#
+# `npm run verify` is the whole check and it runs anywhere, which is deliberate. `check:corpus`
+# is NOT part of it: that check re-hashes the 661-file research corpus under `PDF/`, which is
+# gitignored and deliberately not distributed — 2 GB of third-party papers whose canonical home
+# is arXiv. A fresh checkout has never had it, so folding it into `verify` would make the
+# headline command fail for every adopter. It is a check on a local asset, and it has its own
+# command.
+#
+# This workflow has never executed: the repository has no remote. It is committed so that the
+# day a remote exists, the check is already the one the README describes rather than one
+# written afterwards to match whatever was passing.
+name: verify
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # The differential oracle shells out to the frozen Python linter. Without Python the
+      # oracle cannot run, and an oracle that silently skips is worse than none — ADR-0007.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify
+        run: npm run verify

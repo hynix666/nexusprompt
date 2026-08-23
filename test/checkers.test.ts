@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -816,8 +816,29 @@ describe("check-corpus", () => {
     expect(r.manifest.duplicate_files).toBe(1);
   });
 
-  it("passes on the real repository", () => {
-    expect(checkCorpus(process.cwd()).ok).toBe(true);
+  it("agrees with the real repository about whether the corpus is there", () => {
+    /**
+     * Both branches assert; neither skips.
+     *
+     * `PDF/` is gitignored — 2 GB of third-party papers whose canonical home is arXiv — so a
+     * fresh checkout has never had it and never will. A test that simply expected `ok` would
+     * be red on every clone, and one that skipped when the corpus was absent would report
+     * green for work it did not do, which is the pattern this file exists to prevent.
+     *
+     * So the assertion is on the checker being CORRECT rather than on the corpus being
+     * present: with the corpus, the check must pass; without it, the check must fail and say
+     * which files are missing. The second branch is a must-fire case against the real
+     * manifest, which is stronger coverage than the original assertion had.
+     */
+    const present = existsSync(join(process.cwd(), "PDF"));
+    const r = checkCorpus(process.cwd());
+
+    if (present) {
+      expect(r.ok, "corpus is present, so every pinned hash must still match").toBe(true);
+    } else {
+      expect(r.ok, "corpus is absent, so the check must not report success").toBe(false);
+      expect(JSON.stringify(r)).toMatch(/missing/i);
+    }
   });
 
   it("catches a file substituted for one of the same length", () => {

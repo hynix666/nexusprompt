@@ -10,8 +10,8 @@
  * them eleven lines below. That is now true rather than asserted, and
  * `npm run lint:boundaries` is what keeps it true.
  *
- *   promptnexus lint <file>
- *   promptnexus run --stage compile <file>
+ *   nexusprompt lint <file>
+ *   nexusprompt run --stage compile <file>
  */
 
 import { readFile } from "node:fs/promises";
@@ -241,12 +241,12 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  console.log(`promptnexus — usage:
-  promptnexus lint <file>              run the registered gates
-  promptnexus run --stage compile <f>  run one pipeline stage end to end
-  promptnexus pipeline <file>          run the full pipeline over a brief
-  promptnexus gates                    list registered gates
-  promptnexus evidence                 what the evidence plane holds, and what is current
+  console.log(`nexusprompt — usage:
+  nexusprompt lint <file>              run the registered gates
+  nexusprompt run --stage compile <f>  run one pipeline stage end to end
+  nexusprompt pipeline <file>          run the full pipeline over a brief
+  nexusprompt gates                    list registered gates
+  nexusprompt evidence                 what the evidence plane holds, and what is current
 
 pipeline options:
   --stakes LOW|MEDIUM|HIGH|SAFETY-CRITICAL   selects depth (default MEDIUM)
