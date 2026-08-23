@@ -1,5 +1,6 @@
 {
   "name": "@nexusprompt/adapters-provider-local-proxy",
+  "license": "MIT",
   "private": true,
   "type": "module"
 }

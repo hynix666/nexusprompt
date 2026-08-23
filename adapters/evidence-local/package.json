@@ -1,5 +1,6 @@
 {
   "name": "@nexusprompt/adapters-evidence-local",
+  "license": "MIT",
   "private": true,
   "type": "module"
 }

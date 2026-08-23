@@ -146,10 +146,6 @@ discordance all written down.
 phase and makes the reviewed-commit requirement impossible to satisfy.
 *Closes when:* a remote exists and the branch is pushed.
 
-**No licence has been chosen.** Deliberately not picked on the author's behalf — the tree
-contains inherited archives whose terms should inform the choice.
-*Closes when:* the author selects one and a `LICENSE` file lands.
-
 **Two stricter compiler flags are measured and not yet adopted.** `strict` is on, along with
 `noUnusedLocals`, `noUnusedParameters` and `noImplicitOverride` — each cost zero or near-zero
 and the first immediately found seven dead imports. Two more were measured and left off:
@@ -177,6 +173,16 @@ The product is **NexusPrompt**. Two things deliberately keep the older `promptne
 The split is deliberate and recorded in ADR-0009 so nobody later mistakes it for drift.
 
 ---
+
+## Licence
+
+MIT — see [LICENSE](./LICENSE). Every workspace package declares it.
+
+**What that covers.** The code, the contracts, the checks, and the documentation in this
+repository. It is not a relicensing of anything inherited: `sources/` holds frozen copies of
+prior artifacts, and the research corpus under `PDF/` is third-party papers whose canonical
+home is arXiv — which is gitignored and not distributed here precisely because it is not
+this project's to give away.
 
 ## Contributing
 

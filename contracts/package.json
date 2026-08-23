@@ -1,5 +1,6 @@
 {
   "name": "@nexusprompt/contracts",
+  "license": "MIT",
   "private": true,
   "type": "module"
 }

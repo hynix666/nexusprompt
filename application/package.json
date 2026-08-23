@@ -1,5 +1,6 @@
 {
   "name": "@nexusprompt/application",
+  "license": "MIT",
   "private": true,
   "type": "module"
 }

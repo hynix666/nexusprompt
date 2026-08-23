@@ -1,5 +1,6 @@
 {
   "name": "@nexusprompt/adapters-storage-local",
+  "license": "MIT",
   "private": true,
   "type": "module"
 }
