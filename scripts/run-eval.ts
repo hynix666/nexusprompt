@@ -20,12 +20,28 @@
 
 import { readFileSync } from "node:fs";
 import { runSuite, configurationId, type StubbedCase } from "../application/src/eval.js";
+import { MemoryCacheStore } from "../application/src/cache.js";
+// Naming a concrete adapter is what a composition root is for.
+import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
 import { compare } from "../core/src/eval/compare.js";
 import { detectorsWithoutProbes, probesWithoutDetectors, deadDetectors } from "../core/src/eval/probes.js";
 import type { Configuration, EvalSuite } from "../contracts/index.js";
 
 /** The configuration a variant names, so two runs differ in exactly one recorded field. */
 const DEGRADED = "degraded-prompt";
+
+/**
+ * `--live` swaps the pinned stubs for the real provider adapter.
+ *
+ * This file is the composition root for evaluation — "the only place a concrete suite path is
+ * named" — so it is also the right place to name a concrete provider. Everything below it
+ * still sees only the `ProviderTransport` port.
+ *
+ * The key is read by the adapter from `ANTHROPIC_API_KEY`; it is never passed through this
+ * script, printed, or written to a run. A live run costs money and sends the suite's briefs
+ * to Anthropic, so it happens only when the flag is given explicitly.
+ */
+const LIVE = process.argv.includes("--live");
 
 const SUITE = process.argv.includes("--suite")
   ? process.argv[process.argv.indexOf("--suite") + 1]
@@ -64,7 +80,57 @@ async function main(): Promise<number> {
     return 3;
   }
 
-  const { run, perCase } = await runSuite({ suite: data.suite, cases: data.cases, configuration });
+  /**
+   * Caching is on for live runs so the Phase gamma prediction is testable at all: the claim
+   * was that a second identical request reports a non-zero cache read. Without a cache there
+   * is nothing to report. It stays off for stubbed runs, where every call is free and a hit
+   * would only hide the accounting.
+   */
+  /**
+   * Pre-flight. Without this a keyless `--live` run degrades all fourteen cases and reports a
+   * score — honest, because demo mode labels every one of them, and unhelpful, because the
+   * user still has no idea why. Refuse first and say what to do.
+   *
+   * Presence is all that is read. The value belongs to the adapter and to `process.env`;
+   * routing it through this script would put it one careless log line away from a terminal.
+   */
+  if (LIVE && !process.env.ANTHROPIC_API_KEY) {
+    console.error(
+      "eval --live: ANTHROPIC_API_KEY is not set in this process's environment.\n\n" +
+      "  Set it yourself — nothing here will ask you for it, store it, or print it:\n" +
+      "    PowerShell   $env:ANTHROPIC_API_KEY = '<your key>'    (this session only)\n" +
+      "    bash / zsh   export ANTHROPIC_API_KEY='<your key>'\n\n" +
+      "  A live run sends this suite's briefs to api.anthropic.com and spends money.\n" +
+      "  Without --live, `npm run eval` stays offline against pinned stubs.",
+    );
+    return 2;
+  }
+
+  const liveWiring = LIVE
+    ? { provider: new LocalProxyProvider(), cache: new MemoryCacheStore() }
+    : {};
+
+  const { run, perCase } = await runSuite({
+    suite: data.suite, cases: data.cases, configuration, ...liveWiring,
+  });
+
+  if (LIVE) {
+    const c = run.cost;
+    console.log(
+      `
+  live provider — ${run.provenance.provider}
+` +
+      `    provider calls  ${c.provider_calls}
+` +
+      `    cache hits      ${c.cache_hits ?? 0}
+` +
+      `    tokens          ${c.tokens_in} in / ${c.tokens_out} out
+` +
+      `    usd             ${c.usd === null ? "unmeasured (no rate supplied)" : c.usd}
+` +
+      `    budget exceeded ${c.budget_exceeded}`,
+    );
+  }
 
   const dead = run.detector_recall ? deadDetectors(run.detector_recall) : [];
   if (dead.length > 0) {
@@ -82,7 +148,13 @@ async function main(): Promise<number> {
   }
 
   console.log(`eval — ${run.suite_id}@${run.suite_version} (${data.suite.kind})`);
-  console.log(`  configuration ${run.configuration_id.slice(0, 12)} · ${run.cost.provider_calls} pinned provider call(s), no network\n`);
+  // "no network" was hard-coded and stopped being true the moment --live existed. The line
+  // now reports which transport actually answered, because that is the difference between a
+  // run that is evidence about a model and one that is evidence about the accounting.
+  console.log(
+    `  configuration ${run.configuration_id.slice(0, 12)} · ${run.cost.provider_calls} ` +
+    `${LIVE ? "live" : "pinned"} provider call(s)${LIVE ? "" : ", no network"}\n`,
+  );
 
   for (const c of perCase) {
     console.log(`  ${c.passed ? "pass" : "FAIL"}  ${c.case_id.padEnd(34)} ${c.failure_mode}`);

@@ -56,26 +56,46 @@ export type StubbedCase = EvalCase & {
  * A provider whose every response is fixed by the case. Not a mock of a model — a
  * declaration that this suite is not measuring one.
  */
+/**
+ * Records what each call consumed, for whichever transport is underneath.
+ *
+ * One recorder rather than one per transport: `provider_calls` and the token totals must mean
+ * the same thing whether the run was stubbed or live, and two implementations of that
+ * accounting would agree the day they were written and drift afterwards.
+ *
+ * A failed call still pushes an entry. A failure consumed a request and on a real provider
+ * can consume tokens too; recording only successes under-counted `provider_calls` by exactly
+ * the number of cases a suite pins to failure, which is the kind of quiet under-count a
+ * budget exists to prevent, appearing inside the budget's own accounting.
+ */
+class RecordingProvider implements ProviderTransport {
+  readonly usages: Array<{ prompt_tokens: number; completion_tokens: number } | undefined> = [];
+  calls = 0;
+  constructor(private readonly inner: ProviderTransport) {}
+  get provider_id(): string { return this.inner.provider_id; }
+
+  async generate(req: GenerationRequest): Promise<GenerationResult | ProviderFailure> {
+    this.calls++;
+    const out = await this.inner.generate(req);
+    this.usages.push("category" in out ? undefined : {
+      prompt_tokens: out.usage?.prompt_tokens ?? 0,
+      completion_tokens: out.usage?.completion_tokens ?? 0,
+    });
+    return out;
+  }
+
+  async healthCheck() { return this.inner.healthCheck(); }
+}
+
 class PinnedProvider implements ProviderTransport {
   readonly provider_id = "pinned-stub";
   calls = 0;
-  /**
-   * One entry per call that REACHED this provider, `undefined` where the call failed.
-   *
-   * A failed call is still a call: it consumed a request, and on a real provider it can
-   * consume tokens too. Recording only successes under-counted `provider_calls` by exactly
-   * the number of cases the suite pins to failure — two of fourteen here — which is the
-   * kind of quiet under-count a budget is supposed to prevent, appearing in the budget's
-   * own accounting.
-   */
-  readonly usages: Array<{ prompt_tokens: number; completion_tokens: number } | undefined> = [];
   constructor(private stub: CaseStub) {}
   setStub(stub: CaseStub) { this.stub = stub; }
 
   async generate(req: GenerationRequest): Promise<GenerationResult | ProviderFailure> {
     this.calls++;
     if (this.stub.fail || this.stub.content === undefined) {
-      this.usages.push(undefined);
       return {
         request_id: req.request_id,
         category: "UNAVAILABLE",
@@ -101,7 +121,6 @@ class PinnedProvider implements ProviderTransport {
       prompt_tokens: estimateTokens(`${req.system ?? ""}\n${req.messages.map((m) => m.content).join("\n")}`),
       completion_tokens: estimateTokens(this.stub.content),
     };
-    this.usages.push(usage);
     return {
       request_id: req.request_id,
       content: this.stub.content,
@@ -145,6 +164,19 @@ export interface RunSuiteOptions {
   trials?: number;
   /** Absent means no caching: every trial reaches the provider. */
   cache?: CacheStore;
+  /**
+   * A live provider, replacing the pinned stubs.
+   *
+   * Absent is the default and keeps every existing run offline, deterministic and
+   * recomputable — which is what makes an `EvalRun` re-derivable from stored artifacts
+   * without re-invoking anything. Supplying one is how a suite finally measures a model, and
+   * `provenance.provider` records which of the two answered so a stubbed run can never be
+   * read as evidence about a model.
+   *
+   * The caller composes it (Composition Root's job, not this function's), so caching, retry
+   * and the host allowlist are all decided above this layer.
+   */
+  provider?: ProviderTransport;
   /** USD per million tokens. Absent leaves `cost.usd` null rather than claiming zero. */
   rate?: { in: number; out: number } | null;
 }
@@ -164,7 +196,13 @@ export function configurationId(c: Omit<Configuration, "configuration_id">): str
 
 export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
   const { suite, cases, configuration } = opts;
+  /**
+   * Stubs unless a live provider was supplied. The recorder wraps whichever it is, so cost
+   * accounting is identical across both and `provenance.provider` is the only thing that
+   * changes — which is exactly the distinction a reader needs.
+   */
   const pinned = new PinnedProvider({});
+  const live = opts.provider !== undefined;
   const events: unknown[] = [];
   let tick = 0;
 
@@ -194,13 +232,23 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
   // single-sample one.
   let currentCase = "";
   let currentTrial = 0;
+  /**
+   * Layering, innermost first: the transport (stub or live), then the recorder, then the
+   * cache.
+   *
+   * The recorder sits INSIDE the cache deliberately. `CachingProvider` returns a hit without
+   * touching what it wraps, so a hit must not count as a provider call — putting the recorder
+   * outside would count every cache hit as spend and make `provider_calls` a measure of the
+   * suite's size rather than of what it cost.
+   */
+  const recorder = new RecordingProvider(opts.provider ?? pinned);
   const caching = opts.cache
-    ? new CachingProvider(pinned, {
+    ? new CachingProvider(recorder, {
         cache: opts.cache,
         keyFor: () => cacheKey(configuration.configuration_id, currentCase, currentTrial, decoding),
       })
     : null;
-  const provider: ProviderTransport & { calls?: number } = caching ?? pinned;
+  const provider: ProviderTransport & { calls?: number } = caching ?? recorder;
 
   const orchestrator = new Orchestrator({
     provider,
@@ -232,7 +280,8 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
       continue;
     }
 
-    pinned.setStub(stubFor(kase));
+    // A live provider answers for itself; a stub has to be told what to say.
+    if (!live) pinned.setStub(stubFor(kase));
     currentCase = case_id;
 
     /**
@@ -286,7 +335,7 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
    */
   const cost = (() => {
     let c = emptyCost();
-    for (const u of pinned.usages) c = accrue(c, u, opts.rate ?? null);
+    for (const u of recorder.usages) c = accrue(c, u, opts.rate ?? null);
     for (let i = 0; i < (caching?.hits ?? 0); i++) c = hit(c);
     if (!opts.rate) c = { ...c, usd: null };
     return { ...c, budget_exceeded: exceeds(c, configuration.budget) };

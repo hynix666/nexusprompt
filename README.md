@@ -98,6 +98,7 @@ placeholder. Output is never fabricated when a model was unreachable, and the
 | `npm run check:matrix` | Fails when the committed capability matrix is not what the repo produces |
 | `npm run check:fingerprint` | Fails the build when a provider swaps the model underneath you |
 | `npm run differential` | The ported gates against the frozen Python linter, verdict for verdict |
+| `npm run eval -- --live` | Runs a suite against the real provider. Needs `ANTHROPIC_API_KEY`; not part of `verify` |
 | `npm run check:anchor` | Regenerates the anchor suite and fails if the committed file differs |
 | `npm run eval:anchor` | Runs the anchor through the real comparator and prints the verdict |
 | `npm run check:corpus` | Re-hashes the local research corpus. Not part of `verify` — see below |
@@ -125,11 +126,23 @@ pin, not a claim.
 
 Named here rather than discovered later. Each carries what would close it.
 
-**Nothing has ever called a real provider.** No API key is configured, so no evaluation run
-has reached a model. `cache_read_tokens` is on the contract and populated by nothing, no
-judge has graded anything, and the release gate — built and tested against each of its five
-conditions — has never fired. Every guard here is armed against stubs.
-*Closes when:* a key exists and one 100-trial run reports a non-zero cache read.
+**Nothing has ever called a real provider.** The path exists — `npm run eval -- --live`
+swaps the pinned stubs for the real adapter, with caching on so the cache-read claim is
+testable — but no key is set here, so it has never run. `cache_read_tokens` is on the
+contract and populated by nothing, no judge has graded anything, and the release gate has
+never fired. Every guard is still armed against stubs.
+
+Set the key yourself; nothing in this repository asks for it, stores it, or prints it, and
+`--live` refuses up front rather than degrading fourteen cases to tell you:
+
+```bash
+export ANTHROPIC_API_KEY='<your key>'   # bash/zsh; PowerShell: $env:ANTHROPIC_API_KEY = '...'
+npm run eval -- --live
+```
+
+A live run sends the suite's briefs to `api.anthropic.com` and spends money. The host is
+hard-coded against a frozen allowlist, so it goes there and nowhere else.
+*Closes when:* one 100-trial live run reports a non-zero cache read.
 
 **No suite measures a model.** The anchor resolves 2 percentage points, but over *gate
 detection on generated text* — it certifies a `gate_set_ref` change, not a prompt's quality.

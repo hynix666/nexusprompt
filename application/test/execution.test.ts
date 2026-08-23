@@ -180,3 +180,79 @@ describe("cost is measured", () => {
     );
   });
 });
+
+/**
+ * The live-provider seam.
+ *
+ * Until this existed, `runSuite` hard-coded its stubs, so the evaluation plane could not
+ * reach a model however the rest of the system was configured. These tests are about the
+ * seam being real AND the default staying offline — the second half matters more, because
+ * an `EvalRun` is only recomputable from stored artifacts while nothing in it phoned out.
+ */
+describe("a suite can run against a live provider", () => {
+  /** A transport that answers without a network, standing in for the real adapter. */
+  class ScriptedProvider {
+    readonly provider_id = "scripted-live";
+    calls = 0;
+    constructor(private readonly tokens = { prompt_tokens: 7, completion_tokens: 11 }) {}
+    async generate(req: { request_id: string }) {
+      this.calls++;
+      return {
+        request_id: req.request_id,
+        content: "# SYSTEM PROMPT\n\nScope: billing only.",
+        provider_id: this.provider_id,
+        model_id: "scripted-1",
+        finish_reason: "end_turn" as const,
+        usage: this.tokens,
+      };
+    }
+    async healthCheck() {
+      return { ok: true, checked_at: "1970-01-01T00:00:00.000Z", latency_ms: 0,
+               degradation_state: "NONE" as const, failing_dependency: null };
+    }
+  }
+
+  it("uses the injected provider, and records which one answered", async () => {
+    const provider = new ScriptedProvider();
+    const { run: evalRun } = await run({}, { provider });
+    expect(provider.calls).toBe(CASES);
+    // The distinction a reader needs: a stubbed run must never be mistaken for a live one.
+    expect(evalRun.provenance.provider).toBe("scripted-live");
+  });
+
+  it("defaults to the pinned stub and touches nothing", async () => {
+    // The must-not-fire half. If the default ever became live, every existing suite would
+    // start spending money and stop being reproducible, silently.
+    const { run: evalRun } = await run({});
+    expect(evalRun.provenance.provider).toBe("pinned-stub");
+  });
+
+  it("accounts for a live provider's real usage rather than an estimate", async () => {
+    const provider = new ScriptedProvider({ prompt_tokens: 100, completion_tokens: 200 });
+    const { run: evalRun } = await run({}, { provider });
+    // Every case succeeds here, so the totals are exactly cases x the reported usage.
+    expect(evalRun.cost.tokens_in).toBe(100 * CASES);
+    expect(evalRun.cost.tokens_out).toBe(200 * CASES);
+    expect(evalRun.cost.provider_calls).toBe(CASES);
+  });
+
+  it("does not count a cache hit as a provider call", async () => {
+    /**
+     * The recorder sits INSIDE the cache for this reason. Outside it, every hit would be
+     * counted as spend and `provider_calls` would measure the suite's size rather than what
+     * it cost — which is the number a budget is enforced against.
+     */
+    const provider = new ScriptedProvider();
+    const cache = new MemoryCacheStore();
+    const first = await run({}, { provider, cache });
+    const callsAfterFirst = provider.calls;
+    const second = await run({}, { provider, cache });
+
+    expect(callsAfterFirst).toBe(CASES);
+    // The second run answers entirely from cache: the transport is never reached again.
+    expect(provider.calls).toBe(callsAfterFirst);
+    expect(second.run.cost.provider_calls).toBe(0);
+    expect(second.run.cost.cache_hits).toBe(CASES);
+    expect(first.run.aggregate.score).toBe(second.run.aggregate.score);
+  });
+});
