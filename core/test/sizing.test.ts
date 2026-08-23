@@ -46,6 +46,23 @@ describe("the exact significance floor", () => {
     expect(attainable(0, 0.05)).toBe(false);
   });
 
+  it("never reports a p-value of exactly zero, even past the underflow", () => {
+    /**
+     * `2 * 0.5^d` underflows a double to exactly 0 from d = 1075. Zero would claim the result
+     * is impossible under the null; the true value there is around 1e-372, which is only
+     * smaller than a double can hold. Clamping to the smallest representable positive keeps
+     * every comparison against alpha identical and stops the arithmetic asserting a certainty
+     * it never reached.
+     *
+     * Found by the gate-recall anchor, the first suite here big enough to get there.
+     */
+    expect(minAttainableP(1074)).toBeGreaterThan(0);
+    expect(minAttainableP(1075)).toBe(Number.MIN_VALUE);
+    expect(minAttainableP(5000)).toBe(Number.MIN_VALUE);
+    // Still decisively below any alpha anyone would use.
+    expect(attainable(5000, 1e-12)).toBe(true);
+  });
+
   it("returns Infinity rather than a small number for a nonsensical alpha", () => {
     expect(floorDiscordant(0)).toBe(Infinity);
     expect(floorDiscordant(-1)).toBe(Infinity);

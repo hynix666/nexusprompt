@@ -98,6 +98,8 @@ placeholder. Output is never fabricated when a model was unreachable, and the
 | `npm run check:matrix` | Fails when the committed capability matrix is not what the repo produces |
 | `npm run check:fingerprint` | Fails the build when a provider swaps the model underneath you |
 | `npm run differential` | The ported gates against the frozen Python linter, verdict for verdict |
+| `npm run check:anchor` | Regenerates the anchor suite and fails if the committed file differs |
+| `npm run eval:anchor` | Runs the anchor through the real comparator and prints the verdict |
 | `npm run check:corpus` | Re-hashes the local research corpus. Not part of `verify` — see below |
 | `npm test` | The suite, offline, in seconds |
 
@@ -129,11 +131,11 @@ judge has graded anything, and the release gate — built and tested against eac
 conditions — has never fired. Every guard here is armed against stubs.
 *Closes when:* a key exists and one 100-trial run reports a non-zero cache read.
 
-**No suite here can resolve a difference below about 53 percentage points.** That is not a
-number to edit — it is the size of the suites. `check:sizing` prints it on every run, and
-the comparator refuses rather than reporting a p-value a design could never have produced.
-*Closes when:* an anchor suite exists, sized by `requiredPairedSize` with alpha, power and
-discordance all written down.
+**No suite measures a model.** The anchor resolves 2 percentage points, but over *gate
+detection on generated text* — it certifies a `gate_set_ref` change, not a prompt's quality.
+The smoke suites remain what they were: 14 and 5 cases, resolving ~53 and ~89 points, which
+`check:sizing` prints on every run.
+*Closes when:* a provider key exists and an anchor can be built over model outputs.
 
 **Two stricter compiler flags are measured and not yet adopted.** `strict` is on, along with
 `noUnusedLocals`, `noUnusedParameters` and `noImplicitOverride` — each cost zero or near-zero

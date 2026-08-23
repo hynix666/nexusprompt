@@ -103,7 +103,18 @@ export function floorDiscordant(alpha: number): number {
  */
 export function minAttainableP(discordant: number): number {
   if (discordant <= 0) return 1;
-  return Math.min(1, 2 * Math.pow(0.5, discordant));
+  const p = Math.min(1, 2 * Math.pow(0.5, discordant));
+  /**
+   * At d >= 1075, `2 * 0.5^d` underflows a double to exactly 0. Returning 0 would say the
+   * result is impossible under the null; the true value is around 1e-372, which is merely
+   * smaller than a double can hold. Those are different claims, and the false one is the
+   * more flattering. Clamping to the smallest representable positive keeps every comparison
+   * against alpha identical while never asserting certainty the arithmetic did not reach.
+   *
+   * Surfaced by the gate-recall anchor, the first suite here large enough to get there:
+   * 1,236 discordant units.
+   */
+  return p === 0 ? Number.MIN_VALUE : p;
 }
 
 /** Whether a design with this many discordant pairs could have produced a significant result. */

@@ -170,7 +170,9 @@ function exactTwoSided(b: number, c: number): number {
     logSum = logAdd(logSum, logCoef);
   }
   const p = 2 * Math.exp(logSum + n * Math.log(0.5));
-  return Math.min(1, p);
+  // Underflows to exactly 0 past ~1075 discordant pairs. Zero would claim impossibility
+  // under the null rather than "smaller than a double holds" — see `minAttainableP`.
+  return p === 0 ? Number.MIN_VALUE : Math.min(1, p);
 }
 
 /**
