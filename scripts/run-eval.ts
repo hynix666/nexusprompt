@@ -18,6 +18,7 @@
  * suite is three orders of magnitude below the size that could certify a promotion.
  */
 
+import { pathToFileURL } from "node:url";
 import { readFileSync } from "node:fs";
 import { runSuite, configurationId, type StubbedCase } from "../application/src/eval.js";
 import { MemoryCacheStore } from "../application/src/cache.js";
@@ -81,6 +82,20 @@ const MAX_CALLS = intFlag("max-calls");
 const SUITE = process.argv.includes("--suite")
   ? process.argv[process.argv.indexOf("--suite") + 1]
   : "eval/compile-smoke.json";
+
+/**
+ * Why this value cannot be a key — or null if nothing rules it out.
+ *
+ * Exported and pure so the refusal is testable without spawning the script or setting a
+ * process-wide variable. It asserts NO vendor format: `sk-ant-` plus a length would fail
+ * closed the day either changes, and this script has no business knowing that. It reports
+ * only shapes a key can never have, which is a claim that stays true.
+ */
+export function implausibleKeyReason(key: string): string | null {
+  if (/[<>"'\s]/.test(key)) return "contains a bracket, quote or whitespace";
+  if (key.length < 20) return `is ${key.length} characters long`;
+  return null;
+}
 
 async function main(): Promise<number> {
   let data: { suite: EvalSuite; cases: StubbedCase[] };
@@ -165,13 +180,47 @@ async function main(): Promise<number> {
   if (LIVE && !process.env.ANTHROPIC_API_KEY) {
     console.error(
       "eval --live: ANTHROPIC_API_KEY is not set in this process's environment.\n\n" +
-      "  Set it yourself — nothing here will ask you for it, store it, or print it:\n" +
-      "    PowerShell   $env:ANTHROPIC_API_KEY = '<your key>'    (this session only)\n" +
-      "    bash / zsh   export ANTHROPIC_API_KEY='<your key>'\n\n" +
+      "  Set it yourself — nothing here will ask you for it, store it, or print it.\n" +
+      "  Replace the words YOUR_KEY_HERE; do not paste the line as written:\n" +
+      "    PowerShell   $env:ANTHROPIC_API_KEY = 'YOUR_KEY_HERE'    (this session only)\n" +
+      "    bash / zsh   export ANTHROPIC_API_KEY='YOUR_KEY_HERE'\n\n" +
       "  A live run sends this suite's briefs to api.anthropic.com and spends money.\n" +
       "  Without --live, `npm run eval` stays offline against pinned stubs.",
     );
     return 2;
+  }
+
+  /**
+   * A key that cannot possibly be one is refused HERE, not by the API.
+   *
+   * Presence was the only test, and presence is the honest thing for this script to read —
+   * but it means a placeholder passes and the failure relocates to a 401 partway through a
+   * paid run, which is the worst place for it: the budget is already committed, the error is
+   * remote, and the message names an HTTP status rather than the mistake.
+   *
+   * Observed, not hypothetical. `setx ANTHROPIC_API_KEY "<your key>"` was run verbatim from
+   * a copy-pasted instruction, and the guard above waved through a ten-character value whose
+   * first character is `<`. The message that produced it is fixed above; this is the check
+   * that catches it whatever the wording does next.
+   *
+   * These are shapes NO key has, not a format assertion. Asserting `sk-ant-` and a length
+   * would fail closed the day the vendor changes either, and this script has no business
+   * knowing that. Angle brackets, quotes and whitespace mean "you pasted the wrong thing",
+   * and they mean it permanently. Validating the key for real needs a network call, which is
+   * the thing being guarded.
+   */
+  const rawKey = process.env.ANTHROPIC_API_KEY;
+  if (LIVE && rawKey) {
+    const looksPasted = implausibleKeyReason(rawKey);
+    if (looksPasted) {
+      console.error(
+        `eval --live: ANTHROPIC_API_KEY is set, but its value ${looksPasted}.\n\n` +
+        "  That is a placeholder or a truncated paste, not a key. Refusing here rather than\n" +
+        "  letting api.anthropic.com reject it after the run has started spending.\n\n" +
+        "  The value is not shown, and was not read for any purpose other than this check.",
+      );
+      return 2;
+    }
   }
 
   /**
@@ -373,4 +422,6 @@ async function compareRuns(
   return 0;
 }
 
-process.exit(await main());
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.exit(await main());
+}
