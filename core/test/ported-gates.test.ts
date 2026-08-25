@@ -10,14 +10,14 @@ import {
   duplicateInstruction, delimiterEntropy,
 } from "../src/gates/guardrail-gap.js";
 import { tokenBudget, qutmCeiling, contextLimit } from "../src/gates/budget.js";
-import { estimateTokens, halfUp2 } from "../src/gates/lint-primitives.js";
+import { estimateTokens, halfUp2, QUTM_MIN_BASELINE_TOKENS } from "../src/gates/lint-primitives.js";
 import { listGates } from "../src/gates/registry.js";
 
 /**
- * The thirteen gates ported in Phase 2, each with a must-fire and a must-not-fire case.
+ * All sixteen ported gates, each with a must-fire and a must-not-fire case.
  *
  * The differential oracle already compares every one of these against the frozen Python
- * linter over 8,100 verdicts, which is a stronger check than anything here. These tests
+ * linter over thousands of verdicts, which is a stronger check than anything here. These tests
  * exist for what the oracle cannot express: they name WHY each rule has the shape it does,
  * so a later edit that looks harmless has something to argue with. Several pin a defect
  * that actually shipped.
@@ -51,6 +51,79 @@ describe("RUNTIME_KEY_UNDECLARED", () => {
     const fencedManifest = "# Runtime Variables\n```\n[[K]]\n```\n\nUse [[K]].";
     expect(runtimeKeyUndeclared(fencedManifest).verdict).toBe("PASS");
     expect(runtimeKeyUndeclared("Example only:\n```\n[[K]]\n```\n").verdict).toBe("PASS");
+  });
+
+  /**
+   * Ported from SPB AUDIT.md B1, plus the false clean nobody had found.
+   *
+   * The source requires `#+` before the heading and terminates the span at `(?=\n#|\Z)`.
+   * Both halves are wrong, and they fail in OPPOSITE directions — which is why every
+   * fixture in this repository passed while the gate was broken: all of them wrote
+   * `# Runtime Variables` and followed it with another `#` heading, the one shape in
+   * which the two defects cancel. See ADR-0010.
+   */
+  describe("the manifest section — ADR-0010", () => {
+    const BLOCK_LAYOUT = [
+      "Runtime Variables (declared, not audited)",
+      "[[ISOLATION_NONCE]] - per-session hex nonce.",
+      "[[PLAYER_TIER]] - account tier supplied by the client.",
+      "",
+      "BLOCK III - Execution",
+    ].join("\n");
+
+    it("accepts a heading written as bare prose", () => {
+      // The v5 BLUEPRINT emits the line without hashes, so requiring them made every
+      // correctly declared key read as undeclared — including [[ISOLATION_NONCE]], which
+      // DELIMITER_ENTROPY requires be present. No compliant prompt could pass both.
+      expect(runtimeKeyUndeclared(`${BLOCK_LAYOUT}\n1. Read [[PLAYER_TIER]] and branch.`).verdict)
+        .toBe("PASS");
+    });
+
+    it("still fires on an undeclared key in a BLOCK-delimited body", () => {
+      // THE FALSE CLEAN. `(?=\n#|\Z)` terminates on a heading or EOF, and this layout has
+      // no second heading — so the manifest span swallowed the whole document and every
+      // key used anywhere read as declared. Writing the heading correctly is what
+      // disabled the gate.
+      const undeclared = `# ${BLOCK_LAYOUT}\n1. Read [[NEVER_DECLARED]] and branch.`;
+      expect(runtimeKeyUndeclared(undeclared).verdict).toBe("FAIL");
+      expect(runtimeKeyUndeclared(undeclared).message).toContain("NEVER_DECLARED");
+    });
+
+    it("does not let a USE declare itself", () => {
+      // The same defect the citation pair already carries a fix for: scanning a section
+      // for any [[KEY]] let a use inside it count as a declaration, exactly as scanning a
+      // ledger section for any [Sn] let a citation declare itself and silenced both
+      // citation gates. A declaration opens its line; `1. Read [[X]]` is prose.
+      expect(runtimeKeyUndeclared("# Runtime Variables\n1. Read [[SNEAKY]] and branch.").verdict)
+        .toBe("FAIL");
+      expect(runtimeKeyUndeclared("# Runtime Variables\n- [[BULLETED]] is fine.\n\nUse [[BULLETED]].").verdict)
+        .toBe("PASS");
+    });
+
+    it("survives blank lines and fences inside the manifest", () => {
+      // Neither ends a declaration list. The fence case is load-bearing: the manifest is
+      // read from RAW text so that a fenced manifest still declares, and treating ``` as
+      // prose would undo that on the first one.
+      const spaced = "# Runtime Variables\n\n[[A]] - one.\n\n[[B]] - two.\n\nBLOCK I\nUse [[A]] and [[B]].";
+      expect(runtimeKeyUndeclared(spaced).verdict).toBe("PASS");
+      expect(runtimeKeyUndeclared("## Runtime Variables\n```\n[[K]] - fenced.\n```\n\nBLOCK I\nUse [[K]].").verdict)
+        .toBe("PASS");
+    });
+
+    it("reads every manifest, not only the first", () => {
+      // Binding to the first match would let a passing prose mention shadow the real
+      // section — and with the hash now optional, a prose mention is easier to write.
+      const twice = "See the Runtime Variables note.\n\n# Runtime Variables\n[[REAL]] - declared here.\n\nBLOCK I\nUse [[REAL]].";
+      expect(runtimeKeyUndeclared(twice).verdict).toBe("PASS");
+    });
+
+    it("still finds nothing when there is no manifest at all", () => {
+      // The must-not-fire half of the heading change: relaxing `#+` to `#*` must not make
+      // any line mentioning the phrase into a manifest that declares whatever follows.
+      expect(runtimeKeyUndeclared("Use [[API_HOST]].").verdict).toBe("FAIL");
+      expect(runtimeKeyUndeclared("There are no runtime variables here.\nUse [[API_HOST]].").verdict)
+        .toBe("FAIL");
+    });
   });
 });
 
@@ -207,10 +280,50 @@ describe("the arithmetic trio", () => {
 
   it("QUTM_CEILING treats naiveTokens 0 as an explicit baseline", () => {
     // The identical defect, fixed on TOKEN_BUDGET and left standing on its sibling.
+    //
+    // The baseline floor (ADR-0011) moved where this is observable. An explicit 0 now
+    // reports `baseline_too_small` while an ABSENT option defaults to 400 and is armed,
+    // so the two are still distinguishable — but by message code, not by verdict. Assert
+    // the code: reintroducing `options.naiveTokens || 400` would substitute 400 for the 0
+    // and produce `exceeded`, which this catches and a verdict comparison would not.
     const long = "a".repeat(4000); // est 1000
-    expect(qutmCeiling(long, { stakes: "low", naiveTokens: 0 }).verdict).toBe("FAIL");
+    expect(qutmCeiling(long, { stakes: "low", naiveTokens: 0 }).message_code)
+      .toBe("QUTM_CEILING.baseline_too_small");
+    expect(qutmCeiling(long, { stakes: "low" }).message_code).toBe("QUTM_CEILING.exceeded");
     expect(qutmCeiling(long, { stakes: "low" }).verdict).toBe("FAIL"); // default 400 -> 2.5 > 1.2
     expect(qutmCeiling("abcd", { stakes: "low" }).verdict).toBe("PASS");
+  });
+
+  it("QUTM_CEILING does not arm below the baseline floor, and does at it", () => {
+    // Ported from SPB AUDIT.md B7 — the gate was unsatisfiable for short briefs, because
+    // the ratio divides a compiled prompt by the one-line brief it came from. Measured
+    // 5.6x against a 4x ceiling on a CORRECT prompt, and 318x on an empty brief.
+    const prompt = "a".repeat(3600); // est 900
+    expect(qutmCeiling(prompt, { stakes: "guarded", naiveTokens: 1 }).verdict).toBe("PASS");
+    expect(qutmCeiling(prompt, { stakes: "safety-critical", naiveTokens: 40 }).verdict).toBe("PASS");
+
+    // The boundary itself, both sides. A floor tested only well below its value cannot
+    // tell an off-by-one from a correct comparison.
+    expect(qutmCeiling(prompt, { stakes: "guarded", naiveTokens: QUTM_MIN_BASELINE_TOKENS - 1 }).message_code)
+      .toBe("QUTM_CEILING.baseline_too_small");
+    expect(qutmCeiling(prompt, { stakes: "guarded", naiveTokens: QUTM_MIN_BASELINE_TOKENS }).message_code)
+      .toBe("QUTM_CEILING.exceeded");
+  });
+
+  it("QUTM_CEILING still bites on genuinely bloated output above the floor", () => {
+    // The must-fire half. Re-scoping a gate is only defensible if it still fires on the
+    // thing it exists for; a floor that disarmed it everywhere would be a deletion.
+    const bloated = "a".repeat(40_000); // est 10,000
+    expect(qutmCeiling(bloated, { stakes: "guarded", naiveTokens: 200 }).verdict).toBe("FAIL");
+    expect(qutmCeiling(bloated, { stakes: "safety-critical", naiveTokens: 500 }).verdict).toBe("FAIL");
+  });
+
+  it("QUTM_CEILING reports an unknown tier even when the baseline is below the floor", () => {
+    // Order matters: a misspelled tier is a configuration error and must surface whatever
+    // the baseline is. Checking the floor first would hide the typo until someone
+    // happened to supply a long brief.
+    expect(qutmCeiling("x", { stakes: "extremely-high", naiveTokens: 1 }).message_code)
+      .toBe("QUTM_CEILING.unknown_tier");
   });
 
   it("QUTM_CEILING refuses an unknown tier rather than passing quietly", () => {

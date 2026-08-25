@@ -14,7 +14,7 @@
 
 import {
   type GateOptions, sha256, result, estimateTokens, halfUp2,
-  QUTM_CEILINGS, PROVIDER_CONTEXT_LIMITS,
+  QUTM_CEILINGS, QUTM_MIN_BASELINE_TOKENS, PROVIDER_CONTEXT_LIMITS,
 } from "./lint-primitives.js";
 import type { GateResult } from "../../../contracts/index.js";
 
@@ -68,6 +68,17 @@ export function qutmCeiling(text: string, options: GateOptions = {}): GateResult
       "QUTM_CEILING.unknown_tier", hash);
   }
   const baseline = options.naiveTokens !== undefined ? options.naiveTokens : 400;
+
+  // The baseline floor is checked AFTER the unknown-tier refusal, not before. A misspelled
+  // tier is a configuration error and must be reported whatever the baseline is; letting a
+  // short brief suppress it would hide the typo until someone supplied a long one.
+  if (baseline < QUTM_MIN_BASELINE_TOKENS) {
+    return result(QUTM_GATE_ID, GATE_VERSION, "PASS",
+      `Baseline ${baseline} token(s) below the ${QUTM_MIN_BASELINE_TOKENS}-token floor; ` +
+      `a cost ratio against a brief this short measures the brief, not the prompt. Check not armed.`,
+      "QUTM_CEILING.baseline_too_small", hash);
+  }
+
   const costRatio = halfUp2(estimateTokens(text) / Math.max(1, baseline));
 
   if (costRatio <= ceiling) {

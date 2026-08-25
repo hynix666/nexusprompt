@@ -94,7 +94,8 @@ export function runGate(id: string, text: string, options: GateOptions = {}): Ga
 }
 
 /**
- * The registered set is 2 of the source linter's 16. The remaining 14 are a port
- * task, not a design task — each is one module and one line here.
+ * The source linter's gate count, and the number registered above — the port is complete.
+ * `scripts/differential.ts` fails when the two disagree, so this cannot drift silently
+ * from what the frozen linter actually emits.
  */
 export const SOURCE_GATE_COUNT = 16;

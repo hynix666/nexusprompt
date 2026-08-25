@@ -79,11 +79,60 @@ const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\
 export const clausePresent = (clause: string, low: string): boolean =>
   new RegExp(`\\b${escapeRegExp(clause)}`).test(low);
 
-/** Runtime Variables must be declared in a manifest section. Read from RAW text, not audit text. */
+/**
+ * Runtime Variables must be declared in a manifest section. Read from RAW text, not audit text.
+ *
+ * DIVERGES FROM THE SOURCE — declared in scripts/divergence-allowlist.json, ADR-0010.
+ *
+ * The source is `#+\s*Runtime Variables.*?(?=\n#|\Z)`, which carries two defects that
+ * cancel into something worse than either alone:
+ *
+ *   1. `#+` requires a Markdown hash. The v5 framework's own BLUEPRINT emits the line as
+ *      bare prose, so the manifest was invisible and EVERY correctly declared key read as
+ *      undeclared — a gate no compliant prompt could pass.
+ *   2. `(?=\n#|\Z)` terminates only on a heading or EOF. The layout that framework
+ *      prescribes uses `BLOCK I`/`BLOCK III` markers, not headings, so in the intended
+ *      shape the span runs to the end of the document and every `[[KEY]]` used ANYWHERE
+ *      reads as declared. The gate returns PASS on undeclared keys.
+ *
+ * Together: writing the heading the way the source demands is what disables the gate.
+ * Writing it the way the framework demands is what makes the gate fire on everything.
+ * The false-clean is the one that matters — it is a security-adjacent check reporting
+ * that it looked when it did not.
+ *
+ * The fix is the discipline `extractSourceLedgerIds` already carries, applied here for
+ * the same reason. There, scanning a section for any `[Sn]` let a citation inside the
+ * section declare ITSELF, silencing both citation gates at once. This is that defect
+ * with different brackets: a section bounded only by EOF lets a USE declare itself.
+ *
+ * So a manifest is the heading plus the run of declaration lines beneath it, and it ends
+ * at the first line of prose that declares nothing. A declaration line opens with its key
+ * (optionally bulleted); `1. Read [[PLAYER_TIER]] and branch.` is a use, not a
+ * declaration, and ends the section rather than extending it.
+ */
+const MANIFEST_HEADING_RE = /^\s*#*\s*Runtime Variables\b/i;
+const DECLARATION_LINE_RE = /^\s*(?:[-*+]\s*)?\[\[[A-Za-z0-9_:-]+\]\]/;
+const FENCE_LINE_RE = /^\s*```/;
+const RUNTIME_KEY_G = /\[\[([A-Za-z0-9_:-]+)\]\]/g;
+
 export function extractRuntimeManifest(text: string): Set<string> {
   const declared = new Set<string>();
-  const m = text.match(/#+\s*Runtime Variables[\s\S]*?(?=\n#|$)/i);
-  if (m) for (const k of m[0].matchAll(/\[\[([A-Za-z0-9_:-]+)\]\]/g)) declared.add(k[1]);
+  const lines = text.split("\n");
+
+  // Every heading, not just the first: a document may carry more than one manifest, and
+  // binding to the first match would let a passing prose mention shadow the real section.
+  for (let h = 0; h < lines.length; h++) {
+    if (!MANIFEST_HEADING_RE.test(lines[h])) continue;
+    for (let i = h + 1; i < lines.length; i++) {
+      const line = lines[i];
+      // Blank lines and fence delimiters do not end a manifest. The fence case is load-
+      // bearing: this function reads RAW text precisely so a manifest inside a fence still
+      // declares, and treating ``` as prose would undo that on the first fenced manifest.
+      if (line.trim() === "" || FENCE_LINE_RE.test(line)) continue;
+      if (!DECLARATION_LINE_RE.test(line)) break;
+      for (const k of line.matchAll(RUNTIME_KEY_G)) declared.add(k[1]);
+    }
+  }
   return declared;
 }
 
@@ -142,6 +191,23 @@ export const TOKEN_SPAM_TAGS = ["[ACK]", "[EXEC]", "[CLI]", "[MEM_STATE]"] as co
 export const QUTM_CEILINGS: Record<string, number> = {
   "safety-critical": 12.0, high: 6.0, guarded: 4.0, medium: 2.5, low: 1.2,
 };
+
+/**
+ * Below this baseline the cost ratio carries no signal, so QUTM_CEILING does not arm.
+ *
+ * DIVERGES FROM THE SOURCE — declared in scripts/divergence-allowlist.json, ADR-0011.
+ *
+ * A compiled system prompt is necessarily many times longer than the one-line brief it
+ * came from, and the ratio divides one by the other. The source applies the ceiling at
+ * any baseline, so a correct 900-token prompt scores 900× against a one-line brief and
+ * 7.5× against a 120-token one — unpassable at every tier including safety-critical's
+ * 12×. The gate was measuring the brief's brevity, not the prompt's bloat.
+ *
+ * A named constant rather than an inline number, deliberately: a threshold spelled into
+ * the comparison is a guard whose scope nothing can state, which is how a check ends up
+ * narrower than its name.
+ */
+export const QUTM_MIN_BASELINE_TOKENS = 120;
 
 export const PROVIDER_CONTEXT_LIMITS: Record<string, number> = {
   anthropic: 200_000, openai: 128_000, google: 1_048_576, ollama: 128_000,
