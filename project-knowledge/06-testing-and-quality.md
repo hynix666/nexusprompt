@@ -1,6 +1,6 @@
 # Testing and quality
 
-**693 tests, 0 failing.** Runs offline in seconds.
+**712 tests, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -37,8 +37,10 @@ The ported TypeScript gates against `sources/v5/prompt_lint.py`, verdict for ver
 fixtures   40 cases
 generated  120 cases (seed 1)
 boundary   10 conjunction cases
-compared   2720 gate verdicts
+allowlist  3 declared divergence(s)
+compared   2768 gate verdicts
 ✓ the two implementations agree on every shared gate.
+  16 verdict(s) differ deliberately, each declared in scripts/divergence-allowlist.json
 ```
 
 **Why it exists (ADR-0007):** parity between two implementations of one design is
@@ -48,15 +50,36 @@ a caller-supplied `0`, a citation that declared itself inside an empty ledger (s
 *both* citation gates), and a multi-citation regex that dropped every id after the first.
 
 Divergences are declared in `scripts/divergence-allowlist.json` with a reason and an ADR. It
-ships with **zero entries and that is correct** — both ported gates are faithful. Entries pin
-*both* verdicts and carry their demonstration inline; a stale entry fails.
+sat at **zero entries for a week and that was correct**; it holds **three** now, all from the
+SPB defect-parity audit. Entries pin *both* verdicts and carry their demonstration inline — the
+harness runs each demonstration as a case, so an entry whose divergence disappears **fails**
+rather than quietly continuing to excuse.
+
+Two matchers, and reaching for the wrong one is expensive:
+
+| | |
+|---|---|
+| `also_matches` | **broadens** by regex over the input, for a systematic difference across generated cases |
+| `only_when_options` | **narrows** to cases whose options satisfy a constraint (`lt`/`lte`/`gt`/`gte`/`eq`) |
+
+The second exists because a divergence can be **option-shaped rather than input-shaped**. The
+QUTM baseline floor diverges on any text whose baseline is under the floor, so the only text
+regex covering it is `.*` — which would also have excused `qutm-ceiling-crossing`, the one
+boundary case in which half-up rounding is observable at all. **Declaring one deliberate
+difference must not cost an unrelated regression detector.** An option a case does not carry
+is *not* satisfied: absence must not excuse by omission.
 
 ### 3. Mutation probes — the discipline that found the most
 
 Break the code deliberately, confirm a test fails, restore. **Measure by exit code only.**
 
 Cumulative across phases: **α 10/10 · β 11/11 · γ 13/13 · δ 14/14 · ε 31/31 · routing 17/17 ·
-anchor 15/15.**
+anchor 15/15 · divergence 7/7 · staleness 9/9.**
+
+The divergence pair is the most instructive here. One probe mutates rounding and asserts the
+build still **fails**; the next removes `only_when_options`, applies the *same* mutation, and
+asserts the build **passes**. Neither alone proves anything — together they prove the field is
+load-bearing rather than decoration, which is the question worth asking of any new guard.
 
 Probe instrument rules, each learned the hard way:
 
@@ -78,7 +101,7 @@ CRLF).
 
 ## The recurring failure: fixtures too uniform to discriminate
 
-**Five probe survivors across the project shared one root cause.**
+**Eight probe survivors across the project shared one root cause.**
 
 | Occurrence | The fixture could not discriminate because |
 |---|---|
@@ -86,6 +109,14 @@ CRLF).
 | ε | every discordant unit pointed one way, so the exact p *was* the design floor |
 | ε | every schema was covered, so a hard-coded `validated: true` matched a derived one |
 | anchor ×2 | the case did not retain its base text, so "exactly one gate newly fired" could not be re-checked |
+| staleness | the out-of-order lineage chain was one level deep, so a single pass already found the descendant |
+| staleness | the unknown-id case cascaded to nothing with the guard removed too |
+| manifest | **every** fixture in the repo wrote `# Runtime Variables` followed by another `#` heading — the one layout in which two opposite defects cancel |
+
+The last one is the sharpest instance in the project. Two defects in one regex failed in
+opposite directions, so the gate was simultaneously unpassable in one layout and disabled in
+another — and 2,720 oracle verdicts agreed, because no input in the corpus distinguished two
+implementations that were wrong in the same place.
 
 **Rule:** before writing a fixture, name the mutation it must fail on, then check the fixture
 actually contains that case — mixed directions, a member the guard should reject beside ones
@@ -94,6 +125,19 @@ it accepts, counts that differ so counting the wrong thing gives a different ans
 When a probe survives, **grow the fixture rather than loosening the assertion.** Twice the
 honest answer was to change the *code*: a guard nothing could reach was dead, and deleting it
 beat writing a test to reach it.
+
+A third answer showed up in the staleness probes: the guard was real but its **comment was
+wrong**, claiming to prevent something it did not. What it actually protects is a dangling
+parent reference — an entry naming a parent the bundle lacks. The fixture was grown to contain
+that, and the comment was corrected to say the narrower true thing. A comment that overstates
+a guard is the same defect as a guard that overstates itself; it just fails later, in the
+reader.
+
+**And a probe that survives is not automatically a finding.** Of four survivors in this round,
+one was the *instrument*: swapping `break` for `continue` does not restore the old behaviour,
+because a use line still is not a declaration line. That is the third time here that a probe,
+not the code, was the thing that was wrong — which is why a control at both ends is not
+optional.
 
 ## Tests that could not fail
 

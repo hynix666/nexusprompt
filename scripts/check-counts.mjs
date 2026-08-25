@@ -88,6 +88,22 @@ export function resolvers(root = process.cwd()) {
     "sources.frozen_files": () => readJson(at("sources/MANIFEST.json")).files.length,
     "docs.markdown_files": () => readdirSync(at("Documentation")).filter((f) => f.endsWith(".md")).length,
     "gates.ported": () => readJson(at("scripts/ported-gates.json")).ported.length,
+
+    /**
+     * ADRs on disk, by filename. Pinned because project-knowledge/ restates the count in two
+     * places and it was wrong in both within two days of being written — the knowledge base
+     * is a snapshot, and a snapshot nobody re-derives is a snapshot that rots.
+     */
+    "adrs.count": () =>
+      readdirSync(at("Documentation")).filter((f) => /^\d{4}-.+\.md$/.test(f)).length,
+
+    /**
+     * Declared divergences from the frozen linter. Pinned because "the allowlist is empty"
+     * was true, load-bearing, and quoted in prose — exactly the kind of claim that keeps
+     * being repeated after it stops being true.
+     */
+    "divergences.declared": () =>
+      readJson(at("scripts/divergence-allowlist.json")).entries.length,
     "stages.built": () =>
       readdirSync(at("core/src/stages")).filter((f) => f.endsWith(".ts") && !["pipeline.ts", "stage-kit.ts"].includes(f)).length,
   };

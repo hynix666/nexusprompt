@@ -16,7 +16,7 @@ milestone. Every schema has a producer.
 | `gate-result` | 1.3.0 | One gate's verdict |
 | `pipeline-outcome` | 1.0.0 | What a Shell receives |
 | `provider-failure` | 1.0.0 | Typed, classified failure |
-| `revision-entry` | 1.3.0 | One stage execution, persisted |
+| `revision-entry` | 1.3.1 | One stage execution, persisted. `parent_revision_ids` populated since 1.3.1 |
 | `observability-event` | 1.2.0 | Keyed hashes only |
 | `technique-record` | 1.3.0 | Catalog entry (195 records) |
 | `configuration` | 1.3.0 | The versioned artifact — **not** the prompt |
@@ -260,7 +260,12 @@ interface EvidenceStore {          // deliberately NO update, NO delete
   list(kind, filter?): Promise<EvidenceSummary[]>; }
 
 interface CacheStore  { get(key): Promise<GenerationResult | null>; set(key, v): Promise<void>; }
-interface RevisionStore { append(entry): Promise<void>; getRun(run_id): Promise<RevisionEntry[]>; }
+interface RevisionStore {
+  append(entry): Promise<void>;
+  getRun(run_id): Promise<RevisionEntry[]>;
+  listRecent(limit): Promise<RunBundleSummary[]>;
+  markStale(run_id, from_revision_id): Promise<void>;   // a REVISION, not a stage
+}
 interface EventSink   { emit(e: ObservabilityEvent): void; }
 interface JudgeTransport { judge_id: string; judge_family: string;
                            grade(req: JudgeRequest): Promise<JudgeVerdict>; }

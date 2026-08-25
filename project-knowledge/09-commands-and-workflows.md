@@ -6,7 +6,7 @@
 npm install && npm run verify
 ```
 
-~16 s, offline, exit 0. Runs boundaries → types → frozen-source hashes → documentation counts
+~24 s, offline, exit 0. Runs boundaries → types → frozen-source hashes → documentation counts
 → suite sizing → the generated matrix → every evaluation suite → the test suite → the
 differential oracle.
 
@@ -19,7 +19,7 @@ differential oracle.
 | `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 50 files, 144 imports |
 | `npm run typecheck` | `tsc --noEmit`, strict + 3 extra flags |
 | `npm run verify:sources` | Re-hashes 420 frozen files against `sources/MANIFEST.json` |
-| `npm run check:counts` | Re-derives every pinned number in the docs from the tree. 31 occurrences of 28 pins |
+| `npm run check:counts` | Re-derives every pinned number in the docs from the tree. 42 occurrences of 37 pins, including 9 in this knowledge base |
 | `npm run check:plan` | 15 machine-checked claims in `IMPLEMENTATION_PLAN.md` |
 | `npm run check:citations` | Every catalog citation internally consistent (195 records) |
 | `npm run check:catalog` | `import:catalog --check` — the committed catalog is what the importer produces |
@@ -45,7 +45,7 @@ differential oracle.
 | `npm run eval:adversarial` | the adversarial corpus |
 | `npm run eval:anchor` | the 4,906-case anchor through `compare()` |
 | `npm run build:anchor` | regenerates `eval/gate-recall-anchor.json` from seed 1 |
-| `npm run differential` | ported gates vs the frozen Python linter — 2,720 verdicts |
+| `npm run differential` | ported gates vs the frozen Python linter — 2,768 verdicts, 16 differing deliberately |
 | `npm run differential -- --n 800 --seed 7` | a longer / different generated corpus |
 
 ### Tests, docs, CLI
@@ -71,9 +71,14 @@ npm run cli -- evidence
    their middles. A probe once found six planted defects caught and **four surviving**, all in
    behaviours no generated input reached.
 4. `npm run differential` — it must agree with the Python linter, or declare a divergence in
-   `scripts/divergence-allowlist.json` with a reason and an ADR.
-5. `npm run build:anchor` — the corpus changes when the registry does.
-6. `npm run verify`.
+   `scripts/divergence-allowlist.json` with a reason and an ADR. Use `also_matches` when the
+   difference is input-shaped and `only_when_options` when it is option-shaped; a blanket
+   `.*` excuses more than the decision covers and will silence some other detector.
+5. **Bump the gate's own version if behaviour changed**, and update the pinned table in
+   `core/test/ported-gates.test.ts`. `gate_version` is persisted in every revision, so two
+   results carrying one version claim to have come from one rule.
+6. `npm run build:anchor` — the corpus changes when the registry does.
+7. `npm run verify`.
 
 ### Changing a contract (ADR-0002 order — this is a rule, not an aspiration)
 
@@ -150,7 +155,7 @@ Back up on **full path**. Control at **both ends**. Verdicts by **exit code only
 cp -r project-knowledge/ /path/to/new-project/
 ```
 
-Ten files, ~55 KB of Markdown. Small enough to paste whole; complete enough to rebuild from.
+Eleven files, ~100 KB of Markdown. Small enough to paste whole; complete enough to rebuild from.
 
 ### 2. Point a new Claude Code session at it
 
@@ -164,7 +169,13 @@ system. Read `project-knowledge/00-index.md` first. The architectural invariants
 statistical results in `04`, and the defect patterns in `08` are the parts most likely to
 apply here.
 
-Numbers in it were true at commit f19dc83 (23 August 2026). Verify before relying on one.
+Structural counts (gates, stages, contracts, ADRs, doc files, declared divergences) are
+pinned to resolvers and re-derived by `npm run check:counts`, so they cannot drift silently
+while the folder lives in this repository. Everything else — test counts, verdict counts,
+line counts — was true at commit `3c0d440` (25 August 2026); verify before relying on one.
+
+**Once you copy this folder elsewhere, all of it becomes a snapshot again**, because the
+resolvers stay behind.
 ```
 
 Or, in a session:
@@ -193,7 +204,9 @@ Fastest honest path, in dependency order:
    retrofit.
 3. **One checker that re-derives a documented number from the tree.** It will find more than
    you expect (15 across 6 documents here).
-4. **A second, independently-authored oracle** for anything ported or duplicated.
+4. **A second, independently-authored oracle** for anything ported or duplicated — and
+   remember its blind spot: parity cannot see a defect both implementations share. Budget for
+   a periodic cross-reference against whatever sibling lineage exists, run by execution.
 5. **Mutation probes from the first test**, with a control at both ends.
 6. **Statistics before the first comparison anyone will cite** — the sizing rule, the exact
    floor, and the refusal paths in `04`. Retrofitting these means retracting published

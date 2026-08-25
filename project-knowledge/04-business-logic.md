@@ -14,7 +14,7 @@ Pure functions of `(text, options) → GateResult` with verdict `PASS | WARN | F
 | `SECRET_LEAK_SCAN` | 1.1.0 | API keys, tokens, emails, phone numbers |
 | `CLAIM_DISCIPLINE` | 1.1.0 | "guarantee", "100% accurate" — unearned certainty |
 | `PLACEHOLDER_AUDIT` | 1.0.0 | `<<ROLE>>` left unfilled |
-| `RUNTIME_KEY_UNDECLARED` | 1.0.0 | `[[API_HOST]]` with no declaration |
+| `RUNTIME_KEY_UNDECLARED` | **1.1.0** | `[[API_HOST]]` with no declaration. Diverges from the source (ADR-0010) |
 | `SOURCE_LEDGER_MISSING` | 1.0.0 | citations with no ledger |
 | `ORPHAN_CLAIMS` | 1.0.0 | claims citing nothing |
 | `GUARDRAIL_GAP` | 1.0.0 | missing bias/sanitisation language |
@@ -24,7 +24,7 @@ Pure functions of `(text, options) → GateResult` with verdict `PASS | WARN | F
 | `DUPLICATE_INSTRUCTION` | 1.0.0 | repeated blocks (60-character floor) |
 | `DELIMITER_ENTROPY` | 1.0.0 | delimiters under a 32-hex minimum |
 | `TOKEN_BUDGET` | 1.0.0 | estimate over a declared ceiling |
-| `QUTM_CEILING` | 1.0.0 | ratio ceiling |
+| `QUTM_CEILING` | **1.1.0** | ratio ceiling, not armed below a 120-token baseline. Diverges from the source (ADR-0011) |
 | `CONTEXT_LIMIT` | 1.0.0 | context overflow |
 | `ADVERSARIAL_RESILIENCE` | 1.0.0 | takes an **injected** corpus |
 
@@ -32,7 +32,9 @@ Pure functions of `(text, options) → GateResult` with verdict `PASS | WARN | F
 Eight of the sixteen do nothing until an option arms them.
 
 **Every gate is checked against the frozen Python linter** (`sources/v5/prompt_lint.py`) by
-the differential oracle — 2,720 verdicts. See ADR-0007: parity between two implementations of
+the differential oracle — 2,768 verdicts, of which 16 differ deliberately (ADR-0010, ADR-0011).
+`gate_version` is per **gate**, not per module, and `core/test/ported-gates.test.ts` pins all
+sixteen pairs — a behaviour change without a version bump has to be a conscious edit. See ADR-0007: parity between two implementations of
 one design is structurally blind to a defect they *share*, and the frozen fixtures document
 three shipped bugs that survived a passing parity suite for exactly that reason.
 
@@ -60,7 +62,7 @@ run has no `SKIPPED` entries at all.
 
 ### Gate feedback loop — `decideGateFeedback(ctx, plan)`
 
-A gate FAIL routes back to `refine` carrying its message. **Five named reasons not to loop**,
+A gate FAIL routes back to `refine` carrying its message. **Six named reasons not to loop**,
 each returned explicitly:
 
 1. topology is not reflexive
@@ -68,6 +70,11 @@ each returned explicitly:
 3. the verdict is not `GATE_FAIL`
 4. the plan omits `refine` or `lint`
 5. the output is a demo placeholder
+6. the verdict is `GATE_FAIL` but no gate returned a FAIL — nothing to feed back
+
+Capped-and-still-failing and declined-because-clean both return `retry: false`, so the
+*reason* is the only thing separating them. `lintStatus` stays `GATE_FAIL` on a capped run,
+so a run that exhausted its budget cannot read as a clean pass.
 
 **The cap is derived, not chosen.** Each round re-runs `refine` then `lint` — exactly two
 executions — so `check:depth` prices it:
