@@ -17,6 +17,8 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 | 0007 | The differential oracle is **permanent**, not a migration step |
 | 0008 | Evaluation-first environment; Configuration is the versioned artifact |
 | 0009 | Product is NexusPrompt; contract lineage stays `promptnexus` |
+| 0010 | The runtime manifest is a declaration list, not a span to end-of-file — authorises 2 divergence entries |
+| 0011 | `QUTM_CEILING` does not arm below a named baseline floor — authorises 1, and added `only_when_options` |
 
 ## Open register — each with a closing condition
 
@@ -25,7 +27,6 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 | **Nothing has ever called a provider.** The path exists (`npm run eval -- --live`) and has never run. `cache_read_tokens` is populated by nothing; no judge has graded anything; the release gate has never fired | A key exists, and one 100-trial run reports a non-zero cache read |
 | **The anchor certifies detection, not quality.** No suite here measures a model | A key, then an anchor built over model outputs rather than gate verdicts |
 | **Keyed fingerprints documented, bare `sha256` in code** | The event port holds a deployment-scoped key and `orchestrator.ts` uses it |
-| **`markStale` has zero callers and zero tests**; cascades by array position where the design says lineage | `parent_revision_ids` is populated and the cascade follows it |
 | **Does per-stage validation actually mitigate the depth cliff?** The strongest untested hypothesis here; the cited measurement is of *unvalidated* chains | A live run makes it measurable. If false, eleven stages is the wrong shape |
 | **Is gate-message text sufficient reflective feedback?** The mechanism works and is capped; whether it *improves* anything is unmeasured | — |
 | **`bootstrap-ci` is declared and refused.** Graded and free-form metrics need it | The first suite producing a non-binary metric |
@@ -40,7 +41,27 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 
 no git remote (23 Aug) · no CI (23 Aug) · no licence (23 Aug) · corpus outside the repo
 (23 Aug) · no suite resolves below ~53 pp (23 Aug, by the anchor) · the pipeline suite
-reported 5/5 while never running the pipeline (23 Aug).
+reported 5/5 while never running the pipeline (23 Aug) · **`markStale` cascaded by array
+position with zero callers** (25 Aug — walks `parent_revision_ids` to a fixed point, is
+inclusive, and the gate-feedback rewind calls it) · **the divergence allowlist had never been
+used** (25 Aug — three entries, and it turned out to need a second matcher).
+
+## Closed by the SPB defect-parity audit — 25 August 2026
+
+Cross-referencing a sibling lineage (the System Prompt Builder, v6.2.x) against this tree.
+Every item was reproduced by **execution**, not by reading.
+
+| Reported | Outcome |
+|---|---|
+| Gate 2 manifest scanner required a `#` heading | **Confirmed** — and the *other* half of the same regex was a false clean nobody had predicted. ADR-0010 |
+| Gate 13 QUTM unsatisfiable for short briefs | **Confirmed.** ADR-0011 |
+| Gate 15 taxed non-citing prompts | **Already correct** here — but no fixture covered it, so the whole branch was untested |
+| Gate 3 backreference scan was slow | **Refuted.** `TOKEN_SPAM` is a literal `split()`; 1 ms on 200 KB of adversarial input |
+| Gate 16 `JSON_SCHEMA_MALFORMED` missing | **Not a gap.** The frozen linter's sixteen ids are exactly the sixteen registered; SPB carries that gate where this tree carries `CONTEXT_LIMIT`. Two descendants differing, not a dropped port |
+
+Two things the audit found that were in *neither* tree's report: the manifest false clean, and
+`gate_version` being a module version wearing a gate's name — the fix for the first shipped
+without bumping the second, and nothing noticed because nothing read the field.
 
 ## The recurring defect patterns
 
@@ -48,7 +69,7 @@ These are the *classes*, worth more than any individual fix.
 
 ### R9 — a guard's scope is quietly narrower than its name
 
-Found **eight times**. Examples:
+Found **eleven times**. Examples:
 
 - `check:plan` verifies 15 claims and passes, reading **exactly one file** — every count in
   every other document drifted unguarded. Fixed by `check:counts`, deliberately *not* named
@@ -63,6 +84,15 @@ Found **eight times**. Examples:
 - `admitRun` returns *"no budget declared"* and admits everything when a configuration carries
   no budget — and the eval composition root declared none, so the first 100-trial live run
   would have been the unbounded one (1,400 calls, nothing able to stop them).
+- **`extractRuntimeManifest` bounded the manifest at end-of-file**, so in the layout the v5
+  framework prescribes the "manifest section" was the whole document and a *use* declared
+  itself. The gate returned PASS on undeclared keys. Its sibling `extractSourceLedgerIds`
+  already carried the fix for the identical defect with different brackets.
+- **`gate_version` was per module, not per gate.** Gates sharing a file shared one constant,
+  so the field could not express the true thing even in principle — bumping the gate that
+  changed would have bumped up to five that did not.
+- **`check:counts` does not read source comments.** Three comments claiming "2 of 16 gates
+  ported" survived every guard, including the guard built to catch exactly this class.
 
 ### Documentation that contradicts its own machine-checked data
 
@@ -92,7 +122,7 @@ protected and cannot fail visibly.
 
 ### Fixtures too uniform to discriminate
 
-Five occurrences. See `06-testing-and-quality.md`.
+Eight occurrences. See `06-testing-and-quality.md`.
 
 ## Statistical gotchas worth carrying to any project
 
@@ -117,7 +147,17 @@ Five occurrences. See `06-testing-and-quality.md`.
 ## Engineering lessons
 
 - **Every defect of consequence was found by a second, independently-authored checker** —
-  never by making the first stricter.
+  never by making the first stricter. The SPB audit extends this: the second reader does not
+  have to be a *checker*. A sibling lineage's bug list, cross-referenced by execution, found
+  two defects a passing 2,720-verdict oracle could not see — because both implementations
+  shared them.
+- **A guard whose scope cannot express the true thing is not a strict guard, it is a broken
+  one.** `gate_version` per module could not say "this gate changed and its file-mates did
+  not". The fix is always to change the shape before changing the value.
+- **Declaring a known exception must not cost an unrelated check.** The blanket
+  `also_matches: ".*"` that would have documented the QUTM divergence would also have
+  silenced the only detector for a rounding regression. When an exception is broader than
+  the decision it records, widen the *mechanism*, not the exception.
 - **Ship the check *with* the capability, never after.** The encoded fix for the
   "guarantee written but not wired" class.
 - **Refuse rather than caveat.** A caveat beside a p-value gets the p-value quoted and the

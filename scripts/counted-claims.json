@@ -182,6 +182,60 @@
       "pattern": "(\\d[\\d,]*)-file research corpus",
       "resolver": "corpus.files",
       "reason": "The file count and the document count differ by 62 byte-identical duplicates; stating only one of them is how 599 got rounded up."
+    },
+    {
+      "document": "project-knowledge/00-index.md",
+      "pattern": "(\\d[\\d,]*) of \\d+ ported",
+      "resolver": "gates.ported",
+      "reason": "The headline gate count, in the file a new session reads first. Three source comments claiming '2 of 16 ported' survived every guard while all 16 were, so this number has already been wrong in this repository."
+    },
+    {
+      "document": "project-knowledge/00-index.md",
+      "pattern": "(\\d[\\d,]*) pure gate implementations",
+      "resolver": "gates.ported",
+      "reason": "The same count restated in the directory map. A number repeated twice is two chances to be wrong, and the check requires both occurrences to agree."
+    },
+    {
+      "document": "project-knowledge/00-index.md",
+      "pattern": "(\\d[\\d,]*) Markdown files",
+      "resolver": "docs.markdown_files",
+      "reason": "Said 32 the day two ADRs landed. Cheap to re-derive, and wrong here means a reader thinks they have seen the whole doc set."
+    },
+    {
+      "document": "project-knowledge/00-index.md",
+      "pattern": "(\\d[\\d,]*) ADRs",
+      "resolver": "adrs.count",
+      "reason": "Stated twice in this file and wrong in both the moment ADR-0010 and 0011 landed. An ADR index that undercounts hides the decisions a reader most needs."
+    },
+    {
+      "document": "project-knowledge/00-index.md",
+      "pattern": "(\\d[\\d,]*) (?:versioned )?JSON Schemas",
+      "resolver": "contracts.schemas",
+      "reason": "Contracts are the sole cross-boundary interface, so their count is the size of the interface. Restated in the quick facts and the directory map; both must agree."
+    },
+    {
+      "document": "project-knowledge/00-index.md",
+      "pattern": "(\\d[\\d,]*) pipeline stages",
+      "resolver": "stages.built",
+      "reason": "The stage count moved from nine to eleven once already, and a doc set that never mentioned the two new stages is the reason check:stages exists."
+    },
+    {
+      "document": "project-knowledge/00-index.md",
+      "pattern": "(\\d[\\d,]*) declared divergences",
+      "resolver": "divergences.declared",
+      "reason": "'The allowlist ships with zero entries and that is correct' was true, quoted, and load-bearing right up until it was not."
+    },
+    {
+      "document": "project-knowledge/02-data-models.md",
+      "pattern": "(\\d[\\d,]*) JSON Schemas in",
+      "resolver": "contracts.schemas",
+      "reason": "The opening line of the contracts reference. If it disagrees with the index, one of the two is lying to whoever reads only one."
+    },
+    {
+      "document": "project-knowledge/04-business-logic.md",
+      "pattern": "The (\\d[\\d,]*) gates",
+      "resolver": "gates.ported",
+      "reason": "The heading over the gate table. A heading that says sixteen above a table of fifteen rows is the failure this catches."
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Source code summary
 
-~20,800 lines across `contracts/ core/ application/ adapters/ shells/ scripts/ test/`.
+~21,500 lines across `contracts/ core/ application/ adapters/ shells/ scripts/ test/`.
 Comment density is high and deliberate: **comments record decisions, constraints, rejected
 alternatives, and bugs a naive rewrite would reintroduce** — never what the code already says.
 
@@ -12,7 +12,8 @@ alternatives, and bugs a naive rewrite would reintroduce** — never what the co
 
 | Path | Exports | Notes |
 |---|---|---|
-| `core/src/gates/registry.ts` | `listGates`, `runGates`, `runGate`, `SOURCE_GATE_COUNT` | `runGate` throws on an unknown id |
+| `core/src/gates/registry.ts` | `listGates`, `runGates`, `runGate`, `SOURCE_GATE_COUNT` | `runGate` throws on an unknown id; version is per **gate**, not per module |
+| `core/src/gates/lint-primitives.ts` | `extractRuntimeManifest`, `extractSourceLedgerIds`, `halfUp2`, `estimateTokens` | the shared helpers; two carry the same fix for the same defect |
 | `core/src/stages/pipeline.ts` | `planForContext`, `decideGateFeedback`, `formatGateCritique` | depth plan + the bounded feedback loop |
 | `core/src/eval/compare.ts` | `compare`, `mcnemar`, `clusteredPaired`, `clusterOf`, `requiredAnchorSize` | every refusal path lives here |
 | `core/src/eval/sizing.ts` | `floorDiscordant`, `minAttainableP`, `attainable`, `requiredPairedSize`, `resolvableDelta` | the corrected sizing rule |
@@ -120,7 +121,23 @@ node scripts/generate-capability-matrix.mjs --check   # fail if the committed fi
 Used by `docs:matrix`, `build:anchor`, `import:catalog`. A document anyone can hand-edit
 asserts whatever its last editor believed.
 
-### 8. Pin a number in prose to a resolver
+### 8. Widen the mechanism, not the exception
+
+When a known exception has to be written broader than the decision it records, the exception
+is not the thing to widen.
+
+```jsonc
+// Documents the divergence -- and also excuses a rounding regression on every input.
+{ "also_matches": ".*" }
+
+// Says what the decision actually covers.
+{ "also_matches": ".*", "only_when_options": { "naiveTokens": { "lt": 120 } } }
+```
+
+An option a case does not carry is **not** satisfied; an unknown operator **fails** rather
+than reading as true. Absence must never excuse by omission.
+
+### 9. Pin a number in prose to a resolver
 
 ```jsonc
 { "document": "README.md", "pattern": "(\\d[\\d,]*) gates,",
@@ -132,7 +149,7 @@ Two rules: a pattern matching **nothing** fails as stale; **every** occurrence m
 > Gotcha: `([\d,]+)` also matches a bare comma, so `"gates, stages,"` captures `","`. Use
 > `(\d[\d,]*)`. The checker caught this as *"captured no digits"*.
 
-### 9. Errors that can be acted on
+### 10. Errors that can be acted on
 
 ```ts
 throw new RoutingPolicyInvalid(
@@ -142,7 +159,7 @@ throw new RoutingPolicyInvalid(
 
 What failed · where · what was expected · why it matters.
 
-### 10. Comments that earn their place
+### 11. Comments that earn their place
 
 ```ts
 // Bounded on both ends deliberately. An open `+` here scanned quadratically against long
@@ -216,8 +233,9 @@ Every key-shaped string in this repository is a **synthetic fixture** used to te
 real vendor prefixes. They are deliberately not reproduced here, so this file does not trip a
 scanner in whatever repository it is pasted into.
 
-All 66 commits were scanned before the first push. No real credential has ever been
-committed, there is no `.env` file, and no gitlink from the bundled `.git/` directory.
+All 66 commits then in history were scanned before the first push, and every commit since
+has been reviewed the same way. No real credential has ever been committed, there is no
+`.env` file, and no gitlink from the bundled `.git/` directory.
 
 ---
 

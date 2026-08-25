@@ -3,7 +3,19 @@
 A compact, self-contained record of this project, written so a new session (or a new person)
 can rebuild, extend, or reason about it without reading the whole tree.
 
-Generated 23 August 2026, at commit `f19dc83`.
+Generated 23 August 2026 at commit `f19dc83`; revised 25 August 2026 after the SPB
+defect-parity audit.
+
+> **Nine of the structural counts below are pinned.** `npm run check:counts` re-derives them
+> from the repository and fails the build when a number here disagrees with the tree — the
+> same mechanism this project uses on its own documentation. It applies to counts of gates,
+> stages, contracts, ADRs, Markdown files and declared divergences.
+>
+> It does **not** cover test counts, verdict counts or line counts, which would mean running
+> the suite inside a checker that has to stay fast. Treat those as a snapshot and verify them
+> before relying on one. The distinction is the point: a number that can be guarded cheaply
+> should be, and a number that cannot should say so rather than borrow the credibility of the
+> ones that are.
 
 ---
 
@@ -31,16 +43,16 @@ components were rejected by it.
 | Language / runtime | TypeScript 5.9, Node 24, ESM, `module: NodeNext` |
 | Package manager | **npm workspaces** — *not* pnpm (pnpm is not installed; older docs say otherwise) |
 | Repo | `github.com/hynix666/nexusprompt` (private), branch `master`, CI green |
-| Headline command | `npm install && npm run verify` — ~16 s, offline |
-| Tests | 693 passing, 0 failing |
-| Differential oracle | 2,720 gate verdicts, TS port vs frozen Python linter, all agreeing |
+| Headline command | `npm install && npm run verify` — ~24 s, offline |
+| Tests | 712 passing, 0 failing |
+| Differential oracle | 2,768 gate verdicts vs the frozen Python linter; 16 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
 | Contracts | 15 JSON Schemas, all validated against produced values |
 | Adapters | 3 built (provider-local-proxy, storage-local, evidence-local) |
 | Shells | 1 built (cli); 2 specified and unbuilt |
-| Source size | ~20,800 lines across `contracts/ core/ application/ adapters/ shells/ scripts/ test/` |
-| Commits | 66 |
+| Source size | ~21,500 lines across `contracts/ core/ application/ adapters/ shells/ scripts/ test/` |
+| Commits | 72 — and note that a commit stating this number changes it, which is why it is not pinned |
 | Licence | MIT |
 
 ### The three zeros (unchanged, and the point)
@@ -68,7 +80,7 @@ the number appears rather than letting the wiring pass for a result.
 | [05-configuration-and-deployment.md](./05-configuration-and-deployment.md) | Env vars, tsconfig, CI, `verify` composition, the corpus |
 | [06-testing-and-quality.md](./06-testing-and-quality.md) | Vitest projects, mutation probes, the differential oracle, fixture discipline |
 | [07-dependencies.md](./07-dependencies.md) | Eight dev dependencies and why each one is there |
-| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 9 ADRs, the open register, and the recurring defect patterns |
+| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 11 ADRs, the open register, and the recurring defect patterns |
 | [09-commands-and-workflows.md](./09-commands-and-workflows.md) | Every npm script, what it checks, and the common workflows |
 | [10-source-code-summary.md](./10-source-code-summary.md) | Key modules, reusable patterns, code idioms worth keeping |
 
@@ -95,9 +107,10 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `adapters/evidence-local/` | Immutable evidence store (`wx` flag, no `update`) |
 | `shells/cli/` | The one built Shell + its composition root |
 | `scripts/` | 20 checkers and runners. Each fails the build rather than warning |
+| `scripts/divergence-allowlist.json` | 3 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
-| `Documentation/` | 32 Markdown files: 9 ADRs, implementation plan, architecture, references |
+| `Documentation/` | 34 Markdown files: 11 ADRs, implementation plan, architecture, references |
 | `docs/superpowers/specs/` | The corpus-grounded spec that drove Phases α–ζ |
 | `test/` | Cross-cutting: contract conformance, evidence conformance, checker tests |
 | `.github/workflows/verify.yml` | CI. Runs `npm run verify` on every push and PR |
