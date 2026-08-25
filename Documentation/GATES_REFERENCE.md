@@ -8,6 +8,22 @@ This table is the **target** inventory: the 16 gates emitted by `prompt_lint.py`
 
 > **Counted, not inherited.** This table previously claimed 17 gates, listed one (`GUARDRAIL_COMPLETENESS`) that exists in no source, and omitted two that do. The inventory below is the verified set — see [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md). The source implements these as inline checks inside a single `lint()` function; porting them as 16 separately testable pure functions is a decomposition, and gate-by-gate behavioral parity against `fixtures.json` is the exit criterion for that work.
 
+## Which sixteen — the lineage question
+
+The frozen v5 linter emits exactly the sixteen ids below, and `core/src/gates/registry.ts`
+registers the same sixteen. `scripts/differential.ts` fails when the two sets disagree, so
+this cannot drift silently.
+
+A **sibling lineage** — the System Prompt Builder, at v6.2.x — also has sixteen gates, but
+not the same sixteen: it carries `JSON_SCHEMA_MALFORMED` where this one carries
+`CONTEXT_LIMIT`. That is a difference between two descendants of the v5 framework, not a
+gate this port dropped. Adding it here would mean a seventeenth gate with no counterpart in
+the oracle, which is a decision (and an ADR), not a bug fix. Recorded so the next audit
+comparing the two trees does not have to re-derive it.
+
+Two gates deliberately **diverge** from the frozen linter, each declared in
+`scripts/divergence-allowlist.json` with a reason and an ADR — see the table below.
+
 Verdicts below are **read from the emission sites** in `prompt_lint.py`, not from prior documentation. An earlier revision of this table stated the wrong verdict for five gates — most consequentially `SECRET_LEAK_SCAN`, documented as FAIL when the source deliberately emits WARN because "a hit means *look here*, not proof."
 
 | Gate ID | Checks | Verdict triggers |
