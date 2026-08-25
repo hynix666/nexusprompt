@@ -164,6 +164,31 @@ describe("the citation pair — ported together because they failed together", (
     expect(orphanClaims(`As shown [S1, S2].\n\n${LEDGER}`).verdict).toBe("PASS");
   });
 
+  it("does not tax a prompt that cites nothing", () => {
+    /**
+     * Ported from SPB AUDIT.md B6, where the equivalent gate demanded the literal words
+     * `ledger` and `source` from any GUARDED+ prompt regardless of whether it cited
+     * anything — an unclearable failure for a support agent that quotes no sources.
+     *
+     * NexusPrompt's pair was already conditional and needs no fix. It had no fixture for
+     * it, though: every case here carried at least one citation, so the whole
+     * nothing-to-check branch was untested on both gates.
+     *
+     * Honest about what this does NOT discriminate: `orphans` is derived from `cited`, so
+     * an empty `cited` gives an empty `orphans` and the `cited.size > 0` conjunct is
+     * redundant with `orphans.length > 0`. Deleting it would not fail this test. It stays
+     * because it mirrors the source's branch structure, which is what makes the two gates'
+     * mutual exclusivity readable — but it is not what this case is pinning.
+     */
+    const noCitations = `${GUARDRAILS}\nAnswer billing questions from the policy you were given.`;
+    expect(sourceLedgerMissing(noCitations).verdict).toBe("PASS");
+    expect(orphanClaims(noCitations).verdict).toBe("PASS");
+
+    // Including with a ledger present but nothing citing into it.
+    expect(sourceLedgerMissing(`${noCitations}\n\n${LEDGER}`).verdict).toBe("PASS");
+    expect(orphanClaims(`${noCitations}\n\n${LEDGER}`).verdict).toBe("PASS");
+  });
+
   it("does not treat a page reference as a source id", () => {
     // `[S1, p. 42]` must not leak 42 as a cited source.
     expect(orphanClaims(`As shown [S1, p. 42].\n\n${LEDGER}`).verdict).toBe("PASS");
