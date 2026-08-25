@@ -15,7 +15,6 @@ import type {
   RevisionEntry,
   RevisionStore,
   RunBundleSummary,
-  StageId,
 } from "../../../contracts/index.js";
 
 const MAX_BUNDLES = 8;
@@ -56,17 +55,55 @@ export class LocalRevisionStore implements RevisionStore {
       .slice(0, limit);
   }
 
-  async markStale(run_id: string, from_stage_id: StageId): Promise<void> {
+  /**
+   * Staleness cascades along LINEAGE, not append order.
+   *
+   * The predecessor walked the bundle with a `seen` latch keyed on `stage_id`, which was
+   * wrong three ways at once and had no caller and no test to notice. It marked entries
+   * stale for sitting later in the array rather than for depending on anything. It never
+   * staled the originating entry. And because a reflexive run appends `refine` and `lint`
+   * twice, the latch RE-ARMED on the second occurrence of the named stage instead of
+   * staling it — the one shape the feature exists to handle.
+   *
+   * Walking `parent_revision_ids` is the fix and the reason 1.3.1 populates the field.
+   * Iterate to a fixed point rather than assuming the bundle is topologically ordered: a
+   * feedback jump appends a child before entries it did not descend from, so one pass in
+   * array order can miss a descendant.
+   *
+   * `freshness` is independent of `status` — an entry stays SUCCEEDED while becoming STALE.
+   */
+  async markStale(run_id: string, from_revision_id: string): Promise<void> {
     const path = this.bundlePath(run_id);
     if (!existsSync(path)) return;
     const bundle = JSON.parse(await readFile(path, "utf8")) as RevisionEntry[];
-    // Staleness cascades from the edited stage onward. freshness is independent
-    // of status: an entry stays SUCCEEDED while becoming STALE.
-    let seen = false;
-    for (const e of bundle) {
-      if (e.stage_id === from_stage_id) seen = true;
-      else if (seen) e.freshness = "STALE";
+
+    const stale = new Set<string>([from_revision_id]);
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const e of bundle) {
+        if (stale.has(e.revision_id)) continue;
+        if ((e.parent_revision_ids ?? []).some((p) => stale.has(p))) {
+          stale.add(e.revision_id);
+          grew = true;
+        }
+      }
     }
+
+    /**
+     * A revision this bundle does not contain supersedes nothing in it.
+     *
+     * This matters only for a DANGLING parent — an entry naming a parent the bundle lacks,
+     * which a partial write or a hand-edited file can produce. Without this line that
+     * entry's descendants would be staled on the strength of an id nothing here can
+     * account for. With it, the answer is "no such revision", which is the truth.
+     *
+     * It is deliberately not phrased as protecting against staling the whole bundle: it
+     * does not do that, and a probe showed the difference. An id matching no entry and no
+     * parent reference already cascades to nothing; all that is saved there is a pointless
+     * rewrite of an unchanged file.
+     */
+    if (!bundle.some((e) => e.revision_id === from_revision_id)) return;
+    for (const e of bundle) if (stale.has(e.revision_id)) e.freshness = "STALE";
     await writeFile(path, JSON.stringify(bundle, null, 2));
   }
 

@@ -154,6 +154,7 @@ export async function runPipeline(
         run_id, stage_id: stage.id, inputHash,
         outputText: "", status: "SKIPPED", provider: null, gate_results: [],
         now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null, feedbackRound,
+        parents: revision_ids.slice(-1),
       });
       await opts.store.append(revision);
       revision_ids.push(revision.revision_id);
@@ -179,6 +180,7 @@ export async function runPipeline(
         run_id, stage_id: stage.id, inputHash,
         outputText: "", status: "FAILED", provider: null, gate_results: [],
         now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null, feedbackRound,
+        parents: revision_ids.slice(-1),
       });
       await opts.store.append(revision);
       revision_ids.push(revision.revision_id);
@@ -199,6 +201,7 @@ export async function runPipeline(
         outputText: summarize(stage.id, ctx), status: "SUCCEEDED", provider: null,
         gate_results: stage.id === "lint" ? (ctx.gate_results ?? []) : [],
         now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null, feedbackRound,
+        parents: revision_ids.slice(-1),
       });
       await opts.store.append(revision);
       revision_ids.push(revision.revision_id);
@@ -227,7 +230,31 @@ export async function runPipeline(
           // Core already refused to retry when the plan lacks the target, so this is
           // belt-and-braces — but a -1 here would restart the whole run, and a silent
           // infinite loop is the one failure this feature must not introduce.
-          if (target >= 0) { i = target - 1; continue; }
+          if (target >= 0) {
+            /**
+             * The retry supersedes the pass being rewound, so say so in the bundle.
+             *
+             * `markStale` had zero callers, which is why nobody noticed it cascaded by
+             * array position. This is the call site the mechanism was built for: the loop
+             * is about to re-execute `resumeAt`, so that stage's previous revision and
+             * everything computed from it — including the lint verdict that triggered the
+             * retry — describe a prompt this run is about to replace.
+             *
+             * STALE, not deleted. `status` stays SUCCEEDED and the gate results stay put:
+             * the record of the failing lint that CAUSED the retry is the thing a reader
+             * most needs, and marking it stale says it is history, not that it is gone.
+             */
+            const superseded = [...stages].reverse().find((s) => s.stage_id === feedback.resumeAt);
+            if (superseded?.revision_id) {
+              await opts.store.markStale(run_id, superseded.revision_id);
+              emit("REVISION_PERSISTED", {
+                component: `core/stages/${feedback.resumeAt}`,
+                verdict: `superseded by feedback round ${(ctx.feedbackRounds ?? 0)}`,
+              });
+            }
+            i = target - 1;
+            continue;
+          }
         }
       }
       continue;
@@ -299,6 +326,7 @@ export async function runPipeline(
       fingerprint: degraded ? null : `${(outcome as GenerationResult).provider_id}:${(outcome as GenerationResult).model_id}`,
       gate_results: [],
       now, coreBuildHash, configFingerprint: opts.configFingerprint ?? null, feedbackRound,
+        parents: revision_ids.slice(-1),
     });
     await opts.store.append(revision);
     revision_ids.push(revision.revision_id);
@@ -363,7 +391,7 @@ function buildRevision(a: {
   run_id: string; stage_id: StageId; inputHash: string; outputText: string;
   status: RevisionEntry["status"]; provider: string | null; fingerprint?: string | null; attempts?: number;
   gate_results: GateResult[]; now: () => Date; coreBuildHash: string; configFingerprint: string | null;
-  feedbackRound?: number;
+  feedbackRound?: number; parents?: string[];
 }): RevisionEntry {
   const provenance: ExecutionProvenance = {
     core_build_hash: a.coreBuildHash,
@@ -375,7 +403,16 @@ function buildRevision(a: {
     revision_id: randomUUID(),
     run_id: a.run_id,
     stage_id: a.stage_id,
-    parent_revision_ids: [],
+    /**
+     * Real lineage, populated since revision-entry 1.3.1. It existed from 1.0.0 and nothing
+     * wrote it, so `markStale` had no graph to walk and fell back to append order.
+     *
+     * The parent is whatever ran immediately before, because that is what produced the
+     * context this stage consumed. On a gate-feedback jump the loop moves BACKWARDS, so the
+     * re-run of `refine` records the failing `lint` as its parent — which is accurate, and
+     * is exactly the edge array position cannot represent.
+     */
+    parent_revision_ids: a.parents ?? [],
     timestamp: a.now().toISOString(),
     // Provider attempts within THIS execution. The real count — hardcoding 1 made a
     // revision claim one attempt and mean three. Re-executions are `feedback_round`.

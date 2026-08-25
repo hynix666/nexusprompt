@@ -171,7 +171,7 @@ export const CONTRACT_VERSIONS = {
   "gate-result": "1.3.0",
   "provider-failure": "1.0.0",
   "pipeline-outcome": "1.0.0",
-  "revision-entry": "1.3.0",
+  "revision-entry": "1.3.1",
   "observability-event": "1.2.0",
   "eval-run": "1.1.0",
   comparison: "2.1.0",
@@ -225,7 +225,22 @@ export interface RevisionStore {
   append(entry: RevisionEntry): Promise<void>;
   getRun(run_id: string): Promise<RevisionEntry[]>;
   listRecent(limit: number): Promise<RunBundleSummary[]>;
-  markStale(run_id: string, from_stage_id: StageId): Promise<void>;
+  /**
+   * Mark a revision and everything computed from it STALE.
+   *
+   * Keyed on a REVISION, not a stage. A stage id cannot identify what to invalidate once a
+   * reflexive run holds more than one revision per stage — the previous signature latched on
+   * the first entry carrying that id and staled everything after it in append order, so a
+   * re-executed stage re-armed the latch instead of being staled, and an entry became stale
+   * because of where it sat rather than what it depended on.
+   *
+   * Inclusive: the named revision is stale too. It is being superseded, which is the reason
+   * anyone is calling this.
+   *
+   * `freshness` and `status` stay independent. A staled revision keeps its SUCCEEDED status
+   * and its gate results — the record of what happened is not the claim that it still holds.
+   */
+  markStale(run_id: string, from_revision_id: string): Promise<void>;
 }
 
 /* ── Execution plane ──────────────────────────────────────────────────────── */
