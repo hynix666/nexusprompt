@@ -18,7 +18,21 @@ import {
 } from "./lint-primitives.js";
 import type { GateResult } from "../../../contracts/index.js";
 
-export const GATE_VERSION = "1.0.0";
+/**
+ * One version PER GATE, not per module.
+ *
+ * These three shared a single `GATE_VERSION` because they share a file. That made
+ * `gate_version` a module version wearing a gate's name: bumping QUTM_CEILING for ADR-0011
+ * would have silently bumped TOKEN_BUDGET and CONTEXT_LIMIT, which did not change, and NOT
+ * bumping it left a stored GateResult claiming 1.0.0 for two different behaviours.
+ * `gate_version` is persisted in every revision, so that is a provenance record contradicting
+ * itself — the same defect class as an input_hash covering the wrong inputs.
+ */
+export const TOKEN_BUDGET_GATE_VERSION = "1.0.0";
+/** 1.1.0 — ADR-0011 added the QUTM_MIN_BASELINE_TOKENS floor. Behaviour changed; version moves. */
+export const QUTM_GATE_VERSION = "1.1.0";
+export const CONTEXT_LIMIT_GATE_VERSION = "1.0.0";
+
 export const TOKEN_BUDGET_GATE_ID = "TOKEN_BUDGET";
 export const QUTM_GATE_ID = "QUTM_CEILING";
 export const CONTEXT_LIMIT_GATE_ID = "CONTEXT_LIMIT";
@@ -33,15 +47,15 @@ export const CONTEXT_LIMIT_GATE_ID = "CONTEXT_LIMIT";
 export function tokenBudget(text: string, options: GateOptions = {}): GateResult {
   const hash = sha256(text);
   if (options.tokenBudget === undefined) {
-    return result(TOKEN_BUDGET_GATE_ID, GATE_VERSION, "PASS",
+    return result(TOKEN_BUDGET_GATE_ID, TOKEN_BUDGET_GATE_VERSION, "PASS",
       "No token budget declared; check not armed.", "TOKEN_BUDGET.not_armed", hash);
   }
   const est = estimateTokens(text);
   if (est <= options.tokenBudget) {
-    return result(TOKEN_BUDGET_GATE_ID, GATE_VERSION, "PASS",
+    return result(TOKEN_BUDGET_GATE_ID, TOKEN_BUDGET_GATE_VERSION, "PASS",
       `Estimated ${est} within budget ${options.tokenBudget}.`, "TOKEN_BUDGET.within", hash);
   }
-  return result(TOKEN_BUDGET_GATE_ID, GATE_VERSION, "FAIL",
+  return result(TOKEN_BUDGET_GATE_ID, TOKEN_BUDGET_GATE_VERSION, "FAIL",
     `Estimated ${est} > budget ${options.tokenBudget}.`, "TOKEN_BUDGET.exceeded", hash);
 }
 
@@ -56,14 +70,14 @@ export function tokenBudget(text: string, options: GateOptions = {}): GateResult
 export function qutmCeiling(text: string, options: GateOptions = {}): GateResult {
   const hash = sha256(text);
   if (!options.stakes) {
-    return result(QUTM_GATE_ID, GATE_VERSION, "PASS",
+    return result(QUTM_GATE_ID, QUTM_GATE_VERSION, "PASS",
       "No stakes tier declared; check not armed.", "QUTM_CEILING.not_armed", hash);
   }
   const ceiling = QUTM_CEILINGS[options.stakes];
   if (ceiling === undefined) {
     // An unknown tier raises KeyError in the source rather than passing quietly. A gate
     // that silently passes on a misspelled tier is worse than one that refuses.
-    return result(QUTM_GATE_ID, GATE_VERSION, "FAIL",
+    return result(QUTM_GATE_ID, QUTM_GATE_VERSION, "FAIL",
       `Unknown stakes tier "${options.stakes}". Expected one of: ${Object.keys(QUTM_CEILINGS).join(", ")}.`,
       "QUTM_CEILING.unknown_tier", hash);
   }
@@ -73,7 +87,7 @@ export function qutmCeiling(text: string, options: GateOptions = {}): GateResult
   // tier is a configuration error and must be reported whatever the baseline is; letting a
   // short brief suppress it would hide the typo until someone supplied a long one.
   if (baseline < QUTM_MIN_BASELINE_TOKENS) {
-    return result(QUTM_GATE_ID, GATE_VERSION, "PASS",
+    return result(QUTM_GATE_ID, QUTM_GATE_VERSION, "PASS",
       `Baseline ${baseline} token(s) below the ${QUTM_MIN_BASELINE_TOKENS}-token floor; ` +
       `a cost ratio against a brief this short measures the brief, not the prompt. Check not armed.`,
       "QUTM_CEILING.baseline_too_small", hash);
@@ -82,11 +96,11 @@ export function qutmCeiling(text: string, options: GateOptions = {}): GateResult
   const costRatio = halfUp2(estimateTokens(text) / Math.max(1, baseline));
 
   if (costRatio <= ceiling) {
-    return result(QUTM_GATE_ID, GATE_VERSION, "PASS",
+    return result(QUTM_GATE_ID, QUTM_GATE_VERSION, "PASS",
       `Cost ratio ${costRatio} within the ${ceiling}× ceiling for ${options.stakes}.`,
       "QUTM_CEILING.within", hash);
   }
-  return result(QUTM_GATE_ID, GATE_VERSION, "FAIL",
+  return result(QUTM_GATE_ID, QUTM_GATE_VERSION, "FAIL",
     `Cost ratio ${costRatio} > ${ceiling} ceiling for ${options.stakes}.`,
     "QUTM_CEILING.exceeded", hash);
 }
@@ -97,14 +111,14 @@ export function contextLimit(text: string, options: GateOptions = {}): GateResul
   const limit = options.provider ? PROVIDER_CONTEXT_LIMITS[options.provider] : undefined;
   if (limit === undefined) {
     // An unrecognised provider is not armed, matching the source's `provider in CONFIGS`.
-    return result(CONTEXT_LIMIT_GATE_ID, GATE_VERSION, "PASS",
+    return result(CONTEXT_LIMIT_GATE_ID, CONTEXT_LIMIT_GATE_VERSION, "PASS",
       "No known provider declared; check not armed.", "CONTEXT_LIMIT.not_armed", hash);
   }
   const est = estimateTokens(text);
   if (est <= limit) {
-    return result(CONTEXT_LIMIT_GATE_ID, GATE_VERSION, "PASS",
+    return result(CONTEXT_LIMIT_GATE_ID, CONTEXT_LIMIT_GATE_VERSION, "PASS",
       `Estimated ${est} within the ${options.provider} context limit.`, "CONTEXT_LIMIT.within", hash);
   }
-  return result(CONTEXT_LIMIT_GATE_ID, GATE_VERSION, "WARN",
+  return result(CONTEXT_LIMIT_GATE_ID, CONTEXT_LIMIT_GATE_VERSION, "WARN",
     `Estimated ${est} > ${options.provider} context limit ${limit}.`, "CONTEXT_LIMIT.exceeded", hash);
 }

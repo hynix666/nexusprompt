@@ -12,7 +12,12 @@ import {
 } from "./lint-primitives.js";
 import type { GateResult } from "../../../contracts/index.js";
 
-export const GATE_VERSION = "1.0.0";
+export const GUARDRAIL_GATE_VERSION = "1.0.0";
+export const TOKEN_SPAM_GATE_VERSION = "1.0.0";
+export const RECURSION_GATE_VERSION = "1.0.0";
+export const RAG_SHIELD_GATE_VERSION = "1.0.0";
+export const DUPLICATE_GATE_VERSION = "1.0.0";
+export const DELIMITER_GATE_VERSION = "1.0.0";
 export const GUARDRAIL_GATE_ID = "GUARDRAIL_GAP";
 export const TOKEN_SPAM_GATE_ID = "TOKEN_SPAM";
 export const RECURSION_GATE_ID = "RECURSION_MACHINERY_PRESENT";
@@ -40,10 +45,10 @@ export function guardrailGap(text: string, options: GateOptions = {}): GateResul
   ];
 
   if (missing.length === 0) {
-    return result(GUARDRAIL_GATE_ID, GATE_VERSION, "PASS",
+    return result(GUARDRAIL_GATE_ID, GUARDRAIL_GATE_VERSION, "PASS",
       "Every required guardrail clause is present.", "GUARDRAIL_GAP.clean", hash);
   }
-  return result(GUARDRAIL_GATE_ID, GATE_VERSION, options.safetyTier ? "FAIL" : "WARN",
+  return result(GUARDRAIL_GATE_ID, GUARDRAIL_GATE_VERSION, options.safetyTier ? "FAIL" : "WARN",
     `Missing guardrail clause(s): ${missing.join(", ")}.`, "GUARDRAIL_GAP.missing", hash);
 }
 
@@ -59,10 +64,10 @@ export function tokenSpam(text: string, options: GateOptions = {}): GateResult {
   const dup = TOKEN_SPAM_TAGS.filter((t) => auditText.split(t).length - 1 > 8);
 
   if (dup.length === 0) {
-    return result(TOKEN_SPAM_GATE_ID, GATE_VERSION, "PASS",
+    return result(TOKEN_SPAM_GATE_ID, TOKEN_SPAM_GATE_VERSION, "PASS",
       "No bracket tag is over-repeated.", "TOKEN_SPAM.clean", hash);
   }
-  return result(TOKEN_SPAM_GATE_ID, GATE_VERSION, "WARN",
+  return result(TOKEN_SPAM_GATE_ID, TOKEN_SPAM_GATE_VERSION, "WARN",
     `Over-repeated tag(s): ${dup.join(", ")}.`, "TOKEN_SPAM.repeated", hash);
 }
 
@@ -75,17 +80,17 @@ export function tokenSpam(text: string, options: GateOptions = {}): GateResult {
 export function recursionMachineryPresent(text: string, options: GateOptions = {}): GateResult {
   const hash = sha256(text);
   if (!options.recursiveTarget) {
-    return result(RECURSION_GATE_ID, GATE_VERSION, "PASS",
+    return result(RECURSION_GATE_ID, RECURSION_GATE_VERSION, "PASS",
       "Not a recursive target; check not armed.", "RECURSION_MACHINERY_PRESENT.not_armed", hash);
   }
   const low = audit(text, options).toLowerCase();
   const present = RECURSION_MACHINERY_TOKENS.filter((t) => low.includes(t.toLowerCase()));
 
   if (present.length === 0) {
-    return result(RECURSION_GATE_ID, GATE_VERSION, "PASS",
+    return result(RECURSION_GATE_ID, RECURSION_GATE_VERSION, "PASS",
       "No recursion machinery left in a recursive target.", "RECURSION_MACHINERY_PRESENT.clean", hash);
   }
-  return result(RECURSION_GATE_ID, GATE_VERSION, "FAIL",
+  return result(RECURSION_GATE_ID, RECURSION_GATE_VERSION, "FAIL",
     `Recursion machinery present: ${present.join(", ")}.`, "RECURSION_MACHINERY_PRESENT.present", hash);
 }
 
@@ -99,17 +104,17 @@ export function recursionMachineryPresent(text: string, options: GateOptions = {
 export function ragShieldGap(text: string, options: GateOptions = {}): GateResult {
   const hash = sha256(text);
   if (!options.ragTarget) {
-    return result(RAG_SHIELD_GATE_ID, GATE_VERSION, "PASS",
+    return result(RAG_SHIELD_GATE_ID, RAG_SHIELD_GATE_VERSION, "PASS",
       "Not a RAG target; check not armed.", "RAG_SHIELD_GAP.not_armed", hash);
   }
   const low = audit(text, options).toLowerCase();
   const missing = RAG_SHIELD_CLAUSES.filter((c) => !low.includes(c));
 
   if (missing.length < RAG_SHIELD_CLAUSES.length) {
-    return result(RAG_SHIELD_GATE_ID, GATE_VERSION, "PASS",
+    return result(RAG_SHIELD_GATE_ID, RAG_SHIELD_GATE_VERSION, "PASS",
       "A RAG Shield acknowledgment token is present.", "RAG_SHIELD_GAP.clean", hash);
   }
-  return result(RAG_SHIELD_GATE_ID, GATE_VERSION, "FAIL",
+  return result(RAG_SHIELD_GATE_ID, RAG_SHIELD_GATE_VERSION, "FAIL",
     `No RAG Shield acknowledgment token found (expected one of: ${RAG_SHIELD_CLAUSES.join(", ")}).`,
     "RAG_SHIELD_GAP.absent", hash);
 }
@@ -132,11 +137,11 @@ export function duplicateInstruction(text: string, options: GateOptions = {}): G
   const dup = [...counts.entries()].filter(([, n]) => n > 1);
 
   if (dup.length === 0) {
-    return result(DUPLICATE_GATE_ID, GATE_VERSION, "PASS",
+    return result(DUPLICATE_GATE_ID, DUPLICATE_GATE_VERSION, "PASS",
       "No instruction block is duplicated.", "DUPLICATE_INSTRUCTION.clean", hash);
   }
   const details = dup.map(([p, n]) => `${n}× — ${p.length <= 96 ? p : p.slice(0, 93) + "…"}`);
-  return result(DUPLICATE_GATE_ID, GATE_VERSION, "WARN",
+  return result(DUPLICATE_GATE_ID, DUPLICATE_GATE_VERSION, "WARN",
     `Duplicated instruction block(s): ${details.join(" | ")}.`, "DUPLICATE_INSTRUCTION.duplicated", hash);
 }
 
@@ -160,10 +165,10 @@ export function delimiterEntropy(text: string, options: GateOptions = {}): GateR
   )].sort();
 
   if (weak.length === 0) {
-    return result(DELIMITER_GATE_ID, GATE_VERSION, "PASS",
+    return result(DELIMITER_GATE_ID, DELIMITER_GATE_VERSION, "PASS",
       "No under-entropy isolation delimiter.", "DELIMITER_ENTROPY.clean", hash);
   }
-  return result(DELIMITER_GATE_ID, GATE_VERSION, "FAIL",
+  return result(DELIMITER_GATE_ID, DELIMITER_GATE_VERSION, "FAIL",
     `Weak delimiter(s): ${weak.map((w) => `${w} (${w.length} hex chars < 32 minimum)`).join(", ")}.`,
     "DELIMITER_ENTROPY.weak", hash);
 }
