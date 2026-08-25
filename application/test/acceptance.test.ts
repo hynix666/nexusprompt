@@ -299,3 +299,134 @@ describe("storage-local retains whole run bundles", () => {
     await rm(root, { recursive: true, force: true });
   });
 });
+
+/* ── the staleness cascade ───────────────────────────────────────────────── */
+
+/**
+ * `markStale` shipped with zero callers and zero tests, cascading by array position.
+ *
+ * These fixtures are built so that lineage and position DISAGREE. A bundle whose append
+ * order matches its dependency order cannot tell the two implementations apart, which is
+ * why nothing caught it: every bundle this repository had ever written was linear.
+ */
+describe("markStale cascades along lineage, not append order", () => {
+  const entry = (id: string, parents: string[], stage = "compile") => ({
+    revision_id: id, run_id: "run-s", stage_id: stage as never,
+    parent_revision_ids: parents, timestamp: new Date(1_760_000_000_000).toISOString(),
+    stage_attempt: 1, input_hash: "a".repeat(64), output_hash: "b".repeat(64),
+    gate_results: [], freshness: "FRESH" as const, status: "SUCCEEDED" as const,
+    provider_used: null,
+    execution_provenance: { core_build_hash: "t", contract_versions: {}, provider_model_fingerprint: null, config_fingerprint: null },
+    retention_scope: "LOCAL_BUNDLE" as const,
+  });
+
+  const freshness = async (store: LocalRevisionStore) =>
+    Object.fromEntries((await store.getRun("run-s")).map((e) => [e.revision_id, e.freshness]));
+
+  it("stales the named revision and its descendants, and leaves a sibling branch alone", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnx-st-"));
+    const store = new LocalRevisionStore(root);
+
+    // Two independent chains. `sib` sits AFTER `edited` in append order but descends from
+    // nothing that was staled, so a position walk stales it and a lineage walk does not.
+    // That disagreement is the entire point of the fixture.
+    for (const e of [
+      entry("root", []),
+      entry("edited", ["root"]),
+      entry("sib", []),                 // second root — later in the array, unrelated
+      entry("child", ["edited"]),
+      entry("sib-child", ["sib"]),
+      entry("grandchild", ["child"]),
+    ]) await store.append(e);
+
+    await store.markStale("run-s", "edited");
+    expect(await freshness(store)).toEqual({
+      root: "FRESH",                    // an ancestor is not invalidated by its descendant
+      edited: "STALE",                  // inclusive: it is the thing being superseded
+      child: "STALE",
+      grandchild: "STALE",              // transitively, through `child`
+      sib: "FRESH",                     // must-not-fire — later in the array, no lineage
+      "sib-child": "FRESH",
+    });
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("reaches a descendant appended BEFORE its parent", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnx-st2-"));
+    const store = new LocalRevisionStore(root);
+
+    /**
+     * A bundle is not topologically ordered — a feedback jump appends a child of an
+     * earlier revision after entries it does not descend from — so the cascade iterates
+     * to a fixed point rather than once in array order.
+     *
+     * The chain is TWO levels deep on purpose. A one-level version of this fixture does
+     * not discriminate: `far` is visited after `mid` has already been seeded, so a single
+     * pass finds it and a probe deleting the fixed point survived. Only a descendant whose
+     * parent is itself discovered DURING the pass needs the second one — here `far` sits
+     * before `near`, and `near` is not stale until the pass reaches it.
+     */
+    for (const e of [
+      entry("a", []),
+      entry("far", ["near"]),          // grandchild, first in the file
+      entry("near", ["seed"]),         // its parent, discovered mid-pass
+      entry("seed", ["a"]),
+    ]) await store.append(e);
+
+    await store.markStale("run-s", "seed");
+    expect(await freshness(store)).toEqual({
+      a: "FRESH", seed: "STALE", near: "STALE", far: "STALE",
+    });
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("stales nothing for a revision this bundle does not contain", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnx-st3-"));
+    const store = new LocalRevisionStore(root);
+
+    /**
+     * `orphan` names a parent the bundle lacks, which a partial write or a hand-edited
+     * file can produce. Staling its descendants on the strength of an id nothing here can
+     * account for would be inventing a lineage.
+     *
+     * The plain unknown-id case below does NOT discriminate on its own — with the guard
+     * removed it cascades to nothing anyway, and a probe caught that the assertion was
+     * proving less than it looked. The dangling parent is what makes the guard observable.
+     */
+    for (const e of [entry("a", []), entry("b", ["a"]), entry("orphan", ["ghost"])]) {
+      await store.append(e);
+    }
+
+    await store.markStale("run-s", "ghost");
+    expect(await freshness(store)).toEqual({ a: "FRESH", b: "FRESH", orphan: "FRESH" });
+
+    await store.markStale("run-s", "no-such-revision");
+    expect(await freshness(store)).toEqual({ a: "FRESH", b: "FRESH", orphan: "FRESH" });
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("keeps status and gate results while changing freshness", async () => {
+    // The two are independent by design: a revision is SUCCEEDED and STALE at once. A
+    // cascade that downgraded status would destroy the record of what actually happened.
+    const root = await mkdtemp(join(tmpdir(), "pnx-st4-"));
+    const store = new LocalRevisionStore(root);
+    await store.append({
+      ...entry("a", []),
+      gate_results: [{
+        gate_id: "TOKEN_SPAM", gate_version: "1.0.0", verdict: "WARN",
+        message: "kept", message_code: "TOKEN_SPAM.repeated", input_hash: "c".repeat(64), location: null,
+      }],
+    });
+
+    await store.markStale("run-s", "a");
+    const [reloaded] = await store.getRun("run-s");
+    expect(reloaded.freshness).toBe("STALE");
+    expect(reloaded.status).toBe("SUCCEEDED");
+    expect(reloaded.gate_results).toHaveLength(1);
+
+    await rm(root, { recursive: true, force: true });
+  });
+});

@@ -16,6 +16,43 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-25 (SPB defect-parity audit)
+
+### `revision-entry` **1.3.1** (patch)
+
+`parent_revision_ids` gains a description. It has existed since 1.0.0 with no description
+and no producer — `[]` on every entry ever written — which is the same shape
+`configuration.router_policy_ref` had for three versions and the same reason nobody
+noticed: a field nothing writes and nothing documents cannot be observed to be missing.
+
+Nothing about the shape changes, so this is a patch. What changes is that the field is now
+**populated**, which the description says, because a reader of a 1.3.0 bundle and a reader
+of a 1.3.1 bundle see genuinely different data in it.
+
+### `RevisionStore.markStale` — signature change (port interface, not a schema)
+
+`markStale(run_id, from_stage_id)` becomes `markStale(run_id, from_revision_id)`.
+
+A stage id cannot identify what to invalidate. A reflexive run holds more than one revision
+per stage, so the old signature latched on the first entry carrying that id and staled
+everything after it in append order — which meant an entry became stale for where it sat
+rather than what it depended on, the originating entry was never staled at all, and the
+re-executed stage RE-ARMED the latch instead of being staled. That is the one shape the
+feature exists to handle.
+
+This is a breaking change to an interface with exactly one production implementation and
+four test stubs, all in this repository. It is recorded here rather than versioned because
+`RevisionStore` is a port, not a wire contract: no artifact carries its shape, so there is
+no `$id` to move and no consumer that could read an old one.
+
+The mechanism had **zero callers** before this, which is why none of the above was visible.
+The gate-feedback loop is now one: when it rewinds to re-run `refine`, that stage's
+previous revision and everything computed from it are superseded, and the bundle says so.
+`freshness` stays independent of `status` — a staled revision keeps SUCCEEDED and keeps its
+gate results, because the failing lint that caused the retry is the record a reader most
+needs.
+---
+
 ## 2026-08-22 (Phase ζ, Part 10)
 
 ### `routing-policy` **1.0.0** (new)

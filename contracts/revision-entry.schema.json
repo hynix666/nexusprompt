@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/revision-entry/1.3.0",
+  "$id": "https://promptnexus.dev/contracts/revision-entry/1.3.1",
   "title": "RevisionEntry",
   "description": "One stage execution. freshness and status are independent: a revision can be SUCCEEDED and STALE at once.",
   "type": "object",
@@ -10,7 +10,10 @@
     "revision_id": { "type": "string", "minLength": 1 },
     "run_id": { "type": "string", "minLength": 1 },
     "stage_id": { "type": "string" },
-    "parent_revision_ids": { "type": "array", "items": { "type": "string" } },
+    "parent_revision_ids": {
+      "description": "The revisions whose output this one was computed from — the run's real lineage, not its append order. Populated since 1.3.1; it existed from 1.0.0 and nothing wrote it, so the staleness cascade fell back to array position and marked entries stale because of where they sat rather than what they depended on. A store must not assume a single parent or a linear chain: the field is an array because a bundle may hold independent branches, and a cascade that walks position cannot tell them apart.",
+      "type": "array", "items": { "type": "string" }
+    },
     "timestamp": { "type": "string", "format": "date-time" },
     "stage_attempt": {
       "description": "Provider attempts made during THIS execution of the stage, not executions of the stage. A retried call reports 3 here; hardcoding 1 once made a revision claim one attempt and mean three. Re-executions are counted by feedback_round.",

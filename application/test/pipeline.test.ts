@@ -112,7 +112,9 @@ class BundleStore implements RevisionStore {
   async append(e: RevisionEntry) { this.runs.set(e.run_id, [...(this.runs.get(e.run_id) ?? []), e]); }
   async getRun(id: string) { return this.runs.get(id) ?? []; }
   async listRecent() { return []; }
-  async markStale() {}
+  /** Records rather than no-ops: a stub that swallows the call cannot show it happened. */
+  readonly staled: Array<{ run_id: string; from: string }> = [];
+  async markStale(run_id: string, from: string) { this.staled.push({ run_id, from }); }
 }
 
 const command = (over: Partial<PipelineCommand> = {}): PipelineCommand => ({
@@ -609,6 +611,37 @@ describe("gate feedback as a control signal", () => {
     expect(countOf(r, "lint")).toBe(2);
     expect(r.context.lintStatus).toBe("PASS");
     expect(r.context.feedbackRounds).toBe(1);
+  });
+
+  it("marks the superseded pass STALE when it rewinds", async () => {
+    /**
+     * `markStale` had zero callers until this loop got one. The retry re-executes `refine`,
+     * so the PREVIOUS refine revision and everything computed from it — the lint verdict
+     * that triggered the retry included — describe a prompt about to be replaced.
+     *
+     * Asserted on the revision id, not merely on the call count: passing the wrong entry
+     * would stale the wrong half of the bundle and still look like it fired.
+     */
+    const provider = new ScriptedProvider(new Set(), PASS_SENTINEL, undefined, GUARDED);
+    const store = new BundleStore();
+    const r = await runPipeline(cmd({ ...SAFETY, topology: REFLEXIVE }), { provider, store, sink: NOOP_SINK });
+
+    const bundle = await store.getRun(r.run_id);
+    const firstRefine = bundle.find((e) => e.stage_id === "refine" && e.feedback_round === 0);
+    expect(store.staled).toEqual([{ run_id: r.run_id, from: firstRefine!.revision_id }]);
+
+    // And the lineage the cascade needs is actually populated, or it walks an empty graph.
+    const secondRefine = bundle.find((e) => e.stage_id === "refine" && e.feedback_round === 1);
+    expect(secondRefine!.parent_revision_ids).toHaveLength(1);
+    expect(bundle.filter((e) => e.parent_revision_ids.length === 0)).toHaveLength(1); // only the root
+  });
+
+  it("does not mark anything stale on a run that never rewinds", async () => {
+    // The must-not-fire half. A clean run supersedes nothing.
+    const provider = new ScriptedProvider(new Set(), PASS_SENTINEL, undefined, GUARDED);
+    const store = new BundleStore();
+    await runPipeline(cmd(SAFETY), { provider, store, sink: NOOP_SINK });
+    expect(store.staled).toEqual([]);
   });
 
   it("records which round produced each revision, so a longer bundle explains itself", async () => {
