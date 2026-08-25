@@ -24,7 +24,8 @@ import type { GateResult } from "../../../contracts/index.js";
 
 export const LEDGER_GATE_ID = "SOURCE_LEDGER_MISSING";
 export const ORPHAN_GATE_ID = "ORPHAN_CLAIMS";
-export const GATE_VERSION = "1.0.0";
+export const LEDGER_GATE_VERSION = "1.0.0";
+export const ORPHAN_GATE_VERSION = "1.0.0";
 
 /** Shared analysis, computed identically for both gates so they cannot disagree. */
 function analyse(text: string, options: GateOptions) {
@@ -42,11 +43,11 @@ export function sourceLedgerMissing(text: string, options: GateOptions = {}): Ga
   const { cited, ledger, orphans } = analyse(text, options);
 
   if (cited.size > 0 && orphans.length > 0 && ledger.size === 0) {
-    return result(LEDGER_GATE_ID, GATE_VERSION, "FAIL",
+    return result(LEDGER_GATE_ID, LEDGER_GATE_VERSION, "FAIL",
       `Citations present (${cited.size}) but no source ledger found.`,
       "SOURCE_LEDGER_MISSING.absent", hash);
   }
-  return result(LEDGER_GATE_ID, GATE_VERSION, "PASS",
+  return result(LEDGER_GATE_ID, LEDGER_GATE_VERSION, "PASS",
     cited.size === 0 ? "No citations to ledger." : "A source ledger is present.",
     "SOURCE_LEDGER_MISSING.clean", hash);
 }
@@ -59,10 +60,10 @@ export function orphanClaims(text: string, options: GateOptions = {}): GateResul
   // `ledger.size > 0` is what keeps this exclusive with SOURCE_LEDGER_MISSING. Dropping it
   // would make both fire on a citation with no ledger, double-reporting one defect.
   if (cited.size > 0 && orphans.length > 0 && ledger.size > 0) {
-    return result(ORPHAN_GATE_ID, GATE_VERSION, "FAIL",
+    return result(ORPHAN_GATE_ID, ORPHAN_GATE_VERSION, "FAIL",
       `Cited but not in the ledger: ${orphans.map((o) => `S${o}`).join(", ")}.`,
       "ORPHAN_CLAIMS.orphaned", hash);
   }
-  return result(ORPHAN_GATE_ID, GATE_VERSION, "PASS",
+  return result(ORPHAN_GATE_ID, ORPHAN_GATE_VERSION, "PASS",
     "Every citation resolves to a ledger entry.", "ORPHAN_CLAIMS.clean", hash);
 }

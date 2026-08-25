@@ -92,6 +92,13 @@ suite catches. A verdict-only comparison would not.
 **The gate still bites.** Tests pin that bloated output above the floor still fails, at two
 tiers. A floor that disarmed the gate everywhere would be a deletion wearing a threshold.
 
+## The version this moved
+
+`QUTM_CEILING` goes to **1.1.0**, for the reason ADR-0010 records: `gate_version` is a
+provenance claim persisted in every revision, and this change altered when the gate arms.
+`TOKEN_BUDGET` and `CONTEXT_LIMIT` share `budget.ts` and stay at 1.0.0 — which is only
+expressible because the version constants were split per gate rather than per module.
+
 ## Alternatives rejected
 
 **Raise the ceilings instead.** The ceilings are framework §5.9 values with their own lineage;

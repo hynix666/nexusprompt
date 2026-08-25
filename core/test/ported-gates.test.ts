@@ -11,7 +11,7 @@ import {
 } from "../src/gates/guardrail-gap.js";
 import { tokenBudget, qutmCeiling, contextLimit } from "../src/gates/budget.js";
 import { estimateTokens, halfUp2, QUTM_MIN_BASELINE_TOKENS } from "../src/gates/lint-primitives.js";
-import { listGates } from "../src/gates/registry.js";
+import { listGates, runGate } from "../src/gates/registry.js";
 
 /**
  * All sixteen ported gates, each with a must-fire and a must-not-fire case.
@@ -24,6 +24,66 @@ import { listGates } from "../src/gates/registry.js";
  */
 
 const GUARDRAILS = "anti-override scope fact-grounding";
+
+/**
+ * Every registered (gate_id, gate_version) pair, pinned.
+ *
+ * `gate_version` is persisted in every GateResult and therefore in every revision, so it is a
+ * provenance claim: two results carrying the same version assert they were produced by the
+ * same rule. Nothing checked that. ADR-0010 and ADR-0011 changed two gates' behaviour and
+ * both kept reporting 1.0.0, which is a stored record contradicting itself — and it was
+ * invisible because no test, checker or fixture read the field.
+ *
+ * It was invisible for a structural reason too: the version was attached to the MODULE.
+ * Gates sharing a file shared one constant, so bumping the gate that changed would have
+ * bumped up to five that did not. Versions are per-gate now, and this table is what makes a
+ * behaviour change without a version bump a conscious edit rather than an omission.
+ *
+ * If you are here because this test failed: do not just update the number. Decide whether the
+ * behaviour changed. If it did, bump the gate's own constant. If it did not, the version
+ * moved by accident and that is the bug.
+ */
+describe("gate versions are provenance, not decoration", () => {
+  it("pins every registered gate id to its version", () => {
+    expect(Object.fromEntries(listGates().map((g) => [g.id, g.version]))).toEqual({
+      SECRET_LEAK_SCAN: "1.1.0",
+      CLAIM_DISCIPLINE: "1.1.0",
+      PLACEHOLDER_AUDIT: "1.0.0",
+      RUNTIME_KEY_UNDECLARED: "1.1.0",   // ADR-0010 — manifest section rewritten
+      SOURCE_LEDGER_MISSING: "1.0.0",
+      ORPHAN_CLAIMS: "1.0.0",
+      GUARDRAIL_GAP: "1.0.0",
+      TOKEN_SPAM: "1.0.0",
+      RECURSION_MACHINERY_PRESENT: "1.0.0",
+      RAG_SHIELD_GAP: "1.0.0",
+      DUPLICATE_INSTRUCTION: "1.0.0",
+      DELIMITER_ENTROPY: "1.0.0",
+      TOKEN_BUDGET: "1.0.0",
+      QUTM_CEILING: "1.1.0",             // ADR-0011 — baseline floor added
+      CONTEXT_LIMIT: "1.0.0",
+      ADVERSARIAL_RESILIENCE: "1.0.0",
+    });
+  });
+
+  it("gives the two gates that changed a version their unchanged file-mates did not get", () => {
+    // The must-not-fire half, and the whole reason the constants were split. A module-wide
+    // bump would have dragged PLACEHOLDER_AUDIT along with RUNTIME_KEY_UNDECLARED, and
+    // TOKEN_BUDGET and CONTEXT_LIMIT along with QUTM_CEILING.
+    const v = Object.fromEntries(listGates().map((g) => [g.id, g.version]));
+    expect(v.RUNTIME_KEY_UNDECLARED).not.toBe(v.PLACEHOLDER_AUDIT);
+    expect(v.QUTM_CEILING).not.toBe(v.TOKEN_BUDGET);
+    expect(v.QUTM_CEILING).not.toBe(v.CONTEXT_LIMIT);
+  });
+
+  it("reports the same version through runGate as through the registry", () => {
+    // Two paths to a GateResult; a version that differs between them is worse than one that
+    // is merely stale, because which record you get depends on how the gate was invoked.
+    for (const g of listGates()) {
+      expect(runGate(g.id, "some prompt text", { stakes: "low", provider: "openai" }).gate_version)
+        .toBe(g.version);
+    }
+  });
+});
 
 describe("PLACEHOLDER_AUDIT", () => {
   it("fires on an unfilled slot and not on a rendered one", () => {

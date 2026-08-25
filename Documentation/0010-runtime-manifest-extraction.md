@@ -90,6 +90,19 @@ does not thereby declare whatever follows it.
 **The oracle stays live on this gate.** Only the two declared shapes are excused. Any other
 `RUNTIME_KEY_UNDECLARED` disagreement is still a build failure.
 
+## The version this moved
+
+`RUNTIME_KEY_UNDECLARED` goes to **1.1.0**. `gate_version` is persisted in every `GateResult`
+and therefore in every revision, so it is a provenance claim — two results carrying the same
+version assert they came from the same rule. This change landed at 1.0.0 first, which made a
+stored record contradict itself, and nothing caught it because nothing read the field.
+
+The structural cause was that the version was attached to the **module**: `PLACEHOLDER_AUDIT`
+and `RUNTIME_KEY_UNDECLARED` share a file and shared one constant, so bumping the gate that
+changed would have bumped the one that did not. Versions are per-gate now, and
+`core/test/ported-gates.test.ts` pins all sixteen pairs so the next behaviour change has to
+decide rather than omit.
+
 ## Alternatives rejected
 
 **Reproduce the source and record it as a known defect.** This is what the allowlist exists to
