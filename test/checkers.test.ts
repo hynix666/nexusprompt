@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { checkPlan } from "../scripts/check-plan.mjs";
 import { checkBoundaries } from "../scripts/check-boundaries.mjs";
 import { verifySources } from "../scripts/verify-sources.mjs";
+import { implausibleKeyReason } from "../scripts/run-eval.js";
 import { checkCitations } from "../scripts/check-citations.mjs";
 import { checkXsd, buildXml, validateAgainstXsd } from "../scripts/check-xsd.mjs";
 import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
@@ -1174,5 +1175,51 @@ describe("docs:matrix", () => {
 
   it("marks the output as generated, so a hand-editor is warned before the build is", () => {
     expect(render(collect(matrixRepo()))).toContain("GENERATED FILE — do not edit by hand");
+  });
+});
+
+/* ── eval --live key shape ───────────────────────────────────────────────── */
+
+/**
+ * The refusal that exists because the guard next to it was honest about being narrow.
+ *
+ * `ANTHROPIC_API_KEY` was tested for PRESENCE only, which is the right thing for a script
+ * that must never route the value anywhere. But presence lets a placeholder through, and
+ * then the failure is a 401 from api.anthropic.com partway into a run whose budget is
+ * already committed — remote, late, and reported as an HTTP status rather than as the
+ * mistake that caused it.
+ *
+ * Observed: `setx ANTHROPIC_API_KEY "<your key>"` run verbatim from a copy-pasted line.
+ */
+describe("implausibleKeyReason", () => {
+  it("rejects a placeholder pasted verbatim", () => {
+    expect(implausibleKeyReason("<your key>")).toBe("contains a bracket, quote or whitespace");
+    expect(implausibleKeyReason("YOUR_KEY_HERE")).toBe("is 13 characters long");
+    expect(implausibleKeyReason("'sk-ant-api03-realish-looking-value'"))
+      .toBe("contains a bracket, quote or whitespace");
+    expect(implausibleKeyReason("sk-ant-api03-with a space in it")).toBe("contains a bracket, quote or whitespace");
+  });
+
+  it("rejects a truncated paste", () => {
+    expect(implausibleKeyReason("sk-ant-")).toBe("is 7 characters long");
+    expect(implausibleKeyReason("")).toBe("is 0 characters long");
+  });
+
+  it("accepts anything that could actually be a key", () => {
+    // The must-not-fire half, and the reason this asserts no vendor format. A check for
+    // `sk-ant-` plus a length would fail closed the day either changes, turning a working
+    // setup into a refusal for a reason the user cannot act on.
+    expect(implausibleKeyReason(`sk-ant-api03-${"a".repeat(90)}`)).toBeNull();
+    expect(implausibleKeyReason("a".repeat(20))).toBeNull();          // exactly at the floor
+    expect(implausibleKeyReason("some-future-format-that-is-long-enough")).toBeNull();
+  });
+
+  it("never returns the key itself", () => {
+    // The reason is printed to a terminal. A message that quoted the value would be the
+    // one careless log line this script's whole key discipline exists to prevent.
+    const secretish = "sk-ant-api03-DEADBEEF-not-a-real-key-but-long-enough-to-pass";
+    for (const k of [secretish, "<your key>", "short"]) {
+      expect(implausibleKeyReason(k) ?? "").not.toContain(k);
+    }
   });
 });
