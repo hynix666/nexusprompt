@@ -13,10 +13,10 @@ Verdicts below are **read from the emission sites** in `prompt_lint.py`, not fro
 | Gate ID | Checks | Verdict triggers |
 |---|---|---|
 | `PLACEHOLDER_AUDIT` | Every `{{variable}}`-style placeholder is declared somewhere in the prompt's runtime-variable section | FAIL if an undeclared placeholder is referenced |
-| `RUNTIME_KEY_UNDECLARED` | Runtime keys used in logic are declared before use | FAIL on first undeclared reference |
+| `RUNTIME_KEY_UNDECLARED` | Runtime keys used in logic are declared before use | FAIL on first undeclared reference. **Diverges from the source** — the manifest is a declaration list, not a span to end-of-file, so a *use* cannot declare itself (ADR-0010) |
 | `SOURCE_LEDGER_MISSING` | Any claim of external fact carries a source reference | FAIL when citations are present but no ledger exists |
 | `ADVERSARIAL_RESILIENCE` | Prompt resists known jailbreak/injection patterns from `core/scorer`'s corpus | FAIL below the corpus pass-rate threshold; WARN in a middle band |
-| `QUTM_CEILING` | Quoted-untrusted-text-to-model ratio stays under budget | FAIL over the ceiling for the declared tier (`safety-critical` 12.0 → `low` 1.2) |
+| `QUTM_CEILING` | Quoted-untrusted-text-to-model ratio stays under budget | FAIL over the ceiling for the declared tier (`safety-critical` 12.0 → `low` 1.2). **Diverges from the source** — not armed below a 120-token baseline, where the ratio measures the brief's brevity rather than the prompt's bloat (ADR-0011) |
 | `DELIMITER_ENTROPY` | Anti-override delimiters carry ≥32 hex characters (≥128 bits) | FAIL on insufficient entropy |
 | `CONTEXT_LIMIT` | Estimated token count stays under the target model's context window | WARN over the provider's configured limit |
 | `SECRET_LEAK_SCAN` | Heuristic scan for credentials and PII in the compiled prompt's own text | **WARN** on any match — a hit indicates where to look, not a proven leak |

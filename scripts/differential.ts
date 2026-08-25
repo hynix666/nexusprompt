@@ -203,8 +203,43 @@ interface AllowedDivergence {
   source_verdict: Verdict;
   port_verdict: Verdict;
   also_matches?: string;
+  /**
+   * NARROWS the entry to cases whose options satisfy every constraint. Added because a
+   * divergence can be option-shaped rather than input-shaped, and the text-only matcher
+   * could not express one without excusing far more than the decision covers.
+   *
+   * QUTM_CEILING's baseline floor (ADR-0011) is the case that forced this. It diverges on
+   * any text whose baseline is below the floor, so the only text regex that covers it is
+   * `.*` — which would also excuse the `qutm-ceiling-crossing` boundary case, the one a
+   * mutation probe added to make half-up rounding observable at all. Declaring one
+   * deliberate difference must not cost an unrelated regression detector.
+   */
+  only_when_options?: Record<string, Record<string, number>>;
   reason?: string;
   adr?: string;
+}
+
+const OPERATORS: Record<string, (a: number, b: number) => boolean> = {
+  lt: (a, b) => a < b, lte: (a, b) => a <= b,
+  gt: (a, b) => a > b, gte: (a, b) => a >= b,
+  eq: (a, b) => a === b,
+};
+
+/**
+ * True when every declared constraint holds. A constraint on an option the case does not
+ * carry is NOT satisfied — an absent option means the case is outside what the entry
+ * described, so it must stay a live disagreement rather than be excused by omission.
+ */
+function optionsSatisfied(e: AllowedDivergence, options: CaseOptions): boolean {
+  if (!e.only_when_options) return true;
+  for (const [name, constraint] of Object.entries(e.only_when_options)) {
+    const actual = (options as Record<string, unknown>)[name];
+    if (typeof actual !== "number") return false;
+    for (const [op, bound] of Object.entries(constraint)) {
+      if (!OPERATORS[op]?.(actual, bound)) return false;
+    }
+  }
+  return true;
 }
 
 const allowlist: AllowedDivergence[] = (() => {
@@ -235,12 +270,33 @@ for (const [i, e] of allowlist.entries()) {
     try { new RegExp(e.also_matches); }
     catch { allowlistProblems.push(`${at}: also_matches is not a valid regex`); }
   }
+  for (const [name, constraint] of Object.entries(e.only_when_options ?? {})) {
+    for (const op of Object.keys(constraint)) {
+      if (!OPERATORS[op]) {
+        allowlistProblems.push(
+          `${at}: only_when_options.${name} uses unknown operator "${op}". ` +
+          `Known: ${Object.keys(OPERATORS).join(", ")}. An unrecognised operator must not read as satisfied.`,
+        );
+      }
+    }
+  }
+  // An entry whose own demonstration falls outside its option constraints could never
+  // prove itself, so it would fail the staleness rule below with a confusing message.
+  // Say the real thing here instead.
+  if (e.only_when_options && !optionsSatisfied(e, e.demonstration?.options ?? {})) {
+    allowlistProblems.push(
+      `${at}: its demonstration's options do not satisfy its own only_when_options. ` +
+      `The entry describes a case it cannot itself produce.`,
+    );
+  }
 }
 
 const covers = (e: AllowedDivergence, d: Disagreement): boolean =>
   d.gate === e.gate &&
   d.python === e.source_verdict &&
   d.typescript === e.port_verdict &&
+  // Narrowing, applied to every match including the demonstration's own text.
+  optionsSatisfied(e, d.options) &&
   (d.text === e.demonstration?.text || (!!e.also_matches && new RegExp(e.also_matches).test(d.text)));
 
 const disagreements: Disagreement[] = [];
