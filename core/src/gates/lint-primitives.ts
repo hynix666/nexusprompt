@@ -233,7 +233,17 @@ function declarationKeys(line: string): string[] {
  * at once. This scan is already a declared divergence (ADR-0010), so it can be stricter alone.
  * The asymmetry is deliberate and stated rather than left for someone to trip over.
  */
-const FENCE_LINE_RE = /^\s*(`{3,}|~{3,})/;
+/**
+ * `^ {0,3}`, not `^\s*`: four spaces of indentation makes a delimiter into CONTENT.
+ *
+ * Stripping any indentation let an indented, equal-length closer end a documentation sample
+ * early — so a heading placed after it was read as real document and its keys declared.
+ * `declared={T}` on a document whose only manifest was inside a fenced example.
+ *
+ * CommonMark is explicit: an opening fence may be indented up to three spaces, and a closing
+ * fence indented four or more is an indented code block, not a close. Three is the boundary.
+ */
+const FENCE_LINE_RE = /^ {0,3}(`{3,}|~{3,})/;
 
 const RUNTIME_KEY_G = /\[\[([A-Za-z0-9_:-]+)\]\]/g;
 
