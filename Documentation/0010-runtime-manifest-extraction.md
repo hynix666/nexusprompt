@@ -46,18 +46,39 @@ table and a silent one is not.
 The manifest is **the heading plus the run of declaration lines beneath it**. It ends at the
 first line of prose that declares nothing.
 
-- The heading matches with or without leading hashes — but it must be **heading-shaped**:
-  optional hashes, the phrase, an optional parenthetical, an optional colon, end of line.
-  `Runtime Variables (declared, not audited)` matches; a sentence does not.
+- With a leading `#`, the line is a heading and the tail must be a **qualifier** — end of
+  line, or something that introduces a subtitle: a bracket, a colon, a dash, or closing
+  hashes. `## Runtime Variables (host-supplied) — do not echo` matches;
+  `## Runtime Variables You Must Never Log` does not.
+- Without a `#`, the line must be **nothing but the phrase** plus an optional parenthetical
+  and colon. `Runtime Variables (declared, not audited)` — the v5 BLUEPRINT's form — matches;
+  a sentence does not.
 - The heading must be **outside a fence**. Entries beneath it need not be.
 - A declaration line **opens** with its key under any list syntax — bare, bulleted, ordered,
-  a table cell, or wrapped in backticks or emphasis.
-- Blank lines, fence delimiters, and table rows carrying no key do not end the list. The fence
+  or wrapped in backticks or emphasis. A table **cell** declares on the same rule: it must be
+  the key, not prose mentioning it, so `| Warning | never pass [[X]] to the model |` declares
+  nothing.
+- Blank lines, fence delimiters, and keyless rows of a table already being read do not end the list. The fence
   exemption is load-bearing — this function reads raw text precisely so a fenced manifest
   still declares, and treating ` ``` ` as prose would undo that on the first one.
 - `1. Read [[PLAYER_TIER]] and branch.` is a **use**. It ends the section rather than
   extending it, so a use cannot declare itself.
 - Every heading in the document is read, not only the first.
+
+### Amended again 26 August 2026 — and so was the second
+
+Round three widened two rules to fix false positives, and produced two false cleans. Both were
+documents that **warn** about a key, read as **declaring** it — `## Runtime Variables You Must
+Never Log` above a `[[CARD_NUMBER]]` entry, and `| Warning | never pass [[CUSTOMER_SSN]] to the
+model |` inside the manifest's own table. Master FAILed both; the branch PASSed them.
+
+**The policy that follows, and now governs every rule here.** Every false clean this gate has
+produced came from widening the accept-set to chase a false positive. But the two are not
+symmetric: a rejected manifest is a visible FAIL an author clears in one edit, and an accepted
+non-manifest is a silent PASS nobody ever sees. So ambiguous shapes lose. `## Runtime Variables
+and Their Sources` is rejected, and a manifest that mixes a bullet and then a table ends at the
+table — both are textually indistinguishable from shapes that must not declare, and the safe
+direction wins. Four rounds of the opposite policy did not converge.
 
 ### Amended 25 August 2026 — the first version of this decision was wrong twice
 

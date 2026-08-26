@@ -49,7 +49,7 @@ describe("gate versions are provenance, not decoration", () => {
       SECRET_LEAK_SCAN: "1.1.0",
       CLAIM_DISCIPLINE: "1.1.0",
       PLACEHOLDER_AUDIT: "1.0.0",
-      RUNTIME_KEY_UNDECLARED: "1.1.0",   // ADR-0010 — manifest section rewritten
+      RUNTIME_KEY_UNDECLARED: "1.2.0",   // ADR-0010, amended twice — see its Decision section
       SOURCE_LEDGER_MISSING: "1.0.0",
       ORPHAN_CLAIMS: "1.0.0",
       GUARDRAIL_GAP: "1.0.0",
@@ -277,11 +277,16 @@ describe("RUNTIME_KEY_UNDECLARED", () => {
       // Requiring the whole line to be the phrase made `## Runtime Variables (host-supplied) —
       // do not echo` stop opening a manifest, so its keys read as undeclared: the unclearable
       // direction, and a regression against both the previous port and the frozen oracle.
-      // A leading `#` IS the heading-shapedness; the tail is a subtitle.
+      // A leading `#` makes it a heading; the tail must then INTRODUCE a subtitle.
+      //
+      // Round five narrowed this. It originally accepted any tail, which let
+      // `## Runtime Variables You Must Never Log` open a manifest and declare the key it
+      // forbids — so `## Runtime Variables and Their Sources` moved from this list to the
+      // rejection list below. That is a real, deliberate behaviour reversal: it is textually
+      // indistinguishable from a heading about the topic, and the safe direction wins.
       for (const heading of [
         "## Runtime Variables (host-supplied) - do not echo",
         "## Runtime Variables ##",
-        "## Runtime Variables and Their Sources",
         "## Runtime Variables [v2]",
       ]) {
         const doc = `# Agent\n\n${heading}\n\n- [[PLAYER_TIER]] - tier\n\n## BLOCK III\nBranch on [[PLAYER_TIER]].`;
@@ -314,6 +319,51 @@ describe("RUNTIME_KEY_UNDECLARED", () => {
       // layout declared nothing while the frozen oracle, which scans the whole section, declares it.
       const doc = "## Runtime Variables\n\n| Name | Placeholder | Meaning |\n| --- | --- | --- |\n| Player tier | [[PLAYER_TIER]] | tier |\n\n## BLOCK III\nBranch on [[PLAYER_TIER]].";
       expect(runtimeKeyUndeclared(doc).verdict).toBe("PASS");
+    });
+
+    /**
+     * Round five. Round four widened two rules to fix false positives and produced two false
+     * cleans, both on documents that WARN about a key and were read as DECLARING it.
+     *
+     * The policy is now explicit and applies to every rule here: a rejected manifest is a
+     * visible FAIL an author clears in one edit; an accepted non-manifest is a silent PASS
+     * nobody sees. Four rounds of widening to chase the first produced the second every time,
+     * so ambiguous shapes now lose.
+     */
+    it("does not let a heading ABOUT the feature open a manifest", () => {
+      // `## Runtime Variables You Must Never Log` declared [[CARD_NUMBER]] and the body that
+      // echoed it returned PASS. A never-log section is what a security-conscious prompt
+      // writes, so this was the highest-traffic shape of the lot. Master FAILed it.
+      const neverLog = "## Runtime Variables (host-supplied)\n\n- [[USER_NAME]] - name\n\n## Runtime Variables You Must Never Log\n\n- [[CARD_NUMBER]] - never echo\n\n## BLOCK III\nGreet [[USER_NAME]], confirm [[CARD_NUMBER]].";
+      expect(runtimeKeyUndeclared(neverLog).verdict).toBe("FAIL");
+      expect(runtimeKeyUndeclared(neverLog).message).toContain("CARD_NUMBER");
+
+      // A tail that INTRODUCES a subtitle still opens one; a tail that continues the phrase
+      // does not. Both halves asserted, because widening one has broken the other four times.
+      for (const h of ["## Runtime Variables", "## Runtime Variables (host-supplied) - do not echo",
+                       "## Runtime Variables ##", "## Runtime Variables [v2]",
+                       "## Runtime Variables: host-supplied", "## Runtime Variables - host supplied"]) {
+        expect({ h, v: runtimeKeyUndeclared(`${h}\n\n- [[K]] - a key.\n\n## BLOCK III\nUse [[K]].`).verdict })
+          .toEqual({ h, v: "PASS" });
+      }
+      for (const h of ["## Runtime Variables You Must Never Log", "# Runtime Variables Are Dangerous",
+                       "## Runtime Variables in Other Systems", "## Runtime Variables and Their Sources"]) {
+        expect({ h, v: runtimeKeyUndeclared(`${h}\n\n- [[K]] - a key.\n\n## BLOCK III\nUse [[K]].`).verdict })
+          .toEqual({ h, v: "FAIL" });
+      }
+    });
+
+    it("does not let a warning CELL declare the key it forbids", () => {
+      // A table row declared every key in any cell, so `| Warning | never pass [[X]] to the
+      // model |` inside the manifest's own table declared X. Deleting that one row restored
+      // the FAIL. A cell declares on the same rule as any line: it must OPEN with the key.
+      const warn = "## Runtime Variables\n\n| Key | Meaning |\n| --- | --- |\n| [[USER_NAME]] | name |\n| Warning | never pass [[CUSTOMER_SSN]] to the model |\n\n## BLOCK III\nEcho [[CUSTOMER_SSN]].";
+      expect(runtimeKeyUndeclared(warn).verdict).toBe("FAIL");
+      expect(runtimeKeyUndeclared(warn).message).toContain("CUSTOMER_SSN");
+
+      // ...and a key that IS a whole cell still declares, wherever the cell sits.
+      const col2 = "## Runtime Variables\n\n| Name | Placeholder | Meaning |\n| --- | --- | --- |\n| Tier | [[K]] | a key |\n\n## BLOCK III\nUse [[K]].";
+      expect(runtimeKeyUndeclared(col2).verdict).toBe("PASS");
     });
 
     it("treats tilde fences and nested fences as fences", () => {

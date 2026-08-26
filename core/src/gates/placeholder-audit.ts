@@ -14,8 +14,11 @@ import type { GateResult } from "../../../contracts/index.js";
 export const PLACEHOLDER_GATE_ID = "PLACEHOLDER_AUDIT";
 export const RUNTIME_KEY_GATE_ID = "RUNTIME_KEY_UNDECLARED";
 export const PLACEHOLDER_GATE_VERSION = "1.0.0";
-/** 1.1.0 — ADR-0010 rewrote the manifest section. Behaviour changed; version moves. */
-export const RUNTIME_KEY_GATE_VERSION = "1.1.0";
+/**
+ * 1.2.0 — ADR-0010, amended twice. Each amendment changed which documents this gate
+ * accepts, and `gate_version` is persisted in every GateResult, so it moves with them.
+ */
+export const RUNTIME_KEY_GATE_VERSION = "1.2.0";
 
 /** `<<...>>` with no nested angle brackets, so `<<a>> <<b>>` is two findings, not one. */
 const UNFILLED_RE = /<<[^<>]+>>/g;
