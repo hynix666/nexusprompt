@@ -247,7 +247,12 @@ export async function runPipeline(
             const superseded = [...stages].reverse().find((s) => s.stage_id === feedback.resumeAt);
             if (superseded?.revision_id) {
               await opts.store.markStale(run_id, superseded.revision_id);
-              emit("REVISION_PERSISTED", {
+              // REVISION_SUPERSEDED, not REVISION_PERSISTED: nothing was written here, a
+              // stored revision was mutated. Reusing the persist event made the stream
+              // report one persist per stale-mark, and the count still reconciled against
+              // the bundle only because the two SKIPPED revisions emit STAGE_SKIPPED
+              // instead. Two errors cancelling is not the same as no error.
+              emit("REVISION_SUPERSEDED", {
                 component: `core/stages/${feedback.resumeAt}`,
                 verdict: `superseded by feedback round ${(ctx.feedbackRounds ?? 0)}`,
               });

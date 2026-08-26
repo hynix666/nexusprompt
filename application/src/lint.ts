@@ -29,6 +29,19 @@ import type { GateResult } from "../../contracts/index.js";
 export interface LintOptions {
   /** Lint fenced and backticked spans too, instead of treating them as documentation. */
   includeFences?: boolean;
+  /**
+   * Stakes tier. Arms QUTM_CEILING and escalates GUARDRAIL_GAP from WARN to FAIL.
+   *
+   * This is the ONLY production entry point to the gates, and it passed neither this nor
+   * `naiveTokens` — so three of the sixteen gates could not fire outside the eval harness and
+   * the differential's own boundary cases. ADR-0011 argued about a floor on a gate no real
+   * caller could arm. A guard reachable only by its tests is the defect this repo keeps finding.
+   */
+  stakes?: string;
+  /** Naive-prompt baseline for QUTM_CEILING. Below QUTM_MIN_BASELINE_TOKENS the gate declines. */
+  naiveTokens?: number;
+  /** Provider id, for the CONTEXT_LIMIT advisory. */
+  provider?: string;
 }
 
 export interface PortedGate {
@@ -45,7 +58,26 @@ export interface LintReport {
 }
 
 export function lint(text: string, options: LintOptions = {}): LintReport {
-  const results = runGates(text, { includeFences: options.includeFences });
+  /**
+   * The tier vocabulary is normalised HERE, not in the gate.
+   *
+   * `QUTM_CEILINGS` is keyed lowercase because the frozen linter's argparse choices are, and
+   * an unknown tier is a FAIL there rather than a quiet pass — faithful, and worth keeping.
+   * But this system's own vocabulary is uppercase (`--stakes LOW|MEDIUM|HIGH|SAFETY-CRITICAL`),
+   * so passing it straight through turned every production lint at a declared tier into
+   * `QUTM_CEILING.unknown_tier` — a FAIL, on correct input, introduced by wiring the option up.
+   *
+   * The Application adapts its vocabulary to the port; Core stays exactly as faithful to the
+   * oracle as it was. Lower-casing inside the gate would have been the same fix in the one
+   * place it must not go.
+   */
+  const results = runGates(text, {
+    includeFences: options.includeFences,
+    stakes: options.stakes?.toLowerCase(),
+    naiveTokens: options.naiveTokens,
+    provider: options.provider,
+    safetyTier: options.stakes ? ["HIGH", "SAFETY-CRITICAL"].includes(options.stakes.toUpperCase()) : undefined,
+  });
   return {
     results,
     ported_gate_count: results.length,

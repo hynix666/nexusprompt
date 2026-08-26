@@ -25,7 +25,7 @@ enforces, so this table and that test cannot disagree.
 | `eval-suite` | 2.0.1 | validated |
 | `gate-result` | 1.3.0 | validated |
 | `judge-verdict` | 1.1.0 | validated |
-| `observability-event` | 1.2.0 | validated |
+| `observability-event` | 1.3.0 | validated |
 | `pipeline-outcome` | 1.0.0 | validated |
 | `promotion` | 1.0.0 | validated |
 | `provider-failure` | 1.0.0 | validated |

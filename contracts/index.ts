@@ -172,10 +172,10 @@ export const CONTRACT_VERSIONS = {
   "provider-failure": "1.0.0",
   "pipeline-outcome": "1.0.0",
   "revision-entry": "1.3.1",
-  "observability-event": "1.2.0",
+  "observability-event": "1.3.0",
   "eval-run": "1.1.0",
-  comparison: "2.1.0",
-  configuration: "1.2.0",
+  comparison: "2.2.0",
+  configuration: "1.3.0",
   "judge-verdict": "1.1.0",
 } as const;
 
@@ -434,7 +434,9 @@ export type EventType =
   /** A stage did not run, deliberately. Distinct from DEGRADE: nothing failed. */
   | "STAGE_SKIPPED"
   /** A gate FAIL was routed back to an earlier stage as feedback, within the declared cap. */
-  | "GATE_FEEDBACK";
+  | "GATE_FEEDBACK"
+  /** A revision was marked STALE. Nothing was written — see the changelog for why it is not REVISION_PERSISTED. */
+  | "REVISION_SUPERSEDED";
 
 export interface ObservabilityEvent {
   event_id: string;

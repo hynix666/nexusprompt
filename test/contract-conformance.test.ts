@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -20,6 +20,7 @@ import { Orchestrator } from "../application/src/orchestrator.js";
 import { LocalRevisionStore } from "../adapters/storage-local/src/index.js";
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
 import { runGates } from "../core/src/gates/registry.js";
+import { CONTRACT_VERSIONS } from "../contracts/index.js";
 import { listTechniques } from "../core/src/catalog/registry.js";
 import { runSuite, configurationId } from "../application/src/eval.js";
 import { compare } from "../core/src/eval/compare.js";
@@ -173,6 +174,31 @@ afterAll(async () => {
 });
 
 /* ── the five schemas ─────────────────────────────────────────────────────── */
+
+/**
+ * Every version stamped into provenance equals the schema on disk.
+ *
+ * `CONTRACT_VERSIONS` is written into `execution_provenance` on every revision, so it is a
+ * claim about what a run was executed against. It said comparison 2.1.0 and configuration
+ * 1.2.0 while the schemas were 2.2.0 and 1.3.0 — a stored record naming a version it was not
+ * produced under. Nothing caught it because nothing read the field, which is the same shape as
+ * gate_version staying at 1.0.0 through two behaviour changes and parent_revision_ids being []
+ * since 1.0.0.
+ *
+ * Bumping a schema's `$id` without this table is now a build failure rather than a silent
+ * provenance lie.
+ */
+describe("CONTRACT_VERSIONS is provenance, not decoration", () => {
+  it("stamps the version each schema actually carries", () => {
+    const drift = Object.entries(CONTRACT_VERSIONS).flatMap(([name, stamped]) => {
+      const file = schemaPath(name);
+      if (!existsSync(file)) return [];
+      const real = String(JSON.parse(readFileSync(file, "utf8")).$id).split("/").pop();
+      return real === stamped ? [] : [{ name, stamped, schema: real }];
+    });
+    expect(drift).toEqual([]);
+  });
+});
 
 describe("gate-result", () => {
   it("validates every gate's real output", () => {

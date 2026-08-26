@@ -12,24 +12,77 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 
 ```json plan-status
 {
-  "gates": { "ported": 16, "source_total": 16 },
-  "stages": { "built": 11, "target": 11 },
-  "contracts": { "schemas": 15 },
-  "adapters": ["provider-local-proxy", "storage-local", "evidence-local"],
-  "shells": ["cli"],
-  "catalog": { "records_imported": 195, "records_available": 172, "records_added": 23 },
-  "sources": { "frozen_files": 420 },
-  "ci": { "configured": true },
+  "gates": {
+    "ported": 16,
+    "source_total": 16
+  },
+  "stages": {
+    "built": 11,
+    "target": 11
+  },
+  "contracts": {
+    "schemas": 15
+  },
+  "adapters": [
+    "provider-local-proxy",
+    "storage-local",
+    "evidence-local"
+  ],
+  "shells": [
+    "cli"
+  ],
+  "catalog": {
+    "records_imported": 195,
+    "records_available": 172,
+    "records_added": 23
+  },
+  "sources": {
+    "frozen_files": 420
+  },
+  "ci": {
+    "configured": true
+  },
   "commands": [
-    "verify", "lint:boundaries", "verify:sources", "test", "typecheck",
-    "differential", "cli", "check:plan", "check:citations", "check:citations:online",
-    "import:catalog", "check:catalog", "check:xsd", "check:depth", "check:stages", "eval", "eval:compare", "eval:adversarial",
-    "check:corpus", "check:counts", "check:fingerprint",
-    "check:sizing", "check:matrix", "docs:matrix"
+    "build:anchor",
+    "check:anchor",
+    "check:catalog",
+    "check:citations",
+    "check:citations:online",
+    "check:corpus",
+    "check:counts",
+    "check:depth",
+    "check:fingerprint",
+    "check:matrix",
+    "check:plan",
+    "check:sizing",
+    "check:stages",
+    "check:xsd",
+    "cli",
+    "differential",
+    "docs:matrix",
+    "eval",
+    "eval:adversarial",
+    "eval:anchor",
+    "eval:compare",
+    "eval:pipeline",
+    "import:catalog",
+    "lint:boundaries",
+    "lint:sources",
+    "test",
+    "test:app",
+    "test:core",
+    "typecheck",
+    "verify",
+    "verify:sources"
   ],
   "planned_commands": [
-    "verify:gates", "trace:view", "verify:hash",
-    "scaffold:gate", "scaffold:technique", "catalog:validate", "parity"
+    "verify:gates",
+    "trace:view",
+    "verify:hash",
+    "scaffold:gate",
+    "scaffold:technique",
+    "catalog:validate",
+    "parity"
   ]
 }
 ```
