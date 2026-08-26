@@ -43,6 +43,17 @@ table and a silent one is not.
 
 ## Decision
 
+> **The authoritative statement of this rule is [`spec/manifest-shapes.json`](../spec/manifest-shapes.json),**
+> rendered as [`MANIFEST_SHAPES.md`](./MANIFEST_SHAPES.md) and executed by
+> `core/test/manifest-spec.test.ts`. The prose below explains *why*; the spec says *what*.
+>
+> That split exists because this rule was previously stated in four places — the code, its
+> comments, this ADR, and the tests — and drifted between all of them inside two days. This
+> ADR was amended twice, and a test had to be reconciled after it contradicted the ADR it
+> cited. If the prose here and the spec ever disagree, **the spec is right**, because it is
+> the one that runs.
+
+
 The manifest is **the heading plus the run of declaration lines beneath it**. It ends at the
 first line of prose that declares nothing.
 

@@ -106,11 +106,12 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `adapters/storage-local/` | Run-bundle persistence (8 bundles, evicted whole) |
 | `adapters/evidence-local/` | Immutable evidence store (`wx` flag, no `update`) |
 | `shells/cli/` | The one built Shell + its composition root |
-| `scripts/` | 20 checkers and runners. Each fails the build rather than warning |
+| `scripts/` | 21 checkers and runners. Each fails the build rather than warning |
+| `spec/` | Behavioural specs that ARE the tests and generate their own documentation. One file so far |
 | `scripts/divergence-allowlist.json` | 3 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
-| `Documentation/` | 34 Markdown files: 11 ADRs, implementation plan, architecture, references |
+| `Documentation/` | 35 Markdown files: 11 ADRs, implementation plan, architecture, references, the generated manifest spec |
 | `docs/superpowers/specs/` | The corpus-grounded spec that drove Phases α–ζ |
 | `test/` | Cross-cutting: contract conformance, evidence conformance, checker tests |
 | `.github/workflows/verify.yml` | CI. Runs `npm run verify` on every push and PR |
