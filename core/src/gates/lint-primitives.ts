@@ -137,7 +137,26 @@ export const clausePresent = (clause: string, low: string): boolean =>
  * declared key read as undeclared (a visible FAIL someone fixes) rather than an undeclared key
  * read as declared (a silent PASS nobody sees).
  */
-const MANIFEST_HEADING_RE = /^\s*#*\s*Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
+/**
+ * A leading `#` IS the heading-shapedness. Without one, the line must be nothing but the phrase.
+ *
+ * The previous rule demanded the whole line be the phrase plus at most a parenthetical, whether
+ * or not it was an ATX heading — so `## Runtime Variables (host-supplied) — do not echo`,
+ * `## Runtime Variables ##` and `## Runtime Variables and Their Sources` all stopped opening a
+ * manifest, and every key declared under them read as undeclared. That is the unclearable
+ * direction, and it was a regression against both the previous port and the frozen oracle,
+ * whose `#+\s*Runtime Variables.*?` accepts all of them.
+ *
+ * Splitting the rule fixes both directions at once. A `#` is an unambiguous structural marker:
+ * once it is present the line is a heading and the tail is a subtitle, so nothing more is
+ * needed. Only when the author omits it — the v5 BLUEPRINT's bare-prose form — does the tail
+ * have to be constrained, because there is then nothing to distinguish a heading from a
+ * sentence *about* runtime variables.
+ */
+const ATX_MANIFEST_HEADING_RE = /^\s*#+\s*Runtime Variables\b/i;
+const BARE_MANIFEST_HEADING_RE = /^\s*Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
+const isManifestHeading = (line: string): boolean =>
+  ATX_MANIFEST_HEADING_RE.test(line) || BARE_MANIFEST_HEADING_RE.test(line);
 
 /**
  * A declaration line opens with its key, whatever list syntax carries it.
@@ -155,9 +174,31 @@ const MANIFEST_HEADING_RE = /^\s*#*\s*Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*
  * branch.` does not open with its key, so a use cannot declare itself.
  */
 const DECLARATION_LINE_RE =
-  /^\s*(?:[-*+]\s*|\d+[.)]\s*|\|\s*)?[`*_]*\[\[[A-Za-z0-9_:-]+\]\]/;
+  /^\s*(?:[-*+]\s*|\d+[.)]\s*)?[`*_]*\[\[[A-Za-z0-9_:-]+\]\]/;
 
-const FENCE_LINE_RE = /^\s*```/;
+/** A table row declares if it carries a key in ANY cell, not only the first. */
+const TABLE_ROW_RE = /^\s*\|/;
+const HAS_KEY_RE = /\[\[[A-Za-z0-9_:-]+\]\]/;
+const isDeclarationLine = (line: string): boolean =>
+  DECLARATION_LINE_RE.test(line) || (TABLE_ROW_RE.test(line) && HAS_KEY_RE.test(line));
+
+/**
+ * CommonMark fence delimiters — both characters, and length-aware.
+ *
+ * The previous guard was `/^\s*```/` with a boolean toggle, which failed twice. A `~~~` fence
+ * was invisible, so a tilde-wrapped documentation example declared for real. And because the
+ * toggle ignored fence LENGTH, a ``` line nested inside a ```` block flipped the state back to
+ * "outside", so a genuinely fenced heading was read as real — the exact hole the fence guard
+ * was added to close.
+ *
+ * `strip-documentation-spans.ts` already implements the length rule and is NOT reused here on
+ * purpose: it is a faithful port pinned by the differential oracle, and the frozen Python
+ * linter handles only backticks. Teaching it `~~~` would diverge from the oracle on every gate
+ * at once. This scan is already a declared divergence (ADR-0010), so it can be stricter alone.
+ * The asymmetry is deliberate and stated rather than left for someone to trip over.
+ */
+const FENCE_LINE_RE = /^\s*(`{3,}|~{3,})/;
+
 const RUNTIME_KEY_G = /\[\[([A-Za-z0-9_:-]+)\]\]/g;
 
 export function extractRuntimeManifest(text: string): Set<string> {
@@ -176,28 +217,49 @@ export function extractRuntimeManifest(text: string): Set<string> {
    * The line between them is the HEADING: it must be outside a fence. Entries beneath it may
    * be inside one. That keeps the property the raw read exists for and closes the sample hole.
    */
-  let inFence = false;
+  /** The open fence's delimiter, or null outside one. Closing needs the same char, >= length. */
+  let openFence: string | null = null;
+  const fenceOf = (line: string): string | null => FENCE_LINE_RE.exec(line)?.[1] ?? null;
 
   for (let h = 0; h < lines.length; h++) {
-    if (FENCE_LINE_RE.test(lines[h])) { inFence = !inFence; continue; }
-    if (inFence || !MANIFEST_HEADING_RE.test(lines[h])) continue;
+    const fence = fenceOf(lines[h]);
+    if (fence) {
+      if (openFence === null) openFence = fence;
+      // CommonMark: a closing fence is the same character and at least as long as the opener.
+      // Length-aware, so a ``` inside a ```` block is content and does not reopen the document.
+      else if (fence[0] === openFence[0] && fence.length >= openFence.length) openFence = null;
+      continue;
+    }
+    if (openFence !== null || !isManifestHeading(lines[h])) continue;
 
+    let sawDeclaration = false;
     for (let i = h + 1; i < lines.length; i++) {
       const line = lines[i];
       // Blank lines and fence delimiters do not end a manifest — see above.
       if (line.trim() === "" || FENCE_LINE_RE.test(line)) continue;
+
+      if (isDeclarationLine(line)) {
+        sawDeclaration = true;
+        for (const k of line.matchAll(RUNTIME_KEY_G)) declared.add(k[1]);
+        continue;
+      }
+
       /**
-       * Nor does a table row that declares nothing.
+       * A keyless table row is scaffolding ONLY before the first declaration.
        *
-       * A Markdown table opens with a header and a `| --- |` separator, neither of which
-       * carries a key — so terminating on them ended the section one line before the first
-       * real entry, and a fifty-key table declared nothing at all. They are scaffolding, like
-       * a blank line or a fence delimiter, not prose. Prose still ends the section: a line
-       * with no leading pipe and no leading key is a terminator whatever it contains.
+       * A table opens with a header and a `| --- |` separator, neither carrying a key, so
+       * terminating on them ended the section one line before the first real entry and a
+       * fifty-key table declared nothing. But skipping them unconditionally let the scan walk
+       * out of a finished manifest, across a blank line, and into an unrelated table further
+       * down the document — where a row saying `| [[CUSTOMER_SSN]] | never injected; not a
+       * runtime variable |` was read as declaring it. The gate returned PASS on the key the
+       * table exists to warn about.
+       *
+       * Bounding the skip to the run before the first declaration keeps a table's own header
+       * working and makes a second table a new block, which is what it is.
        */
-      if (/^\s*\|/.test(line) && !/\[\[[A-Za-z0-9_:-]+\]\]/.test(line)) continue;
-      if (!DECLARATION_LINE_RE.test(line)) break;
-      for (const k of line.matchAll(RUNTIME_KEY_G)) declared.add(k[1]);
+      if (!sawDeclaration && TABLE_ROW_RE.test(line)) continue;
+      break;
     }
   }
   return declared;
