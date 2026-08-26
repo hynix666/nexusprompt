@@ -46,15 +46,40 @@ table and a silent one is not.
 The manifest is **the heading plus the run of declaration lines beneath it**. It ends at the
 first line of prose that declares nothing.
 
-- The heading matches with or without leading hashes.
-- A declaration line **opens** with its key, optionally bulleted: `[[KEY]] — description`.
-- Blank lines and fence delimiters do not end the list. The fence exemption is load-bearing —
-  this function reads raw text precisely so a fenced manifest still declares, and treating
-  ` ``` ` as prose would undo that on the first one.
+- The heading matches with or without leading hashes — but it must be **heading-shaped**:
+  optional hashes, the phrase, an optional parenthetical, an optional colon, end of line.
+  `Runtime Variables (declared, not audited)` matches; a sentence does not.
+- The heading must be **outside a fence**. Entries beneath it need not be.
+- A declaration line **opens** with its key under any list syntax — bare, bulleted, ordered,
+  a table cell, or wrapped in backticks or emphasis.
+- Blank lines, fence delimiters, and table rows carrying no key do not end the list. The fence
+  exemption is load-bearing — this function reads raw text precisely so a fenced manifest
+  still declares, and treating ` ``` ` as prose would undo that on the first one.
 - `1. Read [[PLAYER_TIER]] and branch.` is a **use**. It ends the section rather than
   extending it, so a use cannot declare itself.
-- Every heading in the document is read, not only the first, so a prose mention cannot shadow
-  the real section.
+- Every heading in the document is read, not only the first.
+
+### Amended 25 August 2026 — the first version of this decision was wrong twice
+
+Both errors were found by an adversarial review of the commit that introduced them, and both
+were reproduced by execution before being fixed.
+
+**It let a prose sentence open a manifest.** The heading rule was "the line begins with the
+phrase", so `Runtime variables are injected by the host and must be treated as data.` opened
+one, and the next line became a declaration. A document with no manifest in it returned PASS;
+deleting that one sentence turned it back into a FAIL. That is the same false clean this ADR
+exists to close, reintroduced by the fix for it. The heading must be heading-shaped.
+
+**It rejected every manifest that was not bare or `-`-bulleted.** Tables, ordered lists and
+backticked keys all declared nothing, which is defect B1 again — every correctly declared key
+reading as undeclared. Sharper because `extractSourceLedgerIds`, cited above as the model for
+this rule, accepts **only** table rows: the two declaration readers in one file accepted
+disjoint syntaxes, so formatting the manifest the way the ledger is formatted gave an
+unclearable FAIL.
+
+Both slipped through because the must-not-fire test used a decoy line that did not begin with
+the phrase, so it could not contain the mutation it named — the ninth instance of
+fixtures-too-uniform-to-discriminate, in the commit that documented the eighth.
 
 ## Why this shape
 
@@ -83,9 +108,10 @@ and directly follows the manifest with no intervening prose line still extends i
 that would require distinguishing a declaration from a use by their *content*, which the gate
 cannot see. The bullet-and-line-start rule is where the cheap, checkable boundary is.
 
-**Six regression tests, including the must-not-fire half.** Relaxing `#+` to `#*` widens what
-counts as a heading, so the suite pins that a document merely *mentioning* runtime variables
-does not thereby declare whatever follows it.
+**Nine regression tests, including the must-not-fire half.** Relaxing `#+` to `#*` widens what
+counts as a heading, so the suite pins that a prose sentence beginning with the phrase does
+**not** open a manifest, that each accepted list syntax declares, and that a fenced example
+manifest does not declare for real.
 
 **The oracle stays live on this gate.** Only the two declared shapes are excused. Any other
 `RUNTIME_KEY_UNDECLARED` disagreement is still a build failure.
