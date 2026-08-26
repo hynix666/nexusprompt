@@ -153,7 +153,26 @@ export const clausePresent = (clause: string, low: string): boolean =>
  * have to be constrained, because there is then nothing to distinguish a heading from a
  * sentence *about* runtime variables.
  */
-const ATX_MANIFEST_HEADING_RE = /^\s*#+\s*Runtime Variables\b/i;
+/**
+ * ...but the tail must be a QUALIFIER, not a continuation of the sentence.
+ *
+ * Allowing any tail after the phrase let a heading *about* the feature open a manifest:
+ * `## Runtime Variables You Must Never Log`, followed by `- [[CARD_NUMBER]] - never echo
+ * this`, declared `CARD_NUMBER` and the gate returned PASS on the body that echoed it. A
+ * never-log section is not exotic — it is what a security-conscious prompt writes, so this
+ * was the highest-traffic shape of the lot. Master FAILs that document; the unbounded tail
+ * was a regression.
+ *
+ * So after the phrase the line must end, or continue with something that introduces a
+ * subtitle rather than continuing a noun phrase: a bracket, a colon, a dash, or the closing
+ * hashes of a closed ATX heading.
+ *
+ * This deliberately rejects `## Runtime Variables and Their Sources`, which an earlier round
+ * accepted. That is the trade this gate now takes everywhere: a rejected manifest is a
+ * visible FAIL an author clears in one edit, an accepted non-manifest is a silent PASS nobody
+ * ever sees. Four rounds of widening to chase the first produced the second every time.
+ */
+const ATX_MANIFEST_HEADING_RE = /^\s*#+\s*Runtime Variables\s*(?:$|[(\[:–—-]|#)/i;
 const BARE_MANIFEST_HEADING_RE = /^\s*Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
 const isManifestHeading = (line: string): boolean =>
   ATX_MANIFEST_HEADING_RE.test(line) || BARE_MANIFEST_HEADING_RE.test(line);
@@ -176,11 +195,28 @@ const isManifestHeading = (line: string): boolean =>
 const DECLARATION_LINE_RE =
   /^\s*(?:[-*+]\s*|\d+[.)]\s*)?[`*_]*\[\[[A-Za-z0-9_:-]+\]\]/;
 
-/** A table row declares if it carries a key in ANY cell, not only the first. */
 const TABLE_ROW_RE = /^\s*\|/;
-const HAS_KEY_RE = /\[\[[A-Za-z0-9_:-]+\]\]/;
-const isDeclarationLine = (line: string): boolean =>
-  DECLARATION_LINE_RE.test(line) || (TABLE_ROW_RE.test(line) && HAS_KEY_RE.test(line));
+
+/**
+ * The keys a line DECLARES — empty when it declares nothing.
+ *
+ * A table row used to declare every key it contained in any cell, so a warning row inside the
+ * manifest's own table — `| Warning | never pass [[CUSTOMER_SSN]] to the model |` — declared
+ * the key it exists to forbid, and the gate returned PASS on a body that echoed it. Deleting
+ * that one row restored the FAIL. Structurally the same defect as a later table declaring for
+ * the whole document, relocated one table earlier.
+ *
+ * A cell declares on the same rule as any other line: it must OPEN with the key. That keeps
+ * the `Name | Placeholder | Meaning` layout working — the key is in cell two, but it is the
+ * whole of cell two — while a prose cell mentioning a key declares nothing.
+ */
+function declarationKeys(line: string): string[] {
+  const collect = (s: string) => [...s.matchAll(RUNTIME_KEY_G)].map((m) => m[1]);
+  if (TABLE_ROW_RE.test(line)) {
+    return line.split("|").flatMap((cell) => (DECLARATION_LINE_RE.test(cell) ? collect(cell) : []));
+  }
+  return DECLARATION_LINE_RE.test(line) ? collect(line) : [];
+}
 
 /**
  * CommonMark fence delimiters — both characters, and length-aware.
@@ -232,33 +268,41 @@ export function extractRuntimeManifest(text: string): Set<string> {
     }
     if (openFence !== null || !isManifestHeading(lines[h])) continue;
 
-    let sawDeclaration = false;
+    /**
+     * A keyless table row is scaffolding only while we are INSIDE that table.
+     *
+     * A table opens with a header and a `| --- |` separator, neither carrying a key, so
+     * terminating on them ended the section one line before the first real entry and a
+     * fifty-key table declared nothing. Skipping them unconditionally went too far the other
+     * way: the scan walked out of a finished manifest, across a blank line, into an unrelated
+     * table, and read `| [[CUSTOMER_SSN]] | never injected; not a runtime variable |` as
+     * declaring it. Bounding the skip to "before the first declaration" fixed that case and
+     * broke ordinary layouts instead — a manifest whose table follows a bullet lost every
+     * table entry.
+     *
+     * Adjacency is the property that actually distinguishes them: scaffolding belongs to a
+     * table we are already reading. Starts true so the heading may be followed directly by a
+     * table, and is reset by every declaration to whether THAT declaration was a table row.
+     *
+     * A manifest that mixes a bullet and then a table therefore ends at the table — the two
+     * are textually indistinguishable from a finished manifest followed by an unrelated
+     * table, so the safe direction wins: a visible FAIL rather than a silent PASS.
+     */
+    let inTableRun = true;
+
     for (let i = h + 1; i < lines.length; i++) {
       const line = lines[i];
       // Blank lines and fence delimiters do not end a manifest — see above.
       if (line.trim() === "" || FENCE_LINE_RE.test(line)) continue;
 
-      if (isDeclarationLine(line)) {
-        sawDeclaration = true;
-        for (const k of line.matchAll(RUNTIME_KEY_G)) declared.add(k[1]);
+      const isTableRow = TABLE_ROW_RE.test(line);
+      const keys = declarationKeys(line);
+      if (keys.length > 0) {
+        for (const k of keys) declared.add(k);
+        inTableRun = isTableRow;
         continue;
       }
-
-      /**
-       * A keyless table row is scaffolding ONLY before the first declaration.
-       *
-       * A table opens with a header and a `| --- |` separator, neither carrying a key, so
-       * terminating on them ended the section one line before the first real entry and a
-       * fifty-key table declared nothing. But skipping them unconditionally let the scan walk
-       * out of a finished manifest, across a blank line, and into an unrelated table further
-       * down the document — where a row saying `| [[CUSTOMER_SSN]] | never injected; not a
-       * runtime variable |` was read as declaring it. The gate returned PASS on the key the
-       * table exists to warn about.
-       *
-       * Bounding the skip to the run before the first declaration keeps a table's own header
-       * working and makes a second table a new block, which is what it is.
-       */
-      if (!sawDeclaration && TABLE_ROW_RE.test(line)) continue;
+      if (isTableRow && inTableRun) continue;
       break;
     }
   }
