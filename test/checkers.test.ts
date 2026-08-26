@@ -7,6 +7,9 @@ import { checkPlan } from "../scripts/check-plan.mjs";
 import { checkBoundaries } from "../scripts/check-boundaries.mjs";
 import { verifySources } from "../scripts/verify-sources.mjs";
 import { implausibleKeyReason } from "../scripts/run-eval.js";
+import { execFileSync } from "node:child_process";
+import { pathToFileURL, fileURLToPath } from "node:url";
+const __dirnameShim = dirname(fileURLToPath(import.meta.url));
 import { checkCitations } from "../scripts/check-citations.mjs";
 import { checkXsd, buildXml, validateAgainstXsd } from "../scripts/check-xsd.mjs";
 import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
@@ -1212,6 +1215,32 @@ describe("implausibleKeyReason", () => {
     expect(implausibleKeyReason(`sk-ant-api03-${"a".repeat(90)}`)).toBeNull();
     expect(implausibleKeyReason("a".repeat(20))).toBeNull();          // exactly at the floor
     expect(implausibleKeyReason("some-future-format-that-is-long-enough")).toBeNull();
+  });
+
+  it("importing run-eval does not exit its host, whatever the host's argv says", () => {
+    /**
+     * The module is imported by this file to reach `implausibleKeyReason`. It used to parse
+     * --trials at MODULE SCOPE and call process.exit(2) on a bad value, so importing it with
+     * the wrong argv killed the importer before any test ran. Verified at the time:
+     * `await import(...)` never returned and the process died with exit 2.
+     *
+     * The entry-point guard alone did not fix it -- that stops main() from running, not the
+     * constants above it. Flag parsing lives inside main() now and reports by throwing.
+     *
+     * Spawned rather than asserted in-process, because the failure mode IS process death:
+     * an in-process check would take the suite down with it instead of reporting.
+     */
+    const script = [
+      'process.argv = [process.argv[0], "vitest", "--trials", "not-a-number"];',
+      'await import(' + JSON.stringify(pathToFileURL(join(__dirnameShim, "../scripts/run-eval.ts")).href) + ');',
+      'console.log("SURVIVED");',
+    ].join("\n");
+    const file = join(mkdtempSync(join(tmpdir(), "pnx-imp-")), "imp.mjs");
+    writeFileSync(file, script);
+    const out = execFileSync(process.execPath, [join(__dirnameShim, "../node_modules/tsx/dist/cli.mjs"), file], {
+      cwd: join(__dirnameShim, ".."), encoding: "utf8",
+    });
+    expect(out).toContain("SURVIVED");
   });
 
   it("never returns the key itself", () => {

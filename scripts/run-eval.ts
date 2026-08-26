@@ -50,38 +50,30 @@ const flagValue = (name: string): string | undefined => {
   return i === -1 ? undefined : process.argv[i + 1];
 };
 
+/** Thrown rather than exited, so parsing a flag cannot kill a process that merely IMPORTED us. */
+class FlagError extends Error {}
+
+/**
+ * A bad flag REPORTS; it does not exit.
+ *
+ * This called `process.exit(2)` directly, and `TRIALS` was parsed at module scope — so
+ * importing this file to unit-test `implausibleKeyReason` could terminate the host. Verified:
+ * with `--trials not-a-number` in the importer's argv, `await import(...)` never returned and
+ * the process died with exit 2 before any test ran.
+ *
+ * The entry-point guard added for testability stopped `main()` from running but not the
+ * module-level constants above it, which is the half that is easy to miss. Flags are parsed
+ * inside `main()` now, and the failure is a thrown value the caller decides what to do with.
+ */
 const intFlag = (name: string): number | undefined => {
   const raw = flagValue(name);
   if (raw === undefined) return undefined;
   const n = Number.parseInt(raw, 10);
   if (!Number.isInteger(n) || n < 1) {
-    console.error(`eval: --${name} must be a positive integer, got ${JSON.stringify(raw)}.`);
-    process.exit(2);
+    throw new FlagError(`eval: --${name} must be a positive integer, got ${JSON.stringify(raw)}.`);
   }
   return n;
 };
-
-const TRIALS = intFlag("trials") ?? 1;
-
-/**
- * A live run must declare what it may spend, and there is no default.
- *
- * Phase γ's entry criterion was "budget enforcement written before the first real call".
- * `admitRun` has existed since then and this composition root never declared a budget, so the
- * FIRST live run would have been the unbounded one — `admitRun` would have returned
- * "no budget declared" and admitted all 1,400 calls of a 100-trial suite. A guard that exists
- * and is not wired is the defect this repository keeps finding, and it was sitting in the one
- * place where the cost of missing it is measured in money.
- *
- * Requiring the flag rather than defaulting it: both a generous default and a stingy one are
- * defensible, so picking either for the caller is the bug — the same reasoning that makes
- * `Budget.on_exceed` mandatory.
- */
-const MAX_CALLS = intFlag("max-calls");
-
-const SUITE = process.argv.includes("--suite")
-  ? process.argv[process.argv.indexOf("--suite") + 1]
-  : "eval/compile-smoke.json";
 
 /**
  * Why this value cannot be a key — or null if nothing rules it out.
@@ -98,6 +90,35 @@ export function implausibleKeyReason(key: string): string | null {
 }
 
 async function main(): Promise<number> {
+  /**
+   * A live run must declare what it may spend, and there is no default.
+   *
+   * Phase γ's entry criterion was "budget enforcement written before the first real call".
+   * `admitRun` has existed since then and this composition root never declared a budget, so
+   * the FIRST live run would have been the unbounded one — `admitRun` would have returned
+   * "no budget declared" and admitted all 1,400 calls of a 100-trial suite. A guard that
+   * exists and is not wired is the defect this repository keeps finding, and it was sitting
+   * in the one place where the cost of missing it is measured in money.
+   *
+   * Requiring the flag rather than defaulting it: both a generous default and a stingy one
+   * are defensible, so picking either for the caller is the bug — the same reasoning that
+   * makes `Budget.on_exceed` mandatory.
+   */
+  let TRIALS: number;
+  let MAX_CALLS: number | undefined;
+  try {
+    TRIALS = intFlag("trials") ?? 1;
+    MAX_CALLS = intFlag("max-calls");
+  } catch (err) {
+    if (!(err instanceof FlagError)) throw err;
+    console.error(err.message);
+    return 2;
+  }
+
+  const SUITE = process.argv.includes("--suite")
+    ? process.argv[process.argv.indexOf("--suite") + 1]
+    : "eval/compile-smoke.json";
+
   let data: { suite: EvalSuite; cases: StubbedCase[] };
   try {
     data = JSON.parse(readFileSync(SUITE, "utf8"));
