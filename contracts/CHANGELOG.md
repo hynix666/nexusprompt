@@ -16,6 +16,31 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-26 (convergence pass)
+
+### `observability-event` **1.3.0** (minor)
+
+Adds `REVISION_SUPERSEDED`. The gate-feedback rewind emitted `REVISION_PERSISTED` when it
+marked a revision STALE — nothing was written, an existing record was mutated. A consumer
+reconciling the event stream against a reloaded bundle counted one persist per stale-mark, and
+the totals still matched only because the two SKIPPED revisions emit `STAGE_SKIPPED` instead.
+Two errors cancelling is not the same as no error; it is the same error, harder to see.
+
+Additive, so minor: a 1.2.0 consumer ignores an event type it does not know.
+
+### `CONTRACT_VERSIONS` corrected — `comparison` 2.1.0 → 2.2.0, `configuration` 1.2.0 → 1.3.0
+
+Not a schema change. This table is stamped into `execution_provenance` on every revision, so
+it is a claim about what a run executed against — and it named two versions that had moved on
+without it. A stored record asserting a version it was not produced under is the same defect as
+`gate_version` holding at 1.0.0 through two behaviour changes, and it survived for the same
+reason: nothing read the field.
+
+`test/contract-conformance.test.ts` now asserts every stamped version equals the `$id` of the
+schema on disk, so bumping a schema without this table is a build failure.
+
+---
+
 ## 2026-08-25 (SPB defect-parity audit)
 
 ### `revision-entry` **1.3.1** (patch)

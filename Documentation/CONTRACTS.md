@@ -323,7 +323,7 @@ One stage execution within a run. Expanded to support lineage, freshness, and pr
 Storage adapters implement:
 
 - `append(RevisionEntry) → void`
-- `markStale(run_id, from_stage_id) → void`
+- `markStale(run_id, from_revision_id) → void` — inclusive; cascades along `parent_revision_ids`
 - `getRun(run_id) → RevisionEntry[]`
 - `listRecent(limit) → RunBundleSummary[]` (local adapter respects the eight-run-bundle bound)
 - `delete(run_id, confirmation) → void`

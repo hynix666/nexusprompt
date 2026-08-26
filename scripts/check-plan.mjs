@@ -168,6 +168,17 @@ export function checkPlan(root = process.cwd()) {
 
   // …and commands the plan says are planned must NOT exist, or they are built and the
   // plan is understating what is done.
+  /**
+   * ...and every script must be DECLARED. The check ran one way only: it verified that
+   * listed commands exist, never that existing commands are listed. Seven were invisible to
+   * it — check:anchor, eval:pipeline, build:anchor among them — so the plan could describe a
+   * repository missing a quarter of its own commands and still pass. A guard whose scope is
+   * narrower than its name, in the guard that anchors the plan.
+   */
+  claim("every package.json script is declared in the plan", [],
+    scripts.filter((c) => !declared.commands.includes(c) && !declared.planned_commands.includes(c)),
+    "add each to `commands` (built) or `planned_commands` (not built)");
+
   claim("planned_commands (none built yet)", [],
     declared.planned_commands.filter((c) => scripts.includes(c)),
     "a command listed as planned is already implemented — move it to `commands`");
