@@ -320,6 +320,94 @@
       "text": "````markdown\nWrap it:\n    ````\n# Runtime Variables\n- [[T]] - example only\n````\n\nUse [[T]].",
       "expect": "FAIL",
       "why": "Found by this spec file on its first run: the row as originally written did not reproduce, and chasing why turned up the shape that does. An indented, equal-length closer ended the sample early, so a heading placed after it was read as real document and declared its keys. CommonMark: an opening fence may be indented up to three spaces; a closer indented four or more is content. The regex anchors at ^ {0,3} rather than ^\\s*."
+    },
+    {
+      "id": "reject-html-comment",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "<!--\n## Runtime Variables\n- [[SECRET]] - example\n-->\n\nEcho [[SECRET]].",
+      "expect": "FAIL",
+      "why": "Found by the Phase D sweep. A commented-out manifest declared its keys for the whole document -- the same category as a fenced example, in a different syntax. Inherited rather than introduced; master returns PASS here."
+    },
+    {
+      "id": "reject-setext-heading",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "Runtime Variables\n=================\n\n[[SECRET]] - never echo\n\n## BLOCK III\nEcho [[SECRET]].",
+      "expect": "FAIL",
+      "why": "A setext-underlined heading is not read. The bare form requires the line to be nothing but the phrase, and the underline is a separate line, so the section ends before any declaration. Recorded as the safe direction rather than left undefined."
+    },
+    {
+      "id": "reject-blockquoted-heading",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "> ## Runtime Variables\n> - [[SECRET]] - example\n\n## BLOCK III\nEcho [[SECRET]].",
+      "expect": "FAIL",
+      "why": "A heading inside a blockquote is quoted material, not this document's own manifest."
+    },
+    {
+      "id": "reject-listitem-heading",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "- ## Runtime Variables\n  - [[SECRET]] - example\n\n## BLOCK III\nEcho [[SECRET]].",
+      "expect": "FAIL",
+      "why": "A heading nested inside a list item is not a document section."
+    },
+    {
+      "id": "reject-crlf-never-log",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables You Must Never Log\r\n\r\n- [[SECRET]] - never echo\r\n\r\n## BLOCK III\r\nEcho [[SECRET]].",
+      "expect": "FAIL",
+      "why": "CRLF line endings do not change any verdict. Most files in this repository are CRLF, and a rule that behaved differently under them would be wrong in production and invisible in tests."
+    },
+    {
+      "id": "reject-second-manifest-warns",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "# Runtime Variables\n[[A]] - ok\n\n# Runtime Variables You Must Never Log\n[[SECRET]] - forbidden\n\n## BLOCK III\nUse [[A]] and [[SECRET]].",
+      "expect": "FAIL",
+      "why": "Reading every heading must not mean reading every heading-LIKE line: the real manifest declares A, and the never-log section declares nothing."
+    },
+    {
+      "id": "edge-empty-section",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A heading with no declarations beneath it declares nothing."
+    },
+    {
+      "id": "edge-manifest-only-document",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - a key.",
+      "expect": "PASS",
+      "why": "A document that is only a manifest uses nothing, so nothing is undeclared."
+    },
+    {
+      "id": "edge-use-before-manifest",
+      "group": "Edges",
+      "status": "spec",
+      "text": "Use [[A]] first.\n\n## Runtime Variables\n- [[A]] - a key.",
+      "expect": "PASS",
+      "why": "Declaration is order-independent: the whole document is scanned for manifests before uses are judged."
+    },
+    {
+      "id": "edge-duplicate-key",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - one\n- [[A]] - two\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "A key declared twice is declared. The set semantics make this uninteresting, which is worth pinning so a future rewrite does not make it interesting."
+    },
+    {
+      "id": "edge-full-charset-key",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[a-Z_0:9]] - a key.\n\n## BLOCK III\nUse [[a-Z_0:9]].",
+      "expect": "PASS",
+      "why": "Every character the key pattern allows -- letters, digits, underscore, hyphen, colon -- in one key."
     }
   ]
 }

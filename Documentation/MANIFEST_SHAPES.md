@@ -5,7 +5,7 @@
 committed copy is not what the spec produces; `core/test/manifest-spec.test.ts` runs
 every case below against the real gate. See ADR-0010.
 
-35 cases · 30 specified · 5 known limit(s), of which **1** in the unsafe direction.
+46 cases · 41 specified · 5 known limit(s), of which **1** in the unsafe direction.
 
 A *known limit* records what the gate **actually does today**, not what it should —
 so the row is honest and the suite stays green, while `wanted` records the
@@ -162,6 +162,73 @@ No heading, so nothing declares.
 
     There are no runtime variables here.
     Use [[API_HOST]].
+
+### `reject-html-comment` → `FAIL`
+
+Found by the Phase D sweep. A commented-out manifest declared its keys for the whole document -- the same category as a fenced example, in a different syntax. Inherited rather than introduced; master returns PASS here.
+
+    <!--
+    ## Runtime Variables
+    - [[SECRET]] - example
+    -->
+    
+    Echo [[SECRET]].
+
+### `reject-setext-heading` → `FAIL`
+
+A setext-underlined heading is not read. The bare form requires the line to be nothing but the phrase, and the underline is a separate line, so the section ends before any declaration. Recorded as the safe direction rather than left undefined.
+
+    Runtime Variables
+    =================
+    
+    [[SECRET]] - never echo
+    
+    ## BLOCK III
+    Echo [[SECRET]].
+
+### `reject-blockquoted-heading` → `FAIL`
+
+A heading inside a blockquote is quoted material, not this document's own manifest.
+
+    > ## Runtime Variables
+    > - [[SECRET]] - example
+    
+    ## BLOCK III
+    Echo [[SECRET]].
+
+### `reject-listitem-heading` → `FAIL`
+
+A heading nested inside a list item is not a document section.
+
+    - ## Runtime Variables
+      - [[SECRET]] - example
+    
+    ## BLOCK III
+    Echo [[SECRET]].
+
+### `reject-crlf-never-log` → `FAIL`
+
+CRLF line endings do not change any verdict. Most files in this repository are CRLF, and a rule that behaved differently under them would be wrong in production and invisible in tests.
+
+    ## Runtime Variables You Must Never Log
+    
+    - [[SECRET]] - never echo
+    
+    ## BLOCK III
+    Echo [[SECRET]].
+
+### `reject-second-manifest-warns` → `FAIL`
+
+Reading every heading must not mean reading every heading-LIKE line: the real manifest declares A, and the never-log section declares nothing.
+
+    # Runtime Variables
+    [[A]] - ok
+    
+    # Runtime Variables You Must Never Log
+    [[SECRET]] - forbidden
+    
+    ## BLOCK III
+    Use [[A]] and [[SECRET]].
 
 ## Declaration syntaxes that are read
 
@@ -445,3 +512,51 @@ THE ONE KNOWN LIMIT IN THE UNSAFE DIRECTION. Fence delimiters are skipped inside
     ```
     
     Never emit [[CUSTOMER_SSN]].
+
+## Edges
+
+### `edge-empty-section` → `FAIL`
+
+A heading with no declarations beneath it declares nothing.
+
+    ## Runtime Variables
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-manifest-only-document` → `PASS`
+
+A document that is only a manifest uses nothing, so nothing is undeclared.
+
+    ## Runtime Variables
+    - [[A]] - a key.
+
+### `edge-use-before-manifest` → `PASS`
+
+Declaration is order-independent: the whole document is scanned for manifests before uses are judged.
+
+    Use [[A]] first.
+    
+    ## Runtime Variables
+    - [[A]] - a key.
+
+### `edge-duplicate-key` → `PASS`
+
+A key declared twice is declared. The set semantics make this uninteresting, which is worth pinning so a future rewrite does not make it interesting.
+
+    ## Runtime Variables
+    - [[A]] - one
+    - [[A]] - two
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-full-charset-key` → `PASS`
+
+Every character the key pattern allows -- letters, digits, underscore, hyphen, colon -- in one key.
+
+    ## Runtime Variables
+    - [[a-Z_0:9]] - a key.
+    
+    ## BLOCK III
+    Use [[a-Z_0:9]].
