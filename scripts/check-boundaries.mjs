@@ -91,6 +91,8 @@ const RULES = [
     exempt: {
       "shells/cli/src/composition-root.ts":
         "The composition root exists to name concrete adapters. That is its whole job; it contains wiring and no logic.",
+      "shells/api/src/composition-root.ts":
+        "The API composition root exists to name concrete adapters. It contains wiring only; routes call the Application protocol.",
     },
   },
   {

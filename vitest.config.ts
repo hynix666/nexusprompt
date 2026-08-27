@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     projects: [
       {
+        test: { name: "api", include: ["shells/api/test/**/*.test.ts"] },
+      },
+      {
         // Core runs under the purity harness: any network, filesystem, clock, or
         // randomness call during a Core test fails the suite.
         test: {
