@@ -267,7 +267,32 @@ export function extractRuntimeManifest(text: string): Set<string> {
   let openFence: string | null = null;
   const fenceOf = (line: string): string | null => FENCE_LINE_RE.exec(line)?.[1] ?? null;
 
+  /**
+   * A commented-out manifest is not a manifest.
+   *
+   * `<!-- ... -->` is how an author disables a block or shows an example without a fence, and
+   * a heading inside one declared for real: a commented-out manifest whitelisted its keys for
+   * the whole document. Same category as the fenced example, different syntax, and inherited
+   * rather than introduced — found by the Phase D sweep, which ran sixteen other exotic shapes
+   * (setext, blockquote, list item, CRLF, zero-width, non-breaking space) that were already
+   * handled correctly.
+   *
+   * Only heading detection is suppressed. Declarations beneath a real heading are untouched,
+   * exactly as with fences.
+   */
+  let inComment = false;
+
   for (let h = 0; h < lines.length; h++) {
+    if (inComment) {
+      if (lines[h].includes("-->")) inComment = false;
+      continue;
+    }
+    const commentStart = lines[h].indexOf("<!--");
+    if (commentStart !== -1 && !lines[h].slice(commentStart).includes("-->")) {
+      inComment = true;
+      continue;
+    }
+
     const fence = fenceOf(lines[h]);
     if (fence) {
       if (openFence === null) openFence = fence;
