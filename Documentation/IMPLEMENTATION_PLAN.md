@@ -29,7 +29,8 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "evidence-local"
   ],
   "shells": [
-    "cli"
+    "cli",
+    "api"
   ],
   "catalog": {
     "records_imported": 195,
