@@ -94,14 +94,32 @@
       "gate": "QUTM_CEILING",
       "demonstration": {
         "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "options": { "stakes": "low", "naiveTokens": 10 }
+        "options": {
+          "stakes": "low",
+          "naiveTokens": 10
+        }
       },
       "source_verdict": "FAIL",
       "port_verdict": "PASS",
       "also_matches": ".*",
-      "only_when_options": { "naiveTokens": { "lt": 120 } },
+      "only_when_options": {
+        "naiveTokens": {
+          "lt": 120
+        }
+      },
       "reason": "The cost ratio divides the compiled prompt's token estimate by the brief's, and a compiled system prompt is necessarily many times longer than the one-line brief it came from. The source applies the tier ceiling at any baseline, so a correct 900-token prompt scores 900x against a one-line brief and 7.5x against a 120-token one — over the ceiling at every tier below safety-critical. The gate was measuring the brief's brevity rather than the prompt's bloat, and no compliant artifact could clear it. The port declines to arm below a named 120-token floor. `also_matches` is `.*` because the divergence is keyed on the option and not on the input; `only_when_options` is what keeps that from excusing anything else, in particular the qutm-ceiling-crossing boundary case at baseline 400, where half-up rounding is the only thing separating the two implementations and must stay live.",
       "adr": "ADR-0011"
+    },
+    {
+      "gate": "RUNTIME_KEY_UNDECLARED",
+      "demonstration": {
+        "text": "#Runtime Variables\n[[ISOLATION_NONCE]] - per-session hex nonce.\n\n## BLOCK III\nEcho [[ISOLATION_NONCE]].\n",
+        "options": {}
+      },
+      "source_verdict": "PASS",
+      "port_verdict": "FAIL",
+      "reason": "The source opens a manifest on `#+s*Runtime Variables`, and `s*` matches zero characters. CommonMark requires whitespace after the hash run, so `#Runtime Variables` is a paragraph: a reader of the compiled prompt sees no heading and no manifest, while the linter reads one and treats every declaration-shaped line beneath it as declaring. The same pattern accepts seven or more hashes, which CommonMark also renders as a paragraph. Both are the unsafe direction — a line that is not a heading silences the gate for the section under it, and nothing in the output says so. The port bounds the run to `#{1,6}` and requires a following space or tab, which is exactly what a Markdown renderer requires. The narrowing can only produce a visible FAIL an author clears by adding a space, which is the trade ADR-0010 already chose: an accepted non-manifest is a silent PASS nobody sees, so ambiguous shapes lose. Found by the fifth adversarial sweep; no case in the differential corpus exercises the shape, so the oracle could not have raised it and this entry is what records the decision.",
+      "adr": "ADR-0010"
     }
   ]
 }

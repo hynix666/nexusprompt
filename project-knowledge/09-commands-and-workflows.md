@@ -47,7 +47,7 @@ differential oracle.
 | `npm run eval:adversarial` | the adversarial corpus |
 | `npm run eval:anchor` | the 4,906-case anchor through `compare()` |
 | `npm run build:anchor` | regenerates `eval/gate-recall-anchor.json` from seed 1 |
-| `npm run differential` | ported gates vs the frozen Python linter — 2,768 verdicts, 16 differing deliberately |
+| `npm run differential` | ported gates vs the frozen Python linter — 2,784 verdicts, 17 differing deliberately |
 | `npm run differential -- --n 800 --seed 7` | a longer / different generated corpus |
 
 ### Tests, docs, CLI

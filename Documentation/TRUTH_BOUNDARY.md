@@ -44,7 +44,7 @@ that event is a failing build, not a note in a backlog.
 
 `oracle-proves-agreement-not-correctness` · probe `oracleScope`
 
-**Establishes.** All sixteen ported gates are compared verdict-for-verdict against the frozen Python linter they were ported from, and the linter is SHA-256 pinned in the source freeze so it cannot be edited into agreement. Where the port deliberately differs, the difference is declared with a reason and an ADR rather than reconciled or hidden — three such divergences, from two ADRs.
+**Establishes.** All sixteen ported gates are compared verdict-for-verdict against the frozen Python linter they were ported from, and the linter is SHA-256 pinned in the source freeze so it cannot be edited into agreement. Where the port deliberately differs, the difference is declared with a reason and an ADR rather than reconciled or hidden — four such divergences, from two ADRs.
 
 **Does not establish.** That either implementation is right. They are two expressions of one author's opinion about what makes a prompt bad, and an oracle can only tell you they still agree. Where they agree and are both wrong, this check is silent — the `CLAIM_DISCIPLINE` false positive is exactly that shape, which is why it is not in the allowlist: there is no divergence to declare. The gates also have no external validity here; no experiment in this repository connects a gate firing to any outcome a user would care about.
 
@@ -55,7 +55,7 @@ that event is a failing build, not a note in a backlog.
   "gates_in_registry": 16,
   "gates_in_source_linter": 16,
   "gates_compared": 16,
-  "declared_divergences": 3,
+  "declared_divergences": 4,
   "divergence_adrs": [
     "ADR-0010",
     "ADR-0011"
@@ -128,17 +128,17 @@ that event is a failing build, not a note in a backlog.
 
 `manifest-reading-is-specified` · probe `manifestSpec`
 
-**Establishes.** `RUNTIME_KEY_UNDECLARED` reads a runtime manifest according to 71 cases that are simultaneously the test, the generated document, and the thing ADR-0010 points at. Sixty-six are specified behaviour. Five are known limits recorded as what the gate actually does today, each with the verdict it should return, so the row is honest and the suite is green at the same time — and a limit that starts returning its wanted verdict fails as stale rather than lingering.
+**Establishes.** `RUNTIME_KEY_UNDECLARED` reads a runtime manifest according to 83 cases that are simultaneously the test, the generated document, and the thing ADR-0010 points at. Seventy-two are specified behaviour. Eleven are known limits recorded as what the gate actually does today, each with the verdict it should return, so the row is honest and the suite is green at the same time — and a limit that starts returning its wanted verdict fails as stale rather than lingering.
 
-**Does not establish.** That the reader is correct, or that any other gate is specified at all. It is a heuristic over Markdown, and four of its five known limits err toward rejecting a manifest an author intended — a visible FAIL somebody clears. Exactly one errs the other way, toward a silent PASS nobody sees, and that is the direction that ships defects. The other fifteen gates have tests but no specification: their behaviour is described in prose, which is the condition this artifact exists to escape from and has escaped for one gate only.
+**Does not establish.** That the reader is correct, or that any other gate is specified at all. It is a heuristic over Markdown, and ten of its eleven known limits err toward rejecting a manifest an author intended — a visible FAIL somebody clears. Exactly one errs the other way, toward a silent PASS nobody sees, and that is the direction that ships defects. The count rose from five to eleven when a fifth adversarial sweep recorded six shapes it found rather than leaving them to be rediscovered; the unsafe count did not move, which is the number that matters. The other fifteen gates have tests but no specification: their behaviour is described in prose, which is the condition this artifact exists to escape from and has escaped for one gate only.
 
 **Pinned:**
 
 ```json
 {
-  "cases": 71,
-  "specified": 66,
-  "known_limits": 5,
+  "cases": 83,
+  "specified": 72,
+  "known_limits": 11,
   "unsafe_limits": 1,
   "gate": "RUNTIME_KEY_UNDECLARED"
 }
