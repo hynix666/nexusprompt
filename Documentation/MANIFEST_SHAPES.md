@@ -5,7 +5,7 @@
 committed copy is not what the spec produces; `core/test/manifest-spec.test.ts` runs
 every case below against the real gate. See ADR-0010.
 
-71 cases · 66 specified · 5 known limit(s), of which **1** in the unsafe direction.
+83 cases · 72 specified · 11 known limit(s), of which **1** in the unsafe direction.
 
 A *known limit* records what the gate **actually does today**, not what it should —
 so the row is honest and the suite stays green, while `wanted` records the
@@ -317,6 +317,37 @@ HTML comments do not nest; the first `-->` closes. The heading sits before it, s
     
     Echo [[S]].
 
+### `reject-atx-no-space` → `FAIL`
+
+CommonMark requires whitespace after the hash run, so `#Runtime Variables` renders as a paragraph and the reader of the compiled prompt sees no manifest at all. The pattern was `#+s*`, and `s*` matches zero characters, so a line that is not a heading opened one and every declaration-shaped line beneath it silenced the gate. Found by the fifth sweep; the source linter shares the pattern, so this is a declared divergence under ADR-0010.
+
+    #Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-atx-seven-hashes` → `FAIL`
+
+ATX headings stop at six hashes; a seventh makes the line a paragraph. Same false-clean shape as `reject-atx-no-space` and closed by the same bound, `#{1,6}`.
+
+    ####### Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-nested-list-heading` → `FAIL`
+
+A heading indented into a nested list item is an example inside prose, not the document's manifest. Same family as `reject-listitem-heading`, two levels deeper.
+
+    - outer
+      - ## Runtime Variables
+        - [[A]] - example
+    
+    ## BLOCK III
+    Use [[A]].
+
 ## Declaration syntaxes that are read
 
 ### `decl-bare` → `PASS`
@@ -475,6 +506,18 @@ ACCEPTED COST. A manifest mixing a bullet and then a table ends at the table, be
     ## BLOCK III
     Use [[A]] and [[B]].
 
+### `bound-thematic-break-ends-section` → `FAIL`
+
+A thematic break ends the run of declaration lines. B sits after the rule and is not declared, so a use of it is a use.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    ---
+    - [[B]] - later prose
+    
+    ## BLOCK III
+    Use [[A]] and [[B]].
+
 ## Fences
 
 ### `fence-backtick-example` → `FAIL`
@@ -541,6 +584,32 @@ Found by the second Phase D sweep. `^ {0,3}` matched neither a tab-indented fenc
     	```
     
     Echo [[SECRET]].
+
+### `fence-four-closed-by-three` → `FAIL`
+
+A closing run must be at least as long as the opener, so the three-backtick line is content and the manifest stays inside the sample. Pinned because fence arithmetic is where three of the five rounds went wrong.
+
+    ````md
+    ## Runtime Variables
+    - [[A]] - example
+    ```
+    still inside
+    ````
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-mismatched-char-with-fences-included` → `FAIL` — options `{"includeFences":true}`
+
+A tilde run cannot close a backtick fence, so the fence runs to end of document and the heading never declares. This case needs `includeFences` to say anything at all: with fences stripped the unclosed fence swallows the USE as well, leaving nothing to report and PASS the only correct answer. The fifth sweep first wrote it the other way and produced a false finding — a fixture that cannot contain the defect it is aimed at.
+
+    ```md
+    ## Runtime Variables
+    - [[A]] - example
+    ~~~
+    
+    ## BLOCK III
+    Use [[A]].
 
 ## Known limits
 
@@ -610,6 +679,72 @@ THE ONE KNOWN LIMIT IN THE UNSAFE DIRECTION. Fence delimiters are skipped inside
     ```
     
     Never emit [[CUSTOMER_SSN]].
+
+### `limit-blockquoted-declaration` → `FAIL` — **known limit**, wants `PASS`
+
+The heading is real and the row is legible; quoting it is a style choice. The declaration matcher does not admit a `>` prefix, so the section ends at once. Visible-FAIL direction. Fix would treat a blockquote marker as scaffolding, like a bullet or a table cell.
+
+    ## Runtime Variables
+    > - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `limit-setext-heading` → `FAIL` — **known limit**, wants `PASS`
+
+A setext H1 is a real heading and renders exactly like the ATX form. The bare-phrase pattern requires the phrase alone on its line and the `=` underline is a separate line nothing looks at. Visible-FAIL direction; the `---` form is already recorded as `reject-setext-heading` and rejected for a different reason.
+
+    Runtime Variables
+    =================
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `limit-commented-key-counts-as-use` → `FAIL` — **known limit**, wants `PASS`
+
+A key inside an HTML comment is invisible in the rendered prompt and interpolates nothing, so it is not a use. Comments suppress HEADING detection but are not stripped before uses are collected. Visible-FAIL direction, and deliberately not fixed here: stripping comments before use collection is the kind of widening that has twice opened a false clean elsewhere, so it wants its own probe in both directions.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+    <!-- todo: also [[B]] -->
+
+### `limit-checkbox-declaration` → `FAIL` — **known limit**, wants `PASS`
+
+A task-list marker is list scaffolding exactly as a bullet or an ordered marker is, and the manifest reader already admits both. The declaration pattern does not allow a `[ ]` between the marker and the key. Visible-FAIL direction.
+
+    ## Runtime Variables
+    - [ ] [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `limit-html-table-declaration` → `FAIL` — **known limit**, wants `PASS`
+
+An HTML table under a real heading declares as visibly as a pipe table, which the reader does admit. Nothing parses HTML. Visible-FAIL direction, and the fix is a parser rather than another prefix.
+
+    ## Runtime Variables
+    <table><tr><td>[[A]]</td><td>the thing</td></tr></table>
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `limit-comment-opener-inside-fence` → `FAIL` — **known limit**, wants `PASS`
+
+A comment opener inside a fence is sample text and must not suppress a real heading that follows. Comment tracking runs over every line including fenced ones, so the unclosed opener suppresses the rest of the document. Visible-FAIL direction. Fix would skip comment tracking while a fence is open — which is the ordering the fence and heading scans already use for headings.
+
+    ```md
+    <!-- fenced sample, not a real comment
+    ```
+    
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
 
 ## Edges
 

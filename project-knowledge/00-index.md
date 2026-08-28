@@ -45,7 +45,7 @@ components were rejected by it.
 | Repo | `github.com/hynix666/nexusprompt` (private), branch `master`, CI green |
 | Headline command | `npm install && npm run verify` — ~25 s, offline |
 | Tests | 828 passing, 0 failing, across 26 files |
-| Differential oracle | 2,768 gate verdicts vs the frozen Python linter; 16 differ **deliberately**, each with a reason and an ADR |
+| Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
 | Contracts | 15 JSON Schemas, all validated against produced values |
@@ -114,7 +114,7 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `shells/cli/` | The one built Shell + its composition root |
 | `scripts/` | 22 checkers and runners. Each fails the build rather than warning |
 | `spec/` | Behavioural specs that ARE the tests and generate their own documentation. Two files: `manifest-shapes.json` (71 shapes one gate reads) and `truth-boundary.json` (8 entries stating what this repository establishes and what it does not) |
-| `scripts/divergence-allowlist.json` | 3 declared divergences from the frozen linter, each self-proving (ADR-0007) |
+| `scripts/divergence-allowlist.json` | 4 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
 | `Documentation/` | 36 Markdown files: 11 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary |

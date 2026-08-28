@@ -32,7 +32,7 @@ Pure functions of `(text, options) → GateResult` with verdict `PASS | WARN | F
 Eight of the sixteen do nothing until an option arms them.
 
 **Every gate is checked against the frozen Python linter** (`sources/v5/prompt_lint.py`) by
-the differential oracle — 2,768 verdicts, of which 16 differ deliberately (ADR-0010, ADR-0011).
+the differential oracle — 2,784 verdicts, of which 17 differ deliberately (ADR-0010, ADR-0011).
 `gate_version` is per **gate**, not per module, and `core/test/ported-gates.test.ts` pins all
 sixteen pairs — a behaviour change without a version bump has to be a conscious edit. See ADR-0007: parity between two implementations of
 one design is structurally blind to a defect they *share*, and the frozen fixtures document

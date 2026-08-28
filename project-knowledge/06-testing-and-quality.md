@@ -37,10 +37,10 @@ The ported TypeScript gates against `sources/v5/prompt_lint.py`, verdict for ver
 fixtures   40 cases
 generated  120 cases (seed 1)
 boundary   10 conjunction cases
-allowlist  3 declared divergence(s)
-compared   2768 gate verdicts
+allowlist  4 declared divergence(s)
+compared   2784 gate verdicts
 ✓ the two implementations agree on every shared gate.
-  16 verdict(s) differ deliberately, each declared in scripts/divergence-allowlist.json
+  17 verdict(s) differ deliberately, each declared in scripts/divergence-allowlist.json
 ```
 
 **Why it exists (ADR-0007):** parity between two implementations of one design is

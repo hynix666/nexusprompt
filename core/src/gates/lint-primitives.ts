@@ -156,7 +156,7 @@ export const clausePresent = (clause: string, low: string): boolean =>
  * fails to match does not open a manifest, which is safe, so the class stays strict. A
  * tab-indented heading therefore declares nothing, which is the answer we want anyway.
  */
-const ATX_MANIFEST_HEADING_RE = /^ {0,3}#+\s*Runtime Variables\s*(?:$|[(\[:–—-]|#)/i;
+const ATX_MANIFEST_HEADING_RE = /^ {0,3}#{1,6}[ 	]+Runtime Variables\s*(?:$|[(\[:–—-]|#)/i;
 const BARE_MANIFEST_HEADING_RE = /^ {0,3}Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
 const isManifestHeading = (line: string): boolean =>
   ATX_MANIFEST_HEADING_RE.test(line) || BARE_MANIFEST_HEADING_RE.test(line);

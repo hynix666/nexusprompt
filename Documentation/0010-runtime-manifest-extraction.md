@@ -1,6 +1,6 @@
 # ADR-0010: The runtime manifest is a declaration list, not a span to end-of-file
 
-**Status:** Accepted — 25 August 2026
+**Status:** Accepted — 25 August 2026 · amended 28 August 2026 (§ *A heading has to be a heading*)
 **Amends:** nothing. **Authorises:** entries 0 and 1 in `scripts/divergence-allowlist.json`.
 **Related:** ADR-0007 (the differential oracle is permanent), ADR-0002 (contract-first).
 
@@ -160,6 +160,44 @@ and `RUNTIME_KEY_UNDECLARED` share a file and shared one constant, so bumping th
 changed would have bumped the one that did not. Versions are per-gate now, and
 `core/test/ported-gates.test.ts` pins all sixteen pairs so the next behaviour change has to
 decide rather than omit.
+
+## Amendment, 28 August 2026 — a heading has to be a heading
+
+The rule this ADR set is that the manifest is a **run of declaration lines under a heading**.
+It said nothing about what makes something a heading, and the inherited pattern was
+`#+\s*Runtime Variables`. Two things follow from that which nobody intended:
+
+- `\s*` matches **zero** characters, so `#Runtime Variables` opens a manifest. CommonMark
+  requires whitespace after the hash run; without it the line is a paragraph, and a reader of
+  the compiled prompt sees no heading at all.
+- `#+` is unbounded, so `####### Runtime Variables` opens one too. ATX headings stop at six.
+
+Both are the unsafe direction, and in the sharpest form available: a line that **renders as
+ordinary text** silences the gate for every declaration-shaped line beneath it, and nothing in
+the output says a manifest was found. This is the same failure the original decision was about
+— a use declaring itself — reached through the opening delimiter rather than the closing one.
+
+**Decision.** The pattern is `#{1,6}[ 	]+`: at most six hashes, at least one space or tab,
+which is exactly what a Markdown renderer requires. Everything else about the rule is
+unchanged.
+
+The narrowing can only produce a **visible FAIL** an author clears by adding a space. That is
+the trade this ADR already chose and it is worth restating, because the argument is what makes
+the change safe rather than merely stricter: a rejected manifest is a failure someone sees and
+fixes; an accepted non-manifest is a silent PASS nobody sees. **Ambiguous shapes lose.**
+
+The source linter shares the pattern, so this is a fourth allowlist entry under this ADR
+(`source_verdict: PASS`, `port_verdict: FAIL`). Worth noting how it was found: **no case in
+the differential corpus exercises the shape**, so the oracle never raised it and could not
+have. It came from the fifth adversarial sweep, and the allowlist entry is what records a
+decision the oracle is blind to — without it, someone restoring `#+\s*` to match the source
+would see nothing fail.
+
+Twelve cases were added to `spec/manifest-shapes.json` in the same change: the two shapes
+above as specified behaviour, four confirming fence and section-boundary handling the sweep
+probed, and six recorded as known limits. All six err toward a visible FAIL. **The unsafe-limit
+count stayed at one**, which is the number this ADR is actually about — the total rising from
+five to eleven is a record of what was looked at, not of behaviour getting worse.
 
 ## Alternatives rejected
 
