@@ -116,34 +116,6 @@ export const clausePresent = (clause: string, low: string): boolean =>
  * reintroduces the unclearable FAIL.
  */
 /**
- * What opens a manifest, in one place. The authority is spec/manifest-shapes.json.
- *
- * TWO RULES, because a `#` is an unambiguous structural marker and bare prose is not:
- *   with a `#`   the line is a heading, but the tail must be a QUALIFIER — end of line, or a
- *                bracket, colon, dash or closing hashes. Not a continuation of the phrase.
- *   without one  the line must be nothing but the phrase, plus an optional parenthetical
- *                and colon. This is the form the v5 BLUEPRINT emits.
- *
- * Each half exists because omitting it produced a real defect, in a real round:
- *
- *   requiring `#`         made the BLUEPRINT's own manifest invisible, so every correctly
- *                         declared key read as undeclared and no prompt could pass this gate
- *                         and DELIMITER_ENTROPY at once.
- *   making `#` optional
- *   with no tail rule     let `Runtime variables are injected by the host...` open a manifest
- *                         and the next line declare. A document with no manifest returned PASS.
- *   requiring the whole
- *   line be the phrase    broke `## Runtime Variables (host-supplied) — do not echo`, a
- *                         regression against both the previous port and the frozen oracle.
- *   allowing any tail
- *   after a `#`           let `## Runtime Variables You Must Never Log` declare the key it
- *                         forbids. The highest-traffic shape of the lot.
- *
- * The pattern across all four: changing a matcher moves BOTH failure directions, and the
- * author tests only the one they just fixed. When in doubt the accept-set loses — a rejected
- * manifest is a visible FAIL an author clears; an accepted non-manifest is a silent PASS.
- */
-/**
  * Indented four or more spaces, a heading is an indented CODE BLOCK, not a heading.
  *
  * `^\s*` allowed any indentation, so a four-space-indented `## Runtime Variables` opened a
@@ -161,39 +133,11 @@ const BARE_MANIFEST_HEADING_RE = /^ {0,3}Runtime Variables\s*(?:\([^)]*\))?\s*:?
 const isManifestHeading = (line: string): boolean =>
   ATX_MANIFEST_HEADING_RE.test(line) || BARE_MANIFEST_HEADING_RE.test(line);
 
-/**
- * A declaration line opens with its key, whatever list syntax carries it.
- *
- * The bare-or-bulleted-only version rejected every manifest written as a Markdown table, an
- * ordered list, or with the key in backticks — each returning `declared: []` and therefore
- * FAIL on every correctly declared key. That is defect B1 again in a new costume, and it was
- * sharper than a style nit because `extractSourceLedgerIds`, ten lines below and cited by this
- * function's own comment as the model for it, accepts ONLY table rows. The two declaration
- * readers in one file accepted disjoint syntaxes, so formatting the manifest the way the
- * ledger is formatted produced an unclearable FAIL.
- *
- * The prefixes admitted here carry no semantics — a bullet, an ordered marker, a table cell,
- * and emphasis wrappers. What still ends the section is prose: `1. Read [[PLAYER_TIER]] and
- * branch.` does not open with its key, so a use cannot declare itself.
- */
 const DECLARATION_LINE_RE =
   /^\s*(?:[-*+]\s*|\d+[.)]\s*)?[`*_]*\[\[[A-Za-z0-9_:-]+\]\]/;
 
 const TABLE_ROW_RE = /^\s*\|/;
 
-/**
- * The keys a line DECLARES — empty when it declares nothing.
- *
- * A table row used to declare every key it contained in any cell, so a warning row inside the
- * manifest's own table — `| Warning | never pass [[CUSTOMER_SSN]] to the model |` — declared
- * the key it exists to forbid, and the gate returned PASS on a body that echoed it. Deleting
- * that one row restored the FAIL. Structurally the same defect as a later table declaring for
- * the whole document, relocated one table earlier.
- *
- * A cell declares on the same rule as any other line: it must OPEN with the key. That keeps
- * the `Name | Placeholder | Meaning` layout working — the key is in cell two, but it is the
- * whole of cell two — while a prose cell mentioning a key declares nothing.
- */
 function declarationKeys(line: string): string[] {
   const collect = (s: string) => [...s.matchAll(RUNTIME_KEY_G)].map((m) => m[1]);
   if (TABLE_ROW_RE.test(line)) {
