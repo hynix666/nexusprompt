@@ -5,7 +5,7 @@
 committed copy is not what the spec produces; `core/test/manifest-spec.test.ts` runs
 every case below against the real gate. See ADR-0010.
 
-46 cases · 41 specified · 5 known limit(s), of which **1** in the unsafe direction.
+54 cases · 49 specified · 5 known limit(s), of which **1** in the unsafe direction.
 
 A *known limit* records what the gate **actually does today**, not what it should —
 so the row is honest and the suite stays green, while `wanted` records the
@@ -105,6 +105,17 @@ Every heading is read, not only the first. Both lines here match the heading rul
     
     BLOCK I
     Use [[REAL]].
+
+### `comment-empty-then-heading` → `PASS`
+
+A comment that opens and closes on one line does not suppress what follows. The must-not-fire half of comment suppression.
+
+    <!-- -->
+    ## Runtime Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
 
 ## Lines that do NOT open a manifest
 
@@ -229,6 +240,27 @@ Reading every heading must not mean reading every heading-LIKE line: the real ma
     
     ## BLOCK III
     Use [[A]] and [[SECRET]].
+
+### `comment-unclosed-suppresses` → `FAIL`
+
+An unclosed HTML comment suppresses every heading to end of document. The safe direction: an author who leaves a comment open gets a visible FAIL, not silent declarations.
+
+    <!--
+    ## Runtime Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-homoglyph-heading` → `FAIL`
+
+A Cyrillic homoglyph in the phrase is not the phrase. Pinned so a future case-folding or normalisation change cannot quietly make lookalikes match.
+
+    ## Runtime Vаriables
+    - [[SECRET]] - x
+    
+    ## BLOCK III
+    Echo [[SECRET]].
 
 ## Declaration syntaxes that are read
 
@@ -444,6 +476,17 @@ Found by this spec file on its first run: the row as originally written did not 
     
     Use [[T]].
 
+### `fence-tab-indented` → `FAIL`
+
+Found by the second Phase D sweep. `^ {0,3}` matched neither a tab-indented fence nor an indented code block, so the delimiter was invisible, the fence never opened, and a heading inside the sample was read as real. Strictly a tab is four columns and this is an indented code block rather than a fence -- but either reading must suppress the contents, and only one of them suppresses them here.
+
+    	```
+    ## Runtime Variables
+    - [[SECRET]] - x
+    	```
+    
+    Echo [[SECRET]].
+
 ## Known limits
 
 ### `limit-sub-headings` → `FAIL` — **known limit**, wants `PASS`
@@ -560,3 +603,47 @@ Every character the key pattern allows -- letters, digits, underscore, hyphen, c
     
     ## BLOCK III
     Use [[a-Z_0:9]].
+
+### `edge-front-matter` → `PASS`
+
+YAML front matter delimiters are not fences and do not suppress a later manifest.
+
+    ---
+    title: x
+    ---
+    
+    ## Runtime Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-tab-indented-declaration` → `PASS`
+
+A tab-indented declaration still declares. Tabs are ordinary indentation for list items, unlike fence delimiters where the column count changes the block type.
+
+    ## Runtime Variables
+    	- [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-many-keys-one-line` → `PASS`
+
+A declaration line declares every key on it, not just the first. Fifty on one line, and the last one is the one used.
+
+    ## Runtime Variables
+    [[K0]] [[K1]] [[K2]] [[K3]] [[K4]] [[K5]] [[K6]] [[K7]] [[K8]] [[K9]] [[K10]] [[K11]] [[K12]] [[K13]] [[K14]] [[K15]] [[K16]] [[K17]] [[K18]] [[K19]] [[K20]] [[K21]] [[K22]] [[K23]] [[K24]] [[K25]] [[K26]] [[K27]] [[K28]] [[K29]] [[K30]] [[K31]] [[K32]] [[K33]] [[K34]] [[K35]] [[K36]] [[K37]] [[K38]] [[K39]] [[K40]] [[K41]] [[K42]] [[K43]] [[K44]] [[K45]] [[K46]] [[K47]] [[K48]] [[K49]]
+    
+    ## BLOCK III
+    Use [[K49]].
+
+### `edge-manifest-in-table-cell` → `FAIL`
+
+A heading inside a table cell is not a document heading -- the line does not start with the phrase or a hash.
+
+    | Doc | Body |
+    | --- | --- |
+    | x | ## Runtime Variables [[SECRET]] |
+    
+    Echo [[SECRET]].
