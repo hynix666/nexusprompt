@@ -54,7 +54,12 @@ export function render(spec) {
     out.push("");
     for (const c of spec.cases.filter((x) => x.group === group)) {
       const tag = c.status === "known-limit" ? ` — **known limit**, wants \`${c.wanted}\`` : "";
-      out.push(`### \`${c.id}\` → \`${c.expect}\`${tag}`);
+      // Options are part of the case. Rendering the document without them would show a
+      // verdict the reader cannot reproduce from the text alone.
+      const opts = c.options && Object.keys(c.options).length
+        ? ` — options \`${JSON.stringify(c.options)}\``
+        : "";
+      out.push(`### \`${c.id}\` → \`${c.expect}\`${tag}${opts}`);
       out.push("");
       out.push(c.why);
       out.push("");

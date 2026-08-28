@@ -5,7 +5,7 @@
 committed copy is not what the spec produces; `core/test/manifest-spec.test.ts` runs
 every case below against the real gate. See ADR-0010.
 
-54 cases · 49 specified · 5 known limit(s), of which **1** in the unsafe direction.
+71 cases · 66 specified · 5 known limit(s), of which **1** in the unsafe direction.
 
 A *known limit* records what the gate **actually does today**, not what it should —
 so the row is honest and the suite stays green, while `wanted` records the
@@ -261,6 +261,61 @@ A Cyrillic homoglyph in the phrase is not the phrase. Pinned so a future case-fo
     
     ## BLOCK III
     Echo [[SECRET]].
+
+### `reject-key-in-heading-itself` → `FAIL`
+
+A key in the heading line is not a declaration -- declarations are the lines beneath it. Otherwise a prompt could whitelist a key by naming it in the heading.
+
+    ## Runtime Variables [[SECRET]]
+    
+    prose only
+    
+    ## BLOCK III
+    Echo [[SECRET]].
+
+### `reject-manifest-in-fence-in-comment` → `FAIL`
+
+Comment suppression and fence suppression compose; neither leaks through the other.
+
+    <!--
+    ```
+    # Runtime Variables
+    [[S]] - x
+    ```
+    -->
+    
+    Echo [[S]].
+
+### `reject-key-in-markdown-link` → `FAIL`
+
+A link whose text resembles a key is not a declaration line.
+
+    ## Runtime Variables
+    [[[A]]](http://x)
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-heading-indented-four` → `FAIL`
+
+Found by the fourth sweep. Indented four spaces a heading is an indented CODE BLOCK, so a sample written the indented way rather than the fenced way was whitelisting its keys. `^\s*` allowed any indentation; the bound is now three, matching the fence rule's boundary.
+
+        ## Runtime Variables
+        - [[SECRET]] - x
+    
+    Echo [[SECRET]].
+
+### `reject-nested-unclosed-comments` → `FAIL`
+
+HTML comments do not nest; the first `-->` closes. The heading sits before it, so it stays suppressed.
+
+    <!--
+    <!--
+    ## Runtime Variables
+    - [[S]] - x
+    -->
+    
+    Echo [[S]].
 
 ## Declaration syntaxes that are read
 
@@ -645,5 +700,334 @@ A heading inside a table cell is not a document heading -- the line does not sta
     | Doc | Body |
     | --- | --- |
     | x | ## Runtime Variables [[SECRET]] |
+    
+    Echo [[SECRET]].
+
+### `edge-phrase-case-insensitive` → `PASS`
+
+The phrase match is case-insensitive, matching the frozen linter's /i.
+
+    ## RUNTIME VARIABLES
+    - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-phrase-double-space` → `FAIL`
+
+Two spaces inside the phrase is not the phrase. Pinned so a future whitespace-tolerant rewrite is a decision rather than a side effect.
+
+    ## Runtime  Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-large-manifest` → `PASS`
+
+Two hundred entries. The scan is linear in lines; a 2000-entry version runs in single-digit milliseconds.
+
+    ## Runtime Variables
+    - [[K0]] - x
+    - [[K1]] - x
+    - [[K2]] - x
+    - [[K3]] - x
+    - [[K4]] - x
+    - [[K5]] - x
+    - [[K6]] - x
+    - [[K7]] - x
+    - [[K8]] - x
+    - [[K9]] - x
+    - [[K10]] - x
+    - [[K11]] - x
+    - [[K12]] - x
+    - [[K13]] - x
+    - [[K14]] - x
+    - [[K15]] - x
+    - [[K16]] - x
+    - [[K17]] - x
+    - [[K18]] - x
+    - [[K19]] - x
+    - [[K20]] - x
+    - [[K21]] - x
+    - [[K22]] - x
+    - [[K23]] - x
+    - [[K24]] - x
+    - [[K25]] - x
+    - [[K26]] - x
+    - [[K27]] - x
+    - [[K28]] - x
+    - [[K29]] - x
+    - [[K30]] - x
+    - [[K31]] - x
+    - [[K32]] - x
+    - [[K33]] - x
+    - [[K34]] - x
+    - [[K35]] - x
+    - [[K36]] - x
+    - [[K37]] - x
+    - [[K38]] - x
+    - [[K39]] - x
+    - [[K40]] - x
+    - [[K41]] - x
+    - [[K42]] - x
+    - [[K43]] - x
+    - [[K44]] - x
+    - [[K45]] - x
+    - [[K46]] - x
+    - [[K47]] - x
+    - [[K48]] - x
+    - [[K49]] - x
+    - [[K50]] - x
+    - [[K51]] - x
+    - [[K52]] - x
+    - [[K53]] - x
+    - [[K54]] - x
+    - [[K55]] - x
+    - [[K56]] - x
+    - [[K57]] - x
+    - [[K58]] - x
+    - [[K59]] - x
+    - [[K60]] - x
+    - [[K61]] - x
+    - [[K62]] - x
+    - [[K63]] - x
+    - [[K64]] - x
+    - [[K65]] - x
+    - [[K66]] - x
+    - [[K67]] - x
+    - [[K68]] - x
+    - [[K69]] - x
+    - [[K70]] - x
+    - [[K71]] - x
+    - [[K72]] - x
+    - [[K73]] - x
+    - [[K74]] - x
+    - [[K75]] - x
+    - [[K76]] - x
+    - [[K77]] - x
+    - [[K78]] - x
+    - [[K79]] - x
+    - [[K80]] - x
+    - [[K81]] - x
+    - [[K82]] - x
+    - [[K83]] - x
+    - [[K84]] - x
+    - [[K85]] - x
+    - [[K86]] - x
+    - [[K87]] - x
+    - [[K88]] - x
+    - [[K89]] - x
+    - [[K90]] - x
+    - [[K91]] - x
+    - [[K92]] - x
+    - [[K93]] - x
+    - [[K94]] - x
+    - [[K95]] - x
+    - [[K96]] - x
+    - [[K97]] - x
+    - [[K98]] - x
+    - [[K99]] - x
+    - [[K100]] - x
+    - [[K101]] - x
+    - [[K102]] - x
+    - [[K103]] - x
+    - [[K104]] - x
+    - [[K105]] - x
+    - [[K106]] - x
+    - [[K107]] - x
+    - [[K108]] - x
+    - [[K109]] - x
+    - [[K110]] - x
+    - [[K111]] - x
+    - [[K112]] - x
+    - [[K113]] - x
+    - [[K114]] - x
+    - [[K115]] - x
+    - [[K116]] - x
+    - [[K117]] - x
+    - [[K118]] - x
+    - [[K119]] - x
+    - [[K120]] - x
+    - [[K121]] - x
+    - [[K122]] - x
+    - [[K123]] - x
+    - [[K124]] - x
+    - [[K125]] - x
+    - [[K126]] - x
+    - [[K127]] - x
+    - [[K128]] - x
+    - [[K129]] - x
+    - [[K130]] - x
+    - [[K131]] - x
+    - [[K132]] - x
+    - [[K133]] - x
+    - [[K134]] - x
+    - [[K135]] - x
+    - [[K136]] - x
+    - [[K137]] - x
+    - [[K138]] - x
+    - [[K139]] - x
+    - [[K140]] - x
+    - [[K141]] - x
+    - [[K142]] - x
+    - [[K143]] - x
+    - [[K144]] - x
+    - [[K145]] - x
+    - [[K146]] - x
+    - [[K147]] - x
+    - [[K148]] - x
+    - [[K149]] - x
+    - [[K150]] - x
+    - [[K151]] - x
+    - [[K152]] - x
+    - [[K153]] - x
+    - [[K154]] - x
+    - [[K155]] - x
+    - [[K156]] - x
+    - [[K157]] - x
+    - [[K158]] - x
+    - [[K159]] - x
+    - [[K160]] - x
+    - [[K161]] - x
+    - [[K162]] - x
+    - [[K163]] - x
+    - [[K164]] - x
+    - [[K165]] - x
+    - [[K166]] - x
+    - [[K167]] - x
+    - [[K168]] - x
+    - [[K169]] - x
+    - [[K170]] - x
+    - [[K171]] - x
+    - [[K172]] - x
+    - [[K173]] - x
+    - [[K174]] - x
+    - [[K175]] - x
+    - [[K176]] - x
+    - [[K177]] - x
+    - [[K178]] - x
+    - [[K179]] - x
+    - [[K180]] - x
+    - [[K181]] - x
+    - [[K182]] - x
+    - [[K183]] - x
+    - [[K184]] - x
+    - [[K185]] - x
+    - [[K186]] - x
+    - [[K187]] - x
+    - [[K188]] - x
+    - [[K189]] - x
+    - [[K190]] - x
+    - [[K191]] - x
+    - [[K192]] - x
+    - [[K193]] - x
+    - [[K194]] - x
+    - [[K195]] - x
+    - [[K196]] - x
+    - [[K197]] - x
+    - [[K198]] - x
+    - [[K199]] - x
+    
+    ## BLOCK III
+    Use [[K199]].
+
+### `edge-bom` → `PASS`
+
+A byte-order mark before the first heading does not hide it.
+
+    ﻿## Runtime Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-heading-indented-three` → `PASS`
+
+Three spaces is still a heading. The must-not-fire half of the indent bound -- without it, bounding the indent would have been indistinguishable from forbidding indentation.
+
+       ## Runtime Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-list-continuation-manifest` → `PASS`
+
+A manifest inside a list continuation indents three spaces, which is why the bound is three and not zero.
+
+    1. Item
+    
+       ## Runtime Variables
+       - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-declaration-before-heading` → `FAIL`
+
+Declarations are the lines BENEATH a heading. One above it declares nothing, however it is formatted.
+
+    - [[A]] - x
+    ## Runtime Variables
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-mixed-line-endings` → `PASS`
+
+A document mixing CRLF and LF -- the state of half this repository -- reads the same as either alone.
+
+    ## Runtime Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-declaration-no-description` → `PASS`
+
+A key with no description is still a declaration.
+
+    ## Runtime Variables
+    - [[A]]
+    
+    ## BLOCK III
+    Use [[A]].
+
+## Options
+
+### `option-fenced-use-stripped` → `PASS`
+
+By default a key used only inside a fence is documentation, not a use, so it cannot be undeclared. The manifest is read from RAW text and uses from stripped text -- this row pins the stripped half.
+
+    ## Runtime Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    ```
+    Use [[UNDECLARED]] here.
+    ```
+
+### `option-fenced-use-included` → `FAIL` — options `{"includeFences":true}`
+
+With includeFences the same fenced key IS a use, and it is undeclared. Three sweeps ran before any varied this option -- a gate option nothing exercised is a branch nothing had observed.
+
+    ## Runtime Variables
+    - [[A]] - x
+    
+    ## BLOCK III
+    ```
+    Use [[UNDECLARED]] here.
+    ```
+
+### `option-fenced-example-included` → `FAIL` — options `{"includeFences":true}`
+
+includeFences changes what counts as a USE; it must NOT make a fenced heading declare. An invariance row: the verdict is FAIL with the option and without it, and the suite asserts both. The runner's discrimination check caught this row on its first run -- it was written as if the option mattered here, and it does not.
+
+    Example:
+    ```
+    # Runtime Variables
+    [[SECRET]] - x
+    ```
     
     Echo [[SECRET]].
