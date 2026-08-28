@@ -1350,6 +1350,30 @@ describe("check-repo-hygiene", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("fires on a tracked JSON file that does not parse", () => {
+    // Incident shape: 2ba1b32 truncated package-lock.json and shells/api/package.json
+    // mid-file. `npm ci` refused, CI could not install, and nothing local noticed because
+    // `npm install` repairs quietly.
+    const root = plant();
+    writeFileSync(join(root, "broken.json"), ['{ "a": 1,', "  }", "},"].join("\n"));
+    const r = run(root, [...clean, "broken.json"]);
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/`broken\.json` is not valid JSON/);
+  });
+
+  it("exempts files that are JSONC on purpose", () => {
+    // tsconfig.json carries comments and is read by a parser that accepts them. Without the
+    // exemption this rule would fire on every checkout, which is how a check gets ignored.
+    const root = plant();
+    writeFileSync(
+      join(root, "tsconfig.json"),
+      ["{", "  /* a comment */", '  "compilerOptions": {}', "}"].join("\n"),
+    );
+    const r = run(root, [...clean, "tsconfig.json"]);
+    expect(r.failures).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
   it("passes on the real repository, reading the real index", () => {
     // The one case that exercises `git ls-files`. If this fails, the repository itself is in
     // the state this checker was written for — read the failure, do not weaken the check.

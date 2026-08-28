@@ -4,9 +4,6 @@ export default defineConfig({
   test: {
     projects: [
       {
-        test: { name: "api", include: ["shells/api/test/**/*.test.ts"] },
-      },
-      {
         // Core runs under the purity harness: any network, filesystem, clock, or
         // randomness call during a Core test fails the suite.
         test: {
@@ -28,6 +25,9 @@ export default defineConfig({
         // process spawn plus a full pipeline run — and the only place wiring bugs are
         // visible: a composition root naming the wrong adapter, a flag that never reaches
         // the runner, an exit code that contradicts what happened.
+        // Covers shells/api too. It had a SECOND project of its own for a while, so every
+        // api test ran twice and failed twice — one failure, counted two ways, reads as a
+        // broader problem than it is.
         test: { name: "shells", include: ["shells/*/test/**/*.test.ts"], testTimeout: 120_000 },
       },
       {

@@ -29,9 +29,17 @@
  *      0.81 MB (`core/src/catalog/techniques.json`), so the 4 MB bound has fivefold headroom
  *      and still catches a model shard, a PDF, or a bundled binary. This is the rule that
  *      fires when something large arrives under a name nobody pinned.
+ *   5. Every tracked `.json` file parses. `2ba1b32` truncated `package-lock.json` and
+ *      `shells/api/package.json` mid-file; the first made `npm ci` refuse outright, so CI
+ *      could not install the project at all and every later failure was a symptom of that.
+ *      It went unnoticed for a day because `npm ci` is the one command a local checkout
+ *      never runs — `npm install` repairs quietly, which is precisely why the local tree
+ *      looked healthy. `JSONC_ALLOWED` names the files that are deliberately not JSON.
  *
- * Rules 1 and 2 are deliberately redundant, and rules 3 and 4 are too. Each pair covers the
- * other's blind spot: a named rule catches a known cost, a bound catches an unknown one.
+ * Rules 1 and 2 are deliberately redundant, and so are 3 and 4: a named rule catches a known
+ * cost, a bound catches an unknown one. Rule 5 is the odd one out and belongs here anyway —
+ * it is not about size or ignoring, it is the other way a commit can leave the repository
+ * unbuildable while every local command still passes.
  *
  * ## What it does NOT do
  *
@@ -73,6 +81,9 @@ export const FORBIDDEN_TRACKED_PREFIXES = ["node_modules/", "PDF/", "LLM/", ".ve
 
 /** Largest legitimate tracked file is 0.81 MB. Fivefold headroom, still catches a blob. */
 export const MAX_TRACKED_BYTES = 4 * 1024 * 1024;
+
+/** Files that carry comments on purpose and are read by tools that accept them. */
+export const JSONC_ALLOWED = ["tsconfig.json"];
 
 const readText = (path) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 
@@ -167,6 +178,25 @@ export function checkRepoHygiene(root = process.cwd(), opts = {}) {
       `bound. Large files are permanent: git keeps the blob whether or not a later commit ` +
       `removes it. If this one belongs here, raise the bound deliberately and say why.`,
     );
+  }
+
+  for (const path of tracked.filter((p) => p.endsWith(".json"))) {
+    if (JSONC_ALLOWED.includes(path)) continue;
+    let raw;
+    try {
+      raw = readText(join(root, path));
+    } catch {
+      continue; // Tracked but absent: rule 3's problem, not this one.
+    }
+    try {
+      JSON.parse(raw);
+    } catch (err) {
+      failures.push(
+        `\`${path}\` is not valid JSON: ${err.message}. A malformed manifest or lockfile is ` +
+        `invisible locally — \`npm ci\` is the one command a checkout never runs — and stops ` +
+        `CI at install, where every later failure looks like something else.`,
+      );
+    }
   }
 
   return { ok: failures.length === 0, failures, trackedCount: tracked.length, ruleCount: rules.length };

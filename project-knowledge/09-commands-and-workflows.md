@@ -17,7 +17,7 @@ differential oracle.
 | Command | What it checks |
 |---|---|
 | `npm run check:hygiene` | The repository's shape: pinned `.gitignore` rules, a rule-count floor, nothing vendored in the index, no tracked file over 4 MB. **Runs first in `verify`** |
-| `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 51 files, 151 imports |
+| `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 53 files, 160 imports |
 | `npm run typecheck` | `tsc --noEmit`, strict + 3 extra flags |
 | `npm run verify:sources` | Re-hashes 420 frozen files against `sources/MANIFEST.json` |
 | `npm run check:counts` | Re-derives every pinned number in the docs from the tree. 42 occurrences of 37 pins, including 9 in this knowledge base |
