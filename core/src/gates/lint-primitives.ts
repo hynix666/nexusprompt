@@ -143,8 +143,21 @@ export const clausePresent = (clause: string, low: string): boolean =>
  * author tests only the one they just fixed. When in doubt the accept-set loses — a rejected
  * manifest is a visible FAIL an author clears; an accepted non-manifest is a silent PASS.
  */
-const ATX_MANIFEST_HEADING_RE = /^\s*#+\s*Runtime Variables\s*(?:$|[(\[:–—-]|#)/i;
-const BARE_MANIFEST_HEADING_RE = /^\s*Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
+/**
+ * Indented four or more spaces, a heading is an indented CODE BLOCK, not a heading.
+ *
+ * `^\s*` allowed any indentation, so a four-space-indented `## Runtime Variables` opened a
+ * manifest and its entries declared -- a documentation sample written the indented way rather
+ * than the fenced way whitelisted its keys for the whole document.
+ *
+ * Note this is `^ {0,3}` where FENCE_LINE_RE is `^[ 	]{0,3}`, and the asymmetry is
+ * deliberate: both err safe, in opposite directions. A fence that fails to match does not
+ * open, so its contents stay readable -- unsafe -- and the class is widened. A heading that
+ * fails to match does not open a manifest, which is safe, so the class stays strict. A
+ * tab-indented heading therefore declares nothing, which is the answer we want anyway.
+ */
+const ATX_MANIFEST_HEADING_RE = /^ {0,3}#+\s*Runtime Variables\s*(?:$|[(\[:–—-]|#)/i;
+const BARE_MANIFEST_HEADING_RE = /^ {0,3}Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
 const isManifestHeading = (line: string): boolean =>
   ATX_MANIFEST_HEADING_RE.test(line) || BARE_MANIFEST_HEADING_RE.test(line);
 
@@ -225,7 +238,18 @@ const RUNTIME_KEY_G = /\[\[([A-Za-z0-9_:-]+)\]\]/g;
 
 export function extractRuntimeManifest(text: string): Set<string> {
   const declared = new Set<string>();
-  const lines = text.split("\n");
+  /**
+   * A byte-order mark is a file artifact, not indentation.
+   *
+   * Bounding the heading indent to three spaces — CommonMark: four makes it an indented code
+   * block — broke BOM-prefixed documents, which are ordinary on Windows. `﻿## Runtime
+   * Variables` stopped matching, so every declared key read as undeclared. The previous `\s*`
+   * had been absorbing the BOM by accident.
+   *
+   * Stripping it once, here, is the fix. Widening the indent class to include it would have
+   * been the same fix in the wrong place, and would have let a BOM stand in for a space.
+   */
+  const lines = text.replace(/^﻿/, "").split("\n");
 
   /**
    * A heading inside a fence is an EXAMPLE, and must not declare.
