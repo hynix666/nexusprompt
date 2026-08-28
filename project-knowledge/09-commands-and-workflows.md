@@ -29,6 +29,8 @@ differential oracle.
 | `npm run check:sizing` | What each suite can actually resolve; refuses an anchor that cannot certify |
 | `npm run check:anchor` | The committed anchor is what the generator produces |
 | `npm run check:matrix` | The committed capability matrix is what the repo produces |
+| `npm run check:manifest-spec` | The committed manifest-shapes document is what `spec/manifest-shapes.json` produces |
+| `npm run check:truth` | Re-derives the eight truth-boundary entries from the tree. Fails when a boundary moves — the first provider answer, a divergence retired, a known limit fixed |
 | `npm run check:fingerprint` | Fails on provider model drift; reports **"not armed"** until a run reaches a provider |
 | `npm run check:corpus` | Re-hashes 661 local PDFs. **Deliberately outside `verify`** |
 
