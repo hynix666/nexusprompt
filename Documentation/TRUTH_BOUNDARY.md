@@ -128,16 +128,16 @@ that event is a failing build, not a note in a backlog.
 
 `manifest-reading-is-specified` · probe `manifestSpec`
 
-**Establishes.** `RUNTIME_KEY_UNDECLARED` reads a runtime manifest according to 109 cases that are simultaneously the test, the generated document, and the thing ADR-0010 points at. Ninety-seven are specified behaviour. Twelve are known limits recorded as what the gate actually does today, each with the verdict it should return, so the row is honest and the suite is green at the same time — and a limit that starts returning its wanted verdict fails as stale rather than lingering.
+**Establishes.** `RUNTIME_KEY_UNDECLARED` reads a runtime manifest according to 135 cases that are simultaneously the test, the generated document, and the thing ADR-0010 points at. One hundred and twenty-three are specified behaviour. Twelve are known limits recorded as what the gate actually does today, each with the verdict it should return, so the row is honest and the suite is green at the same time — and a limit that starts returning its wanted verdict fails as stale rather than lingering.
 
-**Does not establish.** That the reader is correct, or that any other gate is specified at all. It is a heuristic over Markdown, and eleven of its twelve known limits err toward rejecting a manifest an author intended — a visible FAIL somebody clears. Exactly one errs the other way, toward a silent PASS nobody sees, and that is the direction that ships defects. The total rose from five to twelve across the fifth and sixth sweeps, which recorded what they found rather than leaving it to be rediscovered; **the unsafe count has not moved**, which is the number that matters. Nor is one gate one reader: the USE side is `stripDocumentationSpans`, a separate port with a different fence rule, and the two are reconciled by argument rather than by code — see ADR-0010. The other fifteen gates have tests but no specification: their behaviour is described in prose, which is the condition this artifact exists to escape from and has escaped for one gate only.
+**Does not establish.** That the reader is correct, or that any other gate is specified at all. It is a heuristic over Markdown, and eleven of its twelve known limits err toward rejecting a manifest an author intended — a visible FAIL somebody clears. Exactly one errs the other way, toward a silent PASS nobody sees, and that is the direction that ships defects. The total rose from five to twelve across the fifth and sixth sweeps, which recorded what they found rather than leaving it to be rediscovered; **the unsafe count has not moved across three sweeps**, which is the number that matters. The seventh sweep added twenty-six specified cases and no new limit — it found a regression rather than a gap, in delimiter code a previous sweep had just changed. Nor is one gate one reader: the USE side is `stripDocumentationSpans`, a separate port with a different fence rule, and the two are reconciled by argument rather than by code — see ADR-0010. The other fifteen gates have tests but no specification: their behaviour is described in prose, which is the condition this artifact exists to escape from and has escaped for one gate only.
 
 **Pinned:**
 
 ```json
 {
-  "cases": 109,
-  "specified": 97,
+  "cases": 135,
+  "specified": 123,
   "known_limits": 12,
   "unsafe_limits": 1,
   "gate": "RUNTIME_KEY_UNDECLARED"

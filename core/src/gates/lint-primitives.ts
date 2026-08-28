@@ -256,7 +256,26 @@ export function extractRuntimeManifest(text: string): Set<string> {
    * Stripping it once, here, is the fix. Widening the indent class to include it would have
    * been the same fix in the wrong place, and would have let a BOM stand in for a space.
    */
-  const lines = text.replace(/^﻿/, "").split("\n");
+  /**
+   * Split on BOTH line endings, so no `\r` is carried into the scan.
+   *
+   * This is not tidiness. `FENCE_LINE_RE` ends `(.*)$`, and in JavaScript `\r` IS a line
+   * terminator: `.` cannot consume it, and `$` without the `m` flag will not match before it.
+   * So a delimiter arriving as `` ```\r `` matched NOTHING. No fence ever opened, and every
+   * fenced documentation sample declared its keys for the whole document — the exact false
+   * clean the fence guard exists to prevent, reintroduced for every CRLF file. That is every
+   * local file in this repository; only `sources/**` is pinned to LF.
+   *
+   * Introduced by the sweep-six closer fix, which added `(.*)$` to read a closer's tail, and
+   * found by the seventh sweep. It is precisely the pattern this file's own header warns
+   * about: changing a matcher moves BOTH failure directions and the author tests only the one
+   * they just fixed. Two spec cases already asserted "CRLF changes no verdict" — neither
+   * contained a fence, so both stayed green while the claim became false.
+   *
+   * Normalising here fixes the class rather than one regex: no later pattern in this scan can
+   * trip over a `\r` it did not expect.
+   */
+  const lines = text.replace(/^﻿/, "").split(/\r?\n/);
 
   /**
    * A heading inside a fence is an EXAMPLE, and must not declare.

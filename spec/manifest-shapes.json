@@ -929,6 +929,218 @@
       "expect": "FAIL",
       "wanted": "PASS",
       "why": "An HTML heading renders as a heading and a reader sees no difference from the ATX form. Nothing parses HTML. Visible-FAIL direction, and the fix is a parser rather than another pattern -- the same conclusion as `limit-html-table-declaration`."
+    },
+    {
+      "id": "fence-crlf-bare-closer",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md\r\n## Runtime Variables\r\n- [[A]] - sample\r\n```\r\n\r\n## BLOCK III\r\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "THE SEVENTH SWEEP'S FINDING. `FENCE_LINE_RE` ends `(.*)$`, and in JavaScript a carriage return IS a line terminator: `.` cannot consume it and `$` without the `m` flag will not match before it. So a delimiter arriving as ```\\r matched nothing, no fence ever opened, and every fenced sample declared its keys for the whole document. That is the false clean the fence guard exists to prevent, reintroduced for every CRLF file -- which is every local file here. Introduced by the sweep-six closer fix; the scan now splits on /\\r?\\n/."
+    },
+    {
+      "id": "fence-crlf-closer-with-info-string",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md\r\nsample\r\n```md\r\n## Runtime Variables\r\n- [[A]] - the thing\r\n\r\n## BLOCK III\r\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "The other direction under CRLF: a closer carrying an info string must still fail to close. Normalising line endings must not soften the rule it exposed."
+    },
+    {
+      "id": "fence-crlf-tilde-closer",
+      "group": "Fences",
+      "status": "spec",
+      "text": "~~~md\r\n## Runtime Variables\r\n- [[A]] - sample\r\n~~~\r\n\r\n## BLOCK III\r\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Both previously untested halves at once -- tilde delimiters under CRLF."
+    },
+    {
+      "id": "edge-crlf-heading-and-declaration",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\r\n- [[A]] - the thing\r\n\r\n## BLOCK III\r\nUse [[A]].",
+      "expect": "PASS",
+      "why": "The ordinary case in the line ending this repository actually uses. `reject-crlf-never-log` and `edge-mixed-line-endings` already claimed CRLF changes no verdict; neither contained a fence, so both stayed green while the claim became false. This is the control that pairs with the three fence cases above."
+    },
+    {
+      "id": "fence-tilde-closer-with-info-string",
+      "group": "Fences",
+      "status": "spec",
+      "text": "~~~md\nsample\n~~~md\n## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Every closer case in the spec used backticks, so the bare-closer rule shipped tested on one delimiter character out of two. A tilde closer may not carry an info string either."
+    },
+    {
+      "id": "fence-tilde-closer-bare",
+      "group": "Fences",
+      "status": "spec",
+      "text": "~~~md\n## Runtime Variables\n- [[A]] - sample\n~~~\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "The control: a bare tilde closer DOES close, so the manifest was a sample and the later use is undeclared. Without it, 'a tilde closer must be bare' could be satisfied by never closing a tilde fence at all."
+    },
+    {
+      "id": "fence-tilde-closer-longer",
+      "group": "Fences",
+      "status": "spec",
+      "text": "~~~md\n## Runtime Variables\n- [[A]] - sample\n~~~~~\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A longer tilde run is a valid closer, as with backticks."
+    },
+    {
+      "id": "fence-tilde-closer-shorter",
+      "group": "Fences",
+      "status": "spec",
+      "text": "~~~~md\n## Runtime Variables\n- [[A]] - sample\n~~~\nstill inside\n~~~~\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A shorter run is content; the manifest stays inside the sample."
+    },
+    {
+      "id": "fence-tilde-closer-trailing-space",
+      "group": "Fences",
+      "status": "spec",
+      "text": "~~~md\n## Runtime Variables\n- [[A]] - sample\n~~~  \n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Trailing whitespace is permitted on a closer of either character."
+    },
+    {
+      "id": "fence-tilde-opener-backtick-closer",
+      "group": "Fences",
+      "status": "spec",
+      "text": "~~~md\n## Runtime Variables\n- [[A]] - sample\n```\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "options": {
+        "includeFences": true
+      },
+      "why": "A backtick run cannot close a tilde fence, so the heading never leaves the sample and A is used but never declared. The option is INVARIANT here, and the reason is worth pinning: stripDocumentationSpans does not recognise tilde fences at all, so with fences stripped it leaves the use in place, while extractRuntimeManifest does recognise them and keeps the heading out. The two readers disagree about tildes by design (ADR-0012), and this case is where that disagreement is visible -- both settings FAIL, by different routes.",
+      "options_invariant": true
+    },
+    {
+      "id": "fence-tilde-info-string-backticks",
+      "group": "Fences",
+      "status": "spec",
+      "text": "~~~`js`\n## Runtime Variables\n- [[A]] - sample\n~~~\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "CommonMark lets a TILDE opener's info string contain backticks, where a backtick opener's may not. It is still an opener, so the manifest inside is a sample."
+    },
+    {
+      "id": "fence-opener-trailing-whitespace",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md   \n## Runtime Variables\n- [[A]] - sample\n```\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Trailing spaces after an info string do not stop a line being an opener."
+    },
+    {
+      "id": "fence-opener-indented-three",
+      "group": "Fences",
+      "status": "spec",
+      "text": "   ```md\n## Runtime Variables\n- [[A]] - sample\n```\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "An opener may be indented up to three spaces, and the closer need not match its indent."
+    },
+    {
+      "id": "fence-opener-bare",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```\n## Runtime Variables\n- [[A]] - sample\n```\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "An opener with no info string at all is still an opener."
+    },
+    {
+      "id": "fence-two-backticks-not-a-fence",
+      "group": "Fences",
+      "status": "spec",
+      "text": "``\n## Runtime Variables\n- [[A]] - the thing\n``\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "A fence needs three or more, so nothing here is fenced and the heading is real. The lower boundary of the delimiter rule."
+    },
+    {
+      "id": "fence-ten-backticks",
+      "group": "Fences",
+      "status": "spec",
+      "text": "``````````\n## Runtime Variables\n- [[A]] - sample\n``````````\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Long runs are ordinary fences; nothing caps the length."
+    },
+    {
+      "id": "fence-adjacent-blocks",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```\nfirst\n```\n```\n## Runtime Variables\n- [[A]] - sample\n```\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Parity must survive back-to-back blocks: close, open, and the heading is inside the second."
+    },
+    {
+      "id": "fence-empty-block",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```\n```\n## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "An empty block opens and closes, leaving the heading outside it and real."
+    },
+    {
+      "id": "fence-three-delimiters-odd-parity",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```\n```\n```\n## Runtime Variables\n- [[A]] - sample\n```\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Open, close, open: the heading sits inside the third delimiter's block, which the fourth closes. Odd parity is where a toggle-based reader went wrong twice before."
+    },
+    {
+      "id": "heading-tab-after-hashes",
+      "group": "Headings that open a manifest",
+      "status": "spec",
+      "text": "#\tRuntime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "CommonMark accepts a space OR a tab after the hash run. Note the deliberate asymmetry with `reject-phrase-tab-separator`: the DELIMITER is permissive because CommonMark says so, while the PHRASE must be spelled with an ASCII space because an accept-set that grows one whitespace character at a time stops being checkable."
+    },
+    {
+      "id": "heading-many-spaces-after-hashes",
+      "group": "Headings that open a manifest",
+      "status": "spec",
+      "text": "#     Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "Any run of spaces after the hashes is one delimiter."
+    },
+    {
+      "id": "heading-six-hashes",
+      "group": "Headings that open a manifest",
+      "status": "spec",
+      "text": "###### Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "Six is the CommonMark maximum and must still be accepted -- the boundary `reject-atx-seven-hashes` bounds from the other side. A rule stated only by its rejection can be satisfied by rejecting everything."
+    },
+    {
+      "id": "heading-closing-sequence-spaced",
+      "group": "Headings that open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables ##\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "A spaced closing hash sequence is not part of the heading text."
+    },
+    {
+      "id": "heading-hash-after-phrase",
+      "group": "Headings that open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables#\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "Strictly the rendered text is `Runtime Variables#`, since a closing sequence needs a preceding space. Accepted anyway: a trailing hash is a qualifier the accept-set already admits, and the shape is unambiguous to a reader."
+    },
+    {
+      "id": "reject-heading-emoji-tail",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables 🔑\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "An unrecognised tail means the heading is about more than the manifest. Same family as the slash and comma separators: ambiguous shapes lose."
+    },
+    {
+      "id": "edge-empty-heading-then-bare-phrase",
+      "group": "Edges",
+      "status": "spec",
+      "text": "#\nRuntime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "An empty ATX heading, then the bare-phrase form on its own line -- which the reader accepts, because that is the shape the v5 BLUEPRINT emits."
     }
   ]
 }
