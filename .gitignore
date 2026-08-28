@@ -1,1 +1,100 @@
+node_modules/
+dist/
+*.zip
+.nexusprompt/
+# The pre-ADR-0009 runtime directory. Kept ignored rather than deleted: it holds run
+# bundles the CLI wrote under the old name, and an ignore rule is cheaper than a migration
+# for data nothing reads.
+.promptnexus/
 
+# Literature corpora. Third-party published papers, read against the project but
+# never ported from — their canonical home is arXiv, and PDF/ alone is 2079 MB
+# against a 6 MB tracked repository. Documentation/LITERATURE_CORPUS.md records
+# what was checked and the SHA-256 of each file checked, which is what makes a
+# finding re-verifiable; the bytes themselves are not evidence of anything.
+PDF/
+
+# Loose archive extractions. `sources/` is the only place source material is tracked,
+# because it is the only place hashes are pinned — verify:sources re-checks all 420 files
+# against MANIFEST.json on every build, and a copy outside it is verified by nothing.
+#
+# These two are not hypothetical clutter. Both hold `promptnexus-v5/prompt_lint.py` with
+# FIFTEEN gates, missing DUPLICATE_INSTRUCTION; the frozen `sources/v5/prompt_lint.py` came
+# from the later files_4 drop and has sixteen. So an extraction that looks current is a
+# linter one gate behind the one the differential oracle compares against.
+#
+# That is the third time a stale duplicate has turned up beside a frozen original here: a
+# nine-stage SystemPromptBuilderPipeline.tsx sits in the repo root with a NEWER mtime than
+# the frozen eleven-stage one, and Phase 3 opened by building check:stages because of it.
+# Ignoring these keeps the trap out of history without deleting anyone's working copy.
+#
+# Archives keep being extracted into this working directory while work is going on, so
+# `git add -A` here is unsafe: six of these appeared BETWEEN a `git status` and the commit
+# that followed it, and swept 327 unintended files into a 4-file change. Stage explicit
+# paths in this repository, never `-A` or `.`.
+#
+# `systempromptbuilder/` carries its own `.git/`, so `git add` records it as a gitlink —
+# a submodule pointer to a repository that is not registered anywhere. That one does not
+# merely bloat history, it produces a tree git cannot check out cleanly.
+Nexus-Prompt/
+Prompt-Nexus/
+promptnexus-v5/
+PromptNexus-6.2/
+System-Prompt-Builder-final-*/
+promptnexus5/
+synth/
+system-prompt-builder-diff-fix/
+systempromptbuilder/
+#
+# `promptnexus-ci/` is filesZ.zip despite the name — catalog.js, PromptNexus.jsx,
+# test_app_scope.py and two nested tarballs. It is the historical toolkit archive, NOT CI
+# configuration for this repository, which still has none. Its PromptNexus.jsx is 178,520
+# bytes against the frozen 179,558 from the later files_4 drop: the fifth stale duplicate
+# found beside a frozen original here. Note also that `*.zip` above does not cover the
+# `.tar.gz` files inside it.
+promptnexus-ci/
+#
+# `promptnexus-v6-benchmark/` is a specification skeleton, NOT the independent v6
+# implementation ADR-0007 wants. That ADR says a v6-equivalent "should be preferred over
+# the frozen linter" as the oracle, so this directory is exactly what someone would assume
+# had arrived — its `src/lint/prompt_lint.py` is titled "14-Gate Static Analysis Engine"
+# and is 29 lines that raise NotImplementedError. Zero gates against the frozen v5's
+# sixteen. A name broader than its mechanism, in a filename.
+#
+# Checked so nobody spends an afternoon wiring it into scripts/differential.ts. If a real
+# v6 lands later it belongs in sources/ with a manifest entry, not loose here.
+promptnexus-v6-benchmark/
+
+# Model weights. 815 MB against a 6 MB tracked repository, and git keeps blobs forever —
+# committing this once makes every future clone carry it whether or not a later commit
+# removes it. Weights are also not source: nothing here re-derives or verifies them, and
+# the repository has no runtime that loads one.
+LLM/
+
+# Generated catalog export bundles. 593 files, five serializations of the same 195 records,
+# byte-equivalent to core/src/catalog/techniques.json — the only difference across all 195
+# is JSON key order inside usage_templates.
+#
+# This project does track a generated artifact, techniques.json, but only because
+# `check:catalog` re-derives it from the frozen catalog plus catalog-additions.json on every
+# build and fails on any drift. NOTHING IN THE REPOSITORY GENERATES THIS BUNDLE, so nothing
+# could ever check it. A tracked copy that no checker re-derives is a claim with no verifier.
+#
+# The name bakes in the record count, so the directory is stale the moment the catalog
+# reaches 196 — the fourth stale-duplicate-beside-a-tracked-original here, after the
+# nine-stage pipeline component and two copies of a fifteen-gate linter.
+#
+# If a distributable bundle is wanted, the fix is an exporter script wired into `verify`,
+# not a directory committed once and diverging quietly thereafter.
+final_bundle_*/
+
+# ── Added with shells/api (2026-08-28) ─────────────────────────────────────────
+# The API shell is a workspace with its own package.json. Its build output and any
+# local env file stay out of the tree; its dependencies are NOT installed and the
+# shell is excluded from the root typecheck until that is a deliberate decision —
+# see tsconfig.json and Documentation/07-dependencies.md's zero-runtime-dependency
+# property, which adding fastify would end.
+shells/*/dist/
+.env
+.env.*
+*.log

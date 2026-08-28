@@ -48,6 +48,36 @@ The entries most worth knowing before quoting anything:
 Crossing a boundary is a failing build naming what moved — the point being that this is the
 one moment anyone reliably re-reads the sentence attached to it.
 
+## The recurring failure nobody had a checker for: `.gitignore`
+
+Emptied **three times** by automated commits — `7ede11a`, `83890f1` (repaired by `bf1fd4d`),
+and `8ee5d0a`. The third truncated it to zero bytes and tracked **3,677 node_modules files in
+the same commit**, which is how `.git` reached 2.3 GB. At the moment it was found, `PDF/`
+(2.0 GB) and `LLM/` (815 MB) were ignored by nothing and tracked by nothing: one `git add -A`
+from entering history permanently.
+
+The structural cause is stated plainly because it generalises: **every checker in this
+repository verified the repository's CONTENT, and none verified its SHAPE.** So the same
+failure landed three times and was found three times by hand, each time by someone noticing
+a `git status` that looked wrong.
+
+`npm run check:hygiene` closes it, and runs first in `verify`. Four rules in two deliberately
+redundant pairs — a pinned rule set and a floor on the rule count; a vendor-prefix ban and a
+4 MB size bound. Each pair covers the other's blind spot: a named rule catches a known cost,
+a bound catches an unknown one. An ignore rule also does nothing for a path that is *already*
+tracked, which is precisely the state `8ee5d0a` left behind, so the index is checked
+separately from the file.
+
+Two things worth carrying forward:
+
+- **The truth boundary caught this on its own.** Two of its eight entries failed —
+  `run_bundles_are_gitignored` and `gitignored` both derived `false`. It was built to notice
+  when a claim stops being true, and the first thing it noticed was not a claim about the
+  product but about the repository.
+- **`git rm -r --cached` stops the bleeding; it does not clean the wound.** The blobs are on
+  `origin` and every clone carries them. Removing them means rewriting published history,
+  which is the owner's decision, not a checker's.
+
 ## Open register — each with a closing condition
 
 | Open | Closes when |

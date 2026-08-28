@@ -17,6 +17,7 @@ import { checkStages } from "../scripts/check-stages.mjs";
 import { checkCorpus, buildManifest } from "../scripts/check-corpus.mjs";
 import { checkCounts } from "../scripts/check-counts.mjs";
 import { checkFingerprint } from "../scripts/check-fingerprint.mjs";
+import { checkRepoHygiene } from "../scripts/check-repo-hygiene.mjs";
 import { collect, render } from "../scripts/generate-capability-matrix.mjs";
 
 /**
@@ -1250,5 +1251,110 @@ describe("implausibleKeyReason", () => {
     for (const k of [secretish, "<your key>", "short"]) {
       expect(implausibleKeyReason(k) ?? "").not.toContain(k);
     }
+  });
+});
+
+/**
+ * Repository hygiene: the shape of the repository rather than its content.
+ *
+ * This checker exists because `.gitignore` was emptied three times by automated commits and
+ * found three times by hand. The must-fire cases below are each one of those incidents,
+ * reduced to a fixture — and the reason they are here at all is that a checker with only a
+ * must-not-fire case is indistinguishable from a checker that never fires, which is precisely
+ * how the previous three went unnoticed.
+ *
+ * `listTracked` and `sizeOf` are injected so a fixture needs neither a git repository nor a
+ * four-megabyte file on disk. The last case runs the real thing against the real repository,
+ * so the git path is exercised for real at least once.
+ */
+describe("check-repo-hygiene", () => {
+  const GOOD_RULES = [
+    "node_modules/", "dist/", "*.zip", ".nexusprompt/", ".promptnexus/", "PDF/",
+    "Nexus-Prompt/", "Prompt-Nexus/", "promptnexus-v5/", "PromptNexus-6.2/",
+    "System-Prompt-Builder-final-*/", "promptnexus5/", "synth/",
+    "system-prompt-builder-diff-fix/", "systempromptbuilder/", "promptnexus-ci/",
+    "promptnexus-v6-benchmark/", "LLM/", "final_bundle_*/", "shells/*/dist/",
+    ".env", ".env.*", "*.log",
+  ];
+
+  const plant = (rules: string[] = GOOD_RULES, body = "# a comment\n\n") => {
+    const root = mkroot("hygiene-");
+    writeFileSync(join(root, ".gitignore"), body + rules.join("\n") + "\n");
+    return root;
+  };
+
+  const clean = ["core/src/index.ts", "package.json"];
+  const run = (root: string, tracked = clean, sizes: Record<string, number> = {}) =>
+    checkRepoHygiene(root, {
+      listTracked: () => tracked,
+      sizeOf: (p: string) => sizes[p] ?? 100,
+    });
+
+  it("passes on a well-formed repository", () => {
+    const r = run(plant());
+    expect(r.failures).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.ruleCount).toBe(GOOD_RULES.length);
+  });
+
+  it("fires when a pinned rule is dropped", () => {
+    // Incident shape: a rule removed while the rest of the file survives.
+    const r = run(plant(GOOD_RULES.filter((x) => x !== "PDF/")));
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/no longer carries `PDF\/`/);
+  });
+
+  it("fires when the file is truncated below the floor", () => {
+    // Incident shape: 8ee5d0a, which left the file empty. The pinned set alone cannot see a
+    // rule nobody thought to pin, which is why the floor is a separate check.
+    const r = run(plant(["node_modules/", "PDF/", "LLM/", ".promptnexus/", ".nexusprompt/", "dist/", "*.zip"]));
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/below the floor of 20/);
+  });
+
+  it("treats a missing .gitignore as fatal, not as a failure", () => {
+    const root = mkroot("hygiene-");
+    const r = checkRepoHygiene(root, { listTracked: () => clean });
+    expect(r.fatalCode).toBe(2);
+    expect(r.fatal).toMatch(/missing entirely/);
+  });
+
+  it("fires when a vendor directory is tracked, and counts the damage", () => {
+    // Incident shape: the same commit that emptied .gitignore tracked 3,677 of these.
+    const tracked = [...clean, "node_modules/esbuild/bin/esbuild", "node_modules/typescript/lib/tsc.js"];
+    const r = run(plant(), tracked);
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/2 tracked file\(s\) under `node_modules\/`/);
+  });
+
+  it("fires on a vendor directory even when .gitignore is perfect", () => {
+    // The two rules are deliberately redundant: an ignore rule does nothing for a path that
+    // is ALREADY tracked, which is exactly the state 8ee5d0a left behind.
+    const r = run(plant(), [...clean, "PDF/2301.00234.pdf"]);
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/tracked file\(s\) under `PDF\/`/);
+  });
+
+  it("fires on an oversized tracked file under a name nobody pinned", () => {
+    const r = run(plant(), [...clean, "assets/model.bin"], { "assets/model.bin": 9 * 1024 * 1024 });
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/`assets\/model\.bin` is 9\.0 MB/);
+  });
+
+  it("does not fire just below the size bound", () => {
+    // Without this the size rule could be satisfied by firing on everything.
+    const r = run(plant(), [...clean, "core/src/catalog/techniques.json"], {
+      "core/src/catalog/techniques.json": 4 * 1024 * 1024,
+    });
+    expect(r.failures).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("passes on the real repository, reading the real index", () => {
+    // The one case that exercises `git ls-files`. If this fails, the repository itself is in
+    // the state this checker was written for — read the failure, do not weaken the check.
+    const r = checkRepoHygiene(__dirnameShim + "/..");
+    expect(r.failures ?? []).toEqual([]);
+    expect(r.ok).toBe(true);
   });
 });

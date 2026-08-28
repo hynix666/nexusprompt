@@ -95,7 +95,8 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 
 | Command | What it does |
 |---|---|
-| `npm run verify` | boundaries → typecheck → source freeze → tests → differential oracle. The whole check, ~10s. |
+| `npm run verify` | hygiene → boundaries → typecheck → source freeze → tests → differential oracle. The whole check. |
+| `npm run check:hygiene` | The repository's own SHAPE, not its content: pinned `.gitignore` rules, a floor on the rule count, nothing tracked under `node_modules/` `PDF/` `LLM/`, no tracked file over 4 MB. Written after `.gitignore` was emptied by automated commits **three times** — the third also tracked 3,677 dependency files. |
 | `npm run lint:boundaries` | Import-boundary rule (`scripts/check-boundaries.mjs`). |
 | `npm run verify:sources` | Re-hashes all 420 frozen files against `MANIFEST.json`. |
 | `npm test` | Vitest: projects `core`, `application`, `adapters`, `shells`, `contracts`. |
