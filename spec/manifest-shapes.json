@@ -472,6 +472,463 @@
       "text": "| Doc | Body |\n| --- | --- |\n| x | ## Runtime Variables [[SECRET]] |\n\nEcho [[SECRET]].",
       "expect": "FAIL",
       "why": "A heading inside a table cell is not a document heading -- the line does not start with the phrase or a hash."
+    },
+    {
+      "id": "option-fenced-use-stripped",
+      "group": "Options",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - x\n\n## BLOCK III\n```\nUse [[UNDECLARED]] here.\n```",
+      "expect": "PASS",
+      "why": "By default a key used only inside a fence is documentation, not a use, so it cannot be undeclared. The manifest is read from RAW text and uses from stripped text -- this row pins the stripped half."
+    },
+    {
+      "id": "option-fenced-use-included",
+      "group": "Options",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - x\n\n## BLOCK III\n```\nUse [[UNDECLARED]] here.\n```",
+      "expect": "FAIL",
+      "options": {
+        "includeFences": true
+      },
+      "why": "With includeFences the same fenced key IS a use, and it is undeclared. Three sweeps ran before any varied this option -- a gate option nothing exercised is a branch nothing had observed."
+    },
+    {
+      "id": "option-fenced-example-included",
+      "group": "Options",
+      "status": "spec",
+      "text": "Example:\n```\n# Runtime Variables\n[[SECRET]] - x\n```\n\nEcho [[SECRET]].",
+      "expect": "FAIL",
+      "options": {
+        "includeFences": true
+      },
+      "why": "includeFences changes what counts as a USE; it must NOT make a fenced heading declare. An invariance row: the verdict is FAIL with the option and without it, and the suite asserts both. The runner's discrimination check caught this row on its first run -- it was written as if the option mattered here, and it does not.",
+      "options_invariant": true
+    },
+    {
+      "id": "reject-key-in-heading-itself",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables [[SECRET]]\n\nprose only\n\n## BLOCK III\nEcho [[SECRET]].",
+      "expect": "FAIL",
+      "why": "A key in the heading line is not a declaration -- declarations are the lines beneath it. Otherwise a prompt could whitelist a key by naming it in the heading."
+    },
+    {
+      "id": "reject-manifest-in-fence-in-comment",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "<!--\n```\n# Runtime Variables\n[[S]] - x\n```\n-->\n\nEcho [[S]].",
+      "expect": "FAIL",
+      "why": "Comment suppression and fence suppression compose; neither leaks through the other."
+    },
+    {
+      "id": "reject-key-in-markdown-link",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables\n[[[A]]](http://x)\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A link whose text resembles a key is not a declaration line."
+    },
+    {
+      "id": "edge-phrase-case-insensitive",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## RUNTIME VARIABLES\n- [[A]] - x\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "The phrase match is case-insensitive, matching the frozen linter's /i."
+    },
+    {
+      "id": "edge-phrase-double-space",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime  Variables\n- [[A]] - x\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Two spaces inside the phrase is not the phrase. Pinned so a future whitespace-tolerant rewrite is a decision rather than a side effect."
+    },
+    {
+      "id": "edge-large-manifest",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[K0]] - x\n- [[K1]] - x\n- [[K2]] - x\n- [[K3]] - x\n- [[K4]] - x\n- [[K5]] - x\n- [[K6]] - x\n- [[K7]] - x\n- [[K8]] - x\n- [[K9]] - x\n- [[K10]] - x\n- [[K11]] - x\n- [[K12]] - x\n- [[K13]] - x\n- [[K14]] - x\n- [[K15]] - x\n- [[K16]] - x\n- [[K17]] - x\n- [[K18]] - x\n- [[K19]] - x\n- [[K20]] - x\n- [[K21]] - x\n- [[K22]] - x\n- [[K23]] - x\n- [[K24]] - x\n- [[K25]] - x\n- [[K26]] - x\n- [[K27]] - x\n- [[K28]] - x\n- [[K29]] - x\n- [[K30]] - x\n- [[K31]] - x\n- [[K32]] - x\n- [[K33]] - x\n- [[K34]] - x\n- [[K35]] - x\n- [[K36]] - x\n- [[K37]] - x\n- [[K38]] - x\n- [[K39]] - x\n- [[K40]] - x\n- [[K41]] - x\n- [[K42]] - x\n- [[K43]] - x\n- [[K44]] - x\n- [[K45]] - x\n- [[K46]] - x\n- [[K47]] - x\n- [[K48]] - x\n- [[K49]] - x\n- [[K50]] - x\n- [[K51]] - x\n- [[K52]] - x\n- [[K53]] - x\n- [[K54]] - x\n- [[K55]] - x\n- [[K56]] - x\n- [[K57]] - x\n- [[K58]] - x\n- [[K59]] - x\n- [[K60]] - x\n- [[K61]] - x\n- [[K62]] - x\n- [[K63]] - x\n- [[K64]] - x\n- [[K65]] - x\n- [[K66]] - x\n- [[K67]] - x\n- [[K68]] - x\n- [[K69]] - x\n- [[K70]] - x\n- [[K71]] - x\n- [[K72]] - x\n- [[K73]] - x\n- [[K74]] - x\n- [[K75]] - x\n- [[K76]] - x\n- [[K77]] - x\n- [[K78]] - x\n- [[K79]] - x\n- [[K80]] - x\n- [[K81]] - x\n- [[K82]] - x\n- [[K83]] - x\n- [[K84]] - x\n- [[K85]] - x\n- [[K86]] - x\n- [[K87]] - x\n- [[K88]] - x\n- [[K89]] - x\n- [[K90]] - x\n- [[K91]] - x\n- [[K92]] - x\n- [[K93]] - x\n- [[K94]] - x\n- [[K95]] - x\n- [[K96]] - x\n- [[K97]] - x\n- [[K98]] - x\n- [[K99]] - x\n- [[K100]] - x\n- [[K101]] - x\n- [[K102]] - x\n- [[K103]] - x\n- [[K104]] - x\n- [[K105]] - x\n- [[K106]] - x\n- [[K107]] - x\n- [[K108]] - x\n- [[K109]] - x\n- [[K110]] - x\n- [[K111]] - x\n- [[K112]] - x\n- [[K113]] - x\n- [[K114]] - x\n- [[K115]] - x\n- [[K116]] - x\n- [[K117]] - x\n- [[K118]] - x\n- [[K119]] - x\n- [[K120]] - x\n- [[K121]] - x\n- [[K122]] - x\n- [[K123]] - x\n- [[K124]] - x\n- [[K125]] - x\n- [[K126]] - x\n- [[K127]] - x\n- [[K128]] - x\n- [[K129]] - x\n- [[K130]] - x\n- [[K131]] - x\n- [[K132]] - x\n- [[K133]] - x\n- [[K134]] - x\n- [[K135]] - x\n- [[K136]] - x\n- [[K137]] - x\n- [[K138]] - x\n- [[K139]] - x\n- [[K140]] - x\n- [[K141]] - x\n- [[K142]] - x\n- [[K143]] - x\n- [[K144]] - x\n- [[K145]] - x\n- [[K146]] - x\n- [[K147]] - x\n- [[K148]] - x\n- [[K149]] - x\n- [[K150]] - x\n- [[K151]] - x\n- [[K152]] - x\n- [[K153]] - x\n- [[K154]] - x\n- [[K155]] - x\n- [[K156]] - x\n- [[K157]] - x\n- [[K158]] - x\n- [[K159]] - x\n- [[K160]] - x\n- [[K161]] - x\n- [[K162]] - x\n- [[K163]] - x\n- [[K164]] - x\n- [[K165]] - x\n- [[K166]] - x\n- [[K167]] - x\n- [[K168]] - x\n- [[K169]] - x\n- [[K170]] - x\n- [[K171]] - x\n- [[K172]] - x\n- [[K173]] - x\n- [[K174]] - x\n- [[K175]] - x\n- [[K176]] - x\n- [[K177]] - x\n- [[K178]] - x\n- [[K179]] - x\n- [[K180]] - x\n- [[K181]] - x\n- [[K182]] - x\n- [[K183]] - x\n- [[K184]] - x\n- [[K185]] - x\n- [[K186]] - x\n- [[K187]] - x\n- [[K188]] - x\n- [[K189]] - x\n- [[K190]] - x\n- [[K191]] - x\n- [[K192]] - x\n- [[K193]] - x\n- [[K194]] - x\n- [[K195]] - x\n- [[K196]] - x\n- [[K197]] - x\n- [[K198]] - x\n- [[K199]] - x\n\n## BLOCK III\nUse [[K199]].",
+      "expect": "PASS",
+      "why": "Two hundred entries. The scan is linear in lines; a 2000-entry version runs in single-digit milliseconds."
+    },
+    {
+      "id": "edge-bom",
+      "group": "Edges",
+      "status": "spec",
+      "text": "﻿## Runtime Variables\n- [[A]] - x\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "A byte-order mark before the first heading does not hide it."
+    },
+    {
+      "id": "reject-heading-indented-four",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "    ## Runtime Variables\n    - [[SECRET]] - x\n\nEcho [[SECRET]].",
+      "expect": "FAIL",
+      "why": "Found by the fourth sweep. Indented four spaces a heading is an indented CODE BLOCK, so a sample written the indented way rather than the fenced way was whitelisting its keys. `^\\s*` allowed any indentation; the bound is now three, matching the fence rule's boundary."
+    },
+    {
+      "id": "edge-heading-indented-three",
+      "group": "Edges",
+      "status": "spec",
+      "text": "   ## Runtime Variables\n- [[A]] - x\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "Three spaces is still a heading. The must-not-fire half of the indent bound -- without it, bounding the indent would have been indistinguishable from forbidding indentation."
+    },
+    {
+      "id": "edge-list-continuation-manifest",
+      "group": "Edges",
+      "status": "spec",
+      "text": "1. Item\n\n   ## Runtime Variables\n   - [[A]] - x\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "A manifest inside a list continuation indents three spaces, which is why the bound is three and not zero."
+    },
+    {
+      "id": "edge-declaration-before-heading",
+      "group": "Edges",
+      "status": "spec",
+      "text": "- [[A]] - x\n## Runtime Variables\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Declarations are the lines BENEATH a heading. One above it declares nothing, however it is formatted."
+    },
+    {
+      "id": "reject-nested-unclosed-comments",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "<!--\n<!--\n## Runtime Variables\n- [[S]] - x\n-->\n\nEcho [[S]].",
+      "expect": "FAIL",
+      "why": "HTML comments do not nest; the first `-->` closes. The heading sits before it, so it stays suppressed."
+    },
+    {
+      "id": "edge-mixed-line-endings",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\r\n- [[A]] - x\n\r\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "A document mixing CRLF and LF -- the state of half this repository -- reads the same as either alone."
+    },
+    {
+      "id": "edge-declaration-no-description",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]]\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "A key with no description is still a declaration."
+    },
+    {
+      "id": "reject-atx-no-space",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "#Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "CommonMark requires whitespace after the hash run, so `#Runtime Variables` renders as a paragraph and the reader of the compiled prompt sees no manifest at all. The pattern was `#+s*`, and `s*` matches zero characters, so a line that is not a heading opened one and every declaration-shaped line beneath it silenced the gate. Found by the fifth sweep; the source linter shares the pattern, so this is a declared divergence under ADR-0010."
+    },
+    {
+      "id": "reject-atx-seven-hashes",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "####### Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "ATX headings stop at six hashes; a seventh makes the line a paragraph. Same false-clean shape as `reject-atx-no-space` and closed by the same bound, `#{1,6}`."
+    },
+    {
+      "id": "fence-four-closed-by-three",
+      "group": "Fences",
+      "status": "spec",
+      "text": "````md\n## Runtime Variables\n- [[A]] - example\n```\nstill inside\n````\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A closing run must be at least as long as the opener, so the three-backtick line is content and the manifest stays inside the sample. Pinned because fence arithmetic is where three of the five rounds went wrong."
+    },
+    {
+      "id": "fence-mismatched-char-with-fences-included",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md\n## Runtime Variables\n- [[A]] - example\n~~~\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "options": {
+        "includeFences": true
+      },
+      "why": "A tilde run cannot close a backtick fence, so the fence runs to end of document and the heading never declares. This case needs `includeFences` to say anything at all: with fences stripped the unclosed fence swallows the USE as well, leaving nothing to report and PASS the only correct answer. The fifth sweep first wrote it the other way and produced a false finding — a fixture that cannot contain the defect it is aimed at."
+    },
+    {
+      "id": "bound-thematic-break-ends-section",
+      "group": "Where the section ends",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n---\n- [[B]] - later prose\n\n## BLOCK III\nUse [[A]] and [[B]].",
+      "expect": "FAIL",
+      "why": "A thematic break ends the run of declaration lines. B sits after the rule and is not declared, so a use of it is a use."
+    },
+    {
+      "id": "reject-nested-list-heading",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "- outer\n  - ## Runtime Variables\n    - [[A]] - example\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A heading indented into a nested list item is an example inside prose, not the document's manifest. Same family as `reject-listitem-heading`, two levels deeper."
+    },
+    {
+      "id": "limit-blockquoted-declaration",
+      "group": "Known limits",
+      "status": "known-limit",
+      "text": "## Runtime Variables\n> - [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "wanted": "PASS",
+      "why": "The heading is real and the row is legible; quoting it is a style choice. The declaration matcher does not admit a `>` prefix, so the section ends at once. Visible-FAIL direction. Fix would treat a blockquote marker as scaffolding, like a bullet or a table cell."
+    },
+    {
+      "id": "limit-setext-heading",
+      "group": "Known limits",
+      "status": "known-limit",
+      "text": "Runtime Variables\n=================\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "wanted": "PASS",
+      "why": "A setext H1 is a real heading and renders exactly like the ATX form. The bare-phrase pattern requires the phrase alone on its line and the `=` underline is a separate line nothing looks at. Visible-FAIL direction; the `---` form is already recorded as `reject-setext-heading` and rejected for a different reason."
+    },
+    {
+      "id": "limit-commented-key-counts-as-use",
+      "group": "Known limits",
+      "status": "known-limit",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].\n<!-- todo: also [[B]] -->",
+      "expect": "FAIL",
+      "wanted": "PASS",
+      "why": "A key inside an HTML comment is invisible in the rendered prompt and interpolates nothing, so it is not a use. Comments suppress HEADING detection but are not stripped before uses are collected. Visible-FAIL direction, and deliberately not fixed here: stripping comments before use collection is the kind of widening that has twice opened a false clean elsewhere, so it wants its own probe in both directions."
+    },
+    {
+      "id": "limit-checkbox-declaration",
+      "group": "Known limits",
+      "status": "known-limit",
+      "text": "## Runtime Variables\n- [ ] [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "wanted": "PASS",
+      "why": "A task-list marker is list scaffolding exactly as a bullet or an ordered marker is, and the manifest reader already admits both. The declaration pattern does not allow a `[ ]` between the marker and the key. Visible-FAIL direction."
+    },
+    {
+      "id": "limit-html-table-declaration",
+      "group": "Known limits",
+      "status": "known-limit",
+      "text": "## Runtime Variables\n<table><tr><td>[[A]]</td><td>the thing</td></tr></table>\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "wanted": "PASS",
+      "why": "An HTML table under a real heading declares as visibly as a pipe table, which the reader does admit. Nothing parses HTML. Visible-FAIL direction, and the fix is a parser rather than another prefix."
+    },
+    {
+      "id": "limit-comment-opener-inside-fence",
+      "group": "Known limits",
+      "status": "known-limit",
+      "text": "```md\n<!-- fenced sample, not a real comment\n```\n\n## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "wanted": "PASS",
+      "why": "A comment opener inside a fence is sample text and must not suppress a real heading that follows. Comment tracking runs over every line including fenced ones, so the unclosed opener suppresses the rest of the document. Visible-FAIL direction. Fix would skip comment tracking while a fence is open — which is the ordering the fence and heading scans already use for headings."
+    },
+    {
+      "id": "fence-closer-with-info-string",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md\nsample\n```md\n## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "CommonMark allows only whitespace after a CLOSING delimiter run; an info string makes the line content. Reading it as a closer flips fence parity for the rest of the document, so a sample that should stay hidden becomes visible and the heading inside it declares for real. Found by the sixth sweep, in the unsafe direction. The shape only discriminates because A is used: with a valid closer the same document PASSes, which is what `fence-closer-trailing-spaces` controls for."
+    },
+    {
+      "id": "fence-closer-with-attributes",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md\nsample\n```{.md #id}\n## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Same rule, attribute-style info string. Anything but whitespace after the run means the line is not a closer."
+    },
+    {
+      "id": "fence-closer-trailing-spaces",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md\n## Runtime Variables\n- [[A]] - sample\n```   \n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Trailing whitespace IS allowed on a closer, so the fence closes here and the manifest was only a sample. The control for the two cases above: without it, 'require a bare closer' could be satisfied by rejecting every closer, and the fence would never close at all."
+    },
+    {
+      "id": "fence-closer-longer-than-opener",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md\n## Runtime Variables\n- [[A]] - sample\n`````\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A closer must be at least as long as the opener, not exactly as long. Five closes a three."
+    },
+    {
+      "id": "fence-closer-indented-three",
+      "group": "Fences",
+      "status": "spec",
+      "text": "```md\n## Runtime Variables\n- [[A]] - sample\n   ```\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Up to three spaces of indent is still a closer; four would be an indented code block, which `fence-indented-closer` already records."
+    },
+    {
+      "id": "reject-phrase-nbsp",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A non-breaking space renders as a space, so this is the same class as `reject-homoglyph-heading`: a heading that reads correctly and is not the one it appears to be. The established policy is that ambiguous renders lose, and the rejection is a visible FAIL an author clears by retyping the space."
+    },
+    {
+      "id": "reject-phrase-narrow-nbsp",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Same, narrow form."
+    },
+    {
+      "id": "reject-phrase-zero-width",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime​ Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A zero-width space renders as nothing at all, which is the sharpest form of the same class."
+    },
+    {
+      "id": "reject-phrase-tab-separator",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime\tVariables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A tab between the words renders as whitespace. Rejected for consistency with the three above rather than because a tab is suspicious: the phrase is spelled one way, and admitting a second spelling per whitespace character is how an accept-set stops being checkable."
+    },
+    {
+      "id": "reject-phrase-singular",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variable\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "The singular is a different heading and the reader does not guess."
+    },
+    {
+      "id": "reject-heading-slash-separator",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables / Placeholders\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A slash is not in the admitted separator set, so the heading is about more than the manifest."
+    },
+    {
+      "id": "reject-heading-comma-separator",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "## Runtime Variables, and where they come from\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Same family as `reject-heading-and-their-sources`, with a comma."
+    },
+    {
+      "id": "decl-table-separator-row",
+      "group": "Declaration syntaxes that are read",
+      "status": "spec",
+      "text": "## Runtime Variables\n| Key | Meaning |\n|---|---|\n| [[A]] | the thing |\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "A header and a separator are the scaffolding every Markdown table has; a keyless row inside a table run does not end the manifest."
+    },
+    {
+      "id": "decl-table-third-cell",
+      "group": "Declaration syntaxes that are read",
+      "status": "spec",
+      "text": "## Runtime Variables\n| # | Owner | Key |\n|---|---|---|\n| 1 | host | [[A]] |\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "Which column carries the key is a layout choice. `decl-table-second-cell` covers one column over; this covers arbitrary position."
+    },
+    {
+      "id": "decl-table-header-cell-key",
+      "group": "Declaration syntaxes that are read",
+      "status": "spec",
+      "text": "## Runtime Variables\n| [[A]] | Meaning |\n|---|---|\n| example | the thing |\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "Unusual, but visible and unambiguous."
+    },
+    {
+      "id": "bound-prose-before-table",
+      "group": "Where the section ends",
+      "status": "spec",
+      "text": "## Runtime Variables\nThe host supplies these:\n| Key | Meaning |\n|---|---|\n| [[A]] | the thing |\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "A prose line ends the declaration run, so a table below it is outside the manifest. This is the cost of the run rule and it is deliberate: the alternative is a span that reaches forward past arbitrary prose, which is the defect ADR-0010 exists to fix."
+    },
+    {
+      "id": "bound-table-run-broken-by-prose",
+      "group": "Where the section ends",
+      "status": "spec",
+      "text": "## Runtime Variables\n| [[A]] | the thing |\nand also:\n| [[B]] | the other |\n\n## BLOCK III\nUse [[A]] and [[B]].",
+      "expect": "FAIL",
+      "why": "The prose line ends the run; B is below it and undeclared."
+    },
+    {
+      "id": "edge-two-identical-headings",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "PASS",
+      "why": "The second heading opens a section whose declaration run holds A. An empty first section declares nothing and harms nothing."
+    },
+    {
+      "id": "edge-manifest-heading-last-line",
+      "group": "Edges",
+      "status": "spec",
+      "text": "Use [[A]].\n\n## Runtime Variables",
+      "expect": "FAIL",
+      "why": "An empty manifest at end of document declares nothing, and the use above it is still a use."
+    },
+    {
+      "id": "bound-deeper-then-shallower-heading",
+      "group": "Where the section ends",
+      "status": "spec",
+      "text": "### Runtime Variables\n- [[A]] - the thing\n\n# Notes\n- [[B]] - mentioned\n\n## BLOCK III\nUse [[A]] and [[B]].",
+      "expect": "FAIL",
+      "why": "B sits under a different heading; the manifest ended at the first non-declaration line, regardless of heading depth."
+    },
+    {
+      "id": "reject-indented-code-block-heading",
+      "group": "Lines that do NOT open a manifest",
+      "status": "spec",
+      "text": "Example:\n\n    ## Runtime Variables\n    - [[A]] - sample\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "why": "Four spaces makes an indented code block, and a heading inside a sample declares nothing. The `^ {0,3}` bound produces this; `reject-heading-indented-four` pins the bound itself."
+    },
+    {
+      "id": "edge-use-in-inline-code-span",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]]. Write `[[B]]` to reference a key.",
+      "expect": "PASS",
+      "why": "An inline code span is stripped along with the fences, so a key shown as syntax is not a use. This is `stripDocumentationSpans` doing its job on the USE side, not the manifest reader -- the two are different code with different fence rules, which `fence-closer-with-info-string` is also about."
+    },
+    {
+      "id": "edge-use-in-link-target",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]]. See [docs](https://example.test/[[B]]).",
+      "expect": "FAIL",
+      "why": "A key in a URL is interpolated at runtime like any other. `reject-key-in-markdown-link` covers the link TEXT; this covers the target."
+    },
+    {
+      "id": "edge-dotted-key-is-not-a-key",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[user.name]].",
+      "expect": "PASS",
+      "why": "A dot is outside the key charset, so `[[user.name]]` is not a key this gate knows about in either position. Worth pinning because it is a limit of the CHARSET rather than of the manifest reader: a template engine supporting dotted paths would need the charset widened in both the declaration and the use reader, and widening one alone is exactly how a false clean gets built."
+    },
+    {
+      "id": "edge-key-with-nbsp-is-not-a-key",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A B]] - the thing\n\n## BLOCK III\nUse [[A B]].",
+      "expect": "PASS",
+      "why": "Not a key under the charset in either position, so there is nothing to report. The symmetry is the point."
+    },
+    {
+      "id": "limit-html-heading",
+      "group": "Known limits",
+      "status": "known-limit",
+      "text": "<h2>Runtime Variables</h2>\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
+      "expect": "FAIL",
+      "wanted": "PASS",
+      "why": "An HTML heading renders as a heading and a reader sees no difference from the ATX form. Nothing parses HTML. Visible-FAIL direction, and the fix is a parser rather than another pattern -- the same conclusion as `limit-html-table-declaration`."
     }
   ]
 }

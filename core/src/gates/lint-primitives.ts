@@ -143,8 +143,21 @@ export const clausePresent = (clause: string, low: string): boolean =>
  * author tests only the one they just fixed. When in doubt the accept-set loses — a rejected
  * manifest is a visible FAIL an author clears; an accepted non-manifest is a silent PASS.
  */
-const ATX_MANIFEST_HEADING_RE = /^\s*#+\s*Runtime Variables\s*(?:$|[(\[:–—-]|#)/i;
-const BARE_MANIFEST_HEADING_RE = /^\s*Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
+/**
+ * Indented four or more spaces, a heading is an indented CODE BLOCK, not a heading.
+ *
+ * `^\s*` allowed any indentation, so a four-space-indented `## Runtime Variables` opened a
+ * manifest and its entries declared -- a documentation sample written the indented way rather
+ * than the fenced way whitelisted its keys for the whole document.
+ *
+ * Note this is `^ {0,3}` where FENCE_LINE_RE is `^[ 	]{0,3}`, and the asymmetry is
+ * deliberate: both err safe, in opposite directions. A fence that fails to match does not
+ * open, so its contents stay readable -- unsafe -- and the class is widened. A heading that
+ * fails to match does not open a manifest, which is safe, so the class stays strict. A
+ * tab-indented heading therefore declares nothing, which is the answer we want anyway.
+ */
+const ATX_MANIFEST_HEADING_RE = /^ {0,3}#{1,6}[ 	]+Runtime Variables\s*(?:$|[(\[:–—-]|#)/i;
+const BARE_MANIFEST_HEADING_RE = /^ {0,3}Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
 const isManifestHeading = (line: string): boolean =>
   ATX_MANIFEST_HEADING_RE.test(line) || BARE_MANIFEST_HEADING_RE.test(line);
 
@@ -219,13 +232,24 @@ function declarationKeys(line: string): string[] {
  * fence never opened, and a heading inside the sample was read as real document. Either
  * reading suppresses the contents; only one of them suppresses them HERE. Safe direction.
  */
-const FENCE_LINE_RE = /^[ 	]{0,3}(`{3,}|~{3,})/;
+const FENCE_LINE_RE = /^[ 	]{0,3}(`{3,}|~{3,})(.*)$/;
 
 const RUNTIME_KEY_G = /\[\[([A-Za-z0-9_:-]+)\]\]/g;
 
 export function extractRuntimeManifest(text: string): Set<string> {
   const declared = new Set<string>();
-  const lines = text.split("\n");
+  /**
+   * A byte-order mark is a file artifact, not indentation.
+   *
+   * Bounding the heading indent to three spaces — CommonMark: four makes it an indented code
+   * block — broke BOM-prefixed documents, which are ordinary on Windows. `﻿## Runtime
+   * Variables` stopped matching, so every declared key read as undeclared. The previous `\s*`
+   * had been absorbing the BOM by accident.
+   *
+   * Stripping it once, here, is the fix. Widening the indent class to include it would have
+   * been the same fix in the wrong place, and would have let a BOM stand in for a space.
+   */
+  const lines = text.replace(/^﻿/, "").split("\n");
 
   /**
    * A heading inside a fence is an EXAMPLE, and must not declare.
@@ -241,7 +265,12 @@ export function extractRuntimeManifest(text: string): Set<string> {
    */
   /** The open fence's delimiter, or null outside one. Closing needs the same char, >= length. */
   let openFence: string | null = null;
-  const fenceOf = (line: string): string | null => FENCE_LINE_RE.exec(line)?.[1] ?? null;
+  /** The delimiter run and whatever follows it on the line. An opener may carry an info
+   *  string; a closer may not, which is the whole reason `rest` is returned at all. */
+  const fenceOf = (line: string): { run: string; rest: string } | null => {
+    const m = FENCE_LINE_RE.exec(line);
+    return m ? { run: m[1]!, rest: m[2]! } : null;
+  };
 
   /**
    * A commented-out manifest is not a manifest.
@@ -271,10 +300,24 @@ export function extractRuntimeManifest(text: string): Set<string> {
 
     const fence = fenceOf(lines[h]);
     if (fence) {
-      if (openFence === null) openFence = fence;
-      // CommonMark: a closing fence is the same character and at least as long as the opener.
-      // Length-aware, so a ``` inside a ```` block is content and does not reopen the document.
-      else if (fence[0] === openFence[0] && fence.length >= openFence.length) openFence = null;
+      // An OPENER may carry an info string -- ```md, ```{.md #id}, ```text. That is what the
+      // string is for.
+      if (openFence === null) openFence = fence.run;
+      // A CLOSER may not. CommonMark allows only whitespace after the delimiter run, and the
+      // difference is not pedantic: reading ```md as a closer flips fence parity for the rest
+      // of the document, so a sample that should stay hidden becomes visible and a heading
+      // inside it declares for real. Found by the sixth sweep, and it is the unsafe direction
+      // -- a silent PASS on a key the reader never saw declared.
+      //
+      // Failing to close is safe here, which is the opposite of the opener asymmetry recorded
+      // above: an unclosed fence hides MORE, and hidden content declares nothing.
+      else if (
+        fence.run[0] === openFence[0] &&
+        fence.run.length >= openFence.length &&
+        fence.rest.trim() === ""
+      ) {
+        openFence = null;
+      }
       continue;
     }
     if (openFence !== null || !isManifestHeading(lines[h])) continue;

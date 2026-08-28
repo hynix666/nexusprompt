@@ -118,8 +118,19 @@ node scripts/generate-capability-matrix.mjs           # write
 node scripts/generate-capability-matrix.mjs --check   # fail if the committed file differs
 ```
 
-Used by `docs:matrix`, `build:anchor`, `import:catalog`. A document anyone can hand-edit
-asserts whatever its last editor believed.
+Used by `docs:matrix`, `docs:manifest-spec`, `docs:truth`, `build:anchor`, `import:catalog`.
+A document anyone can hand-edit asserts whatever its last editor believed.
+
+Two refinements the later ones added:
+
+- **Normalise line endings before comparing.** `check:catalog` was red on every Windows
+  checkout for 195 byte-identical records because the committed file was CRLF and the
+  rendered string LF. A generated-artifact check that fails for a reason unrelated to its
+  subject trains people to ignore it.
+- **Pin the expected value as well as deriving it.** `docs:truth` compares three things, not
+  two: the declared scope, the derived reality, and the rendered document. A derivation alone
+  reports whatever is true today and never objects, so nothing marks the moment a guarantee
+  changed.
 
 ### 8. Widen the mechanism, not the exception
 

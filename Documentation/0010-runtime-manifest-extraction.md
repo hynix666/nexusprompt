@@ -1,6 +1,6 @@
 # ADR-0010: The runtime manifest is a declaration list, not a span to end-of-file
 
-**Status:** Accepted — 25 August 2026
+**Status:** Accepted — 25 August 2026 · amended 28 August 2026 (§§ *A heading has to be a heading*, *A closer has to be bare*)
 **Amends:** nothing. **Authorises:** entries 0 and 1 in `scripts/divergence-allowlist.json`.
 **Related:** ADR-0007 (the differential oracle is permanent), ADR-0002 (contract-first).
 
@@ -160,6 +160,106 @@ and `RUNTIME_KEY_UNDECLARED` share a file and shared one constant, so bumping th
 changed would have bumped the one that did not. Versions are per-gate now, and
 `core/test/ported-gates.test.ts` pins all sixteen pairs so the next behaviour change has to
 decide rather than omit.
+
+## Amendment, 28 August 2026 — a heading has to be a heading
+
+The rule this ADR set is that the manifest is a **run of declaration lines under a heading**.
+It said nothing about what makes something a heading, and the inherited pattern was
+`#+\s*Runtime Variables`. Two things follow from that which nobody intended:
+
+- `\s*` matches **zero** characters, so `#Runtime Variables` opens a manifest. CommonMark
+  requires whitespace after the hash run; without it the line is a paragraph, and a reader of
+  the compiled prompt sees no heading at all.
+- `#+` is unbounded, so `####### Runtime Variables` opens one too. ATX headings stop at six.
+
+Both are the unsafe direction, and in the sharpest form available: a line that **renders as
+ordinary text** silences the gate for every declaration-shaped line beneath it, and nothing in
+the output says a manifest was found. This is the same failure the original decision was about
+— a use declaring itself — reached through the opening delimiter rather than the closing one.
+
+**Decision.** The pattern is `#{1,6}[ 	]+`: at most six hashes, at least one space or tab,
+which is exactly what a Markdown renderer requires. Everything else about the rule is
+unchanged.
+
+The narrowing can only produce a **visible FAIL** an author clears by adding a space. That is
+the trade this ADR already chose and it is worth restating, because the argument is what makes
+the change safe rather than merely stricter: a rejected manifest is a failure someone sees and
+fixes; an accepted non-manifest is a silent PASS nobody sees. **Ambiguous shapes lose.**
+
+The source linter shares the pattern, so this is a fourth allowlist entry under this ADR
+(`source_verdict: PASS`, `port_verdict: FAIL`). Worth noting how it was found: **no case in
+the differential corpus exercises the shape**, so the oracle never raised it and could not
+have. It came from the fifth adversarial sweep, and the allowlist entry is what records a
+decision the oracle is blind to — without it, someone restoring `#+\s*` to match the source
+would see nothing fail.
+
+Twelve cases were added to `spec/manifest-shapes.json` in the same change: the two shapes
+above as specified behaviour, four confirming fence and section-boundary handling the sweep
+probed, and six recorded as known limits. All six err toward a visible FAIL. **The unsafe-limit
+count stayed at one**, which is the number this ADR is actually about — the total rising from
+five to eleven is a record of what was looked at, not of behaviour getting worse.
+
+## Amendment, 28 August 2026 — a closer has to be bare
+
+Found by the sixth sweep, one round after the heading fix and in the mirror-image place: the
+opening delimiter was the previous amendment, this is the closing one.
+
+The fence tracker checked a candidate closer for the right character and a long enough run,
+and nothing else. CommonMark allows only whitespace after a closing delimiter run — an info
+string makes the line content. So a document containing
+
+    ```md
+    sample
+    ```md
+    ## Runtime Variables
+    - [[A]] - the thing
+
+read the second ``` ```md ``` as a close. That **flips fence parity for the rest of the
+document**: a sample that should stay hidden becomes visible, the heading inside it is read as
+real, and its keys declare. A use of one of them then passes silently, which is the direction
+this ADR exists to close.
+
+**Decision.** A closer must be the delimiter run followed by whitespace only. Openers are
+unchanged — an info string is what an opener is *for*.
+
+Failing to close is the safe direction here, and it is worth saying because it is the opposite
+of the asymmetry recorded for openers: an unclosed fence hides **more**, and hidden content
+declares nothing. A fence that fails to *open* leaves its contents readable, which is why the
+opener class is deliberately wide. The two rules err in opposite syntactic directions and the
+same semantic one.
+
+### What this made visible: two fence readers, deliberately different
+
+`extractRuntimeManifest` reads fences for the HEADING side; `stripDocumentationSpans` reads
+them for the USE side, and is a port of frozen source consumed by six gates. They now differ
+in three ways — tilde fences, indent tolerance, and this closer rule.
+
+That is recorded rather than repaired, and the argument is that both differences err the same
+way: the strip reader closes more eagerly, so it strips less and the gates see more; the
+manifest reader closes less eagerly, so it declares less and this gate fires more. Both are
+the visible-FAIL direction. A false clean would need a declaration the strip reader considers
+visible while the use is hidden, and the heading indent cap rules that out — a four-space
+fence opens for the stripper while the heading inside it is an indented code block for the
+manifest reader, so it declares nothing.
+
+Unifying them is not a patch. It changes six gates' verdicts, each of which is a differential
+divergence to declare, and it wants its own ADR.
+
+### The sweep this came from
+
+Twenty-six cases were added to `spec/manifest-shapes.json` (83 → 109). Five pin the closer
+rule, including the control that a closer with only trailing whitespace still closes — without
+it, "require a bare closer" could be satisfied by never closing at all.
+
+Six reject the manifest phrase spelled with anything but an ASCII space: non-breaking, narrow
+non-breaking, zero-width, tab, the singular, and two unadmitted separators. That is the
+`reject-homoglyph-heading` policy applied consistently, and it is worth noting the sweep first
+recorded three of them as defects on the grounds that they render as a space. They do. The
+policy is that ambiguous renders lose, and an accept-set that grows one whitespace character
+at a time stops being checkable.
+
+One is a new known limit — an `<h2>` HTML heading, which renders as a heading and is refused,
+the same conclusion as the HTML table row. **The unsafe-limit count is still one.**
 
 ## Alternatives rejected
 

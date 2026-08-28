@@ -16,11 +16,11 @@ differential oracle.
 
 | Command | What it checks |
 |---|---|
-| `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 50 files, 144 imports |
+| `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 51 files, 151 imports |
 | `npm run typecheck` | `tsc --noEmit`, strict + 3 extra flags |
 | `npm run verify:sources` | Re-hashes 420 frozen files against `sources/MANIFEST.json` |
 | `npm run check:counts` | Re-derives every pinned number in the docs from the tree. 42 occurrences of 37 pins, including 9 in this knowledge base |
-| `npm run check:plan` | 15 machine-checked claims in `IMPLEMENTATION_PLAN.md` |
+| `npm run check:plan` | 16 machine-checked claims in `IMPLEMENTATION_PLAN.md` |
 | `npm run check:citations` | Every catalog citation internally consistent (195 records) |
 | `npm run check:catalog` | `import:catalog --check` — the committed catalog is what the importer produces |
 | `npm run check:xsd` | Catalog against its XSD (libxml2-wasm) |
@@ -29,6 +29,8 @@ differential oracle.
 | `npm run check:sizing` | What each suite can actually resolve; refuses an anchor that cannot certify |
 | `npm run check:anchor` | The committed anchor is what the generator produces |
 | `npm run check:matrix` | The committed capability matrix is what the repo produces |
+| `npm run check:manifest-spec` | The committed manifest-shapes document is what `spec/manifest-shapes.json` produces |
+| `npm run check:truth` | Re-derives the eight truth-boundary entries from the tree. Fails when a boundary moves — the first provider answer, a divergence retired, a known limit fixed |
 | `npm run check:fingerprint` | Fails on provider model drift; reports **"not armed"** until a run reaches a provider |
 | `npm run check:corpus` | Re-hashes 661 local PDFs. **Deliberately outside `verify`** |
 
@@ -45,14 +47,16 @@ differential oracle.
 | `npm run eval:adversarial` | the adversarial corpus |
 | `npm run eval:anchor` | the 4,906-case anchor through `compare()` |
 | `npm run build:anchor` | regenerates `eval/gate-recall-anchor.json` from seed 1 |
-| `npm run differential` | ported gates vs the frozen Python linter — 2,768 verdicts, 16 differing deliberately |
+| `npm run differential` | ported gates vs the frozen Python linter — 2,784 verdicts, 17 differing deliberately |
 | `npm run differential -- --n 800 --seed 7` | a longer / different generated corpus |
 
 ### Tests, docs, CLI
 
 ```bash
 npm test                 npm run test:core        npm run test:app
-npm run docs:matrix      # regenerate CAPABILITY_MATRIX.md
+npm run docs:matrix          # regenerate CAPABILITY_MATRIX.md
+npm run docs:manifest-spec   # regenerate MANIFEST_SHAPES.md from spec/manifest-shapes.json
+npm run docs:truth           # regenerate TRUTH_BOUNDARY.md from spec/truth-boundary.json
 npm run cli -- lint <file>
 npm run cli -- pipeline <file> --stakes HIGH --reflexive 2
 npm run cli -- gates

@@ -25,6 +25,17 @@ interface SpecCase {
   group: string;
   status: "spec" | "known-limit";
   text: string;
+  /** Gate options. A case that varies one MUST be run with it — see the assertion below. */
+  options?: Record<string, unknown>;
+  /**
+   * Set when the row exists to assert the option changes NOTHING here.
+   *
+   * Without this, "the option must change the verdict" would be the only allowed intent, and
+   * an invariance claim — `includeFences` must not make a fenced heading declare — could not
+   * be expressed. Declaring the intent beats inferring it: the assertion then checks the
+   * claim the author actually made.
+   */
+  options_invariant?: boolean;
   expect: "PASS" | "FAIL" | "WARN";
   wanted?: string;
   why: string;
@@ -51,7 +62,7 @@ describe("spec/manifest-shapes.json — the manifest rule, executed", () => {
   it.each(spec.cases.map((c) => [c.id, c] as const))(
     "%s",
     (_id, c) => {
-      expect({ id: c.id, verdict: runtimeKeyUndeclared(c.text).verdict })
+      expect({ id: c.id, verdict: runtimeKeyUndeclared(c.text, (c.options ?? {}) as never).verdict })
         .toEqual({ id: c.id, verdict: c.expect });
     },
   );
@@ -73,6 +84,38 @@ describe("spec/manifest-shapes.json — the manifest rule, executed", () => {
       expect(runtimeKeyUndeclared(c.text).verdict).not.toBe(c.wanted);
     },
   );
+
+  it("actually applies each case's options", () => {
+    /**
+     * The runner ignored `options` until 2026-08-28, so a row varying one ran with defaults
+     * and its recorded verdict was right or wrong by luck. Three `includeFences` rows were
+     * added before anyone noticed — a row the suite silently ignores is worse than no row,
+     * because the documentation renders it as covered.
+     *
+     * This asserts the option is load-bearing: every options-carrying case must produce a
+     * DIFFERENT verdict without its options. If it does not, the row is not testing the option
+     * and should either be given a discriminating fixture or lose the options field.
+     */
+    const withOptions = spec.cases.filter((c) => c.options && Object.keys(c.options).length > 0);
+    expect(withOptions.length).toBeGreaterThan(0);
+    for (const c of withOptions) {
+      const withOpts = runtimeKeyUndeclared(c.text, c.options as never).verdict;
+      const without = runtimeKeyUndeclared(c.text).verdict;
+      expect({ id: c.id, withOpts }).toEqual({ id: c.id, withOpts: c.expect });
+
+      if (c.options_invariant) {
+        // The row claims the option changes nothing. Assert exactly that, so the claim is
+        // checked rather than merely stated.
+        expect({ id: c.id, withOpts, without }).toEqual({ id: c.id, withOpts: c.expect, without: c.expect });
+      } else if (withOpts === without) {
+        throw new Error(
+          `${c.id} carries options ${JSON.stringify(c.options)} but produces ${withOpts} either ` +
+          `way. Either the row does not test what it claims, or it is an invariance claim and ` +
+          `should set options_invariant: true.`,
+        );
+      }
+    }
+  });
 
   it("records at most one known limit in the unsafe direction", () => {
     /**

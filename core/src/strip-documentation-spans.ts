@@ -9,6 +9,32 @@
 // The source uses a line-based state machine rather than a dot-all regex, so a fence
 // opened and never closed strips to EOF. That is deliberate and safe-side: an unclosed
 // template block stays exempt rather than becoming auditable. The port preserves it.
+//
+// ## There are TWO fence readers in this codebase, and they do not agree
+//
+// This one, and `extractRuntimeManifest` in `gates/lint-primitives.ts`. Stated here because
+// the file's own history is full of the cost of two readers of one concept drifting apart —
+// the two declaration readers that accepted disjoint syntaxes, the manifest span that meant
+// something different from the ledger span.
+//
+//                        this (USE side)              extractRuntimeManifest (HEADING side)
+//   tilde fences         not recognised at all        recognised
+//   indent               any amount (left-trimmed)    at most three spaces
+//   closer + info string treated as a closer          NOT a closer (CommonMark)
+//
+// The divergence is deliberate and is NOT a defect, for one reason: it errs the same way in
+// both directions. This reader closing MORE eagerly strips LESS, so more text is audited and
+// the six gates that call it fire more often. The manifest reader closing LESS eagerly hides
+// MORE, so fewer keys are declared and RUNTIME_KEY_UNDECLARED fires more often. Both are the
+// visible-FAIL direction. A false clean would need the opposite pairing — a declaration this
+// reader considers visible while the use is hidden — and the heading indent cap is what rules
+// that out: a four-space-indented fence opens here but the heading inside it is an indented
+// code block over there, so it declares nothing.
+//
+// Do not "unify" them without an ADR. This function is a port of frozen source (lines
+// 250-276) consumed by six gates, so changing its fence rule changes six gates' verdicts and
+// every one of those is a differential divergence to declare. The manifest reader is already
+// carved out by ADR-0010; this one is not.
 
 /** Count leading backticks after left-trimming whitespace. */
 function leadingTicks(line: string): number {

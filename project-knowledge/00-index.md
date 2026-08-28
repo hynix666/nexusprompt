@@ -4,7 +4,7 @@ A compact, self-contained record of this project, written so a new session (or a
 can rebuild, extend, or reason about it without reading the whole tree.
 
 Generated 23 August 2026 at commit `f19dc83`; revised 25 August 2026 after the SPB
-defect-parity audit.
+defect-parity audit, and 28 August 2026 after the truth boundary landed.
 
 > **Nine of the structural counts below are pinned.** `npm run check:counts` re-derives them
 > from the repository and fails the build when a number here disagrees with the tree — the
@@ -43,16 +43,16 @@ components were rejected by it.
 | Language / runtime | TypeScript 5.9, Node 24, ESM, `module: NodeNext` |
 | Package manager | **npm workspaces** — *not* pnpm (pnpm is not installed; older docs say otherwise) |
 | Repo | `github.com/hynix666/nexusprompt` (private), branch `master`, CI green |
-| Headline command | `npm install && npm run verify` — ~24 s, offline |
-| Tests | 712 passing, 0 failing |
-| Differential oracle | 2,768 gate verdicts vs the frozen Python linter; 16 differ **deliberately**, each with a reason and an ADR |
+| Headline command | `npm install && npm run verify` — ~25 s, offline |
+| Tests | 828 passing, 0 failing, across 26 files |
+| Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
 | Contracts | 15 JSON Schemas, all validated against produced values |
 | Adapters | 3 built (provider-local-proxy, storage-local, evidence-local) |
-| Shells | 1 built (cli); 2 specified and unbuilt |
-| Source size | ~21,500 lines across `contracts/ core/ application/ adapters/ shells/ scripts/ test/` |
-| Commits | 72 — and note that a commit stating this number changes it, which is why it is not pinned |
+| Shells | 1 built (`cli`). `shells/api` is present, does not compile, and is excluded from typecheck — counting it would read as progress toward something nobody owns. 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
+| Source size | ~23,600 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/` |
+| Commits | 87 — and note that a commit stating this number changes it, which is why it is not pinned |
 | Licence | MIT |
 
 ### The three zeros (unchanged, and the point)
@@ -67,6 +67,12 @@ Every guard in this system is armed against stubs. `ANTHROPIC_API_KEY` is unset;
 path exists (`npm run eval -- --live`) and has never run. The repository says so everywhere
 the number appears rather than letting the wiring pass for a result.
 
+The first zero is no longer only a sentence: `npm run check:truth` derives it, and one
+eleven-stage run **is** persisted here with all eleven entries recording a null fingerprint.
+A pipeline executed and no model answered — which is demo mode working, not a gap. The check
+fails the build the moment a provider actually answers, because that is the moment every
+sentence in this knowledge base saying *stubbed* or *never executed* stops being true.
+
 ---
 
 ## Table of contents
@@ -80,7 +86,7 @@ the number appears rather than letting the wiring pass for a result.
 | [05-configuration-and-deployment.md](./05-configuration-and-deployment.md) | Env vars, tsconfig, CI, `verify` composition, the corpus |
 | [06-testing-and-quality.md](./06-testing-and-quality.md) | Vitest projects, mutation probes, the differential oracle, fixture discipline |
 | [07-dependencies.md](./07-dependencies.md) | Eight dev dependencies and why each one is there |
-| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 11 ADRs, the open register, and the recurring defect patterns |
+| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 11 ADRs, the truth boundary, the open register, and the recurring defect patterns |
 | [09-commands-and-workflows.md](./09-commands-and-workflows.md) | Every npm script, what it checks, and the common workflows |
 | [10-source-code-summary.md](./10-source-code-summary.md) | Key modules, reusable patterns, code idioms worth keeping |
 
@@ -106,12 +112,12 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `adapters/storage-local/` | Run-bundle persistence (8 bundles, evicted whole) |
 | `adapters/evidence-local/` | Immutable evidence store (`wx` flag, no `update`) |
 | `shells/cli/` | The one built Shell + its composition root |
-| `scripts/` | 21 checkers and runners. Each fails the build rather than warning |
-| `spec/` | Behavioural specs that ARE the tests and generate their own documentation. One file so far |
-| `scripts/divergence-allowlist.json` | 3 declared divergences from the frozen linter, each self-proving (ADR-0007) |
+| `scripts/` | 22 checkers and runners. Each fails the build rather than warning |
+| `spec/` | Behavioural specs that ARE the tests and generate their own documentation. Two files: `manifest-shapes.json` (71 shapes one gate reads) and `truth-boundary.json` (8 entries stating what this repository establishes and what it does not) |
+| `scripts/divergence-allowlist.json` | 4 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
-| `Documentation/` | 35 Markdown files: 11 ADRs, implementation plan, architecture, references, the generated manifest spec |
+| `Documentation/` | 36 Markdown files: 11 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary |
 | `docs/superpowers/specs/` | The corpus-grounded spec that drove Phases α–ζ |
 | `test/` | Cross-cutting: contract conformance, evidence conformance, checker tests |
 | `.github/workflows/verify.yml` | CI. Runs `npm run verify` on every push and PR |
