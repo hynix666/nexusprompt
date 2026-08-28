@@ -32,7 +32,7 @@ describe("spec/manifest-shapes.json — the manifest rule, executed", () => {
   it.each(spec.cases.map((c) => [c.id, c] as const))(
     "%s",
     (_id, c) => {
-      expect({ id: c.id, verdict: runtimeKeyUndeclared(c.text, (c.options ?? {}) as never).verdict })
+      expect({ id: c.id, verdict: runtimeKeyUndeclared(c.text, c.options).verdict })
         .toEqual({ id: c.id, verdict: c.expect });
     },
   );
