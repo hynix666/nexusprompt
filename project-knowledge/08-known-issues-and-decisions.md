@@ -69,6 +69,20 @@ a bound catches an unknown one. An ignore rule also does nothing for a path that
 tracked, which is precisely the state `8ee5d0a` left behind, so the index is checked
 separately from the file.
 
+The guard then shipped with the defect it was written to prevent. Its vendor rule used
+`startsWith("node_modules/")`, which matches the repository root and nothing else — so a
+tracked `shells/api/node_modules/.vite/…/results.json` walked straight past it while the
+check printed **"none vendored"**. This is npm workspaces; every workspace can have its own
+`node_modules`, so root-only was wrong for exactly the layout the rule guards. `.gitignore`
+gets it right for free, because `node_modules/` matches at any level, which is the reason the
+index needs a separate rule at all: an ignore pattern does nothing about a path already
+tracked.
+
+Found the way these always are — `npm ci` deleted the directory and git reported the deletion
+of a file the check had just called clean. The matcher now tests any path segment, and is
+probed in both directions: it fires on `a/b/c/node_modules/d` and stays silent on
+`docs/node_modules-policy.md`, because widening a matcher is how a false positive ships.
+
 Two things worth carrying forward:
 
 - **The truth boundary caught this on its own.** Two of its eight entries failed —
