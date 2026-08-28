@@ -5,7 +5,7 @@
 committed copy is not what the spec produces; `core/test/manifest-spec.test.ts` runs
 every case below against the real gate. See ADR-0010.
 
-83 cases · 72 specified · 11 known limit(s), of which **1** in the unsafe direction.
+109 cases · 97 specified · 12 known limit(s), of which **1** in the unsafe direction.
 
 A *known limit* records what the gate **actually does today**, not what it should —
 so the row is honest and the suite stays green, while `wanted` records the
@@ -348,6 +348,88 @@ A heading indented into a nested list item is an example inside prose, not the d
     ## BLOCK III
     Use [[A]].
 
+### `reject-phrase-nbsp` → `FAIL`
+
+A non-breaking space renders as a space, so this is the same class as `reject-homoglyph-heading`: a heading that reads correctly and is not the one it appears to be. The established policy is that ambiguous renders lose, and the rejection is a visible FAIL an author clears by retyping the space.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-phrase-narrow-nbsp` → `FAIL`
+
+Same, narrow form.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-phrase-zero-width` → `FAIL`
+
+A zero-width space renders as nothing at all, which is the sharpest form of the same class.
+
+    ## Runtime​ Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-phrase-tab-separator` → `FAIL`
+
+A tab between the words renders as whitespace. Rejected for consistency with the three above rather than because a tab is suspicious: the phrase is spelled one way, and admitting a second spelling per whitespace character is how an accept-set stops being checkable.
+
+    ## Runtime	Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-phrase-singular` → `FAIL`
+
+The singular is a different heading and the reader does not guess.
+
+    ## Runtime Variable
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-heading-slash-separator` → `FAIL`
+
+A slash is not in the admitted separator set, so the heading is about more than the manifest.
+
+    ## Runtime Variables / Placeholders
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-heading-comma-separator` → `FAIL`
+
+Same family as `reject-heading-and-their-sources`, with a comma.
+
+    ## Runtime Variables, and where they come from
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-indented-code-block-heading` → `FAIL`
+
+Four spaces makes an indented code block, and a heading inside a sample declares nothing. The `^ {0,3}` bound produces this; `reject-heading-indented-four` pins the bound itself.
+
+    Example:
+    
+        ## Runtime Variables
+        - [[A]] - sample
+    
+    ## BLOCK III
+    Use [[A]].
+
 ## Declaration syntaxes that are read
 
 ### `decl-bare` → `PASS`
@@ -441,6 +523,42 @@ The manifest is read from RAW text precisely so entries inside a fence still dec
     BLOCK I
     Use [[K]].
 
+### `decl-table-separator-row` → `PASS`
+
+A header and a separator are the scaffolding every Markdown table has; a keyless row inside a table run does not end the manifest.
+
+    ## Runtime Variables
+    | Key | Meaning |
+    |---|---|
+    | [[A]] | the thing |
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `decl-table-third-cell` → `PASS`
+
+Which column carries the key is a layout choice. `decl-table-second-cell` covers one column over; this covers arbitrary position.
+
+    ## Runtime Variables
+    | # | Owner | Key |
+    |---|---|---|
+    | 1 | host | [[A]] |
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `decl-table-header-cell-key` → `PASS`
+
+Unusual, but visible and unambiguous.
+
+    ## Runtime Variables
+    | [[A]] | Meaning |
+    |---|---|
+    | example | the thing |
+    
+    ## BLOCK III
+    Use [[A]].
+
 ## Where the section ends
 
 ### `bound-use-does-not-declare` → `FAIL`
@@ -514,6 +632,44 @@ A thematic break ends the run of declaration lines. B sits after the rule and is
     - [[A]] - the thing
     ---
     - [[B]] - later prose
+    
+    ## BLOCK III
+    Use [[A]] and [[B]].
+
+### `bound-prose-before-table` → `FAIL`
+
+A prose line ends the declaration run, so a table below it is outside the manifest. This is the cost of the run rule and it is deliberate: the alternative is a span that reaches forward past arbitrary prose, which is the defect ADR-0010 exists to fix.
+
+    ## Runtime Variables
+    The host supplies these:
+    | Key | Meaning |
+    |---|---|
+    | [[A]] | the thing |
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `bound-table-run-broken-by-prose` → `FAIL`
+
+The prose line ends the run; B is below it and undeclared.
+
+    ## Runtime Variables
+    | [[A]] | the thing |
+    and also:
+    | [[B]] | the other |
+    
+    ## BLOCK III
+    Use [[A]] and [[B]].
+
+### `bound-deeper-then-shallower-heading` → `FAIL`
+
+B sits under a different heading; the manifest ended at the first non-declaration line, regardless of heading depth.
+
+    ### Runtime Variables
+    - [[A]] - the thing
+    
+    # Notes
+    - [[B]] - mentioned
     
     ## BLOCK III
     Use [[A]] and [[B]].
@@ -607,6 +763,68 @@ A tilde run cannot close a backtick fence, so the fence runs to end of document 
     ## Runtime Variables
     - [[A]] - example
     ~~~
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-closer-with-info-string` → `FAIL`
+
+CommonMark allows only whitespace after a CLOSING delimiter run; an info string makes the line content. Reading it as a closer flips fence parity for the rest of the document, so a sample that should stay hidden becomes visible and the heading inside it declares for real. Found by the sixth sweep, in the unsafe direction. The shape only discriminates because A is used: with a valid closer the same document PASSes, which is what `fence-closer-trailing-spaces` controls for.
+
+    ```md
+    sample
+    ```md
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-closer-with-attributes` → `FAIL`
+
+Same rule, attribute-style info string. Anything but whitespace after the run means the line is not a closer.
+
+    ```md
+    sample
+    ```{.md #id}
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-closer-trailing-spaces` → `FAIL`
+
+Trailing whitespace IS allowed on a closer, so the fence closes here and the manifest was only a sample. The control for the two cases above: without it, 'require a bare closer' could be satisfied by rejecting every closer, and the fence would never close at all.
+
+    ```md
+    ## Runtime Variables
+    - [[A]] - sample
+    ```   
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-closer-longer-than-opener` → `FAIL`
+
+A closer must be at least as long as the opener, not exactly as long. Five closes a three.
+
+    ```md
+    ## Runtime Variables
+    - [[A]] - sample
+    `````
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-closer-indented-three` → `FAIL`
+
+Up to three spaces of indent is still a closer; four would be an indented code block, which `fence-indented-closer` already records.
+
+    ```md
+    ## Runtime Variables
+    - [[A]] - sample
+       ```
     
     ## BLOCK III
     Use [[A]].
@@ -741,6 +959,16 @@ A comment opener inside a fence is sample text and must not suppress a real head
     ```
     
     ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `limit-html-heading` → `FAIL` — **known limit**, wants `PASS`
+
+An HTML heading renders as a heading and a reader sees no difference from the ATX form. Nothing parses HTML. Visible-FAIL direction, and the fix is a parser rather than another pattern -- the same conclusion as `limit-html-table-declaration`.
+
+    <h2>Runtime Variables</h2>
     - [[A]] - the thing
     
     ## BLOCK III
@@ -1128,6 +1356,65 @@ A key with no description is still a declaration.
     
     ## BLOCK III
     Use [[A]].
+
+### `edge-two-identical-headings` → `PASS`
+
+The second heading opens a section whose declaration run holds A. An empty first section declares nothing and harms nothing.
+
+    ## Runtime Variables
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-manifest-heading-last-line` → `FAIL`
+
+An empty manifest at end of document declares nothing, and the use above it is still a use.
+
+    Use [[A]].
+    
+    ## Runtime Variables
+
+### `edge-use-in-inline-code-span` → `PASS`
+
+An inline code span is stripped along with the fences, so a key shown as syntax is not a use. This is `stripDocumentationSpans` doing its job on the USE side, not the manifest reader -- the two are different code with different fence rules, which `fence-closer-with-info-string` is also about.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]]. Write `[[B]]` to reference a key.
+
+### `edge-use-in-link-target` → `FAIL`
+
+A key in a URL is interpolated at runtime like any other. `reject-key-in-markdown-link` covers the link TEXT; this covers the target.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]]. See [docs](https://example.test/[[B]]).
+
+### `edge-dotted-key-is-not-a-key` → `PASS`
+
+A dot is outside the key charset, so `[[user.name]]` is not a key this gate knows about in either position. Worth pinning because it is a limit of the CHARSET rather than of the manifest reader: a template engine supporting dotted paths would need the charset widened in both the declaration and the use reader, and widening one alone is exactly how a false clean gets built.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[user.name]].
+
+### `edge-key-with-nbsp-is-not-a-key` → `PASS`
+
+Not a key under the charset in either position, so there is nothing to report. The symmetry is the point.
+
+    ## Runtime Variables
+    - [[A B]] - the thing
+    
+    ## BLOCK III
+    Use [[A B]].
 
 ## Options
 

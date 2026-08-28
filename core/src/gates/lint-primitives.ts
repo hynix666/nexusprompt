@@ -232,7 +232,7 @@ function declarationKeys(line: string): string[] {
  * fence never opened, and a heading inside the sample was read as real document. Either
  * reading suppresses the contents; only one of them suppresses them HERE. Safe direction.
  */
-const FENCE_LINE_RE = /^[ 	]{0,3}(`{3,}|~{3,})/;
+const FENCE_LINE_RE = /^[ 	]{0,3}(`{3,}|~{3,})(.*)$/;
 
 const RUNTIME_KEY_G = /\[\[([A-Za-z0-9_:-]+)\]\]/g;
 
@@ -265,7 +265,12 @@ export function extractRuntimeManifest(text: string): Set<string> {
    */
   /** The open fence's delimiter, or null outside one. Closing needs the same char, >= length. */
   let openFence: string | null = null;
-  const fenceOf = (line: string): string | null => FENCE_LINE_RE.exec(line)?.[1] ?? null;
+  /** The delimiter run and whatever follows it on the line. An opener may carry an info
+   *  string; a closer may not, which is the whole reason `rest` is returned at all. */
+  const fenceOf = (line: string): { run: string; rest: string } | null => {
+    const m = FENCE_LINE_RE.exec(line);
+    return m ? { run: m[1]!, rest: m[2]! } : null;
+  };
 
   /**
    * A commented-out manifest is not a manifest.
@@ -295,10 +300,24 @@ export function extractRuntimeManifest(text: string): Set<string> {
 
     const fence = fenceOf(lines[h]);
     if (fence) {
-      if (openFence === null) openFence = fence;
-      // CommonMark: a closing fence is the same character and at least as long as the opener.
-      // Length-aware, so a ``` inside a ```` block is content and does not reopen the document.
-      else if (fence[0] === openFence[0] && fence.length >= openFence.length) openFence = null;
+      // An OPENER may carry an info string -- ```md, ```{.md #id}, ```text. That is what the
+      // string is for.
+      if (openFence === null) openFence = fence.run;
+      // A CLOSER may not. CommonMark allows only whitespace after the delimiter run, and the
+      // difference is not pedantic: reading ```md as a closer flips fence parity for the rest
+      // of the document, so a sample that should stay hidden becomes visible and a heading
+      // inside it declares for real. Found by the sixth sweep, and it is the unsafe direction
+      // -- a silent PASS on a key the reader never saw declared.
+      //
+      // Failing to close is safe here, which is the opposite of the opener asymmetry recorded
+      // above: an unclosed fence hides MORE, and hidden content declares nothing.
+      else if (
+        fence.run[0] === openFence[0] &&
+        fence.run.length >= openFence.length &&
+        fence.rest.trim() === ""
+      ) {
+        openFence = null;
+      }
       continue;
     }
     if (openFence !== null || !isManifestHeading(lines[h])) continue;
