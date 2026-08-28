@@ -19,6 +19,7 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 | 0009 | Product is NexusPrompt; contract lineage stays `promptnexus` |
 | 0010 | The runtime manifest is a declaration list, not a span to end-of-file — authorises 2 divergence entries |
 | 0011 | `QUTM_CEILING` does not arm below a named baseline floor — authorises 1, and added `only_when_options` |
+| 0012 | `shells/api` adopted as the third Shell; zero-runtime-dependency scoped to below the Shell layer (amends 0004/0006) |
 
 ## The truth boundary
 

@@ -131,18 +131,18 @@
       "title": "The documentation describes a platform; the repository runs a slice",
       "probe": "builtSurface",
       "establishes": "A vertical slice that genuinely works: sixteen gates, eleven stages, three adapters, and a CLI that drives a full pipeline run. It cuts through every layer along the riskiest path in the design — a provider failure reaching a Core reduction and coming back out labelled — and `npm run verify` proves it in about ten seconds.",
-      "does_not_establish": "That the system in the 36 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and of the two shell directories present one is `shells/api` — it does not compile, has no tests, depends on four uninstalled packages, and is excluded from typecheck. Counting it as a shell would read as two-of-three progress toward something nobody owns.",
+      "does_not_establish": "That the system in the 37 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies.",
       "expect": {
-        "documentation_markdown_files": 36,
+        "documentation_markdown_files": 37,
         "gates_built": 16,
         "stages_built": 11,
         "adapters_built": ["evidence-local", "provider-local-proxy", "storage-local"],
         "adapters_target": 5,
         "shells_present": ["api", "cli"],
         "shells_target": 3,
-        "shells_excluded_from_typecheck": true
+        "shells_excluded_from_typecheck": false
       },
-      "crossed_when": "An adapter or shell lands, or `shells/api` is either fixed or deleted. Each moves the built surface, and each should move the documents that describe it in the same commit rather than a later one.",
+      "crossed_when": "An adapter or shell lands, or a Shell stops being typechecked. `shells_excluded_from_typecheck` going true again would mean a Shell had been quarantined rather than owned, which is the state ADR-0012 ended — it lasted a week and took CI down with it.",
       "evidence": [
         "Documentation/IMPLEMENTATION_PLAN.md",
         "Documentation/GATES_REFERENCE.md",

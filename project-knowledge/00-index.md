@@ -44,13 +44,13 @@ components were rejected by it.
 | Package manager | **npm workspaces** — *not* pnpm (pnpm is not installed; older docs say otherwise) |
 | Repo | `github.com/hynix666/nexusprompt` (private), branch `master`, CI green |
 | Headline command | `npm install && npm run verify` — ~25 s, offline |
-| Tests | 828 passing, 0 failing, across 26 files |
+| Tests | 890 passing, 0 failing, across 28 files |
 | Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
 | Contracts | 15 JSON Schemas, all validated against produced values |
 | Adapters | 3 built (provider-local-proxy, storage-local, evidence-local) |
-| Shells | 1 built (`cli`). `shells/api` is present, does not compile, and is excluded from typecheck — counting it would read as progress toward something nobody owns. 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
+| Shells | 2 built — `cli` and `api` (adopted 29 Aug, ADR-0012; typechecked and tested). 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
 | Source size | ~23,600 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/` |
 | Commits | 87 — and note that a commit stating this number changes it, which is why it is not pinned |
 | Licence | MIT |
@@ -86,7 +86,7 @@ sentence in this knowledge base saying *stubbed* or *never executed* stops being
 | [05-configuration-and-deployment.md](./05-configuration-and-deployment.md) | Env vars, tsconfig, CI, `verify` composition, the corpus |
 | [06-testing-and-quality.md](./06-testing-and-quality.md) | Vitest projects, mutation probes, the differential oracle, fixture discipline |
 | [07-dependencies.md](./07-dependencies.md) | Eight dev dependencies and why each one is there |
-| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 11 ADRs, the truth boundary, the open register, and the recurring defect patterns |
+| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 12 ADRs, the truth boundary, the open register, and the recurring defect patterns |
 | [09-commands-and-workflows.md](./09-commands-and-workflows.md) | Every npm script, what it checks, and the common workflows |
 | [10-source-code-summary.md](./10-source-code-summary.md) | Key modules, reusable patterns, code idioms worth keeping |
 
@@ -117,7 +117,7 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `scripts/divergence-allowlist.json` | 4 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
-| `Documentation/` | 36 Markdown files: 11 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary |
+| `Documentation/` | 37 Markdown files: 12 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary |
 | `docs/superpowers/specs/` | The corpus-grounded spec that drove Phases α–ζ |
 | `test/` | Cross-cutting: contract conformance, evidence conformance, checker tests |
 | `.github/workflows/verify.yml` | CI. Runs `npm run verify` on every push and PR |
