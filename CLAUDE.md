@@ -110,6 +110,7 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 | `npm run docs:matrix` | Regenerates `Documentation/CAPABILITY_MATRIX.md` from the tree. |
 | `npm run check:matrix` | Fails when the committed matrix is not what the repository produces. |
 | `npm run docs:truth` / `check:truth` | The truth boundary: eight entries stating what this repository establishes and what it does **not**, each pinned to numbers re-derived from the tree. Reading `Documentation/TRUTH_BOUNDARY.md` first is the cheapest way to avoid quoting a figure more broadly than it holds. |
+| `npm run docs:fence-explanation` / `check:fence-explanation` | Regenerates the fence-closer explainer's data from the live gate, and fails when the committed copy is not what the gate produces. |
 | `npm run check:fingerprint` | Watches for the provider swapping the model under you. Reports "not armed" until a run reaches a provider. |
 | `npm run differential` | The oracle — ported gates vs. the frozen Python linter. Needs Python. |
 | `npm run cli` | `promptnexus lint\|run\|gates`. |
