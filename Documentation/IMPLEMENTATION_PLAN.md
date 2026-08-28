@@ -29,7 +29,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "evidence-local"
   ],
   "shells": [
-     "api",
+    
     "cli"
   ],
   "catalog": {
@@ -288,6 +288,17 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 **Exit gate:** one adapter contract suite runs against both implementations of each port with identical results; the 27-assertion proxy security suite is mapped one-to-one, with every assertion either ported or recorded as N/A with a reason.
 
 ### Phase 6 — Shells
+
+> **`shells/api` is present but NOT wired, and the plan-status list counts directories rather
+> than working shells.** It arrived on 2026-08-27 with four declared runtime dependencies —
+> `fastify`, `@fastify/cors`, `uuid`, `ajv` — none installed, so `tsc` failed on a missing
+> module and twenty-odd implicit `any` parameters and took `npm run verify` down with it. It is
+> excluded from the root typecheck (see `tsconfig.json`) and has no vitest project, so nothing
+> tests it.
+>
+> Installing those dependencies is not a build fix. This repository's stated property is **zero
+> runtime dependencies**, and ending that is an ADR, not an `npm install`. Until one exists,
+> `cli` remains the only built shell and `api` is source that does not compile.
 
 **Entry condition:** Phases 3 and 4.
 

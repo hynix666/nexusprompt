@@ -87,3 +87,14 @@ LLM/
 # If a distributable bundle is wanted, the fix is an exporter script wired into `verify`,
 # not a directory committed once and diverging quietly thereafter.
 final_bundle_*/
+
+# ── Added with shells/api (2026-08-28) ─────────────────────────────────────────
+# The API shell is a workspace with its own package.json. Its build output and any
+# local env file stay out of the tree; its dependencies are NOT installed and the
+# shell is excluded from the root typecheck until that is a deliberate decision —
+# see tsconfig.json and Documentation/07-dependencies.md's zero-runtime-dependency
+# property, which adding fastify would end.
+shells/*/dist/
+.env
+.env.*
+*.log

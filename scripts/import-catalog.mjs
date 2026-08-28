@@ -152,7 +152,21 @@ function main() {
 
   if (check) {
     const current = existsSync(OUT) ? readFileSync(OUT, "utf8") : "";
-    if (current !== rendered) {
+    /**
+     * Line endings are normalised before comparing; nothing else is.
+     *
+     * Git checks this file out as CRLF on Windows and the importer writes LF, so a byte
+     * comparison reported the catalog as stale on every Windows checkout while the 195
+     * records were identical -- no additions, no removals, no changed content. `npm run
+     * verify` failed for a difference that is not one, which is the worst kind of red: it
+     * trains a reader to re-run the generator and commit whatever comes out.
+     *
+     * Only CRLF -> LF is collapsed. Any other difference is still a real one, and a probe
+     * confirms it: mutating one record's name still fails this check.
+     */
+    const eol = (t) => t.replace(/\r\n/g, "\n");
+    const sameIgnoringEol = eol(current) === eol(rendered);
+    if (!sameIgnoringEol) {
       console.error(`import:catalog --check — ${OUT} is not what the source and corrections produce.`);
       console.error(`  Run \`npm run import:catalog\` and commit the result.`);
       return 1;
