@@ -23,8 +23,10 @@
  *      catch wholesale truncation of the rules it does NOT name, and truncation is the exact
  *      shape of all three incidents. This is the guard against the next one being a rule
  *      nobody thought to pin.
- *   3. Nothing under a vendor directory is tracked. `node_modules/` is the one that happened;
- *      the others are listed because the same commit would have taken them too.
+ *   3. Nothing under a vendor directory is tracked, AT ANY DEPTH. `node_modules/` is the one
+ *      that happened; the others are listed because the same commit would have taken them
+ *      too. Depth matters here: a workspace has its own `node_modules`, and the first
+ *      version of this rule matched only the repository root and missed one.
  *   4. No tracked file exceeds `MAX_TRACKED_BYTES`. The largest legitimate tracked file is
  *      0.81 MB (`core/src/catalog/techniques.json`), so the 4 MB bound has fivefold headroom
  *      and still catches a model shard, a PDF, or a bundled binary. This is the rule that
@@ -76,8 +78,24 @@ export const REQUIRED_IGNORES = [
 /** Below this, the file has been truncated rather than edited. It carried 23 when pinned. */
 export const MIN_RULES = 20;
 
-/** Prefixes that must never appear in the index, whatever `.gitignore` currently says. */
-export const FORBIDDEN_TRACKED_PREFIXES = ["node_modules/", "PDF/", "LLM/", ".venv/", "venv/"];
+/**
+ * Directory names that must never appear in the index, whatever `.gitignore` currently says.
+ *
+ * Matched at ANY depth, not as a leading prefix. The first version used `startsWith`, and a
+ * tracked `shells/api/node_modules/.vite/…/results.json` walked straight past it while the
+ * check printed "none vendored" — a workspace has its own `node_modules`, so the root-only
+ * reading was wrong for exactly the layout this repository has. `.gitignore` gets this right
+ * for free (`node_modules/` matches at any level) which is precisely why the index needs its
+ * own rule: an ignore pattern does nothing about a path already tracked.
+ *
+ * Found by `npm ci` deleting the directory and git reporting the deletion of a file the check
+ * had just called clean. Same shape as every other defect here — a matcher covering the case
+ * its author had in mind and not its sibling.
+ */
+export const FORBIDDEN_TRACKED_DIRS = ["node_modules", "PDF", "LLM", ".venv", "venv"];
+
+/** True when `dir` is any path segment of `path`, not merely its first. */
+export const containsDir = (path, dir) => path === dir || path.startsWith(`${dir}/`) || path.includes(`/${dir}/`);
 
 /** Largest legitimate tracked file is 0.81 MB. Fivefold headroom, still catches a blob. */
 export const MAX_TRACKED_BYTES = 4 * 1024 * 1024;
@@ -156,13 +174,13 @@ export function checkRepoHygiene(root = process.cwd(), opts = {}) {
     };
   }
 
-  for (const prefix of FORBIDDEN_TRACKED_PREFIXES) {
-    const hits = tracked.filter((p) => p.startsWith(prefix));
+  for (const dir of FORBIDDEN_TRACKED_DIRS) {
+    const hits = tracked.filter((p) => containsDir(p, dir));
     if (hits.length > 0) {
       failures.push(
-        `${hits.length} tracked file(s) under \`${prefix}\` — e.g. ${hits[0]}. Untrack with ` +
-        `\`git rm -r --cached ${prefix.replace(/\/$/, "")}\`. Note this does not shrink history; ` +
-        `blobs already pushed stay in every clone.`,
+        `${hits.length} tracked file(s) under a \`${dir}\` directory — e.g. ${hits[0]}. Untrack ` +
+        `with \`git rm -r --cached\` on the path that names it. Note this does not shrink ` +
+        `history; blobs already pushed stay in every clone.`,
       );
     }
   }

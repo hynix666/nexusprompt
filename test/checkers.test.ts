@@ -1324,7 +1324,25 @@ describe("check-repo-hygiene", () => {
     const tracked = [...clean, "node_modules/esbuild/bin/esbuild", "node_modules/typescript/lib/tsc.js"];
     const r = run(plant(), tracked);
     expect(r.ok).toBe(false);
-    expect(r.failures.join("\n")).toMatch(/2 tracked file\(s\) under `node_modules\/`/);
+    expect(r.failures.join("\n")).toMatch(/2 tracked file\(s\) under a `node_modules` directory/);
+  });
+
+  it("fires on a vendor directory nested inside a workspace", () => {
+    // The blind spot the first version shipped with. `startsWith("node_modules/")` matched
+    // only the repository root, so a tracked shells/api/node_modules/... file passed while
+    // the check printed "none vendored". This repo is npm workspaces; every workspace can
+    // have its own node_modules, so root-only was wrong for exactly the layout it guards.
+    const r = run(plant(), [...clean, "shells/api/node_modules/.vite/vitest/results.json"]);
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/tracked file\(s\) under a `node_modules` directory/);
+  });
+
+  it("does not fire on a path that merely contains the word", () => {
+    // The other direction: widening a matcher is how a false positive gets shipped. A file
+    // legitimately named for the concept must not be mistaken for one inside it.
+    const r = run(plant(), [...clean, "docs/node_modules-policy.md", "scripts/check-node_modules.mjs"]);
+    expect(r.failures).toEqual([]);
+    expect(r.ok).toBe(true);
   });
 
   it("fires on a vendor directory even when .gitignore is perfect", () => {
@@ -1332,7 +1350,7 @@ describe("check-repo-hygiene", () => {
     // is ALREADY tracked, which is exactly the state 8ee5d0a left behind.
     const r = run(plant(), [...clean, "PDF/2301.00234.pdf"]);
     expect(r.ok).toBe(false);
-    expect(r.failures.join("\n")).toMatch(/tracked file\(s\) under `PDF\/`/);
+    expect(r.failures.join("\n")).toMatch(/tracked file\(s\) under a `PDF` directory/);
   });
 
   it("fires on an oversized tracked file under a name nobody pinned", () => {
