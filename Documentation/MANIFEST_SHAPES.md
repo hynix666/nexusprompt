@@ -5,7 +5,7 @@
 committed copy is not what the spec produces; `core/test/manifest-spec.test.ts` runs
 every case below against the real gate. See ADR-0010.
 
-109 cases · 97 specified · 12 known limit(s), of which **1** in the unsafe direction.
+135 cases · 123 specified · 12 known limit(s), of which **1** in the unsafe direction.
 
 A *known limit* records what the gate **actually does today**, not what it should —
 so the row is honest and the suite stays green, while `wanted` records the
@@ -113,6 +113,56 @@ A comment that opens and closes on one line does not suppress what follows. The 
     <!-- -->
     ## Runtime Variables
     - [[A]] - x
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `heading-tab-after-hashes` → `PASS`
+
+CommonMark accepts a space OR a tab after the hash run. Note the deliberate asymmetry with `reject-phrase-tab-separator`: the DELIMITER is permissive because CommonMark says so, while the PHRASE must be spelled with an ASCII space because an accept-set that grows one whitespace character at a time stops being checkable.
+
+    #	Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `heading-many-spaces-after-hashes` → `PASS`
+
+Any run of spaces after the hashes is one delimiter.
+
+    #     Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `heading-six-hashes` → `PASS`
+
+Six is the CommonMark maximum and must still be accepted -- the boundary `reject-atx-seven-hashes` bounds from the other side. A rule stated only by its rejection can be satisfied by rejecting everything.
+
+    ###### Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `heading-closing-sequence-spaced` → `PASS`
+
+A spaced closing hash sequence is not part of the heading text.
+
+    ## Runtime Variables ##
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `heading-hash-after-phrase` → `PASS`
+
+Strictly the rendered text is `Runtime Variables#`, since a closing sequence needs a preceding space. Accepted anyway: a trailing hash is a qualifier the accept-set already admits, and the shape is unambiguous to a reader.
+
+    ## Runtime Variables#
+    - [[A]] - the thing
     
     ## BLOCK III
     Use [[A]].
@@ -426,6 +476,16 @@ Four spaces makes an indented code block, and a heading inside a sample declares
     
         ## Runtime Variables
         - [[A]] - sample
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `reject-heading-emoji-tail` → `FAIL`
+
+An unrecognised tail means the heading is about more than the manifest. Same family as the slash and comma separators: ambiguous shapes lose.
+
+    ## Runtime Variables 🔑
+    - [[A]] - the thing
     
     ## BLOCK III
     Use [[A]].
@@ -825,6 +885,231 @@ Up to three spaces of indent is still a closer; four would be an indented code b
     ## Runtime Variables
     - [[A]] - sample
        ```
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-crlf-bare-closer` → `FAIL`
+
+THE SEVENTH SWEEP'S FINDING. `FENCE_LINE_RE` ends `(.*)$`, and in JavaScript a carriage return IS a line terminator: `.` cannot consume it and `$` without the `m` flag will not match before it. So a delimiter arriving as ```\r matched nothing, no fence ever opened, and every fenced sample declared its keys for the whole document. That is the false clean the fence guard exists to prevent, reintroduced for every CRLF file -- which is every local file here. Introduced by the sweep-six closer fix; the scan now splits on /\r?\n/.
+
+    ```md
+    ## Runtime Variables
+    - [[A]] - sample
+    ```
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-crlf-closer-with-info-string` → `FAIL`
+
+The other direction under CRLF: a closer carrying an info string must still fail to close. Normalising line endings must not soften the rule it exposed.
+
+    ```md
+    sample
+    ```md
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-crlf-tilde-closer` → `FAIL`
+
+Both previously untested halves at once -- tilde delimiters under CRLF.
+
+    ~~~md
+    ## Runtime Variables
+    - [[A]] - sample
+    ~~~
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-tilde-closer-with-info-string` → `FAIL`
+
+Every closer case in the spec used backticks, so the bare-closer rule shipped tested on one delimiter character out of two. A tilde closer may not carry an info string either.
+
+    ~~~md
+    sample
+    ~~~md
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-tilde-closer-bare` → `FAIL`
+
+The control: a bare tilde closer DOES close, so the manifest was a sample and the later use is undeclared. Without it, 'a tilde closer must be bare' could be satisfied by never closing a tilde fence at all.
+
+    ~~~md
+    ## Runtime Variables
+    - [[A]] - sample
+    ~~~
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-tilde-closer-longer` → `FAIL`
+
+A longer tilde run is a valid closer, as with backticks.
+
+    ~~~md
+    ## Runtime Variables
+    - [[A]] - sample
+    ~~~~~
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-tilde-closer-shorter` → `FAIL`
+
+A shorter run is content; the manifest stays inside the sample.
+
+    ~~~~md
+    ## Runtime Variables
+    - [[A]] - sample
+    ~~~
+    still inside
+    ~~~~
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-tilde-closer-trailing-space` → `FAIL`
+
+Trailing whitespace is permitted on a closer of either character.
+
+    ~~~md
+    ## Runtime Variables
+    - [[A]] - sample
+    ~~~  
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-tilde-opener-backtick-closer` → `FAIL` — options `{"includeFences":true}`
+
+A backtick run cannot close a tilde fence, so the heading never leaves the sample and A is used but never declared. The option is INVARIANT here, and the reason is worth pinning: stripDocumentationSpans does not recognise tilde fences at all, so with fences stripped it leaves the use in place, while extractRuntimeManifest does recognise them and keeps the heading out. The two readers disagree about tildes by design (ADR-0012), and this case is where that disagreement is visible -- both settings FAIL, by different routes.
+
+    ~~~md
+    ## Runtime Variables
+    - [[A]] - sample
+    ```
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-tilde-info-string-backticks` → `FAIL`
+
+CommonMark lets a TILDE opener's info string contain backticks, where a backtick opener's may not. It is still an opener, so the manifest inside is a sample.
+
+    ~~~`js`
+    ## Runtime Variables
+    - [[A]] - sample
+    ~~~
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-opener-trailing-whitespace` → `FAIL`
+
+Trailing spaces after an info string do not stop a line being an opener.
+
+    ```md   
+    ## Runtime Variables
+    - [[A]] - sample
+    ```
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-opener-indented-three` → `FAIL`
+
+An opener may be indented up to three spaces, and the closer need not match its indent.
+
+       ```md
+    ## Runtime Variables
+    - [[A]] - sample
+    ```
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-opener-bare` → `FAIL`
+
+An opener with no info string at all is still an opener.
+
+    ```
+    ## Runtime Variables
+    - [[A]] - sample
+    ```
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-two-backticks-not-a-fence` → `PASS`
+
+A fence needs three or more, so nothing here is fenced and the heading is real. The lower boundary of the delimiter rule.
+
+    ``
+    ## Runtime Variables
+    - [[A]] - the thing
+    ``
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-ten-backticks` → `FAIL`
+
+Long runs are ordinary fences; nothing caps the length.
+
+    ``````````
+    ## Runtime Variables
+    - [[A]] - sample
+    ``````````
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-adjacent-blocks` → `FAIL`
+
+Parity must survive back-to-back blocks: close, open, and the heading is inside the second.
+
+    ```
+    first
+    ```
+    ```
+    ## Runtime Variables
+    - [[A]] - sample
+    ```
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-empty-block` → `PASS`
+
+An empty block opens and closes, leaving the heading outside it and real.
+
+    ```
+    ```
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `fence-three-delimiters-odd-parity` → `FAIL`
+
+Open, close, open: the heading sits inside the third delimiter's block, which the fourth closes. Odd parity is where a toggle-based reader went wrong twice before.
+
+    ```
+    ```
+    ```
+    ## Runtime Variables
+    - [[A]] - sample
+    ```
     
     ## BLOCK III
     Use [[A]].
@@ -1415,6 +1700,27 @@ Not a key under the charset in either position, so there is nothing to report. T
     
     ## BLOCK III
     Use [[A B]].
+
+### `edge-crlf-heading-and-declaration` → `PASS`
+
+The ordinary case in the line ending this repository actually uses. `reject-crlf-never-log` and `edge-mixed-line-endings` already claimed CRLF changes no verdict; neither contained a fence, so both stayed green while the claim became false. This is the control that pairs with the three fence cases above.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+
+### `edge-empty-heading-then-bare-phrase` → `PASS`
+
+An empty ATX heading, then the bare-phrase form on its own line -- which the reader accepts, because that is the shape the v5 BLUEPRINT emits.
+
+    #
+    Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
 
 ## Options
 

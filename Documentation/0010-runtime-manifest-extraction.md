@@ -1,6 +1,6 @@
 # ADR-0010: The runtime manifest is a declaration list, not a span to end-of-file
 
-**Status:** Accepted — 25 August 2026 · amended 28 August 2026 (§§ *A heading has to be a heading*, *A closer has to be bare*)
+**Status:** Accepted — 25 August 2026 · amended 28 August 2026 (§§ *A heading has to be a heading*, *A closer has to be bare*) · 29 August 2026 (§ *The closer fix broke every CRLF document*)
 **Amends:** nothing. **Authorises:** entries 0 and 1 in `scripts/divergence-allowlist.json`.
 **Related:** ADR-0007 (the differential oracle is permanent), ADR-0002 (contract-first).
 
@@ -260,6 +260,53 @@ at a time stops being checkable.
 
 One is a new known limit — an `<h2>` HTML heading, which renders as a heading and is refused,
 the same conclusion as the HTML table row. **The unsafe-limit count is still one.**
+
+## Amendment, 29 August 2026 — the closer fix broke every CRLF document
+
+The previous amendment added `(.*)$` to `FENCE_LINE_RE` so a closer's tail could be inspected.
+In JavaScript **a carriage return is a line terminator**: `.` cannot consume it, and `$`
+without the `m` flag will not match before it. The scan split on `"
+"`, so every line of a
+CRLF document arrived with a trailing `` — and the fence pattern then matched **nothing at
+all**.
+
+No fence ever opened. Every fenced documentation sample declared its keys for the whole
+document. That is the original false clean this ADR exists to close, reintroduced in full, for
+every CRLF file — which is every local file in this repository, since only `sources/**` is
+pinned to LF.
+
+**Decision.** The scan splits on `/?
+/`, so no `` reaches any pattern. Normalising at
+entry fixes the class rather than the one regex: no later pattern in the scan can trip over a
+carriage return it did not expect.
+
+### Why it survived a sweep, a suite, and a review
+
+Two spec cases already asserted the exact property that broke. `reject-crlf-never-log` says
+*"CRLF line endings do not change any verdict"*, and `edge-mixed-line-endings` says a mixed
+document *"reads the same as either alone"*. **Neither contains a fence.** Both stayed green
+while the claim they state became false, because the claim was tested only in the region the
+change did not touch.
+
+The differential oracle could not see it either: its fixtures and generated cases are LF, and
+the frozen linter has no fence tracking to disagree with.
+
+This is the pattern the heading rule's own comment block warns about, now demonstrated by the
+person who wrote the warning down: **changing a matcher moves BOTH failure directions, and the
+author tests only the one they just fixed.** The sweep-six fix was mutation-probed, and the
+probe confirmed exactly what it was aimed at — backtick closers, under LF.
+
+Twenty-six cases were added, covering the delimiter contract rather than one more shape: four
+CRLF cases including the failing one and its control, seven tilde-closer cases (every closer
+case in the spec had used backticks, so half the rule was unexercised), seven opener shapes,
+and eight heading-delimiter shapes. No new known limit — the seventh sweep found a regression
+rather than a gap, in code a previous sweep had just changed.
+
+One of the new rows was caught by the suite before it landed. `fence-tilde-opener-backtick-closer`
+carries `includeFences` but produces FAIL either way, because `stripDocumentationSpans` does
+not recognise tilde fences while `extractRuntimeManifest` does — the ADR-0012 divergence,
+visible. It is marked `options_invariant` with that reason rather than quietly left as a row
+whose option does nothing.
 
 ## Alternatives rejected
 
