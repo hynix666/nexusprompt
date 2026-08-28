@@ -16,11 +16,11 @@ differential oracle.
 
 | Command | What it checks |
 |---|---|
-| `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 50 files, 144 imports |
+| `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 51 files, 151 imports |
 | `npm run typecheck` | `tsc --noEmit`, strict + 3 extra flags |
 | `npm run verify:sources` | Re-hashes 420 frozen files against `sources/MANIFEST.json` |
 | `npm run check:counts` | Re-derives every pinned number in the docs from the tree. 42 occurrences of 37 pins, including 9 in this knowledge base |
-| `npm run check:plan` | 15 machine-checked claims in `IMPLEMENTATION_PLAN.md` |
+| `npm run check:plan` | 16 machine-checked claims in `IMPLEMENTATION_PLAN.md` |
 | `npm run check:citations` | Every catalog citation internally consistent (195 records) |
 | `npm run check:catalog` | `import:catalog --check` — the committed catalog is what the importer produces |
 | `npm run check:xsd` | Catalog against its XSD (libxml2-wasm) |
@@ -54,7 +54,9 @@ differential oracle.
 
 ```bash
 npm test                 npm run test:core        npm run test:app
-npm run docs:matrix      # regenerate CAPABILITY_MATRIX.md
+npm run docs:matrix          # regenerate CAPABILITY_MATRIX.md
+npm run docs:manifest-spec   # regenerate MANIFEST_SHAPES.md from spec/manifest-shapes.json
+npm run docs:truth           # regenerate TRUTH_BOUNDARY.md from spec/truth-boundary.json
 npm run cli -- lint <file>
 npm run cli -- pipeline <file> --stakes HIGH --reflexive 2
 npm run cli -- gates

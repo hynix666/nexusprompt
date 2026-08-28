@@ -1,6 +1,6 @@
 # Testing and quality
 
-**712 tests, 0 failing.** Runs offline in seconds.
+**828 tests across 26 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -22,7 +22,7 @@ npx vitest run --project contracts
 `core/test/purity.setup.ts` traps `fetch`, `Math.random`, `Date.now` and `new Date()` for the
 `core` project. It **cannot** trap the filesystem — see `01-architecture.md`.
 
-## The four quality mechanisms, and what each one alone cannot see
+## The five quality mechanisms, and what each one alone cannot see
 
 ### 1. Unit tests — must-fire *and* must-not-fire
 
@@ -98,6 +98,35 @@ must-not-fire case of running on the real tree. A checker whose verdict depends 
 branch you last switched from is worse than no checker (`check-plan` once shipped with a regex
 anchored on `plan-status\n` and exited 2 the moment a checkout re-materialised the file with
 CRLF).
+
+### 5. The truth boundary — `npm run check:truth`
+
+The four above check that the system does what it says. This one checks what "does" is
+being claimed for. Eight entries in `spec/truth-boundary.json` state a scope in two halves —
+`establishes` and `does_not_establish` — with the numbers bounding it pinned; eight probes
+re-derive those numbers from the tree and render `Documentation/TRUTH_BOUNDARY.md`.
+
+What it catches that the other four cannot: a **true** number attached to an overreaching
+claim. `check:counts` will confirm the anchor holds 4,906 cases while a reader concludes
+something has been measured about a language model. Nothing had.
+
+Both bijection directions are enforced, because a decorative entry is the failure mode:
+
+| Shape | Why it fails |
+|---|---|
+| entry names a probe that does not exist | it asserts nothing |
+| probe named by no entry | it derives into a void |
+| `expect` is empty | renders as confident prose under a heading |
+| probe derives a field the entry does not pin | the boundary moved and nothing objected |
+
+The last is the direction an author never checks, and it is the same shape as the manifest
+defect class: widening the instrument without widening the assertion leaves every existing
+test green while the guarantee shrinks.
+
+**Do not pin a value read from gitignored state.** A first draft counted run bundles under
+`.promptnexus/`, which would have made the check pass or fail depending on which machine ran
+it — a checker whose verdict depends on where you are is worse than none, and this repository
+already paid that once with a CRLF-anchored regex in `check-plan`.
 
 ## The recurring failure: fixtures too uniform to discriminate
 
