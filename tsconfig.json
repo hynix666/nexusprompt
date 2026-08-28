@@ -49,5 +49,27 @@
     "scripts/**/*.ts",
     "scripts/**/*.mjs"
   ],
-  "exclude": ["node_modules", "sources", "**/node_modules"]
+  "exclude": [
+    "node_modules",
+    "sources",
+    "**/node_modules",
+    /**
+     * shells/api is NOT WIRED, and excluding it says so rather than pretending otherwise.
+     *
+     * It was added with four declared runtime dependencies -- fastify, @fastify/cors, uuid,
+     * ajv -- none of which are installed, so `tsc` failed on a missing module plus twenty-odd
+     * implicit `any` parameters and took `npm run verify` down with it. Master has been red
+     * since.
+     *
+     * Installing them is not a build fix, it is an architecture decision: this repository's
+     * stated property is ZERO runtime dependencies (Documentation/07-dependencies.md, and the
+     * README's headline). Ending that deserves an ADR, not an `npm install` folded into an
+     * unrelated PR. Until then the shell is source that does not compile, which is what an
+     * exclusion records.
+     *
+     * To wire it: add an ADR, install the dependencies, remove this line, and add a vitest
+     * project so the shell is tested rather than merely present.
+     */
+    "shells/api"
+  ]
 }
