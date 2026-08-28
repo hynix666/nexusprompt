@@ -20,6 +20,34 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 | 0010 | The runtime manifest is a declaration list, not a span to end-of-file — authorises 2 divergence entries |
 | 0011 | `QUTM_CEILING` does not arm below a named baseline floor — authorises 1, and added `only_when_options` |
 
+## The truth boundary
+
+`Documentation/TRUTH_BOUNDARY.md` is generated from `spec/truth-boundary.json` and re-derived
+by `npm run check:truth`, inside `verify`. Eight entries, each stating a scope in two halves —
+what an artifact establishes and what it does not — with the numbers that bound it pinned.
+
+It is the answer to a failure the other checkers cannot see. `check:counts` confirms a number
+is right; nothing confirmed what it was right *about*, and the documentation was written
+target-state in the present tense, so a correct figure attached to an overreaching claim
+carried a checker's authority. Writing it immediately turned up three false claims in
+`Documentation/README.md` that had survived every existing check: that the capability-matrix
+generator did not exist (it does, and runs in `verify`), that the matrix "asserts nothing",
+and that the repository has no CI.
+
+The entries most worth knowing before quoting anything:
+
+- **Nothing here has ever talked to a model.** One eleven-stage run is persisted and all
+  eleven entries recorded a null fingerprint. Every evaluation figure — the anchor's 4,906
+  cases included — came from the pinned stub, and is evidence about this system's accounting.
+- **The oracle proves agreement, not correctness.** Where the port and the frozen linter are
+  both wrong it is silent, which is exactly the `CLAIM_DISCIPLINE` false positive's shape.
+- **A green smoke suite is not a measurement.** `pipeline-smoke` is below the exact
+  discordance floor outright; the other two clear six only in size, which is necessary and
+  nowhere near sufficient.
+
+Crossing a boundary is a failing build naming what moved — the point being that this is the
+one moment anyone reliably re-reads the sentence attached to it.
+
 ## Open register — each with a closing condition
 
 | Open | Closes when |
@@ -33,7 +61,7 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 | **599 is an upper bound**, not the independent-source count | Title/DOI-level dedup over extracted first pages |
 | **`parent_revision_ids` records execution order, not true lineage.** `cost_estimate` names `preview` as its parent though it reads only `ctx.prompt`. The schema now says so rather than claiming lineage it does not have | Each stage declares which context keys it consumes, and parents are derived from the revisions that last wrote them |
 | **`revision-entry` 1.3.1 was a patch, but `markStale` mis-answers a pre-1.3.1 bundle** — it stales the named revision and leaves descendants FRESH, because their `parent_revision_ids` are `[]`. No error, no validation failure | The store reads `execution_provenance.contract_versions` and refuses (or falls back to the positional cascade) for a bundle written before 1.3.1 — or the field's semantics are treated as a major bump |
-| **The manifest reader is a heuristic, not a parser.** Five rounds, each finding new ambiguous Markdown shapes. Seven known-minor cases remain: sub-headings, indented closing fences, tilde dividers, emphasis and numbered headings | Either a real block-structure parse, or the accept-set is declared closed and everything outside it FAILs by design |
+| **The manifest reader is a heuristic, not a parser.** Five rounds, each finding new ambiguous Markdown shapes. **Five** known limits remain, enumerated in `spec/manifest-shapes.json` and re-derived by `check:truth`: sub-headings, emphasised headings, numbered headings, and tilde dividers all err toward FAIL — a visible refusal an author clears. Exactly one errs the other way: a manifest inside a fenced warning block returns PASS, and a silent PASS is the direction that ships defects | Either a real block-structure parse, or the accept-set is declared closed and everything outside it FAILs by design |
 | **Two strict TS flags deferred** — `exactOptionalPropertyTypes` (25 errors), `noUncheckedIndexedAccess` (208) | Worked through, flag by flag |
 | **Two Shells unbuilt** (`pipeline-ui`, `toolkit-ui`), plus hosted provider and `storage-db` adapters | Built; the shared presentation package is designed in ADR-0006 |
 | **`storage-db` revision persistence is new work, not a port.** The inherited Drizzle schema (MySQL) has `users` and `promptAssets` and no revisions table | The revision schema is designed and lands as a reviewed migration |

@@ -29,7 +29,9 @@ Every count and file name above has been checked against the source artifacts �
 - [`CATALOG.md`](./CATALOG.md) — the technique catalog
 - [`OBSERVABILITY.md`](./OBSERVABILITY.md) — tracing and the event spine
 - [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) — phases, entry conditions, exit gates, risk register. Its numbers are verified by `npm run check:plan`
-- [`CAPABILITY_MATRIX.md`](./CAPABILITY_MATRIX.md) — **illustrative only**; the generator is Phase 7 work and does not exist yet
+- [`CAPABILITY_MATRIX.md`](./CAPABILITY_MATRIX.md) — generated. `npm run docs:matrix` writes it; `npm run check:matrix` fails when the committed copy is not what the repository produces
+- [`MANIFEST_SHAPES.md`](./MANIFEST_SHAPES.md) — generated. The 71 shapes `RUNTIME_KEY_UNDECLARED` reads, which are simultaneously the test and the document
+- [`TRUTH_BOUNDARY.md`](./TRUTH_BOUNDARY.md) — generated. For each thing this repository establishes, what it does **not**. Read this before quoting a number from any other document here
 - [`GLOSSARY.md`](./GLOSSARY.md)
 
 ## Architecture decision records
@@ -80,14 +82,14 @@ A vertical slice — one stage end to end — plus the machinery that checks it.
 | Storage adapters | `storage-local` (run bundles) | + `storage-db` |
 | Shells | `cli` | + `pipeline-ui`, `toolkit-ui` |
 | Technique catalog | 195 records behind a pure registry — 172 frozen, 23 added to close the ensembling gap, 8 citation titles corrected at the import boundary; validated against both the JSON contract and the frozen XSD | 15 scattered coverage gaps |
-| CI | none — `npm run verify` runs locally | full pipeline |
+| CI | `.github/workflows/verify.yml` runs `npm run verify` on every push and pull request | full pipeline |
 
-Verified by: `npm run verify` (boundaries → typecheck → source freeze → 111 tests → differential oracle against the frozen linter).
+Verified by: `npm run verify` (boundaries → typecheck → source freeze → the generated-document checks → the truth boundary → tests → differential oracle against the frozen linter).
 
 Two caveats matter when reading it:
 
 - **`IMPLEMENTATION_PLAN.md` now exists**, and phase numbers in this set refer to it. Documents written against the old numbering cited "Phase 5" for the capability-matrix generator; that work is **Phase 7 — Release truth**, and the citations have been updated. Two review documents keep the old numbering deliberately, because they are records of an assessment made at a point in time.
-- **`CAPABILITY_MATRIX.md` asserts nothing.** Its generator is Phase 7 work. The file shows the expected shape of generated output and is explicitly not a capability claim.
+- **`CAPABILITY_MATRIX.md` is generated and asserts exactly what the suite covers.** It derives coverage by reading which validators `test/contract-conformance.test.ts` actually exercises, so it cannot claim more than the tests provide. Do not hand-edit it; `npm run check:matrix` fails when you do.
 - **Ten claims about the source artifacts were wrong** and have been corrected against the archives. The gate count, the security-assertion count, the `TechniqueRecord` shape, the database engine, and both scaffolding generators were all inaccurate; `storage-db`'s revision persistence turns out to be new work rather than a port. [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md) is the evidence, and it is worth reading before trusting any remaining count in this set.
 - **The nineteen target properties are fifteen.** Searched for and not found in any archive; the count has been corrected rather than padded.
 
