@@ -73,7 +73,8 @@ so the decision is a number rather than an intention:
 ```
 lint:boundaries → typecheck → verify:sources → check:counts → check:plan
 → check:citations → check:catalog → check:xsd → check:depth → check:stages
-→ check:sizing → check:anchor → check:matrix → check:fingerprint
+→ check:sizing → check:anchor → check:matrix → check:manifest-spec
+→ check:truth → check:fingerprint
 → eval → eval:compare → eval:adversarial → eval:pipeline → eval:anchor
 → test → differential
 ```
