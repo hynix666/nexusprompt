@@ -22,7 +22,7 @@ enforces, so this table and that test cannot disagree.
 | `comparison` | 2.2.0 | validated |
 | `configuration` | 1.3.0 | validated |
 | `eval-case` | 1.2.0 | validated |
-| `eval-run` | 1.1.0 | validated |
+| `eval-run` | 2.0.0 | validated |
 | `eval-suite` | 2.0.1 | validated |
 | `gate-result` | 1.3.0 | validated |
 | `judge-verdict` | 1.1.0 | validated |

@@ -469,6 +469,39 @@ describe("evaluation plane, against values the suite actually produced", () => {
     expect(report(validators["eval-run"], run)).toBe(true);
     expect(run.aggregate.cases).toBe(suiteData.suite.case_ids.length);
 
+    /**
+     * provenance 2.0.0 — the negative half, against the run just produced.
+     *
+     * Until 2.0.0 this field was `{"type": "object"}` with a prose description and nothing
+     * required, so `provenance: {}` validated and so did a run that never said which transport
+     * answered. `runSuite` DEFAULTS to the pinned stub; `provenance.provider` is the only thing
+     * separating a run that is evidence about a model from one that is evidence about this
+     * system's accounting. A schema that could not tell them apart was not describing the
+     * field that carries the distinction.
+     *
+     * Mutated from the real value rather than hand-built, so each case differs from a run that
+     * validates in exactly one way — otherwise a rejection could be caused by anything.
+     */
+    expect(report(validators["eval-run"], { ...run, provenance: {} })).toBe(false);
+    for (const key of ["core_build_hash", "configuration_id", "suite_version", "provider"]) {
+      const without = { ...(run.provenance as Record<string, unknown>) };
+      delete without[key];
+      expect(validators["eval-run"]({ ...run, provenance: without }), `missing ${key}`).toBe(false);
+      // Present-but-empty is the same failure wearing a value: `provenance-complete` already
+      // treats an empty build hash as incomplete, and a probe exists to prove it fires.
+      expect(
+        validators["eval-run"]({ ...run, provenance: { ...(run.provenance as object), [key]: "" } }),
+        `empty ${key}`,
+      ).toBe(false);
+    }
+    // And a field nobody declared is refused rather than carried — the run is evidence, and an
+    // unrecognised key in it is a claim no consumer can interpret.
+    expect(validators["eval-run"]({
+      ...run, provenance: { ...(run.provenance as object), smuggled: "x" },
+    })).toBe(false);
+    // The must-not-reject half: the real value still validates after all that mutating.
+    expect(report(validators["eval-run"], run)).toBe(true);
+
     // grader_health absent means no judge ran — never that a judge was fine.
     expect(run.grader_health).toBeNull();
     // Deterministic detectors are untuned, so the held-out guarantee holds by construction.

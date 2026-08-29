@@ -28,16 +28,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      # Third-party actions are pinned to a COMMIT, with the version in the trailing comment.
+      #
+      # A `@v7` tag is mutable: whoever controls the repository can repoint it, and the next
+      # build runs different code with the same reference and no diff anywhere. This workflow
+      # runs `npm ci` and executes the whole test suite, so an action running here has the
+      # repository, the lockfile, and any secret the job is ever given.
+      #
+      # That is a real concern rather than a hypothetical: `tj-actions/changed-files` was
+      # compromised in March 2025 by repointing its tags at a malicious commit, and every
+      # workflow referencing it by tag picked the change up automatically.
+      #
+      # A SHA does not update itself, which is the trade — read it as a dependency pin that
+      # needs deliberate bumping, exactly like `package-lock.json`, and re-resolve the tag
+      # when you bump it rather than trusting the comment.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
           cache: npm
 
       # The differential oracle shells out to the frozen Python linter. Without Python the
       # oracle cannot run, and an oracle that silently skips is worse than none — ADR-0007.
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.12'
 
