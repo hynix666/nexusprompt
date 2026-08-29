@@ -121,6 +121,8 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 
 **CI runs `npm run verify` on every push and pull request** (`.github/workflows/verify.yml`), first executed 23 August 2026 and green. The stage order is meaningful and `verify` follows it: boundaries and schema validation first, then Core tests, then Application, adapters, cross-shell parity, adversarial corpus, reproducibility last. **`check:corpus` is deliberately outside `verify`** — it re-hashes 2 GB of gitignored PDFs, so it can never pass on a clean checkout; it is a local-asset check with its own command. Older documents saying "there is no CI" predate this.
 
+**`vercel.json` exists only to switch Vercel off**, and carries no comment because it cannot: `check:hygiene` parses every tracked `.json` and only `tsconfig.json` may hold comments, so the reason lives here. A `nexusprompt-api` Vercel project has been attached to this repository since before it could build one, and it has failed on **every commit since `c9d5d3c`** — the API shell starts with `tsx src/index.ts`, there is no `build` script anywhere, and `tsx` is a devDependency a production install would omit. `{"git": {"deploymentEnabled": false}}` stops it attempting. It is a stopgap: the Vercel project and its GitHub App access still exist, and removing those is account-level work no token in this repository can do. If a real deployment target is ever wanted, delete this file rather than working around it.
+
 ## Two guards, and what each one actually covers
 
 Core purity is enforced by two mechanisms, and conflating them is how the codebase spent a while believing it was checking something it was not:
