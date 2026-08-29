@@ -1,6 +1,6 @@
 # Testing and quality
 
-**929 tests across 29 files, 0 failing.** Runs offline in seconds.
+**1,155 tests across 30 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -17,12 +17,12 @@ npx vitest run --project contracts
 | `application` | `application/test/` | orchestration, pipeline, eval, judge, release, execution |
 | `adapters` | `adapters/*/test/` | provider transport |
 | `shells` | `shells/*/test/` | CLI commands and exit codes; the API shell's routes and socket seam |
-| `contracts` | `test/` | contract conformance, evidence conformance, checker tests |
+| `contracts` | `test/` | contract conformance, evidence conformance, checker tests, the gate contract |
 
 `core/test/purity.setup.ts` traps `fetch`, `Math.random`, `Date.now` and `new Date()` for the
 `core` project. It **cannot** trap the filesystem — see `01-architecture.md`.
 
-## The six quality mechanisms, and what each one alone cannot see
+## The seven quality mechanisms, and what each one alone cannot see
 
 ### 1. Unit tests — must-fire *and* must-not-fire
 
@@ -139,6 +139,25 @@ stop reading.
 is `true` here and `.gitattributes` pins only `sources/**`, so a Windows checkout and a Linux
 checkout of one commit hold different bytes for every artifact file. Raw byte-hashing would
 have been a platform check wearing a reproducibility check's name.
+
+### 7. The gate contract — `test/gate-contract.test.ts`
+
+Properties every gate must hold whatever the input, checked across all sixteen: determinism
+(the second call is identical field for field), order independence (running the whole registry
+first changes nothing), options immutability, totality (no throw on empty, lone CR, control
+characters, 2,000-character bracket runs), verdict domain, hash stability in both directions,
+and bounded time.
+
+The first six sweeps hunted SHAPES for one gate. This is the axis they could not reach: a gate
+that answers differently on the second call is broken with a perfectly good input, so no
+fixture can find it.
+
+**Its own first version did not work, and that is the point of the must-fire half.** The
+options check stringified the object before and after and compared — which passes silently when
+a gate writes a value equal to the one already there. Probed with a real gate setting
+`options.includeFences = true` against options that already had it true: 199 tests passed. The
+check now hands a FROZEN object, so ESM strict mode throws on any write rather than only on
+one that changes something.
 
 ## Local green is not CI green
 
