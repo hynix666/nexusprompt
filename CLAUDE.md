@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mostly documentation, plus **one vertical slice that really runs**. It holds:
 
-- `Documentation/` — 36 Markdown files describing the *target* architecture of the platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists.
+- `Documentation/` — 37 Markdown files describing the *target* architecture of the platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists.
 - `sources/` — 420 files extracted from five archives, frozen and SHA-256-verified against `sources/MANIFEST.json`. Read from these; never write into them.
 - A working slice: `contracts/`, `core/` (16 of 16 gates, 11 pipeline stages), `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `adapters/evidence-local`, `shells/cli`, `scripts/`, `test/`.
 - `LLM/` — an 811 MB int4 ONNX model and tokenizer, gitignored. **Not wired to anything, and not wire-able as dropped**: it is an ONNX Runtime GenAI export missing `genai_config.json`, so the architecture parameters needed to drive generation are absent. Do not guess them — a wrong value produces fluent garbage, which is the one failure demo mode exists to make impossible.
@@ -95,7 +95,8 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 
 | Command | What it does |
 |---|---|
-| `npm run verify` | boundaries → typecheck → source freeze → tests → differential oracle. The whole check, ~10s. |
+| `npm run verify` | hygiene → boundaries → typecheck → source freeze → tests → differential oracle. The whole check. |
+| `npm run check:hygiene` | The repository's own SHAPE, not its content: pinned `.gitignore` rules, a floor on the rule count, nothing tracked under `node_modules/` `PDF/` `LLM/`, no tracked file over 4 MB. Written after `.gitignore` was emptied by automated commits **three times** — the third also tracked 3,677 dependency files. |
 | `npm run lint:boundaries` | Import-boundary rule (`scripts/check-boundaries.mjs`). |
 | `npm run verify:sources` | Re-hashes all 420 frozen files against `MANIFEST.json`. |
 | `npm test` | Vitest: projects `core`, `application`, `adapters`, `shells`, `contracts`. |
@@ -109,6 +110,7 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 | `npm run docs:matrix` | Regenerates `Documentation/CAPABILITY_MATRIX.md` from the tree. |
 | `npm run check:matrix` | Fails when the committed matrix is not what the repository produces. |
 | `npm run docs:truth` / `check:truth` | The truth boundary: eight entries stating what this repository establishes and what it does **not**, each pinned to numbers re-derived from the tree. Reading `Documentation/TRUTH_BOUNDARY.md` first is the cheapest way to avoid quoting a figure more broadly than it holds. |
+| `npm run docs:fence-explanation` / `check:fence-explanation` | Regenerates the fence-closer explainer's data from the live gate, and fails when the committed copy is not what the gate produces. |
 | `npm run check:fingerprint` | Watches for the provider swapping the model under you. Reports "not armed" until a run reaches a provider. |
 | `npm run differential` | The oracle — ported gates vs. the frozen Python linter. Needs Python. |
 | `npm run cli` | `promptnexus lint\|run\|gates`. |

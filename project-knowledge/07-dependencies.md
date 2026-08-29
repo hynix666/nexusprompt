@@ -1,6 +1,14 @@
 # Dependencies
 
-**Eight dev dependencies. Zero runtime dependencies.** Nothing ships in `dependencies` — the
+**Eight dev dependencies. Zero runtime dependencies below the Shell layer.** `contracts`,
+`core`, `application`, the adapters and `shells/cli` ship nothing in `dependencies`.
+`shells/api` ships two — `fastify` and `@fastify/sensible` — which ADR-0012 records.
+The property that mattered is intact: nothing that computes a verdict, a score or a
+revision imports outside the standard library, so every gate, the oracle and the anchor
+stay reproducible from source with no registry involved. What gained dependencies is an
+HTTP transport, the one place writing your own is the worse engineering.
+
+Historically: nothing shipped in `dependencies` at all — the
 CLI runs from source via `tsx`, and Core is pure TypeScript with no imports outside `node:`
 builtins (and not even those — the boundary checker forbids them there).
 

@@ -1,6 +1,6 @@
 # Testing and quality
 
-**828 tests across 26 files, 0 failing.** Runs offline in seconds.
+**890 tests across 28 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -16,7 +16,7 @@ npx vitest run --project contracts
 | `core` | `core/test/` | gates, stages, eval, sizing, anchor, routing, catalog — **all pure** |
 | `application` | `application/test/` | orchestration, pipeline, eval, judge, release, execution |
 | `adapters` | `adapters/*/test/` | provider transport |
-| `shells` | `shells/cli/test/` | CLI commands, exit codes |
+| `shells` | `shells/*/test/` | CLI commands and exit codes; the API shell's routes and socket seam |
 | `contracts` | `test/` | contract conformance, evidence conformance, checker tests |
 
 `core/test/purity.setup.ts` traps `fetch`, `Math.random`, `Date.now` and `new Date()` for the

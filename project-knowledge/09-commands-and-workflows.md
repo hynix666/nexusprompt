@@ -16,7 +16,8 @@ differential oracle.
 
 | Command | What it checks |
 |---|---|
-| `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 51 files, 151 imports |
+| `npm run check:hygiene` | The repository's shape: pinned `.gitignore` rules, a rule-count floor, nothing vendored in the index, no tracked file over 4 MB. **Runs first in `verify`** |
+| `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 53 files, 160 imports |
 | `npm run typecheck` | `tsc --noEmit`, strict + 3 extra flags |
 | `npm run verify:sources` | Re-hashes 420 frozen files against `sources/MANIFEST.json` |
 | `npm run check:counts` | Re-derives every pinned number in the docs from the tree. 42 occurrences of 37 pins, including 9 in this knowledge base |
@@ -30,6 +31,7 @@ differential oracle.
 | `npm run check:anchor` | The committed anchor is what the generator produces |
 | `npm run check:matrix` | The committed capability matrix is what the repo produces |
 | `npm run check:manifest-spec` | The committed manifest-shapes document is what `spec/manifest-shapes.json` produces |
+| `npm run check:fence-explanation` | The fence explainer's data is what the real gate produces. It was committed unwired for a day, which is the state this repository has a checker against |
 | `npm run check:truth` | Re-derives the eight truth-boundary entries from the tree. Fails when a boundary moves — the first provider answer, a divergence retired, a known limit fixed |
 | `npm run check:fingerprint` | Fails on provider model drift; reports **"not armed"** until a run reaches a provider |
 | `npm run check:corpus` | Re-hashes 661 local PDFs. **Deliberately outside `verify`** |

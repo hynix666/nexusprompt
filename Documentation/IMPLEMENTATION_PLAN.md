@@ -29,7 +29,8 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "evidence-local"
   ],
   "shells": [
-
+    "api",
+    "cli"
   ],
   "catalog": {
     "records_imported": 195,
@@ -51,7 +52,9 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "check:corpus",
     "check:counts",
     "check:depth",
+    "check:fence-explanation",
     "check:fingerprint",
+    "check:hygiene",
     "check:manifest-spec",
     "check:matrix",
     "check:plan",
@@ -62,6 +65,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "api",
     "cli",
     "differential",
+    "docs:fence-explanation",
     "docs:manifest-spec",
     "docs:matrix",
     "docs:truth",

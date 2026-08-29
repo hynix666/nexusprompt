@@ -49,6 +49,7 @@ Every count and file name above has been checked against the source artifacts �
 | [0009](./0009-product-name-and-contract-lineage.md) | The product is NexusPrompt; contract `$id` hosts keep the `promptnexus` lineage | Accepted |
 | [0010](./0010-runtime-manifest-extraction.md) | The runtime manifest is a declaration list, not a span to end-of-file | Accepted — authorises 2 divergence entries under 0007 |
 | [0011](./0011-qutm-baseline-floor.md) | `QUTM_CEILING` does not arm below a named baseline floor | Accepted — authorises 1 divergence entry under 0007 |
+| [0012](./0012-api-shell-and-the-dependency-boundary.md) | The API shell is adopted; the zero-dependency property is scoped, not lost | Accepted — amends 0004/0006 |
 
 An amended ADR stays in force except where its amendment supersedes it; the amendment states which parts. Where an ADR and `ARCHITECTURE.md` disagree on current shape, `ARCHITECTURE.md` is authoritative.
 

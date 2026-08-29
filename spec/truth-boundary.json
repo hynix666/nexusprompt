@@ -15,16 +15,17 @@
       "id": "no-model-has-answered",
       "title": "Nothing here has ever talked to a model",
       "probe": "providerReach",
-      "establishes": "The provider path runs end to end and degrades honestly. One eleven-stage run is persisted in this tree, and all eleven of its revision entries recorded a null model fingerprint: the pipeline executed, the provider was unreachable, and Core mapped the classified failure to a labelled demo placeholder rather than to text. The live path also refuses before it spends anything — a key of the wrong shape is rejected up front instead of being discovered case by case.",
+      "establishes": "The provider path runs end to end and degrades honestly. One eleven-stage run is persisted in this tree, and all eleven of its revision entries recorded a null model fingerprint: the pipeline executed, the provider was unreachable, and Core mapped the classified failure to a labelled demo placeholder rather than to text. The live path refuses before it spends anything, in four independent places, each verified by hand on 29 August 2026: no key at all, a key whose shape says placeholder, a well-shaped key with no declared budget, and a budget flag that is not a positive integer. Every one exits 2 having made no provider call. The budget refusal is the load-bearing one — `admitRun` admits everything when no budget is declared, so without it the FIRST live run would have been the unbounded one.",
       "does_not_establish": "Any claim whatsoever about how a language model behaves. Every evaluation figure this repository reports — the anchor's 4,906 cases, each smoke suite, every gate recall number — was produced by the pinned stub. They are evidence about this system's accounting, not about a model's output. No prompt-engineering advice in the documentation set has been measured here, and the fingerprint watch is empty because there has been nothing to watch.",
       "expect": {
         "any_fingerprint_observed": false,
         "fingerprints_pinned": 0,
         "run_bundles_are_gitignored": true,
         "placeholder_key_refused": true,
-        "real_shaped_key_accepted": true
+        "real_shaped_key_accepted": true,
+        "live_requires_declared_budget": true
       },
-      "crossed_when": "The first provider answers. `any_fingerprint_observed` goes true, and from that moment the repository holds evidence about a model — which means every sentence in the documentation that currently says 'stubbed' or 'never executed' needs re-reading, and the first fingerprint needs pinning deliberately rather than appending a string.",
+      "crossed_when": "The first provider answers. `any_fingerprint_observed` goes true, and from that moment the repository holds evidence about a model — which means every sentence in the documentation that currently says 'stubbed' or 'never executed' needs re-reading, and the first fingerprint needs pinning deliberately rather than appending a string. `live_requires_declared_budget` going false is a different and worse event: it would mean a run can spend without a declared cap, which is the one guard whose absence is measured in money.",
       "evidence": [
         "scripts/check-fingerprint.mjs",
         "scripts/model-fingerprints.json",
@@ -109,11 +110,11 @@
       "id": "manifest-reading-is-specified",
       "title": "One gate's reading of one shape is specified; the rest is described",
       "probe": "manifestSpec",
-      "establishes": "`RUNTIME_KEY_UNDECLARED` reads a runtime manifest according to 109 cases that are simultaneously the test, the generated document, and the thing ADR-0010 points at. Ninety-seven are specified behaviour. Twelve are known limits recorded as what the gate actually does today, each with the verdict it should return, so the row is honest and the suite is green at the same time — and a limit that starts returning its wanted verdict fails as stale rather than lingering.",
-      "does_not_establish": "That the reader is correct, or that any other gate is specified at all. It is a heuristic over Markdown, and eleven of its twelve known limits err toward rejecting a manifest an author intended — a visible FAIL somebody clears. Exactly one errs the other way, toward a silent PASS nobody sees, and that is the direction that ships defects. The total rose from five to twelve across the fifth and sixth sweeps, which recorded what they found rather than leaving it to be rediscovered; **the unsafe count has not moved**, which is the number that matters. Nor is one gate one reader: the USE side is `stripDocumentationSpans`, a separate port with a different fence rule, and the two are reconciled by argument rather than by code — see ADR-0010. The other fifteen gates have tests but no specification: their behaviour is described in prose, which is the condition this artifact exists to escape from and has escaped for one gate only.",
+      "establishes": "`RUNTIME_KEY_UNDECLARED` reads a runtime manifest according to 135 cases that are simultaneously the test, the generated document, and the thing ADR-0010 points at. One hundred and twenty-three are specified behaviour. Twelve are known limits recorded as what the gate actually does today, each with the verdict it should return, so the row is honest and the suite is green at the same time — and a limit that starts returning its wanted verdict fails as stale rather than lingering.",
+      "does_not_establish": "That the reader is correct, or that any other gate is specified at all. It is a heuristic over Markdown, and eleven of its twelve known limits err toward rejecting a manifest an author intended — a visible FAIL somebody clears. Exactly one errs the other way, toward a silent PASS nobody sees, and that is the direction that ships defects. The total rose from five to twelve across the fifth and sixth sweeps, which recorded what they found rather than leaving it to be rediscovered; **the unsafe count has not moved across three sweeps**, which is the number that matters. The seventh sweep added twenty-six specified cases and no new limit — it found a regression rather than a gap, in delimiter code a previous sweep had just changed. Nor is one gate one reader: the USE side is `stripDocumentationSpans`, a separate port with a different fence rule, and the two are reconciled by argument rather than by code — see ADR-0010. The other fifteen gates have tests but no specification: their behaviour is described in prose, which is the condition this artifact exists to escape from and has escaped for one gate only.",
       "expect": {
-        "cases": 109,
-        "specified": 97,
+        "cases": 135,
+        "specified": 123,
         "known_limits": 12,
         "unsafe_limits": 1,
         "gate": "RUNTIME_KEY_UNDECLARED"
@@ -131,18 +132,18 @@
       "title": "The documentation describes a platform; the repository runs a slice",
       "probe": "builtSurface",
       "establishes": "A vertical slice that genuinely works: sixteen gates, eleven stages, three adapters, and a CLI that drives a full pipeline run. It cuts through every layer along the riskiest path in the design — a provider failure reaching a Core reduction and coming back out labelled — and `npm run verify` proves it in about ten seconds.",
-      "does_not_establish": "That the system in the 36 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and of the two shell directories present one is `shells/api` — it does not compile, has no tests, depends on four uninstalled packages, and is excluded from typecheck. Counting it as a shell would read as two-of-three progress toward something nobody owns.",
+      "does_not_establish": "That the system in the 37 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies.",
       "expect": {
-        "documentation_markdown_files": 36,
+        "documentation_markdown_files": 37,
         "gates_built": 16,
         "stages_built": 11,
         "adapters_built": ["evidence-local", "provider-local-proxy", "storage-local"],
         "adapters_target": 5,
         "shells_present": ["api", "cli"],
         "shells_target": 3,
-        "shells_excluded_from_typecheck": true
+        "shells_excluded_from_typecheck": false
       },
-      "crossed_when": "An adapter or shell lands, or `shells/api` is either fixed or deleted. Each moves the built surface, and each should move the documents that describe it in the same commit rather than a later one.",
+      "crossed_when": "An adapter or shell lands, or a Shell stops being typechecked. `shells_excluded_from_typecheck` going true again would mean a Shell had been quarantined rather than owned, which is the state ADR-0012 ended — it lasted a week and took CI down with it.",
       "evidence": [
         "Documentation/IMPLEMENTATION_PLAN.md",
         "Documentation/GATES_REFERENCE.md",

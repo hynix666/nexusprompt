@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Why the closer must be bare — NexusPrompt manifest reader</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;600;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --paper: #E7EAE6;        /* cool celadon-gray ground, not warm cream */
@@ -218,15 +215,12 @@
           <button type="button" id="btn-new" aria-pressed="true">NEW READER</button>
         </div>
 
-        <div class="doc" style="margin-top:1rem" role="img"
-             aria-label="Eight-line Markdown document annotated with the parser's fence state per line">
           <div class="doc-cap" id="doc-cap">manifest-sample.md — fence state per line</div>
           <div class="doc-summary" id="doc-summary" role="status" aria-live="polite"></div>
           <!-- lines injected by script -->
         </div>
       </div>
 
-      <div class="verdict" id="verdict" data-safe="true" aria-live="polite">
         <span class="verdict-chip" id="verdict-chip">FAIL — VISIBLE, AND CORRECT</span>
         <p id="verdict-head">Line 8 uses <code>[[A]]</code>. The gate returns <strong>FAIL</strong>.</p>
         <p class="why" id="verdict-why">
@@ -322,31 +316,15 @@
   (() => {
     "use strict";
 
-    // Line data: text plus per-reader classification, traced from the two real implementations.
-    // old = delimiter match only; new = delimiter match + bare trailer required.
-    const LINES = [
-      { t: "```md",                    old: "open",  new: "open",  note: null },
-      { t: "sample",                   old: "in",    new: "in",    note: null },
-      { t: "```md",                    old: "close", new: "in",    note: { old: ["marked-bad", "← wrongly closes"], new: ["marked-good", "← content, not a close"] } },
-      { t: "## Runtime Variables",     old: "live",  new: "in",    note: null },
-      { t: "- [[A]] = the thing",      old: "live",  new: "in",    note: null },
-      { t: "```",                      old: "close", new: "close", note: null },
-      { t: "",                         old: "live",  new: "live",  note: null },
-      { t: "Use [[A]] now.",           old: "live",  new: "live",  note: null },
-    ];
 
     const VERDICTS = {
       old: {
         safe: "false",
         chip: "PASS — A SILENT FALSE CLEAN",
-        head: 'Line 8 uses [[A]]. The gate returns <strong>PASS</strong> — and should not.',
-        why:  'The old reader accepts line 3 as a closer: right character, long enough run, trailer ignored. Parity flips, lines 4–5 become a real manifest, [[A]] declares itself, and the use on line 8 is waved through. Nobody sees this happen.',
       },
       new: {
         safe: "true",
         chip: "FAIL — VISIBLE, AND CORRECT",
-        head: 'Line 8 uses [[A]]. The gate returns <strong>FAIL</strong>.',
-        why:  'Line 3 carries an info string, so it is content. The sample stays fenced until the bare ``` on line 6 — the heading inside never declares, and the undeclared use is caught where its author can fix it.',
       },
     };
 
@@ -364,8 +342,6 @@
       doc.querySelectorAll(".line").forEach((n) => n.remove());
       const frag = document.createDocumentFragment();
 
-      LINES.forEach((l, i) => {
-        const state = l[mode];
         const row = document.createElement("div");
         row.className = "line";
 
@@ -375,14 +351,6 @@
 
         const code = document.createElement("span");
         code.className = "code";
-        code.textContent = l.t === "" ? " " : l.t;
-
-        if (state === "in") row.classList.add("inside");
-        if (l.note && l.note[mode]) {
-          row.classList.add(l.note[mode][0]);
-          const cm = document.createElement("span");
-          cm.className = "cm";
-          cm.textContent = l.note[mode][1];
           code.appendChild(cm);
         } else if (state === "open" || state === "close") {
           const cm = document.createElement("span");
@@ -402,15 +370,10 @@
 
       // Keep the important intermediate state visible, not just the final verdict.
       // This summary is also the accessible equivalent of the visual line annotations.
-      summary.innerHTML = mode === "old"
-        ? '<span>line 3: <strong>closer accepted</strong></span><span>manifest: <strong>A</strong></span><span>use: <strong>A</strong></span>'
-        : '<span>line 3: <strong>content</strong></span><span>manifest: <strong>none</strong></span><span>use: <strong>A</strong></span>';
 
       const v = VERDICTS[mode];
       verdict.dataset.safe = v.safe;
       chip.textContent = v.chip;
-      head.innerHTML = v.head;
-      why.innerHTML = v.why;
 
       btnOld.setAttribute("aria-pressed", String(mode === "old"));
       btnNew.setAttribute("aria-pressed", String(mode === "new"));

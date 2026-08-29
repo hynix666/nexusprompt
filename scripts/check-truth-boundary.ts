@@ -118,6 +118,22 @@ export const PROBES: Record<string, Probe> = {
       // placeholder that is still sitting in the user environment.
       placeholder_key_refused: implausibleKeyReason("<your key>") !== null,
       real_shaped_key_accepted: implausibleKeyReason("sk-ant-api03-" + "x".repeat(64)) === null,
+      // Derived from the source, not by running the command, and the reason is worth stating.
+      // A behavioural probe would have to invoke `--live` with a key — and if the guard it
+      // tests were ever removed, the probe ITSELF would dispatch the run. A check that
+      // generates network traffic exactly when it fails is worse than one that reads a line.
+      // `--max-calls 0` is not a safe substitute either: flag validation rejects it before the
+      // budget path is reached. Verified behaviourally once, by hand, 29 August 2026: a
+      // well-shaped key with no `--max-calls` exits 2 with "no budget declared", no call made.
+      // Unreadable source reads as NOT verified, never as fine. Same rule the fingerprint
+      // watch applies to a null fingerprint: absence of evidence is recorded as absence.
+      live_requires_declared_budget: (() => {
+        try {
+          return /LIVE && MAX_CALLS === undefined/.test(readText(root, "scripts/run-eval.ts"));
+        } catch {
+          return false;
+        }
+      })(),
     };
   },
 

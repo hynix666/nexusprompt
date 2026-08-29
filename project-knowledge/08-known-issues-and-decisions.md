@@ -19,6 +19,7 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 | 0009 | Product is NexusPrompt; contract lineage stays `promptnexus` |
 | 0010 | The runtime manifest is a declaration list, not a span to end-of-file — authorises 2 divergence entries |
 | 0011 | `QUTM_CEILING` does not arm below a named baseline floor — authorises 1, and added `only_when_options` |
+| 0012 | `shells/api` adopted as the third Shell; zero-runtime-dependency scoped to below the Shell layer (amends 0004/0006) |
 
 ## The truth boundary
 
@@ -47,6 +48,50 @@ The entries most worth knowing before quoting anything:
 
 Crossing a boundary is a failing build naming what moved — the point being that this is the
 one moment anyone reliably re-reads the sentence attached to it.
+
+## The recurring failure nobody had a checker for: `.gitignore`
+
+Emptied **three times** by automated commits — `7ede11a`, `83890f1` (repaired by `bf1fd4d`),
+and `8ee5d0a`. The third truncated it to zero bytes and tracked **3,677 node_modules files in
+the same commit**, which is how `.git` reached 2.3 GB. At the moment it was found, `PDF/`
+(2.0 GB) and `LLM/` (815 MB) were ignored by nothing and tracked by nothing: one `git add -A`
+from entering history permanently.
+
+The structural cause is stated plainly because it generalises: **every checker in this
+repository verified the repository's CONTENT, and none verified its SHAPE.** So the same
+failure landed three times and was found three times by hand, each time by someone noticing
+a `git status` that looked wrong.
+
+`npm run check:hygiene` closes it, and runs first in `verify`. Four rules in two deliberately
+redundant pairs — a pinned rule set and a floor on the rule count; a vendor-prefix ban and a
+4 MB size bound. Each pair covers the other's blind spot: a named rule catches a known cost,
+a bound catches an unknown one. An ignore rule also does nothing for a path that is *already*
+tracked, which is precisely the state `8ee5d0a` left behind, so the index is checked
+separately from the file.
+
+The guard then shipped with the defect it was written to prevent. Its vendor rule used
+`startsWith("node_modules/")`, which matches the repository root and nothing else — so a
+tracked `shells/api/node_modules/.vite/…/results.json` walked straight past it while the
+check printed **"none vendored"**. This is npm workspaces; every workspace can have its own
+`node_modules`, so root-only was wrong for exactly the layout the rule guards. `.gitignore`
+gets it right for free, because `node_modules/` matches at any level, which is the reason the
+index needs a separate rule at all: an ignore pattern does nothing about a path already
+tracked.
+
+Found the way these always are — `npm ci` deleted the directory and git reported the deletion
+of a file the check had just called clean. The matcher now tests any path segment, and is
+probed in both directions: it fires on `a/b/c/node_modules/d` and stays silent on
+`docs/node_modules-policy.md`, because widening a matcher is how a false positive ships.
+
+Two things worth carrying forward:
+
+- **The truth boundary caught this on its own.** Two of its eight entries failed —
+  `run_bundles_are_gitignored` and `gitignored` both derived `false`. It was built to notice
+  when a claim stops being true, and the first thing it noticed was not a claim about the
+  product but about the repository.
+- **`git rm -r --cached` stops the bleeding; it does not clean the wound.** The blobs are on
+  `origin` and every clone carries them. Removing them means rewriting published history,
+  which is the owner's decision, not a checker's.
 
 ## Open register — each with a closing condition
 

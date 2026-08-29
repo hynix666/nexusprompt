@@ -116,10 +116,23 @@ export const clausePresent = (clause: string, low: string): boolean =>
  * reintroduces the unclearable FAIL.
  */
 /**
+ * Indented four or more spaces, a heading is an indented CODE BLOCK, not a heading.
+ *
+ * `^\s*` allowed any indentation, so a four-space-indented `## Runtime Variables` opened a
+ * manifest and its entries declared -- a documentation sample written the indented way rather
+ * than the fenced way whitelisted its keys for the whole document.
+ *
+ * Note this is `^ {0,3}` where FENCE_LINE_RE is `^[ 	]{0,3}`, and the asymmetry is
+ * deliberate: both err safe, in opposite directions. A fence that fails to match does not
+ * open, so its contents stay readable -- unsafe -- and the class is widened. A heading that
+ * fails to match does not open a manifest, which is safe, so the class stays strict. A
+ * tab-indented heading therefore declares nothing, which is the answer we want anyway.
+ */
+/**
  * What opens a manifest, in one place. The authority is spec/manifest-shapes.json.
  *
  * TWO RULES, because a `#` is an unambiguous structural marker and bare prose is not:
- *   with a `#`   the line is a heading, but the tail must be a QUALIFIER — end of line, or a
+ *   with a `#`   the line is a heading, but the tail must be a QUALIFIER -- end of line, or a
  *                bracket, colon, dash or closing hashes. Not a continuation of the phrase.
  *   without one  the line must be nothing but the phrase, plus an optional parenthetical
  *                and colon. This is the form the v5 BLUEPRINT emits.
@@ -133,28 +146,22 @@ export const clausePresent = (clause: string, low: string): boolean =>
  *   with no tail rule     let `Runtime variables are injected by the host...` open a manifest
  *                         and the next line declare. A document with no manifest returned PASS.
  *   requiring the whole
- *   line be the phrase    broke `## Runtime Variables (host-supplied) — do not echo`, a
+ *   line be the phrase    broke `## Runtime Variables (host-supplied) -- do not echo`, a
  *                         regression against both the previous port and the frozen oracle.
  *   allowing any tail
  *   after a `#`           let `## Runtime Variables You Must Never Log` declare the key it
  *                         forbids. The highest-traffic shape of the lot.
+ *   `#+` with `\s*`       accepted zero whitespace and any number of hashes, so
+ *                         `#Runtime Variables` and `####### Runtime Variables` -- neither of
+ *                         which CommonMark renders as a heading -- opened one. Found by the
+ *                         fifth sweep; the `#{1,6}` bound and the required space close it.
  *
- * The pattern across all four: changing a matcher moves BOTH failure directions, and the
- * author tests only the one they just fixed. When in doubt the accept-set loses — a rejected
+ * The pattern across all five: changing a matcher moves BOTH failure directions, and the
+ * author tests only the one they just fixed. When in doubt the accept-set loses -- a rejected
  * manifest is a visible FAIL an author clears; an accepted non-manifest is a silent PASS.
- */
-/**
- * Indented four or more spaces, a heading is an indented CODE BLOCK, not a heading.
  *
- * `^\s*` allowed any indentation, so a four-space-indented `## Runtime Variables` opened a
- * manifest and its entries declared -- a documentation sample written the indented way rather
- * than the fenced way whitelisted its keys for the whole document.
- *
- * Note this is `^ {0,3}` where FENCE_LINE_RE is `^[ 	]{0,3}`, and the asymmetry is
- * deliberate: both err safe, in opposite directions. A fence that fails to match does not
- * open, so its contents stay readable -- unsafe -- and the class is widened. A heading that
- * fails to match does not open a manifest, which is safe, so the class stays strict. A
- * tab-indented heading therefore declares nothing, which is the answer we want anyway.
+ * Removed once as "redundant historical commentary" and restored deliberately. In a file
+ * whose every rule is a scar, the scar is the specification.
  */
 const ATX_MANIFEST_HEADING_RE = /^ {0,3}#{1,6}[ 	]+Runtime Variables\s*(?:$|[(\[:–—-]|#)/i;
 const BARE_MANIFEST_HEADING_RE = /^ {0,3}Runtime Variables\s*(?:\([^)]*\))?\s*:?\s*$/i;
@@ -165,14 +172,14 @@ const isManifestHeading = (line: string): boolean =>
  * A declaration line opens with its key, whatever list syntax carries it.
  *
  * The bare-or-bulleted-only version rejected every manifest written as a Markdown table, an
- * ordered list, or with the key in backticks — each returning `declared: []` and therefore
- * FAIL on every correctly declared key. That is defect B1 again in a new costume, and it was
- * sharper than a style nit because `extractSourceLedgerIds`, ten lines below and cited by this
+ * ordered list, or with the key in backticks -- each returning `declared: []` and therefore
+ * FAIL on every correctly declared key. That is the same defect in a new costume, and it was
+ * sharper than a style nit because `extractSourceLedgerIds`, further down and cited by this
  * function's own comment as the model for it, accepts ONLY table rows. The two declaration
  * readers in one file accepted disjoint syntaxes, so formatting the manifest the way the
  * ledger is formatted produced an unclearable FAIL.
  *
- * The prefixes admitted here carry no semantics — a bullet, an ordered marker, a table cell,
+ * The prefixes admitted here carry no semantics -- a bullet, an ordered marker, a table cell,
  * and emphasis wrappers. What still ends the section is prose: `1. Read [[PLAYER_TIER]] and
  * branch.` does not open with its key, so a use cannot declare itself.
  */
@@ -182,17 +189,17 @@ const DECLARATION_LINE_RE =
 const TABLE_ROW_RE = /^\s*\|/;
 
 /**
- * The keys a line DECLARES — empty when it declares nothing.
+ * The keys a line DECLARES -- empty when it declares nothing.
  *
  * A table row used to declare every key it contained in any cell, so a warning row inside the
- * manifest's own table — `| Warning | never pass [[CUSTOMER_SSN]] to the model |` — declared
+ * manifest's own table -- `| Warning | never pass [[CUSTOMER_SSN]] to the model |` -- declared
  * the key it exists to forbid, and the gate returned PASS on a body that echoed it. Deleting
  * that one row restored the FAIL. Structurally the same defect as a later table declaring for
  * the whole document, relocated one table earlier.
  *
  * A cell declares on the same rule as any other line: it must OPEN with the key. That keeps
- * the `Name | Placeholder | Meaning` layout working — the key is in cell two, but it is the
- * whole of cell two — while a prose cell mentioning a key declares nothing.
+ * the `Name | Placeholder | Meaning` layout working -- the key is in cell two, but it is the
+ * whole of cell two -- while a prose cell mentioning a key declares nothing.
  */
 function declarationKeys(line: string): string[] {
   const collect = (s: string) => [...s.matchAll(RUNTIME_KEY_G)].map((m) => m[1]);
@@ -249,7 +256,26 @@ export function extractRuntimeManifest(text: string): Set<string> {
    * Stripping it once, here, is the fix. Widening the indent class to include it would have
    * been the same fix in the wrong place, and would have let a BOM stand in for a space.
    */
-  const lines = text.replace(/^﻿/, "").split("\n");
+  /**
+   * Split on BOTH line endings, so no `\r` is carried into the scan.
+   *
+   * This is not tidiness. `FENCE_LINE_RE` ends `(.*)$`, and in JavaScript `\r` IS a line
+   * terminator: `.` cannot consume it, and `$` without the `m` flag will not match before it.
+   * So a delimiter arriving as `` ```\r `` matched NOTHING. No fence ever opened, and every
+   * fenced documentation sample declared its keys for the whole document — the exact false
+   * clean the fence guard exists to prevent, reintroduced for every CRLF file. That is every
+   * local file in this repository; only `sources/**` is pinned to LF.
+   *
+   * Introduced by the sweep-six closer fix, which added `(.*)$` to read a closer's tail, and
+   * found by the seventh sweep. It is precisely the pattern this file's own header warns
+   * about: changing a matcher moves BOTH failure directions and the author tests only the one
+   * they just fixed. Two spec cases already asserted "CRLF changes no verdict" — neither
+   * contained a fence, so both stayed green while the claim became false.
+   *
+   * Normalising here fixes the class rather than one regex: no later pattern in this scan can
+   * trip over a `\r` it did not expect.
+   */
+  const lines = text.replace(/^﻿/, "").split(/\r?\n/);
 
   /**
    * A heading inside a fence is an EXAMPLE, and must not declare.
