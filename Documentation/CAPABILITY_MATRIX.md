@@ -17,6 +17,7 @@ enforces, so this table and that test cannot disagree.
 
 | Contract | Version | Status |
 |---|---|---|
+| `audit-report` | 1.0.0 | pending — declared, no producer |
 | `baseline` | 2.0.0 | validated |
 | `comparison` | 2.2.0 | validated |
 | `configuration` | 1.3.0 | validated |
@@ -33,7 +34,7 @@ enforces, so this table and that test cannot disagree.
 | `routing-policy` | 1.0.0 | validated |
 | `technique-record` | 1.3.0 | validated |
 
-**15 of 15** schemas are validated against a value the system produced.
+**15 of 16** schemas are validated against a value the system produced.
 
 ### Columns this table does not have
 
