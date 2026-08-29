@@ -49,7 +49,7 @@ components were rejected by it.
 | Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
-| Contracts | 15 JSON Schemas, all validated against produced values |
+| Contracts | 16 JSON Schemas, all validated against produced values |
 | Adapters | 3 built (provider-local-proxy, storage-local, evidence-local) |
 | Shells | 2 built — `cli` and `api` (adopted 29 Aug, ADR-0012; typechecked and tested). 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
 | Source size | ~24,500 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/ spec/` |
@@ -102,7 +102,7 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 
 | Path | Purpose |
 |---|---|
-| `contracts/` | 15 versioned JSON Schemas + `index.ts` TypeScript bindings. The sole cross-boundary interface |
+| `contracts/` | 16 versioned JSON Schemas + `index.ts` TypeScript bindings. The sole cross-boundary interface |
 | `contracts/CHANGELOG.md` | Why every version moved. ADR-0002 requires an entry per bump |
 | `core/src/gates/` | 16 pure gate implementations + registry |
 | `core/src/stages/` | 11 pipeline stages + `pipeline.ts` (depth plan, gate feedback) |

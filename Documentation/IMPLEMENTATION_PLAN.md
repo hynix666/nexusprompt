@@ -21,7 +21,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "target": 11
   },
   "contracts": {
-    "schemas": 15
+    "schemas": 16
   },
   "adapters": [
     "provider-local-proxy",
@@ -104,7 +104,7 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
 
 ```
                         built          target
-contracts   ████████████████████       15 schemas — all 15 validated against values a real run produced
+contracts   ████████████████████       16 schemas — all 16 validated against values a real run produced
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops

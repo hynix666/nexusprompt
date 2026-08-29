@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/audit-report/1.0.0",
+  "title": "AuditReport",
+  "description": "Output of the Nexus Quality Audit Core. A deterministic verification report that manufactures error signals for silent failures. Does not generate code; only validates, lints, and reports deviations against the 5-layer architecture and versioned JSON contracts.",
+  "type": "object",
+  "required": ["status", "violations", "determinism_score", "silent_failure_risk", "audit_id", "timestamp", "artifact_type", "schemas_checked"],
+  "additionalProperties": false,
+  "properties": {
+    "audit_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for this audit session. Enables traceability when multiple audits run against the same artifact."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the audit was performed. Required because architectural compliance is time-sensitive -- an artifact passing today may fail after a contract update."
+    },
+    "artifact_type": {
+      "enum": ["code", "prompt_brief", "schema", "configuration", "pipeline_spec"],
+      "description": "What kind of artifact was audited. Different types have different failure modes."
+    },
+    "status": {
+      "enum": ["PASS", "FAIL"],
+      "description": "Overall verdict. FAIL if any CRITICAL violation exists, or if determinism_score < 80, or if silent_failure_risk is HIGH."
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["layer", "severity", "description", "suggested_fix"],
+        "additionalProperties": false,
+        "properties": {
+          "layer": {
+            "enum": ["shell", "application", "core", "adapter", "contract", "cross_layer"],
+            "description": "Which layer the violation occurs in, or cross_layer if it involves improper coupling between layers."
+          },
+          "severity": {
+            "enum": ["CRITICAL", "WARNING"],
+            "description": "CRITICAL if it breaks architectural purity, schema conformance, or determinism. WARNING if it degrades maintainability or observability without breaking guarantees."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Specific description of the violation. Must be actionable and reference the exact rule or contract violated."
+          },
+          "suggested_fix": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Concrete remediation. Vague advice like 'fix this' is rejected; must name the specific change required."
+          }
+        }
+      },
+      "description": "List of all violations found. Empty array does not mean PASS -- check status field."
+    },
+    "determinism_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Quantitative measure of reproducibility. 100 means fully deterministic given same inputs and seed. Below 80 is a failing score because non-deterministic artifacts cannot be reliably compared or promoted."
+    },
+    "silent_failure_risk": {
+      "enum": ["HIGH", "MEDIUM", "LOW"],
+      "description": "Likelihood that this artifact could fail without producing an observable error signal. HIGH means the artifact assumes success or lacks explicit error handling. MEDIUM means error paths exist but are untested. LOW means error signals are manufactured and verified."
+    },
+    "schemas_checked": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["schema_id", "version", "conformance"],
+        "additionalProperties": false,
+        "properties": {
+          "schema_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The $id from the schema, e.g., 'https://promptnexus.dev/contracts/gate-result/1.3.0'"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$"
+          },
+          "conformance": {
+            "enum": ["full", "partial", "failed", "not_applicable"],
+            "description": "Level of conformance. partial means some fields match but others are missing or wrong. not_applicable means this schema does not apply to the artifact type."
+          }
+        }
+      },
+      "description": "Which of the 15 versioned contracts were validated against. An audit that does not name its schemas is unauditable."
+    },
+    "architectural_notes": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": ["layer_separation", "io_boundary", "contract_usage"],
+      "additionalProperties": false,
+      "properties": {
+        "layer_separation": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Assessment of whether the 5-layer architecture (Shells→Application→Contracts→Core→Adapters) is respected."
+        },
+        "io_boundary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where I/O operations occur. Core layer must remain pure -- any I/O in Core is a CRITICAL violation."
+        },
+        "contract_usage": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How versioned JSON contracts are used. Bypassing contracts or using unversioned data structures is a CRITICAL violation."
+        }
+      }
+    },
+    "failure_mode_tests": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "required": ["failure_mode", "test_case", "expected_signal"],
+        "additionalProperties": false,
+        "properties": {
+          "failure_mode": {
+            "enum": ["hallucination", "logical-inconsistency", "planning-collapse", "overconfidence", "constraint-violation", "ambiguous-input", "prompt-injection", "context-truncation", "domain-mismatch", "conflicting-instructions", "tool-invocation-error", "tool-runtime-failure", "agent-communication-breakdown", "business-rule-misalignment", "cost-driven-degradation", "provider-timeout", "provider-rate-limit", "provider-auth-failure", "schema-validation-bypass", "non-deterministic-output"]
+          },
+          "test_case": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Specific input or condition that would trigger this failure mode."
+          },
+          "expected_signal": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What error signal should be produced. If no signal would be produced, this is a silent failure gap."
+          }
+        }
+      },
+      "description": "Proposed test cases for failure modes the artifact does not currently handle. Required when silent_failure_risk is not LOW."
+    }
+  }
+}
