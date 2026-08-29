@@ -6,6 +6,7 @@ import {
   detectorsWithoutProbes, probesWithoutDetectors, deadDetectors,
 } from "../src/eval/probes.js";
 import type { EvalCase, PipelineOutcome, DetectorRecallBlock } from "../../contracts/index.js";
+import { PIPELINE } from "../src/stages/pipeline.js";
 
 /**
  * The pure half of the evaluation plane. Both modules are Core, so both run under the
@@ -509,7 +510,7 @@ describe("anchor sizing", () => {
 /* ── budget and the cache key ──────────────────────────────────────────────── */
 
 import {
-  isDeterministic, cacheKey, plannedCalls, admitRun, accrue, hit, exceeds, emptyCost,
+  isDeterministic, cacheKey, plannedCalls, plannedPipelineCalls, admitRun, accrue, assertValidRate, hit, exceeds, emptyCost,
 } from "../src/eval/budget.js";
 
 describe("isDeterministic", () => {
@@ -565,6 +566,50 @@ describe("plannedCalls", () => {
   });
 });
 
+describe("plannedPipelineCalls", () => {
+  const P = PIPELINE.map((s) => ({ id: s.id as string, kind: s.kind }));
+
+  it("counts the generating stages of the plan it is given, not a nominal eleven", () => {
+    // Nine of the eleven stages generate; `lint` and `cost_estimate` are deterministic.
+    expect(plannedPipelineCalls({ plan: P })).toBe(9);
+    expect(P.length).toBe(11);
+    // A shallower plan costs less, which is the whole reason this takes a plan.
+    const tiny = P.slice(0, 4);
+    expect(plannedPipelineCalls({ plan: tiny })).toBeLessThan(plannedPipelineCalls({ plan: P }));
+  });
+
+  it("adds one generating execution per feedback round, DERIVED from the refine..lint slice", () => {
+    // Measured against the runner: at caps of 0/1/2/3 an eleven-stage run performs 8/9/10/11
+    // provider calls. The bound must sit at or above each, and must move with the cap.
+    for (const [rounds, observed] of [[0, 8], [1, 9], [2, 10], [3, 11]] as const) {
+      const bound = plannedPipelineCalls({ plan: P, feedbackRounds: rounds });
+      expect(bound, `rounds=${rounds}`).toBeGreaterThanOrEqual(observed);
+      expect(bound, `rounds=${rounds}`).toBe(9 + rounds);
+    }
+  });
+
+  it("permits no rounds when the plan omits refine or lint", () => {
+    // The same condition `decideGateFeedback` refuses on. A plan that cannot loop must not be
+    // charged for looping, or every shallow run is over-budgeted into refusal.
+    const noLint = P.filter((s) => s.id !== "lint");
+    expect(plannedPipelineCalls({ plan: noLint, feedbackRounds: 3 }))
+      .toBe(plannedPipelineCalls({ plan: noLint, feedbackRounds: 0 }));
+  });
+
+  it("multiplies by attempts, because a retry is another call", () => {
+    expect(plannedPipelineCalls({ plan: P, maxAttempts: 3 })).toBe(27);
+    // Floors at one: `maxAttempts: 0` would otherwise bound a real run at zero calls.
+    expect(plannedPipelineCalls({ plan: P, maxAttempts: 0 })).toBe(9);
+  });
+
+  it("is an UPPER bound — the thing a budget needs", () => {
+    // Stages skip (a clean critique skips `refine`), so a real run costs less. A bound that
+    // sometimes sat below the truth would authorise a spend it did not cover, which is the
+    // one direction that cannot be allowed to fail.
+    expect(plannedPipelineCalls({ plan: P, feedbackRounds: 3, maxAttempts: 3 })).toBe(36);
+  });
+});
+
 describe("admitRun", () => {
   const budget = (over = {}) => ({ on_exceed: "refuse" as const, max_provider_calls: 100, ...over });
 
@@ -588,10 +633,43 @@ describe("admitRun", () => {
     expect(a.reason).toContain("refused before dispatch");
   });
 
-  it("truncates instead when the configuration asked for that", () => {
+  it("refuses `truncate_suite` too, because truncation is not implemented", () => {
+    /**
+     * This test asserted the opposite until 29 August 2026: `admit: true` with
+     * `allowedCalls: 100`. The assertion was true of the function and false of the system.
+     * `application/src/eval.ts` referenced `allowedCalls` ZERO times, so declaring
+     * `on_exceed: "truncate_suite"` ran the WHOLE suite with the cap ignored — a budget that
+     * reads as enforced and is not, which the schema description explicitly promises against
+     * ("enforced BEFORE dispatch rather than observed after").
+     *
+     * Refusing is the conservative half of a choice this module's header says must never be
+     * made silently, and it is reversible: honest truncation needs `EvalRun` to record that
+     * it was truncated and over what, because an aggregate over whichever cases fit is a
+     * score for a suite nobody defined. That is a contract change, and it lands first.
+     */
     const a = admitRun({ budget: budget({ on_exceed: "truncate_suite" }), plannedCalls: 500 });
+    expect(a.admit).toBe(false);
+    expect(a.allowedCalls).toBe(0);
+    expect(a.reason).toContain("truncation is not implemented");
+    // The number is still reported, so the reason is actionable rather than merely negative.
+    expect(a.reason).toContain("100 call(s) would fit");
+  });
+
+  it("a declared max_usd with no estimate is reported as UNENFORCED, not as within budget", () => {
+    // The fail-open above stands. What changes is that it is no longer silent: the old reason
+    // was "within budget (1 call(s))" for a run whose only declared cap was never examined.
+    const a = admitRun({ budget: { on_exceed: "refuse", max_usd: 1 }, plannedCalls: 1 });
     expect(a.admit).toBe(true);
-    expect(a.allowedCalls).toBe(100);
+    expect(a.unenforced).toHaveLength(1);
+    expect(a.unenforced[0]).toContain("max_usd");
+    expect(a.reason).toContain("UNENFORCED");
+  });
+
+  it("does not report UNENFORCED when the cap WAS checked", () => {
+    // The must-not-fire half. A field that always populated would carry no information.
+    expect(admitRun({ budget: { on_exceed: "refuse", max_usd: 1 }, plannedCalls: 1, estimatedUsd: 0.5 }).unenforced).toEqual([]);
+    expect(admitRun({ budget: budget(), plannedCalls: 1 }).unenforced).toEqual([]);
+    expect(admitRun({ plannedCalls: 1 }).unenforced).toEqual([]);
   });
 
   it("bounds by dollars as well as calls", () => {
@@ -605,6 +683,37 @@ describe("admitRun", () => {
     // block every run against a provider that reports no usage; admitting on it silently is
     // what `budget_exceeded` catches after the fact.
     expect(admitRun({ budget: { on_exceed: "refuse", max_usd: 1 }, plannedCalls: 1 }).admit).toBe(true);
+  });
+
+  it("rejects a rate that would defeat the cap it is measured against", () => {
+    /**
+     * An unvalidated rate is a cap that reports itself satisfied. A negative rate makes `usd`
+     * negative, so `exceeds` compares a negative number against a positive cap and returns
+     * false — the more the run spends, the further under budget it looks. NaN is the same
+     * failure by a different route: every comparison against it is false.
+     */
+    for (const bad of [-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(() => assertValidRate({ in: bad, out: 15 }), `in=${bad}`).toThrow(/finite, non-negative/);
+      expect(() => assertValidRate({ out: bad, in: 3 }), `out=${bad}`).toThrow(/finite, non-negative/);
+      expect(() => accrue(emptyCost(), { prompt_tokens: 10 }, { in: bad, out: 15 })).toThrow();
+    }
+  });
+
+  it("accepts the rates a price table actually contains", () => {
+    // The must-not-fire half: zero is a real rate (a free tier), and so is a fractional one.
+    for (const good of [0, 0.25, 3, 15, 75]) {
+      expect(() => assertValidRate({ in: good, out: good })).not.toThrow();
+    }
+    expect(accrue(emptyCost(), { prompt_tokens: 1e6 }, { in: 3, out: 15 }).usd).toBeCloseTo(3, 10);
+  });
+
+  it("the negative rate really did defeat `exceeds` before the guard", () => {
+    // The instrument check. Without this, the test above proves only that a throw happens,
+    // not that anything was wrong — and eight of eleven sweeps here began with an instrument
+    // that could not have failed.
+    const spent = { ...emptyCost(), tokens_in: 1e6, tokens_out: 1e6, usd: -18 };
+    expect(exceeds(spent, { on_exceed: "refuse", max_usd: 1 })).toBe(false);
+    expect(exceeds({ ...spent, usd: 18 }, { on_exceed: "refuse", max_usd: 1 })).toBe(true);
   });
 
   it("gives a reason whether or not it admitted", () => {
