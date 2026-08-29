@@ -1141,6 +1141,215 @@
       "text": "#\nRuntime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].",
       "expect": "PASS",
       "why": "An empty ATX heading, then the bare-phrase form on its own line -- which the reader accepts, because that is the shape the v5 BLUEPRINT emits."
+    },
+    {
+      "id": "key-empty-token",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[]].",
+      "expect": "PASS",
+      "why": "`[[]]` contains no character from the declared charset `[A-Za-z0-9_:-]`, so it is not a key token. Nothing interpolates and nothing needs declaring."
+    },
+    {
+      "id": "key-space-only",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[ ]].",
+      "expect": "PASS",
+      "why": "A space is outside the charset; same reasoning as the empty token."
+    },
+    {
+      "id": "key-digits-only",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[123]].",
+      "expect": "FAIL",
+      "why": "Digits ARE in the charset, so `[[123]]` is a key -- used here and undeclared. Pinned because a numeric key looks like an index and is easy to read past."
+    },
+    {
+      "id": "key-underscore-only",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[_]].",
+      "expect": "FAIL",
+      "why": "A one-character key is still a key. The charset has no minimum length and should not acquire one silently."
+    },
+    {
+      "id": "key-colon-namespaced",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[host:tenant]].",
+      "expect": "FAIL",
+      "why": "A colon is in the charset, so namespaced keys work -- and an undeclared one fails like any other. Contrast `edge-dotted-key-is-not-a-key`: a dot is NOT in the charset, so the two shapes behave differently and both are pinned."
+    },
+    {
+      "id": "key-case-sensitive",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[a]].",
+      "expect": "FAIL",
+      "why": "`[[A]]` is declared and `[[a]]` is used. The charset is case-sensitive, so these are different keys. A case slip is the most likely way to use an undeclared key by accident, and it must not pass silently."
+    },
+    {
+      "id": "key-very-long",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK]].",
+      "expect": "FAIL",
+      "why": "Nothing bounds key length, and a 200-character key is undeclared like any other. Pinned so a future length bound has to be a decision rather than an accident."
+    },
+    {
+      "id": "key-trailing-space-inside",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[B ]].",
+      "expect": "PASS",
+      "why": "A space is outside the charset, so `[[B ]]` is not a key token. Matches `edge-key-with-nbsp-is-not-a-key`, which pins the same rule for a non-breaking space."
+    },
+    {
+      "id": "key-adjacent-uses",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]][[B]] together.",
+      "expect": "FAIL",
+      "why": "Two keys with no separator. Adjacency must not hide the second -- a global regex that consumed too much would report only A."
+    },
+    {
+      "id": "key-extra-closing-bracket",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[B]]].",
+      "expect": "FAIL",
+      "why": "`[[B]]` matches and the trailing bracket is prose. Compare `triple-bracket-declaration-double-use`, where a malformed DECLARATION must not license a use: malformed declarations lose, malformed uses still count."
+    },
+    {
+      "id": "key-extra-opening-bracket",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[[B]].",
+      "expect": "FAIL",
+      "why": "The inner `[[B]]` is well formed. A stray leading bracket must not conceal a use -- concealment is the unsafe direction."
+    },
+    {
+      "id": "key-unclosed",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [[B.",
+      "expect": "PASS",
+      "why": "No closing pair, so no key token -- and nothing interpolates at runtime either, so there is nothing to report."
+    },
+    {
+      "id": "key-unopened",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and B]].",
+      "expect": "PASS",
+      "why": "The same, from the other side."
+    },
+    {
+      "id": "key-single-brackets",
+      "group": "What counts as a key",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]] and [B].",
+      "expect": "PASS",
+      "why": "Single brackets are Markdown link syntax, not a runtime key. Pinned because widening the token to single brackets would make every link a use."
+    },
+    {
+      "id": "edge-use-in-html-block",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].\n<div class=\"note\">[[B]] goes here</div>",
+      "expect": "FAIL",
+      "why": "An HTML block is part of the prompt body and B interpolates. Note the asymmetry with `limit-html-table-declaration` and `limit-html-heading`: HTML is not parsed for DECLARATIONS, but a use inside it still counts. Both directions err toward FAIL, which is the safe one."
+    },
+    {
+      "id": "edge-use-in-image-alt",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].\n![diagram of [[B]]](chart.png)",
+      "expect": "FAIL",
+      "why": "Alt text ships in the rendered prompt."
+    },
+    {
+      "id": "edge-use-in-body-blockquote",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].\n> Remember to include [[B]] verbatim.",
+      "expect": "FAIL",
+      "why": "A blockquote in the BODY is instruction text. Contrast `reject-blockquoted-heading`: a quoted MANIFEST is someone else's document, a quoted instruction is still yours."
+    },
+    {
+      "id": "edge-use-in-nested-list",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].\n- outer\n  - inner: [[B]]",
+      "expect": "FAIL",
+      "why": "List depth does not change whether a key interpolates."
+    },
+    {
+      "id": "edge-use-in-body-table-cell",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].\n| Field | Value |\n|---|---|\n| id | [[B]] |",
+      "expect": "FAIL",
+      "why": "A table in the BODY is content; only a table inside the manifest section declares. This is the pair to `bound-later-unrelated-table`, from the use side."
+    },
+    {
+      "id": "edge-use-in-link-title",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]]. See [docs](https://example.test \"about [[B]]\").",
+      "expect": "FAIL",
+      "why": "A link title is rendered text. With `reject-key-in-markdown-link` (link text) and `edge-use-in-link-target` (the URL), all three positions in a link are now pinned."
+    },
+    {
+      "id": "edge-use-between-code-spans",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]]. Set `flag` to [[B]] before `run`.",
+      "expect": "FAIL",
+      "why": "The span regex is non-greedy within a line, so it removes `flag` and `run` and leaves B. The case where an over-reaching span pattern would swallow a real use between two illustrative ones."
+    },
+    {
+      "id": "edge-use-after-unclosed-code-span",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]]. An unmatched ` backtick, then [[B]].",
+      "expect": "FAIL",
+      "why": "A lone backtick opens no span because the pattern needs a closing one on the same line. If it did open one, every use after it would vanish -- which is the false-clean shape this case exists to rule out."
+    },
+    {
+      "id": "bound-comment-inside-declaration-run",
+      "group": "Where the section ends",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n<!-- TODO: rename this -->\n- [[B]] - the other\n\n## BLOCK III\nUse [[A]] and [[B]].",
+      "expect": "FAIL",
+      "why": "A comment line is not a declaration, so the run ends at it and B is outside the manifest. Consistent with prose ending a run, and it errs toward FAIL: an author sees the failure and moves the comment."
+    },
+    {
+      "id": "edge-second-manifest-declares-too",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]].\n\n## Runtime Variables\n- [[B]] - added later\n\n## BLOCK IV\nUse [[B]].",
+      "expect": "PASS",
+      "why": "Two manifest sections in one document both declare. `heading-two-manifests` pins the headings; this pins that the SECOND section's keys are honoured, so a document that grows a second manifest does not silently lose it."
+    },
+    {
+      "id": "edge-use-in-body-heading",
+      "group": "Edges",
+      "status": "spec",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## Section about [[B]]\nBody text.",
+      "expect": "FAIL",
+      "why": "A key in a body heading renders and interpolates. `reject-key-in-heading-itself` covers a key in the MANIFEST heading; this covers any later one."
+    },
+    {
+      "id": "limit-double-backtick-code-span",
+      "group": "Known limits",
+      "status": "known-limit",
+      "text": "## Runtime Variables\n- [[A]] - the thing\n\n## BLOCK III\nUse [[A]]. Write ``[[B]]`` to show the syntax.",
+      "expect": "FAIL",
+      "wanted": "PASS",
+      "why": "A double-backtick span is a code span, so B is shown rather than used -- the same intent `edge-use-in-inline-code-span` pins for the single-backtick form. The span pattern is `` `[^`\\n]*` ``, which matches the two opening backticks as an empty span and the two closing ones as another, leaving the key exposed. INHERITED, not introduced: sources/v5/prompt_lint.py line 276 uses the identical regex, so the two implementations agree and there is no divergence to declare -- the same shape as the CLAIM_DISCIPLINE false positive. Fixing it in the port alone would diverge from the oracle on all six gates that call the stripper. Visible-FAIL direction."
     }
   ]
 }
