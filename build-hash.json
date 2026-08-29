@@ -1,0 +1,15 @@
+{
+  "_comment": [
+    "The artifact hash: contracts, Core, Application, adapter and Shell sources,",
+    "plus package.json and the lockfile. Content is normalised to LF before hashing",
+    "because core.autocrlf is true here, so raw bytes differ by platform.",
+    "",
+    "This says two checkouts of one commit agree. It does NOT say the build is",
+    "deterministic in a deeper sense: nothing is compiled and tsx transpiles at run",
+    "time. See Documentation/TRUTH_BOUNDARY.md, which keeps the three",
+    "reproducibility claims separate."
+  ],
+  "algorithm": "sha256 over sorted `path sha256(lf-normalised content)` lines",
+  "files": 75,
+  "hash": "ae23b9b9bfd2817f1673d9dbd9de396dcdc73714ad1af4777a37bcb5396c07bb"
+}

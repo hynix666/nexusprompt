@@ -44,7 +44,10 @@
         "gates_in_source_linter": 16,
         "gates_compared": 16,
         "declared_divergences": 4,
-        "divergence_adrs": ["ADR-0010", "ADR-0011"],
+        "divergence_adrs": [
+          "ADR-0010",
+          "ADR-0011"
+        ],
         "oracle_is_frozen": true
       },
       "crossed_when": "A divergence is added or retired, or a gate stops being compared. Each is a decision about how far the port may drift from its oracle, and each should arrive with the ADR that justifies it.",
@@ -132,14 +135,21 @@
       "title": "The documentation describes a platform; the repository runs a slice",
       "probe": "builtSurface",
       "establishes": "A vertical slice that genuinely works: sixteen gates, eleven stages, three adapters, and a CLI that drives a full pipeline run. It cuts through every layer along the riskiest path in the design — a provider failure reaching a Core reduction and coming back out labelled — and `npm run verify` proves it in about ten seconds.",
-      "does_not_establish": "That the system in the 37 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies.",
+      "does_not_establish": "That the system in the 37 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies. What the two built Shells lack is presentation, not capability — both drive the full pipeline through the Application protocol — which is why the gap is stated as scope rather than as a shortfall.",
       "expect": {
         "documentation_markdown_files": 37,
         "gates_built": 16,
         "stages_built": 11,
-        "adapters_built": ["evidence-local", "provider-local-proxy", "storage-local"],
+        "adapters_built": [
+          "evidence-local",
+          "provider-local-proxy",
+          "storage-local"
+        ],
         "adapters_target": 5,
-        "shells_present": ["api", "cli"],
+        "shells_present": [
+          "api",
+          "cli"
+        ],
         "shells_target": 3,
         "shells_excluded_from_typecheck": false
       },
@@ -180,7 +190,12 @@
       "establishes": "The static boundary checker reads every file under `core/src` — whether or not a test exercises it — and forbids twenty effectful builtins outright. The runtime harness traps four ambient globals inside Core tests: `fetch`, `Math.random`, `Date.now`, and the argument-free `Date` constructor. Together they cover both the capability and the effect that arrives some other way.",
       "does_not_establish": "That the runtime harness blocks the filesystem. It does not, and it cannot: Node copies a builtin's CJS exports into the ESM facade when the module is first evaluated, which happens while the test file's import graph loads — before any setup hook runs. Only `require(\"fs\")` looks the property up per call, and no Core module uses it. Three separate places claimed this coverage, including that harness's own header, while `readFileSync` ran green inside a Core gate. Do not try to fix the harness; it was measured. The static check is also a regex over import specifiers — it does not resolve re-exports transitively and cannot see an effect passed in as a value at runtime, which is what ADR-0005 is for.",
       "expect": {
-        "runtime_traps": ["fetch()", "Math.random()", "Date.now()", "new Date()"],
+        "runtime_traps": [
+          "fetch()",
+          "Math.random()",
+          "Date.now()",
+          "new Date()"
+        ],
         "runtime_blocks_filesystem": false,
         "static_forbidden_builtins": 20,
         "static_reads_every_core_file": true,
@@ -191,6 +206,30 @@
         "scripts/check-boundaries.mjs",
         "core/test/purity.setup.ts",
         "Documentation/0005-application-orchestration-boundary.md"
+      ]
+    },
+    {
+      "id": "three-reproducibility-claims",
+      "title": "Three reproducibility claims, of three different strengths",
+      "probe": "reproducibility",
+      "establishes": "Three things reproduce here, and they are reported separately because they are not equally strong. (1) SAME INPUT, SAME VERDICTS: the gates are pure, denied every effectful builtin by a static check that reads every file under core/src, and 2,784 oracle verdicts agree with a SHA-256-pinned second implementation. (2) SAME SEED, SAME SUITE: the 4,906-case anchor regenerates from seed 1 and check:anchor fails if the committed file is not what the generator produces. (3) SAME SOURCE, SAME HASH: 75 artifact files digest to one hash, and content is normalised to LF first because core.autocrlf is true here — so the hash a Windows checkout computes is the hash a Linux checkout computes, which is the only version of the claim worth making.",
+      "does_not_establish": "That this project has reproducible builds in the sense that phrase usually carries. NOTHING IS COMPILED. There is no bundle, no lockstep toolchain pin, no hermetic sandbox; tsx transpiles at run time, and the hash covers source text plus dependency pins rather than a produced binary. The three claims also have genuinely different strengths and must never be merged into one sentence: the first is enforced by a second implementation and a purity guard, the second by a regeneration check, the third only by a digest of files somebody could edit together. Collapsing them lets the weakest borrow the strongest's credibility, which is the specific move this document exists to prevent.",
+      "expect": {
+        "artifact_files": 75,
+        "hash_is_lf_normalised": true,
+        "hash_excludes_tests_and_tooling": true,
+        "hash_excludes_itself": true,
+        "anchor_regenerates_from_seed": 1,
+        "oracle_verdicts_agree": true,
+        "build_is_compiled": false
+      },
+      "crossed_when": "A build step appears — a bundler, a compile, a published package. At that moment the third claim can become a real reproducible-build claim and should be restated as one, rather than continuing to mean 'the source files digest the same'. `build_is_compiled` going true is the signal, and it is the only one of the three whose meaning changes rather than whose number does.",
+      "evidence": [
+        "scripts/build-hash.mjs",
+        "build-hash.json",
+        "scripts/check-boundaries.mjs",
+        "scripts/build-anchor.ts",
+        "scripts/differential.ts"
       ]
     }
   ]

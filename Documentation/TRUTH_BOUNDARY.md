@@ -8,7 +8,7 @@ Every other check in this repository asks whether a number is right. This one as
 it is right *about*. A correct figure attached to an overreaching claim is the more
 dangerous of the two, because a checker has already blessed it.
 
-8 entries · spec version 1.0.0.
+9 entries · spec version 1.0.0.
 
 Each entry states a scope in two halves and pins the numbers that bound it. The
 **Crossed when** line names the event that should make someone rewrite the claim —
@@ -155,7 +155,7 @@ that event is a failing build, not a note in a backlog.
 
 **Establishes.** A vertical slice that genuinely works: sixteen gates, eleven stages, three adapters, and a CLI that drives a full pipeline run. It cuts through every layer along the riskiest path in the design — a provider failure reaching a Core reduction and coming back out labelled — and `npm run verify` proves it in about ten seconds.
 
-**Does not establish.** That the system in the 37 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies.
+**Does not establish.** That the system in the 37 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies. What the two built Shells lack is presentation, not capability — both drive the full pipeline through the Application protocol — which is why the gap is stated as scope rather than as a shortfall.
 
 **Pinned:**
 
@@ -236,3 +236,29 @@ that event is a failing build, not a note in a backlog.
 **Crossed when.** A trap is added or removed, or the forbidden-builtin list changes. Either alters what 'Core is pure' is taken to mean, and the last time that drifted nobody noticed for months.
 
 **Evidence:** `scripts/check-boundaries.mjs` · `core/test/purity.setup.ts` · `Documentation/0005-application-orchestration-boundary.md`
+
+## Three reproducibility claims, of three different strengths
+
+`three-reproducibility-claims` · probe `reproducibility`
+
+**Establishes.** Three things reproduce here, and they are reported separately because they are not equally strong. (1) SAME INPUT, SAME VERDICTS: the gates are pure, denied every effectful builtin by a static check that reads every file under core/src, and 2,784 oracle verdicts agree with a SHA-256-pinned second implementation. (2) SAME SEED, SAME SUITE: the 4,906-case anchor regenerates from seed 1 and check:anchor fails if the committed file is not what the generator produces. (3) SAME SOURCE, SAME HASH: 75 artifact files digest to one hash, and content is normalised to LF first because core.autocrlf is true here — so the hash a Windows checkout computes is the hash a Linux checkout computes, which is the only version of the claim worth making.
+
+**Does not establish.** That this project has reproducible builds in the sense that phrase usually carries. NOTHING IS COMPILED. There is no bundle, no lockstep toolchain pin, no hermetic sandbox; tsx transpiles at run time, and the hash covers source text plus dependency pins rather than a produced binary. The three claims also have genuinely different strengths and must never be merged into one sentence: the first is enforced by a second implementation and a purity guard, the second by a regeneration check, the third only by a digest of files somebody could edit together. Collapsing them lets the weakest borrow the strongest's credibility, which is the specific move this document exists to prevent.
+
+**Pinned:**
+
+```json
+{
+  "artifact_files": 75,
+  "hash_is_lf_normalised": true,
+  "hash_excludes_tests_and_tooling": true,
+  "hash_excludes_itself": true,
+  "anchor_regenerates_from_seed": 1,
+  "oracle_verdicts_agree": true,
+  "build_is_compiled": false
+}
+```
+
+**Crossed when.** A build step appears — a bundler, a compile, a published package. At that moment the third claim can become a real reproducible-build claim and should be restated as one, rather than continuing to mean 'the source files digest the same'. `build_is_compiled` going true is the signal, and it is the only one of the three whose meaning changes rather than whose number does.
+
+**Evidence:** `scripts/build-hash.mjs` · `build-hash.json` · `scripts/check-boundaries.mjs` · `scripts/build-anchor.ts` · `scripts/differential.ts`
