@@ -166,7 +166,7 @@ threshold.**
 
 ## 4. The release gate — `core/src/release/promote.ts`
 
-Two **preconditions**, then five **conditions**, all conjunctive.
+**Three** preconditions, then five **conditions**, all conjunctive.
 
 Preconditions (the instrument before the measurement):
 
@@ -174,6 +174,16 @@ Preconditions (the instrument before the measurement):
 |---|---|
 | `development-lineage` | the baseline is not on the `benchmark` lineage — a cycle in the grading order |
 | `pointer-mismatch` | the comparison, run and baseline do not refer to each other consistently |
+| `dangling-ref` | the evidence names retained content that no longer resolves |
+
+`dangling-ref` is the reachability half of `pointer-mismatch`: pointer consistency says the
+three ids agree, this says the artifacts they name can still be inspected. The oracle is
+injected because existence is an effect — the Application resolves refs through a
+`ContentStore` and hands Core `true`/`false`; Core only composes the decision. An **absent**
+oracle means the deployment keeps no content plane and reachability is not checked, which is
+the pre-lineage behaviour. A present-but-failing oracle must **throw**, never return false, so
+a broken store cannot masquerade as "all content gone" — a wrong refusal wearing the right
+words.
 
 The five:
 
@@ -277,6 +287,30 @@ the p-value **underflows to zero at 1,075 discordant units** (now clamped).
 `admitRun()` decides **before dispatch**, refusing rather than truncating: a partially
 executed suite is not an `EvalRun` — its aggregate would be a score over whichever cases
 happened to fit, published under the name of a suite that means something else.
+
+Four things it got wrong, all fixed 29 August and all the same shape — a cap that reads as
+enforced and is not:
+
+- **The eleven-stage path never called it.** `application/src/pipeline.ts` referenced
+  `admitRun` zero times, and that is the path the CLI wires a real provider into. It is sized
+  now by `plannedPipelineCalls(plan, …)` from the plan *actually selected* — `planForContext`
+  returns six stages at TINY — plus one generating execution per feedback round, times
+  attempts. The per-round figure is **measured, not read**: at caps of 0/1/2/3 an eleven-stage
+  run performs 8/9/10/11 provider calls.
+- **`truncate_suite` admitted with a cap nothing honoured.** It returned `admit: true` and a
+  reduced `allowedCalls` that `eval.ts` referenced zero times, so declaring it ran the whole
+  suite. It now **refuses**, and says how many calls would have fit. Honest truncation is not
+  slicing the case list: `EvalRun` would have to record that it was truncated, which is a
+  contract change that lands first.
+- **Token rates were unvalidated.** A negative rate makes `usd` negative, so `exceeds` compares
+  a negative number against a positive cap and returns false — the more the run spends, the
+  further under budget it looks. `NaN` defeats it the same way.
+- **A declared `max_usd` was reported as "within budget" without being checked.** No caller
+  passes an estimate and `runSuite` is never given a rate, so a dollar cap is enforced at
+  *neither* end. The fail-open stands — refusing on an unknown would block every run against a
+  provider that reports no usage, and a test has pinned that deliberately since the function
+  landed — but `Admission.unenforced` now names it and it reaches the CLI. **A fail-open
+  somebody chose and a fail-open nobody knew about are different things.**
 
 ### The cache key, and a correction to ADR-0008
 

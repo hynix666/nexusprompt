@@ -152,5 +152,6 @@ and documented in the file's header — **do not "fix" it.**
 Single-machine, no server. The CLI is the only entry point. CI runs `npm run verify` on
 GitHub Actions (ubuntu-latest, Node 24, Python 3.12 for the differential oracle).
 
-There is no database, no service, no container. `storage-local` and `evidence-local` write
+There is no database, no service, no container. `storage-local`, `evidence-local` and
+`content-local` write
 JSON under `.nexusprompt/` in the working directory.

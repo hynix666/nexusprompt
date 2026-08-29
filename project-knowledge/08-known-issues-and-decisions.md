@@ -20,6 +20,7 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 | 0010 | The runtime manifest is a declaration list, not a span to end-of-file — authorises 2 divergence entries |
 | 0011 | `QUTM_CEILING` does not arm below a named baseline floor — authorises 1, and added `only_when_options` |
 | 0012 | `shells/api` adopted as the third Shell; zero-runtime-dependency scoped to below the Shell layer (amends 0004/0006) |
+| 0013 | `audit-report` accepted with its producer **outside** this repository — the pending seam exists for exactly this ordering |
 
 ## The truth boundary
 
@@ -51,7 +52,7 @@ one moment anyone reliably re-reads the sentence attached to it.
 
 ## The recurring failure nobody had a checker for: `.gitignore`
 
-Emptied **three times** by automated commits — `7ede11a`, `83890f1` (repaired by `bf1fd4d`),
+**Six incidents now, and the count is the finding.** Emptied **three times** by automated commits — `7ede11a`, `83890f1` (repaired by `bf1fd4d`),
 and `8ee5d0a`. The third truncated it to zero bytes and tracked **3,677 node_modules files in
 the same commit**, which is how `.git` reached 2.3 GB. At the moment it was found, `PDF/`
 (2.0 GB) and `LLM/` (815 MB) were ignored by nothing and tracked by nothing: one `git add -A`
@@ -82,6 +83,39 @@ Found the way these always are — `npm ci` deleted the directory and git report
 of a file the check had just called clean. The matcher now tests any path segment, and is
 probed in both directions: it fires on `a/b/c/node_modules/d` and stays silent on
 `docs/node_modules-policy.md`, because widening a matcher is how a false positive ships.
+
+### Incidents five and six — and the rule that had to be derived
+
+**Fifth (29 August, `#38`).** A bot commit replaced the whole file with generic boilerplate,
+pasted *inside its own markdown fences* — line 1 of the committed file was ` ``` `. It dropped
+`PDF/`, `LLM/`, `.promptnexus/` and `.nexusprompt/`, and ADDED `build-hash.json`, a **tracked**
+file `check:hash` reads.
+
+Rule 1 caught the four removals. **Rule 6 walked past the addition**, because its
+`NEVER_IGNORED` list is a hand-picked sentinel — one file per top-level tree — and nobody had
+thought to name that one. The same sparse-matcher failure as the vendor rule above, one layer up.
+
+Rule 7 asks the question rule 6 was approximating, derived instead of enumerated: **is any file
+in the INDEX ignored?** It cannot be sparse. It immediately found a defect nobody had reported —
+`promptnexus-v5/` was written for a loose archive extraction and matches at any depth, so it
+also matched `sources/v5/promptnexus-v5/`: **nine frozen, SHA-256-pinned source files, ignored.**
+Tracked, so `verify:sources` passed and nothing looked wrong. The extraction rules are anchored
+with a leading `/` now, which is what they always meant.
+
+**Sixth (29 August, `#45`).** `.gitignore` cut from 23 rules to 5 with **3,422 node_modules
+files committed in the same change** — 1,113,326 insertions, the same signature as the third.
+Every hygiene rule fired that should have: the pinned rules, the rule-count floor, the vendor
+ban, the 4 MB bound (three 10.9 MB `esbuild` binaries), and the JSON-validity rule (a vendored
+`tsconfig.json` that is JSONC).
+
+That incident exposed a second, independent reason never to commit `node_modules`, and it is
+**not** the size argument: checking the commit out and then clearing `node_modules` **deleted
+107 workspace source files** — all of `contracts/`, parts of `core/`, `application/`, `shells/`
+and `adapters/`. npm workspaces link each workspace into `node_modules`; on Windows those are
+directory junctions, and a recursive delete traverses a junction into its *target*. Everything
+was in the index and came back, but a clean `npm ci` on a fresh clone does the same thing, and
+on a tree with uncommitted work it would not be recoverable. The usual argument is about the
+repository's size; this one is about the working tree of anyone who checks it out.
 
 Two things worth carrying forward:
 
@@ -231,6 +265,33 @@ never written). Both times the honest fix was to **delete it** and refuse the co
 that would have needed it. Dead code shaped like a guard invites the belief that something is
 protected and cannot fail visibly.
 
+### Declared, and connected to nothing — the dominant pattern of 29 August
+
+Five instances in one day, in code that had been reviewed and merged. Each is a mechanism that
+reads as enforced and is not, which is strictly worse than an absent one:
+
+| declared | what was missing |
+|---|---|
+| `admitRun` on the ELEVEN-STAGE path | called **zero times** by `application/src/pipeline.ts` — the only path the CLI wires a real provider into |
+| `on_exceed: "truncate_suite"` | returned `admit: true` with a reduced `allowedCalls` that `eval.ts` referenced **zero times**, so it ran the whole suite |
+| `--stage` on `nexusprompt run` | parsed, skipped over by the argument scanner, then discarded; `cmdRun` hardcoded `compile` |
+| the `dangling-ref` promotion gate | `decidePromotion` accepted `contentRefs`/`refExists`, both optional, and the only caller passed neither |
+| `input_ref` / `output_ref` | `buildRevision` took ref arguments no call site supplied, and no composition root built a `ContentStore` |
+
+**The tell is an optional parameter with no production caller.** Every one of these type-checks,
+tests green at the unit level, and is described in prose as working. Three of them shipped with
+a CHANGELOG or usage line asserting the behaviour — and in the sharpest case the entry named the
+pattern in its own next sentence, calling [AUDIT B-4] *"a guarantee written but not wired"* while
+being exactly that.
+
+Two habits catch it, and neither is code review at the diff:
+
+- **Grep for the parameter, not the function.** `contentRefs` appearing only in a test file is
+  the whole finding, available in one command.
+- **Mutation-prove at the layer that ships.** Un-wiring the content store failed only the
+  artifact-hash *checksum* until an end-to-end retention test existed — a checksum noticing that
+  bytes moved is not a test noticing that behaviour changed.
+
 ### Fixtures too uniform to discriminate
 
 Eight occurrences. See `06-testing-and-quality.md`.
@@ -294,3 +355,7 @@ Eight occurrences. See `06-testing-and-quality.md`.
 | Writing code through shell heredocs | Backslash escapes (`\n`) get eaten, producing unterminated string literals that vitest tolerates and `tsc` catches later. Use a file-writing tool |
 | `npm.cmd` in `execFileSync` | Does not resolve on Windows — run checkers under `process.execPath` |
 | Probe backups keyed on basename | Two files are named `pipeline.ts`; key on full path |
+| **Merging while `mergeable: UNKNOWN`** | GitHub squashes the branch *as it currently knows it*. A push it had not yet ingested was dropped from `#49` — the commit that only touched `package-lock.json` vanished, `build-hash.json` survived because both commits touched it, and master could not `npm ci`. **Check the PR's `headRefOid` equals the commit you pushed**, not merely that some run is green |
+| **A push does not reliably trigger a CI run here** | More than once the newest commit had no run at all while `gh pr checks` showed the previous head's result. `gh workflow run verify.yml --ref <branch>` and then match the run's `headSha` |
+| **Adding a workspace without `npm install`** | `adapters/content-local/package.json` matched the `adapters/*` glob but was absent from the lock file. `npm install` repairs that quietly; **`npm ci` refuses outright**, so every local command stayed green while CI could not install the project at all |
+| Clearing `node_modules` on Windows | Workspace links are directory junctions and a recursive delete traverses them into the real source directories. It deleted 107 tracked files once. Recoverable only because they were committed |

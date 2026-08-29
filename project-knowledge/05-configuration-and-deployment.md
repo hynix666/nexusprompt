@@ -101,14 +101,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7    # node 24, npm cache
-      - uses: actions/setup-python@v7  # 3.12 — the oracle shells out to Python
+      - uses: actions/checkout@3d3c42e5… # v7 — pinned to a COMMIT, not the tag
+      - uses: actions/setup-node@82076278… # v7, node 24, npm cache
+      - uses: actions/setup-python@5fda3b95… # v7, 3.12 — the oracle shells out to Python
       - run: npm ci
       - run: npm run verify
 ```
 
 Python is set up because **an oracle that silently skips is worse than none** (ADR-0007).
+
+The actions are pinned to commit SHAs because a major tag is mutable: whoever owns the action
+can repoint it and the next build runs different code with the same reference and no diff
+anywhere. This job holds the repository, the lock file and any secret it is given.
 
 First executed 23 August 2026, green on the first run: `npm ci` plus the full `verify` on a
 clean Ubuntu checkout. That is what makes the guards real rather than local habit.
@@ -124,9 +128,31 @@ Runtime state lives under the working directory:
 |---|---|---|
 | `.nexusprompt/runs/` | run bundles | 8 kept, evicted whole |
 | `.nexusprompt/evidence/` | eval-run, comparison, baseline, promotion | append-only, never evicted |
+| `.nexusprompt/content/` | stage input and output bodies, content-addressed | shared BY HASH across runs |
 
 Different lifetimes on purpose — pointing them at one directory would put a retention policy
-in front of the records a promotion cites.
+in front of the records a promotion cites, and content is the sharpest case: it is shared by
+hash, so a run-bundle eviction policy over it would delete an artifact a surviving run cites.
+
+### Vercel — connected, failing, and muted
+
+A `nexusprompt-api` Vercel project has been attached to this repository since before it could
+build one, and failed on **every commit from `c9d5d3c` onward** — including commits where
+`npm ci` installs cleanly and `verify` is green, so the failure is Vercel's build, not this
+repository's. As far as the repo can tell there was never a deployable target: the API shell
+starts with `tsx src/index.ts`, no manifest has a `build` script, and `tsx` is a devDependency
+a production install would omit. The build log was never read — it needs Vercel credentials.
+
+`vercel.json` carries `{"git": {"deploymentEnabled": false}}`, which stops it attempting. It
+holds no comment because it cannot: `check:hygiene` parses every tracked `.json` and only
+`tsconfig.json` may hold comments, so the reason lives in `CLAUDE.md`.
+
+**This is a stopgap, not a disconnect.** The Vercel project and its GitHub App access both
+still exist; removing either is account-level work no credential in this repository can reach
+(`gh api user/installations` returns 403 for a classic OAuth token, and Vercel posts commit
+*statuses* through its App, so there is no webhook to delete). Once disconnected at the
+source, delete `vercel.json` — it exists only to mute a connection that will no longer be
+there.
 
 ## Large assets not in git
 

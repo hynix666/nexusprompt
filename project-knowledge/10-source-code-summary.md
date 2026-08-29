@@ -1,6 +1,6 @@
 # Source code summary
 
-~21,500 lines across `contracts/ core/ application/ adapters/ shells/ scripts/ test/`.
+~28,600 lines across `contracts/ core/ application/ adapters/ shells/ scripts/ test/ spec/`.
 Comment density is high and deliberate: **comments record decisions, constraints, rejected
 alternatives, and bugs a naive rewrite would reintroduce** — never what the code already says.
 

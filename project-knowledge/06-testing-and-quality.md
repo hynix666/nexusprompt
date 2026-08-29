@@ -1,11 +1,13 @@
 # Testing and quality
 
-**1,289 tests across 32 files, 0 failing.** Runs offline in seconds.
+**1,365 tests across 34 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
 npm run test:core             # core only
 npm run test:app              # application only
+npm run test:shells           # CLI + API shells (was `test:api`, which named a project
+                              #   that had not existed since #24 — see below)
 npx vitest run --project contracts
 ```
 
@@ -17,7 +19,7 @@ npx vitest run --project contracts
 | `application` | `application/test/` | orchestration, pipeline, eval, judge, release, execution |
 | `adapters` | `adapters/*/test/` | provider transport |
 | `shells` | `shells/*/test/` | CLI commands and exit codes; the API shell's routes and socket seam |
-| `contracts` | `test/` | contract conformance, evidence conformance, checker tests, the gate contract |
+| `contracts` | `test/` | contract conformance, evidence conformance, **content** conformance, checker tests, the gate contract |
 
 `core/test/purity.setup.ts` traps `fetch`, `Math.random`, `Date.now` and `new Date()` for the
 `core` project. It **cannot** trap the filesystem — see `01-architecture.md`.
@@ -130,7 +132,7 @@ already paid that once with a CRLF-anchored regex in `check-plan`.
 
 ### 6. The artifact hash — `npm run check:hash`
 
-75 runtime files (contracts, Core, Application, adapter and Shell sources, plus `package.json`
+77 runtime files (contracts, Core, Application, adapter and Shell sources, plus `package.json`
 and the lockfile) digested to one hash. NOT tests, scripts, spec or Documentation: those decide
 what is *checked*, not what runs, and a hash that churns on a moved comment is a hash people
 stop reading.
@@ -210,17 +212,39 @@ produced a failure that was invisible locally:
 |---|---|---|
 | corrupt `package-lock.json` | green — `npm install` repairs quietly, and a checkout never runs `npm ci` | `EUSAGE`, could not install at all |
 | a test asserting the tree is CRLF | green | `expected 0 to be greater than 0` |
-| a fence regex meeting `` | red only once a CRLF case existed | — |
+| a fence regex meeting `
+` | red only once a CRLF case existed | — |
 
 The last one is the reverse case and worth keeping in view: CI would NOT have caught it,
 because CI is LF. **Neither environment dominates.** A guard that matters has to be reasoned
 about in both, and a mutation probe run only locally proves only the local half — the
 sweep-six fence fix was probed, passed, and still disabled fences on every CRLF file.
 
-One operational note that has bitten twice: **a push to a branch here does not reliably trigger
-a CI run.** PR #30 was squash-merged from the commit before its fix because no run existed for
-the fix. Check that the run you are reading belongs to the commit you are merging; the run id
-is the tell, and `gh workflow run verify.yml --ref <branch>` dispatches one by hand.
+One operational note that has now bitten **three times**: **a push to a branch here does not
+reliably trigger a CI run.** PR #30 was squash-merged from the commit before its fix because no
+run existed for the fix. Check that the run you are reading belongs to the commit you are
+merging; the run id is the tell, and `gh workflow run verify.yml --ref <branch>` dispatches one
+by hand.
+
+The third time was worse, and the lesson is sharper than "read the run id". `#49` was merged
+while `gh pr view` reported **`mergeable: UNKNOWN`** — GitHub had not yet ingested the last
+push, so the squash took the branch *as it knew it* and silently dropped a commit. The dropped
+commit was the one that added `adapters/content-local` to `package-lock.json`, so master could
+not `npm ci` at all; `build-hash.json` survived only because both commits happened to touch it.
+
+**Verify the PR's `headRefOid` equals the commit you pushed before merging.** A green run is not
+enough — the run can be green on a commit that is not the one about to be squashed. Comparing
+local `HEAD`, `origin/<branch>` and the API's `headRefOid` takes one command and is the only
+check that would have caught it:
+
+```bash
+git rev-parse HEAD; git rev-parse origin/<branch>; gh pr view <n> --json headRefOid --jq .headRefOid
+```
+
+And the class the dropped commit belonged to: **`npm ci` is the one command a local checkout
+never runs.** Adding a workspace without regenerating the lock file leaves every local command
+green while CI cannot install the project. Reproduce that failure the way it appears —
+`rm -rf node_modules && npm ci` — not the way it hides, with `npm install`.
 
 ## The recurring failure: fixtures too uniform to discriminate
 
