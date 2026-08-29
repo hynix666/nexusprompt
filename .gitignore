@@ -1,6 +1,1 @@
-```markdown
-# Documentation
-Documentation/*.log
-Documentation/*.tmp
-Documentation/.*.swp
-```
+Documentation/RECOMMENDATIONS_INVESTIGATION.md
