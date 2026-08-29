@@ -171,7 +171,7 @@ export const CONTRACT_VERSIONS = {
   "gate-result": "1.3.0",
   "provider-failure": "1.0.0",
   "pipeline-outcome": "1.0.0",
-  "revision-entry": "1.3.1",
+  "revision-entry": "1.4.0",
   "observability-event": "1.3.0",
   "eval-run": "2.0.0",
   comparison: "2.2.0",
@@ -204,6 +204,14 @@ export interface RevisionEntry {
   stage_attempt: number;
   input_hash: string;
   output_hash: string;
+  /**
+   * Pointer to the retained stage-input content (grammar in the schema). Null means
+   * "not retained here" — the honest state, never a silent drop. Resolving a ref is an
+   * Application effect; Core receives refs as data and never reads through one.
+   */
+  input_ref: string | null;
+  /** Pointer to the retained stage-output content — the replayable artifact. */
+  output_ref: string | null;
   gate_results: GateResult[];
   /** Which gate-feedback round produced this. Absent or 0 is the first pass. */
   feedback_round?: number;
@@ -212,6 +220,33 @@ export interface RevisionEntry {
   provider_used: string | null;
   execution_provenance: ExecutionProvenance;
   retention_scope: RetentionScope;
+}
+
+/* ── Content plane (artifact-reference lineage) ──────────────────────────── */
+
+/**
+ * What kind of retained content a ref names. The kind travels inside the ref string
+ * (grammar in the revision-entry 1.4.0 schema descriptions) so a ref stays a plain
+ * string that validates with one pattern and survives JSON round-trips without shape
+ * negotiation.
+ */
+export type ContentKind = "stage-input" | "stage-output" | "generation-response";
+
+/**
+ * The retention half of the artifact-reference lineage design. Content is MATERIAL,
+ * not events: the same bytes re-derived are the same material, so `put` is idempotent
+ * by content address (unlike `EvidenceStore.put`, which refuses duplicate ids because
+ * evidence records are events). Content is written once, addressed by its own hash,
+ * and never edited — a corrected artifact is a new artifact.
+ */
+export interface ContentStore {
+  readonly retention_scope: RetentionScope;
+  /** Writes once under the content address; same bytes again is a no-op success. */
+  put(ref: string, bytes: Uint8Array): Promise<void>;
+  /** Resolves a ref to bytes, or null when gone. Null is "not here", not "never was". */
+  get(ref: string): Promise<Uint8Array | null>;
+  /** Existence without the read — the integrity gate's need, and the deletion sweep's. */
+  has(ref: string): Promise<boolean>;
 }
 
 export interface RunBundleSummary {

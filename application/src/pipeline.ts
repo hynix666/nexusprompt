@@ -452,6 +452,7 @@ function buildRevision(a: {
   status: RevisionEntry["status"]; provider: string | null; fingerprint?: string | null; attempts?: number;
   gate_results: GateResult[]; now: () => Date; coreBuildHash: string; configFingerprint: string | null;
   feedbackRound?: number; parents?: string[];
+  inputRef?: string | null; outputRef?: string | null;
 }): RevisionEntry {
   const provenance: ExecutionProvenance = {
     core_build_hash: a.coreBuildHash,
@@ -480,6 +481,13 @@ function buildRevision(a: {
     feedback_round: a.feedbackRound ?? 0,
     input_hash: a.inputHash,
     output_hash: sha256(a.outputText),
+    /**
+     * Retention pointers (revision-entry 1.4.0, [AUDIT B-4]). Populated only when a
+     * ContentStore is wired into the runner — otherwise null, the honest "not retained
+     * here". Never fabricated to satisfy the schema.
+     */
+    input_ref: a.inputRef ?? null,
+    output_ref: a.outputRef ?? null,
     gate_results: a.gate_results,
     status: a.status,
     freshness: "FRESH",

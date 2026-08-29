@@ -1,0 +1,6 @@
+{
+  "name": "@nexusprompt/adapters-content-local",
+  "license": "MIT",
+  "private": true,
+  "type": "module"
+}

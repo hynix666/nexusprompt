@@ -1,5 +1,18 @@
 # Contract changelog
 
+> **2026-08-29 (artifact-reference lineage — implementation).** The `revision-entry` 1.4.0
+> schema bump (landed first, per ADR-0002) is now producer-backed:
+> `contracts/index.ts` gained `input_ref`/`output_ref` on `RevisionEntry` (nullable,
+> `null` = "not retained here"), the `ContentKind` type, and the `ContentStore` port
+> (`put` idempotent by content address / `get` / `has` — no `update`, no `delete`).
+> `adapters/content-local` implements it: one sharded file per content item, `wx`-flag
+> writes, bytes verified against the ref's sha-256 at every boundary, corruption thrown
+> never returned. `CONTRACT_VERSIONS["revision-entry"]` now stamps 1.4.0 into every
+> `execution_provenance`. The release gate gained the `dangling-ref` precondition:
+> `decidePromotion` takes `contentRefs` + a `refExists` oracle and refuses a promotion
+> whose evidence names content that no longer resolves. Conformance:
+> `test/content-conformance.test.ts` (14 cases, coverage-asserted over `adapters/`).
+
 [ADR-0002](../Documentation/0002-contract-first-design.md) requires a version bump **and a
 changelog entry** for every schema change. Versions have always lived in each schema's `$id`;
 the changelog half had no artifact behind it until 2026-08-18. This file is that artifact.
@@ -13,6 +26,27 @@ Versioning, as applied here:
   making an optional field required.
 - **minor** — additive. A new optional field; a widened enum.
 - **patch** — wording only. Descriptions, examples, `$comment`. No shape change.
+
+---
+
+## 2026-08-29 (artifact-reference lineage)
+
+### `revision-entry` 1.3.1 → **1.4.0** (minor)
+
+**Added** optional, nullable `input_ref` and `output_ref`. Closes `[AUDIT B-4]`: the fields
+were documented in `REVISIONS_AND_EXPORTS.md` as "pointers to retained content, so events and
+lineage never embed bodies" and relied on by the deletion and replay guarantees in
+`PRIVACY_AND_SECURITY.md` — while existing in no contract, no store, and no gate.
+
+The pattern is the one the audit named *a guarantee written but not wired*. The design spec
+(`docs/superpowers/specs/2026-08-29-artifact-reference-lineage-design.md`) lands the three
+missing pieces together: the ref grammar, a `ContentStore` port with `adapters/content-local`,
+and a `dangling-ref` promotion precondition so a promotion can no longer certify evidence
+whose content was evicted.
+
+Additive, so minor: every existing entry validates unchanged, and a consumer reading a 1.3.1
+bundle sees a new optional field it may ignore. The hash fields stay required — a ref is a
+retention pointer, not a replacement for the digest fields.
 
 ---
 

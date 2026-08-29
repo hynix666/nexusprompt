@@ -93,6 +93,10 @@ export class Orchestrator {
       run_id: command.run_id,
       stage_id: command.stage_id,
       parent_revision_ids: [],
+      // Content retention (revision-entry 1.4.0) is not wired into the single-stage
+      // orchestrator yet — null is the honest "not retained here".
+      input_ref: null,
+      output_ref: null,
       timestamp: this.now().toISOString(),
       stage_attempt: 1,
       input_hash: sha256(JSON.stringify(command.input)),

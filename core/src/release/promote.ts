@@ -40,6 +40,7 @@ import { admitCostJustification, type CostJustification } from "../routing/polic
 export type RefusalCode =
   | "development-lineage"
   | "pointer-mismatch"
+  | "dangling-ref"
   | "not-significant"
   | "unattainable-comparison"
   | "cost-justification"
@@ -63,6 +64,22 @@ export interface PromotionRequest {
   baselineRun: EvalRun;
   baseline: Baseline;
   comparison: Comparison;
+  /**
+   * Content refs to verify before the promotion may proceed (artifact-reference lineage
+   * design §6). The Application collects every `input_ref`/`output_ref` on the candidate
+   * and baseline runs' revisions and hands them here; Core only composes the decision.
+   * An `EvalRun` does not carry its revisions, so the Application is the right place to
+   * gather them — the caller who read the runs from the revision store already has them.
+   */
+  contentRefs?: string[] | null;
+  /**
+   * Existence oracle over the content plane. The Application resolves refs to
+   * `true`/`false`; Core only composes the decision. Absent oracle means no ref checking
+   * — the promotion proceeds on pointer identity alone, which is the pre-lineage
+   * behaviour. A present-but-failing oracle must throw rather than return false, so a
+   * broken content store cannot masquerade as "all content gone".
+   */
+  refExists?: ((ref: string) => boolean) | null;
   /**
    * The judge's admission, when a judge graded this run.
    *
@@ -174,6 +191,36 @@ export function decidePromotion(req: PromotionRequest): PromotionDecision {
       `Every field of a promotion is a pointer, so a promotion whose pointers disagree ` +
       `certifies something other than what it names.`,
     );
+  }
+
+  /* ── Precondition — do the referenced artifacts still exist? ─────────────── */
+
+  /**
+   * Pointer consistency above says the three ids agree; this says the artifacts the
+   * pointers name are still REACHABLE. A run whose retained content was evicted can be
+   * named by a perfectly consistent set of pointers, and promoting across that hole
+   * would certify evidence nobody can inspect. Checked as a precondition, before the
+   * conditions: "instrument before measurement" — a gate refuses to evaluate a claim
+   * about artifacts it cannot see.
+   *
+   * The oracle is injected because existence is an effect. Absent oracle means the
+   * deployment keeps no content plane, and pointer identity is all that can be checked —
+   * the pre-lineage behaviour. A present-but-failing oracle must throw rather than
+   * return false, so a broken content store cannot masquerade as "all content gone".
+   */
+  if (req.refExists != null) {
+    const dangling: string[] = [];
+    for (const ref of req.contentRefs ?? []) {
+      if (!req.refExists(ref)) dangling.push(ref);
+    }
+    if (dangling.length > 0) {
+      refuse(
+        "dangling-ref",
+        `${dangling.length} content reference(s) no longer resolve, first: ${dangling[0]}. ` +
+        `The evidence names content that no longer exists, so what it certifies cannot be ` +
+        `inspected. Re-run the evaluation rather than promoting across the hole.`,
+      );
+    }
   }
 
   /* ── Condition 1 — significance ──────────────────────────────────────────── */

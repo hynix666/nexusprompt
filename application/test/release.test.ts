@@ -402,6 +402,66 @@ describe("baselines and rollback", () => {
   });
 });
 
+describe("dangling-ref precondition — the content plane (artifact-reference lineage)", () => {
+  /**
+   * Pointer consistency says the three ids agree; the dangling-ref precondition says the
+   * artifacts the pointers name are still REACHABLE. The Application collects the refs
+   * (an EvalRun does not carry its revisions) and hands them to the gate with an
+   * existence oracle; Core only composes the decision.
+   */
+  it("refuses when a content ref no longer resolves", () => {
+    const decision = decidePromotion({
+      promotion_id: "p", promoted_at: "2026-08-22T12:30:00.000Z", promoted_by: "t",
+      candidateRun: run(), baselineRun: baselineRun(),
+      baseline: {
+        baseline_id: "base-1", configuration_id: CONFIG, run_id: "run-baseline",
+        frozen_at: "2026-08-22T12:00:00.000Z", lineage: "benchmark", supersedes: null,
+      },
+      comparison: comparison(), judge: ADMITTED, suiteGranularity: GRANULARITY,
+      contentRefs: [
+        "npx:stage-output:" + "a".repeat(64) + ":local-bundle",  // present
+        "npx:stage-output:" + "b".repeat(64) + ":local-bundle",  // EVICTED
+      ],
+      refExists: (ref) => !ref.startsWith("npx:stage-output:" + "b".repeat(64)),
+    });
+    expect(decision.promoted).toBe(false);
+    expect(decision.refusals.map((r) => r.code)).toEqual(["dangling-ref"]);
+    expect(decision.refusals[0].detail).toContain("b".repeat(12));
+  });
+
+  it("must NOT fire when every content ref resolves (the half that keeps the gate honest)", () => {
+    const decision = decidePromotion({
+      promotion_id: "p", promoted_at: "2026-08-22T12:30:00.000Z", promoted_by: "t",
+      candidateRun: run(), baselineRun: baselineRun(),
+      baseline: {
+        baseline_id: "base-1", configuration_id: CONFIG, run_id: "run-baseline",
+        frozen_at: "2026-08-22T12:00:00.000Z", lineage: "benchmark", supersedes: null,
+      },
+      comparison: comparison(), judge: ADMITTED, suiteGranularity: GRANULARITY,
+      contentRefs: ["npx:stage-output:" + "a".repeat(64) + ":local-bundle"],
+      refExists: () => true,
+    });
+    expect(decision.refusals.map((r) => r.code)).not.toContain("dangling-ref");
+    expect(decision.promoted).toBe(true);
+  });
+
+  it("checks nothing when the deployment keeps no content plane (no oracle)", () => {
+    // Pre-lineage behaviour: pointer identity is all that can be checked.
+    const decision = decidePromotion({
+      promotion_id: "p", promoted_at: "2026-08-22T12:30:00.000Z", promoted_by: "t",
+      candidateRun: run(), baselineRun: baselineRun(),
+      baseline: {
+        baseline_id: "base-1", configuration_id: CONFIG, run_id: "run-baseline",
+        frozen_at: "2026-08-22T12:00:00.000Z", lineage: "benchmark", supersedes: null,
+      },
+      comparison: comparison(), judge: ADMITTED, suiteGranularity: GRANULARITY,
+      contentRefs: ["npx:stage-output:" + "b".repeat(64) + ":local-bundle"],
+      refExists: null,
+    });
+    expect(decision.refusals.map((r) => r.code)).not.toContain("dangling-ref");
+  });
+});
+
 describe("the gate is pure, so it can be asked without a store", () => {
   it("decides identically without any evidence plane present", () => {
     const decision = decidePromotion({

@@ -30,7 +30,7 @@ enforces, so this table and that test cannot disagree.
 | `pipeline-outcome` | 1.0.0 | validated |
 | `promotion` | 1.0.0 | validated |
 | `provider-failure` | 1.0.0 | validated |
-| `revision-entry` | 1.3.1 | validated |
+| `revision-entry` | 1.4.0 | validated |
 | `routing-policy` | 1.0.0 | validated |
 | `technique-record` | 1.3.0 | validated |
 
@@ -48,6 +48,7 @@ draft got exactly this wrong — it listed pure Core modules under "Implementing
 
 Ports have swappable implementations; this is what is present in the tree.
 
+- `adapters/content-local`
 - `adapters/evidence-local`
 - `adapters/provider-local-proxy`
 - `adapters/storage-local`
