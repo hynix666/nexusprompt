@@ -236,6 +236,18 @@
       "pattern": "The (\\d[\\d,]*) gates",
       "resolver": "gates.ported",
       "reason": "The heading over the gate table. A heading that says sixteen above a table of fifteen rows is the failure this catches."
+    },
+    {
+      "document": "project-knowledge/08-known-issues-and-decisions.md",
+      "pattern": "\\*\\*([\\d,]+)\\*\\* known limits remain",
+      "resolver": "manifest.known_limits",
+      "reason": "The open register said Five while the spec held twelve. The register is where a reader goes to learn what is still wrong, so a stale count there understates the residue by more than half."
+    },
+    {
+      "document": "Documentation/IMPLEMENTATION_PLAN.md",
+      "pattern": "the allowlist holds ([\\d,]+) entries",
+      "resolver": "divergences.declared",
+      "reason": "Risk register R2 said \"zero entries, which is correct\" for a week after the count reached four. R2 is the row asserting the oracle has not been silenced, so a wrong number there undercuts the mitigation it claims."
     }
   ]
 }
