@@ -10,7 +10,11 @@ npm run verify         # boundaries → typecheck → source freeze → tests �
 
 `npm`, not `pnpm`: pnpm is not installed here and the workspace is defined with npm workspaces. The documented layout still names packages that do not exist yet — built today are `contracts/`, `core/`, `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `shells/cli`, `scripts/`, and `test/`. `packages/` (shared presentation) and `observability/` are target state.
 
-`npm run verify` is the whole check and runs in about ten seconds. There is **no CI service** configured — no `.github/`, no pipeline. Everything below that says "CI" describes intent; the local command is what actually runs.
+`npm run verify` is the whole check and runs in about ten seconds. **CI runs the same command** — `.github/workflows/verify.yml`, on every push to `master` and every pull request, first green 23 August 2026. It installs with `npm ci` on Linux and sets up Python, because the differential oracle shells out to the frozen linter and an oracle that silently skips is worse than none.
+
+Local green is not CI green, and the difference has produced real failures in both directions. This machine is Windows with `core.autocrlf=true` and an already-installed `node_modules`; CI is Linux, LF, and a clean `npm ci`. A test asserting a CRLF-only fact passed here and failed there; a truncated `package-lock.json` broke `npm ci` for a day while every local command stayed green, because `npm install` repairs quietly and a checkout never runs `npm ci`.
+
+**The only claim on this page a checker enforces is that CI exists at all** — `check:plan` derives `ci.configured` from `.github/` and holds it against `Documentation/IMPLEMENTATION_PLAN.md`. `check:counts` cannot help here: it matches a pinned NUMBER on a line, and everything in this section is prose. Treat the stage descriptions below as unchecked, and re-read them against `verify.yml` rather than trusting them — the sentence this paragraph replaced said there was no CI, and stayed on the page for six days after CI went green.
 
 ## Enforced boundaries
 
@@ -80,7 +84,7 @@ npm run scaffold:technique -- --source "<citation>"
 
 **Neither generator exists yet.** They appear in no source archive, despite earlier drafts of this document and `CONTRIBUTING.md` instructing contributors to use them rather than hand-write files. They are worth building — pre-wiring the contract shape and a stub test is exactly how the property-test requirement stops being a review-time argument — but until then, write the files by hand.
 
-**Nothing enforces the property-test requirement either.** This paragraph used to claim that "a gate without a property test fails the Core stage." There is no Core stage. *(CI arrived 23 August 2026 and runs `npm run verify`; it still does not check for property tests, so the sentence's point stands — the requirement is unenforced, not merely un-CI'd.)* Both ported gates do have property tests, and `CLAIM_DISCIPLINE` only got one after an audit noticed it had no test file at all while `GATES_REFERENCE.md` asserted every gate had both. Until something checks it, treat the requirement as a review convention.
+**Nothing enforces the property-test requirement either.** This paragraph used to claim that "a gate without a property test fails the Core stage." There is no Core stage, and CI does not check for property tests either — the requirement is unenforced, not merely un-CI'd. Both ported gates do have property tests, and `CLAIM_DISCIPLINE` only got one after an audit noticed it had no test file at all while `GATES_REFERENCE.md` asserted every gate had both. Until something checks it, treat the requirement as a review convention.
 
 What a new gate *is* checked against: `scripts/ported-gates.json` must list it, or `npm run differential` refuses to run — see [ADR-0007](./0007-permanent-differential-oracle.md).
 
@@ -108,7 +112,9 @@ Neither mechanism subsumes the other. The static check cannot see an effect hand
 
 ## Intended CI pipeline stages
 
-**No CI service is configured.** These stages describe the intended pipeline; `npm run verify` runs stages 1, 2 and part of 3 locally today.
+These stages describe the intended pipeline. CI does not run them as seven separate, separately-attributed jobs — it runs `npm run verify` as one step, and `verify` follows this order internally: boundaries and schema validation first, then Core, then Application, adapters, cross-shell parity, the adversarial corpus, and reproducibility last. So the ORDER below is real and the ATTRIBUTION is not: a failure surfaces as one `verify` exit code, which is exactly what the closing sentence of this section says it should not be.
+
+`check:corpus` is deliberately outside `verify`. It re-hashes 2 GB of gitignored PDFs, so it can never pass on a clean checkout; folding it in would make the headline command fail for every adopter.
 
 1. Lint (including import-boundary rule) + typecheck + contract schema validation
 2. Core unit + property tests (no network) + Core purity instrumentation — see the table above for what that does and does not cover
