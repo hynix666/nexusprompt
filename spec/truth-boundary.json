@@ -15,16 +15,17 @@
       "id": "no-model-has-answered",
       "title": "Nothing here has ever talked to a model",
       "probe": "providerReach",
-      "establishes": "The provider path runs end to end and degrades honestly. One eleven-stage run is persisted in this tree, and all eleven of its revision entries recorded a null model fingerprint: the pipeline executed, the provider was unreachable, and Core mapped the classified failure to a labelled demo placeholder rather than to text. The live path also refuses before it spends anything — a key of the wrong shape is rejected up front instead of being discovered case by case.",
+      "establishes": "The provider path runs end to end and degrades honestly. One eleven-stage run is persisted in this tree, and all eleven of its revision entries recorded a null model fingerprint: the pipeline executed, the provider was unreachable, and Core mapped the classified failure to a labelled demo placeholder rather than to text. The live path refuses before it spends anything, in four independent places, each verified by hand on 29 August 2026: no key at all, a key whose shape says placeholder, a well-shaped key with no declared budget, and a budget flag that is not a positive integer. Every one exits 2 having made no provider call. The budget refusal is the load-bearing one — `admitRun` admits everything when no budget is declared, so without it the FIRST live run would have been the unbounded one.",
       "does_not_establish": "Any claim whatsoever about how a language model behaves. Every evaluation figure this repository reports — the anchor's 4,906 cases, each smoke suite, every gate recall number — was produced by the pinned stub. They are evidence about this system's accounting, not about a model's output. No prompt-engineering advice in the documentation set has been measured here, and the fingerprint watch is empty because there has been nothing to watch.",
       "expect": {
         "any_fingerprint_observed": false,
         "fingerprints_pinned": 0,
         "run_bundles_are_gitignored": true,
         "placeholder_key_refused": true,
-        "real_shaped_key_accepted": true
+        "real_shaped_key_accepted": true,
+        "live_requires_declared_budget": true
       },
-      "crossed_when": "The first provider answers. `any_fingerprint_observed` goes true, and from that moment the repository holds evidence about a model — which means every sentence in the documentation that currently says 'stubbed' or 'never executed' needs re-reading, and the first fingerprint needs pinning deliberately rather than appending a string.",
+      "crossed_when": "The first provider answers. `any_fingerprint_observed` goes true, and from that moment the repository holds evidence about a model — which means every sentence in the documentation that currently says 'stubbed' or 'never executed' needs re-reading, and the first fingerprint needs pinning deliberately rather than appending a string. `live_requires_declared_budget` going false is a different and worse event: it would mean a run can spend without a declared cap, which is the one guard whose absence is measured in money.",
       "evidence": [
         "scripts/check-fingerprint.mjs",
         "scripts/model-fingerprints.json",

@@ -251,6 +251,25 @@ describe("providerReach — the boundary that matters most", () => {
     expect(r.fingerprints_pinned).toBe(1);
   });
 
+  it("reports the budget guard, and reports its ABSENCE as unverified", () => {
+    // The guard standing between this repository and its first unbounded spend. Derived from
+    // source rather than by running `--live`, because a behavioural probe would dispatch the
+    // very run it is checking for, precisely when the guard is missing.
+    const root = plant(null);
+    mkdirSync(join(root, "scripts"), { recursive: true });
+
+    writeFileSync(join(root, "scripts/run-eval.ts"), "if (LIVE && MAX_CALLS === undefined) { refuse(); }\n");
+    expect(PROBES.providerReach(root).live_requires_declared_budget).toBe(true);
+
+    writeFileSync(join(root, "scripts/run-eval.ts"), "// the guard was removed\n");
+    expect(PROBES.providerReach(root).live_requires_declared_budget).toBe(false);
+
+    rmSync(join(root, "scripts/run-eval.ts"));
+    // Unreadable reads as NOT verified. A removed guard and an unreadable one make the same
+    // claim — nothing was proven — and neither may pass as fine.
+    expect(PROBES.providerReach(root).live_requires_declared_budget).toBe(false);
+  });
+
   it("refuses a placeholder key and accepts a well-shaped one", () => {
     const r = PROBES.providerReach(plant(null));
     expect(r.placeholder_key_refused).toBe(true);
