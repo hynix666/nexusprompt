@@ -51,6 +51,7 @@ import { pathToFileURL } from "node:url";
 import { listGates, SOURCE_GATE_COUNT } from "../core/src/gates/registry.js";
 import { floorDiscordant } from "../core/src/eval/sizing.js";
 import { observe } from "./check-fingerprint.mjs";
+import { isArtifactPath } from "./build-hash.mjs";
 import { implausibleKeyReason } from "./run-eval.js";
 
 const SPEC = "spec/truth-boundary.json";
@@ -272,6 +273,38 @@ export const PROBES: Record<string, Probe> = {
       in_verify: pkg.scripts.verify.includes("check:corpus"),
       gitignored: /^PDF\/?$/m.test(gitignore),
       checkable_on_clean_checkout: false,
+    };
+  },
+
+  /**
+   * Three claims that all get called "reproducible", of three different strengths.
+   *
+   * Derived rather than asserted because the temptation here is to state the strong version:
+   * "the build is reproducible" is a sentence this project cannot support — nothing is
+   * compiled. What it can support is narrower and is pinned field by field, so the weakest of
+   * the three cannot borrow the strongest's credibility by sitting in the same sentence.
+   */
+  reproducibility(root) {
+    const hashFile = readJson(root, "build-hash.json");
+    const hashSource = readText(root, "scripts/build-hash.mjs");
+    const anchor = readJson(root, "eval/gate-recall-anchor.json");
+    const pkg = readJson(root, "package.json");
+    return {
+      artifact_files: hashFile.files,
+      // The property the whole claim rests on: a CRLF checkout and an LF checkout agree.
+      hash_is_lf_normalised: /replace\(\/\\r\\n\/g, "\\n"\)/.test(hashSource),
+      // Asked of the real predicate, not of its source text: what the hash covers is a
+      // behaviour, and a comment claiming an exclusion is not one.
+      hash_excludes_tests_and_tooling:
+        !isArtifactPath("test/checkers.test.ts") &&
+        !isArtifactPath("core/test/eval.test.ts") &&
+        !isArtifactPath("scripts/check-counts.mjs"),
+      hash_excludes_itself: !isArtifactPath("build-hash.json"),
+      anchor_regenerates_from_seed: anchor.generator.seed,
+      oracle_verdicts_agree: pkg.scripts.verify.includes("npm run differential"),
+      // No bundler, no compile step, no emit. `tsc --noEmit` typechecks and produces nothing;
+      // tsx transpiles at run time. Stated as a fact about the project, not a shortcoming.
+      build_is_compiled: /"build"\s*:/.test(JSON.stringify(pkg.scripts)) || pkg.scripts.typecheck !== "tsc --noEmit",
     };
   },
 

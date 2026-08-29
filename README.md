@@ -23,9 +23,10 @@ Node 24+ and npm. **Use npm, not pnpm** — the workspace is defined with npm wo
 npm install && npm run verify
 ```
 
-That is the whole check: import boundaries, types, frozen-source hashes, documentation
-counts, suite sizing, the generated capability matrix, the evaluation suites, the test suite,
-and the differential oracle. It runs offline in under twenty seconds.
+That is the whole check: repository hygiene, import boundaries, types, frozen-source hashes,
+documentation counts, suite sizing, the generated documents, the truth boundary, the artifact
+hash, the evaluation suites, 929 tests, and the differential oracle. It runs offline in about
+thirty seconds and it is the only command you need.
 
 Lint a prompt against the ported gates:
 
@@ -50,6 +51,25 @@ design working, not a failure — see **Demo mode** below.
 
 ---
 
+## What you can do with it today
+
+Three things, all offline, none of which need a provider key:
+
+- **Lint a prompt** against sixteen gates ported from a frozen Python linter and checked
+  against it verdict-for-verdict on every build.
+- **Compile a brief** through eleven pipeline stages, with the depth chosen by the stakes you
+  declare, and read every intermediate revision.
+- **Inspect the evidence** — what was retained, what was promoted, and what the system will
+  not claim.
+
+What it will not do is tell you a prompt is *better*. Nothing here has ever called a model,
+and every evaluation figure in this repository was produced by a pinned stub. That is not a
+gap waiting to be filled quietly; it is the boundary the whole design protects, and
+[`Documentation/TRUTH_BOUNDARY.md`](./Documentation/TRUTH_BOUNDARY.md) states it in nine
+machine-checked entries. Read that before quoting any number from anywhere else here.
+
+---
+
 ## What is in the tree
 
 | Path | Purpose |
@@ -58,7 +78,9 @@ design working, not a failure — see **Demo mode** below.
 | `core/` | Pure logic: gates, stages, catalog, evaluation, statistics, routing, release. No I/O, no clock, no randomness |
 | `application/` | Owns every effect — provider, judge, store, sink, cache, budget, retry |
 | `adapters/` | Swappable implementations: provider, storage, evidence |
-| `shells/cli/` | The one built Shell. Calls the Application protocol only |
+| `shells/cli/` | The CLI Shell — lint, pipeline, gates, evidence. Calls the Application protocol only |
+| `shells/api/` | A REST Shell over the same protocol: seven endpoints, adopted 29 Aug (ADR-0012). The only part of the tree with runtime dependencies |
+| `spec/` | Behaviour specified as data: 135 manifest shapes and 9 truth boundaries, each one simultaneously the test and the document |
 | `scripts/` | The checks. Each one fails the build rather than printing a warning |
 | `eval/` | Evaluation suites, with their declared resolution and significance protocol |
 | `sources/` | 420 frozen, hash-pinned files from prior versions. Read from these; never write into them |
@@ -166,7 +188,9 @@ rather than an intention.
 *Closes when:* the errors are worked through, flag by flag.
 
 **Two Shells are specified and unbuilt** (`pipeline-ui`, `toolkit-ui`), along with the hosted
-provider adapter and the database storage adapter. The CLI is the only Shell.
+provider adapter and the database storage adapter. That is stated as scope rather than as a
+shortfall: `cli` and `api` both drive the full pipeline through the Application protocol, so
+what is missing is presentation, not capability.
 *Closes when:* they are built; the shared presentation package they depend on is designed in
 ADR-0006.
 

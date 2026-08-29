@@ -45,6 +45,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   },
   "commands": [
     "build:anchor",
+    "build:hash",
     "check:anchor",
     "check:catalog",
     "check:citations",
@@ -53,6 +54,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "check:counts",
     "check:depth",
     "check:fence-explanation",
+    "check:hash",
     "check:fingerprint",
     "check:hygiene",
     "check:manifest-spec",
@@ -88,7 +90,6 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "planned_commands": [
     "verify:gates",
     "trace:view",
-    "verify:hash",
     "scaffold:gate",
     "scaffold:technique",
     "catalog:validate",
@@ -325,6 +326,29 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 That derivation is narrower than it sounds, and the distinction is worth keeping even now that it has stopped biting: **configured and executed are different states, and only the first is checkable from inside this repository.** The workflow has in fact run many times — it gated every pull request from #17 to #28, and it caught a broken `npm ci` that no local command could see, because `npm install` repairs quietly and a checkout never runs `npm ci`. But nothing in this repository can verify that sentence; it is a claim about GitHub, made here in prose, and it will go stale the same way its predecessor did. Treat it as a report, not as a check.
 
 **Scope.** CI pipeline in the documented stage order; the `CAPABILITY_MATRIX.md` generator; the trace viewer; build-hash stamping and the reproducibility check.
+
+**Status — 29 August 2026: three of four exit-gate clauses met; the phase is NOT complete.**
+
+| Exit-gate clause | |
+|---|---|
+| the matrix is generated rather than hand-written | ✅ `docs:matrix` / `check:matrix`, deriving coverage from the validators the conformance suite exercises |
+| an orphaned contract or unproven claim fails the build | ✅ `check:matrix`, `check:counts` (44 occurrences of 39 pins), `check:truth` (9 boundaries) |
+| an independent build produces an identical artifact hash | ✅ `build:hash` / `check:hash` — 75 artifact files, one hash |
+| the three reproducibility claims are reported separately and never merged | ✅ the `three-reproducibility-claims` entry in the truth boundary |
+| **the trace viewer** | ❌ **not built.** `trace:view` remains in `planned_commands` |
+
+The artifact hash needs its scope stated rather than assumed. It normalises content to LF
+before hashing, because `core.autocrlf` is `true` here and only `sources/**` is pinned to LF —
+so raw bytes differ between a Windows and a Linux checkout of the same commit. Hashing bytes
+would have produced a platform check wearing a reproducibility check's name: green locally,
+red on its first CI run. The test proves the property against git's object store, which holds
+exactly the bytes the other platform receives.
+
+And the claim is deliberately narrow: **nothing is compiled.** There is no bundle and no emit;
+`tsc --noEmit` typechecks and produces nothing, `tsx` transpiles at run time. "Same source,
+same hash" is true and is not "reproducible builds". The truth boundary keeps the three claims
+apart for exactly that reason — collapsing them lets the weakest borrow the strongest's
+credibility.
 
 **Exit gate:** the matrix is generated from registrations and test evidence rather than hand-written; an orphaned contract or unproven claim fails the build; an independent build produces an identical artifact hash; the three reproducibility claims are reported separately and never merged.
 
