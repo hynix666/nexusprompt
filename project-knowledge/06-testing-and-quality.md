@@ -1,6 +1,6 @@
 # Testing and quality
 
-**890 tests across 28 files, 0 failing.** Runs offline in seconds.
+**929 tests across 29 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -22,7 +22,7 @@ npx vitest run --project contracts
 `core/test/purity.setup.ts` traps `fetch`, `Math.random`, `Date.now` and `new Date()` for the
 `core` project. It **cannot** trap the filesystem — see `01-architecture.md`.
 
-## The five quality mechanisms, and what each one alone cannot see
+## The six quality mechanisms, and what each one alone cannot see
 
 ### 1. Unit tests — must-fire *and* must-not-fire
 
@@ -127,6 +127,42 @@ test green while the guarantee shrinks.
 `.promptnexus/`, which would have made the check pass or fail depending on which machine ran
 it — a checker whose verdict depends on where you are is worse than none, and this repository
 already paid that once with a CRLF-anchored regex in `check-plan`.
+
+### 6. The artifact hash — `npm run check:hash`
+
+75 runtime files (contracts, Core, Application, adapter and Shell sources, plus `package.json`
+and the lockfile) digested to one hash. NOT tests, scripts, spec or Documentation: those decide
+what is *checked*, not what runs, and a hash that churns on a moved comment is a hash people
+stop reading.
+
+**Content is normalised to LF before hashing, and that is the whole design.** `core.autocrlf`
+is `true` here and `.gitattributes` pins only `sources/**`, so a Windows checkout and a Linux
+checkout of one commit hold different bytes for every artifact file. Raw byte-hashing would
+have been a platform check wearing a reproducibility check's name.
+
+## Local green is not CI green
+
+The sharpest lesson of the artifact-hash work, and it cost two red masters.
+
+`npm run verify` on this machine is a **Windows, CRLF, already-installed** run. CI is
+**Linux, LF, `npm ci` from the lockfile**. Three differences, and every one of them has now
+produced a failure that was invisible locally:
+
+| what broke | local | CI |
+|---|---|---|
+| corrupt `package-lock.json` | green — `npm install` repairs quietly, and a checkout never runs `npm ci` | `EUSAGE`, could not install at all |
+| a test asserting the tree is CRLF | green | `expected 0 to be greater than 0` |
+| a fence regex meeting `` | red only once a CRLF case existed | — |
+
+The last one is the reverse case and worth keeping in view: CI would NOT have caught it,
+because CI is LF. **Neither environment dominates.** A guard that matters has to be reasoned
+about in both, and a mutation probe run only locally proves only the local half — the
+sweep-six fence fix was probed, passed, and still disabled fences on every CRLF file.
+
+One operational note that has bitten twice: **a push to a branch here does not reliably trigger
+a CI run.** PR #30 was squash-merged from the commit before its fix because no run existed for
+the fix. Check that the run you are reading belongs to the commit you are merging; the run id
+is the tell, and `gh workflow run verify.yml --ref <branch>` dispatches one by hand.
 
 ## The recurring failure: fixtures too uniform to discriminate
 

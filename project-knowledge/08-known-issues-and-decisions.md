@@ -93,11 +93,36 @@ Two things worth carrying forward:
   `origin` and every clone carries them. Removing them means rewriting published history,
   which is the owner's decision, not a checker's.
 
+## A checker over part of a document implies coverage of the document
+
+`IMPLEMENTATION_PLAN.md` carries `check:plan`, which verifies its ```json plan-status``` block
+and **nothing else**. On 29 August 2026 four claims in that document and the register below
+were false at once: that `shells/api` was unwired, that the CI workflow had never run, that the
+divergence allowlist held zero entries, and that five manifest limits remained. Every one sat
+in prose, inches from a block that was correct the whole time.
+
+That is the same shape the truth boundary exists for — a true number lending its authority to
+an untrue sentence beside it — and it applies to the checker itself: partial coverage reads as
+total coverage.
+
+**What could be mechanised, and what could not.** Two of the four were numbers, and
+`check:counts` is already a prose-claim checker — a regex per document, a resolver per number.
+Both are pinned now, and R2's row was deliberately **rewritten to state a count** rather than
+say "zero", so that a number existed for a checker to hold. That is the reusable trick: prose
+becomes checkable when it commits to a figure.
+
+The other two could not be, and saying so is the honest half. "`shells/api` is not wired" is a
+claim about compilation; a rule reading "this file must not mention shells/api" is a phrase
+ban, not a check, and goes stale the moment the wording moves. "The workflow has never run" is
+a claim about GitHub, unverifiable from inside the repository — Phase 7 now states the CI
+history as a **report and labels it as one**. Prose that admits it is unchecked beats a checker
+that implies more coverage than it has.
+
 ## Open register — each with a closing condition
 
 | Open | Closes when |
 |---|---|
-| **Nothing has ever called a provider.** The path exists (`npm run eval -- --live`) and has never run. `cache_read_tokens` is populated by nothing; no judge has graded anything; the release gate has never fired | A key exists, and one 100-trial run reports a non-zero cache read |
+| **Nothing has ever called a provider.** The path exists (`npm run eval -- --live`) and has never run. `cache_read_tokens` is populated by nothing; no judge has graded anything; the release gate has never fired. The four refusals standing in front of it are now verified and pinned — no key, placeholder shape, no declared budget, non-positive `--max-calls` — so what remains is a key, not a mechanism | A key exists, and one 100-trial run reports a non-zero cache read. `check:truth` will FAIL on `any_fingerprint_observed` at that moment, by design |
 | **The anchor certifies detection, not quality.** No suite here measures a model | A key, then an anchor built over model outputs rather than gate verdicts |
 | **Keyed fingerprints documented, bare `sha256` in code** | The event port holds a deployment-scoped key and `orchestrator.ts` uses it |
 | **Does per-stage validation actually mitigate the depth cliff?** The strongest untested hypothesis here; the cited measurement is of *unvalidated* chains | A live run makes it measurable. If false, eleven stages is the wrong shape |
@@ -114,6 +139,16 @@ Two things worth carrying forward:
 | **The local ONNX model cannot be driven** — `genai_config.json` absent | The config lands, or parameters are recovered from graph tensor shapes with a known-answer test pinning one completion |
 
 ### Recently closed
+
+**29 August 2026.** `.gitignore` emptied a third time and 3,677 node_modules files tracked
+(closed by `check:hygiene`, which then turned out to miss a nested `node_modules` and was
+widened) · `npm ci` impossible for a day, from a truncated `package-lock.json` and
+`shells/api/package.json` · `shells/api` neither owned nor deleted (adopted, ADR-0012) · the
+sweep-six fence fix silently disabling fences on every CRLF file · four false claims in the
+plan and register · no artifact hash at all (Phase 7's third exit clause) · the Vercel
+deployment that had never succeeded (root directory moved to the repo root; ADR-0012 records
+why a server and not serverless).
+
 
 no git remote (23 Aug) · no CI (23 Aug) · no licence (23 Aug) · corpus outside the repo
 (23 Aug) · no suite resolves below ~53 pp (23 Aug, by the anchor) · the pipeline suite

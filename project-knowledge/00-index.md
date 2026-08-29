@@ -4,7 +4,8 @@ A compact, self-contained record of this project, written so a new session (or a
 can rebuild, extend, or reason about it without reading the whole tree.
 
 Generated 23 August 2026 at commit `f19dc83`; revised 25 August 2026 after the SPB
-defect-parity audit, and 28 August 2026 after the truth boundary landed.
+defect-parity audit, 28 August 2026 after the truth boundary landed, and 29 August 2026 after
+the repo-hygiene, API-shell and release-truth work.
 
 > **Nine of the structural counts below are pinned.** `npm run check:counts` re-derives them
 > from the repository and fails the build when a number here disagrees with the tree — the
@@ -43,16 +44,18 @@ components were rejected by it.
 | Language / runtime | TypeScript 5.9, Node 24, ESM, `module: NodeNext` |
 | Package manager | **npm workspaces** — *not* pnpm (pnpm is not installed; older docs say otherwise) |
 | Repo | `github.com/hynix666/nexusprompt` (private), branch `master`, CI green |
-| Headline command | `npm install && npm run verify` — ~25 s, offline |
-| Tests | 890 passing, 0 failing, across 28 files |
+| Headline command | `npm install && npm run verify` — ~30 s, offline. 21 checks before the suite |
+| Tests | 929 passing, 0 failing, across 29 files |
 | Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
 | Contracts | 15 JSON Schemas, all validated against produced values |
 | Adapters | 3 built (provider-local-proxy, storage-local, evidence-local) |
 | Shells | 2 built — `cli` and `api` (adopted 29 Aug, ADR-0012; typechecked and tested). 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
-| Source size | ~23,600 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/` |
-| Commits | 87 — and note that a commit stating this number changes it, which is why it is not pinned |
+| Source size | ~24,500 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/ spec/` |
+| Artifact hash | `ae23b9b9bfd2817f…` over 75 runtime files, LF-normalised so a Windows and a Linux checkout agree |
+| Truth boundary | 9 machine-checked entries stating what this repository establishes and what it does **not** |
+| Commits | 104 — and note that a commit stating this number changes it, which is why it is not pinned |
 | Licence | MIT |
 
 ### The three zeros (unchanged, and the point)
@@ -112,8 +115,8 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `adapters/storage-local/` | Run-bundle persistence (8 bundles, evicted whole) |
 | `adapters/evidence-local/` | Immutable evidence store (`wx` flag, no `update`) |
 | `shells/cli/` | The one built Shell + its composition root |
-| `scripts/` | 22 checkers and runners. Each fails the build rather than warning |
-| `spec/` | Behavioural specs that ARE the tests and generate their own documentation. Two files: `manifest-shapes.json` (71 shapes one gate reads) and `truth-boundary.json` (8 entries stating what this repository establishes and what it does not) |
+| `scripts/` | 25 checkers and runners. Each fails the build rather than warning |
+| `spec/` | Behavioural specs that ARE the tests and generate their own documentation. Two files: `manifest-shapes.json` (135 shapes one gate reads, across seven sweeps) and `truth-boundary.json` (9 entries stating what this repository establishes and what it does not) |
 | `scripts/divergence-allowlist.json` | 4 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
