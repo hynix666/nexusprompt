@@ -151,3 +151,80 @@ describe("nexusprompt pipeline --max-calls", () => {
     expect(r.out).not.toMatch(/refused before dispatch|budget NOT enforced/);
   });
 });
+
+/**
+ * `run` and `lint`, driven the way a person drives them.
+ *
+ * Neither had a single test. The whole CLI suite was `pipeline`, so the argument handling for
+ * the other two commands was covered by nothing: reverting the file-argument fix entirely left
+ * 1,315 of 1,316 tests passing, and the one failure was the artifact-hash CHECKSUM noticing the
+ * bytes had changed — not a behavioural assertion. A repository whose discipline is that every
+ * claim needs a checker had a shipped command with none.
+ */
+describe("nexusprompt run", () => {
+  it("runs a stage against a brief", () => {
+    // 3, not 0: no API key here, so the run degrades and says so. It RAN, which is the point.
+    const r = runCli(["run", "--stage", "compile", "BRIEF"]);
+    expect(r.code).toBe(3);
+    expect(r.out).toMatch(/compile/);
+  });
+
+  it("accepts the file before the flags too", () => {
+    const r = runCli(["run", "BRIEF", "--stage", "compile"]);
+    expect(r.code).toBe(3);
+  });
+
+  it("prints usage when the only argument is a flag's value", () => {
+    // The bug the file-argument fix was written for: `argv[length-1]` resolved the file as
+    // "compile" and died on ENOENT against a path named after the stage.
+    const r = runCli(["run", "--stage", "compile"]);
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/nexusprompt — usage/);
+    expect(r.out).not.toMatch(/ENOENT/);
+  });
+
+  it("refuses a stage it cannot actually run, rather than running compile anyway", () => {
+    // `run --stage harden BRIEF` used to print `Stage "compile" did not run against a model.`
+    // The Orchestrator imports decide/reduce straight from compile.js and uses stage_id only
+    // to LABEL the revision, so honouring the flag would record `harden` over compile's output.
+    const r = runCli(["run", "--stage", "harden", "BRIEF"]);
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/--stage harden is not available/);
+    // And it must not have run anything: no compile output.
+    expect(r.out).not.toMatch(/did not run against a model/);
+  });
+});
+
+describe("nexusprompt lint", () => {
+  it("lints a file", () => {
+    const r = runCli(["lint", "BRIEF"]);
+    expect([0, 1, 3]).toContain(r.code);
+    expect(r.out).toMatch(/gates ported/);
+  });
+
+  it("prints usage for a flag instead of reading a file named after it", () => {
+    // `lint --foo` used to reach readFile and die on `ENOENT ... open '<cwd>/--foo'` — exactly
+    // the confusing failure the file-argument fix exists to remove, one line above it.
+    const r = runCli(["lint", "--foo"]);
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/nexusprompt — usage/);
+    expect(r.out).not.toMatch(/ENOENT/);
+  });
+});
+
+describe("nexusprompt pipeline — flags before the file", () => {
+  it("runs when a flag comes first", () => {
+    // `pipeline --stakes HIGH BRIEF` exited 2 with the usage block: the guard required argv[1]
+    // to be a non-flag. Same defect class as the two above, on the command with five
+    // value-taking flags, so the most likely of the three to be hit.
+    const r = runCli(["pipeline", "--stakes", "HIGH", "BRIEF"]);
+    expect(r.code).toBe(3);
+    expect(r.out).not.toMatch(/nexusprompt — usage/);
+  });
+
+  it("still prints usage when there is no file at all", () => {
+    const r = runCli(["pipeline", "--stakes", "HIGH"]);
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/nexusprompt — usage/);
+  });
+});

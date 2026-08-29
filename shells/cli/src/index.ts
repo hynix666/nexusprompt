@@ -16,6 +16,7 @@
 
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { lint, listPortedGates, worstVerdict } from "../../../application/src/lint.js";
 import { composeEvidence, composeOrchestrator, composePipeline } from "./composition-root.js";
 import { current } from "../../../application/src/release.js";
@@ -31,6 +32,63 @@ const C = {
 };
 
 const paint = (v: string) => (v === "PASS" ? C.pass(v) : v === "WARN" ? C.warn(v) : C.fail(v));
+
+/* ── argument parsing, once, for every command ─────────────────────────────── */
+
+/**
+ * Flags that consume the argv entry after them.
+ *
+ * This list is the one thing `fileArg` cannot derive: only the code reading a flag knows
+ * whether it takes a value. So it is declared here and held to the code by a test —
+ * `shells/cli/test/argument-parsing.test.ts` greps this file for every `flagValue(argv, "--x")`
+ * call and fails if one is missing from these sets. Adding a value-taking flag without
+ * listing it would otherwise make its VALUE parse as the filename, which is precisely the
+ * confusing `ENOENT` the file-argument fix exists to prevent.
+ */
+export const VALUE_FLAGS: ReadonlySet<string> = new Set([
+  "--stage", "--stakes", "--depth", "--test", "--max-calls",
+]);
+
+/**
+ * Flags whose value is optional, taken only when the next entry is a bare integer.
+ *
+ * `--reflexive` alone means one round, `--reflexive 3` means three. Consuming
+ * unconditionally would eat the filename in `pipeline --reflexive brief.txt`; never
+ * consuming would make `--reflexive 3 brief.txt` resolve the file as `3`.
+ */
+export const OPTIONAL_NUMERIC_FLAGS: ReadonlySet<string> = new Set(["--reflexive"]);
+
+/**
+ * The first argv entry that is neither a flag nor a flag's value.
+ *
+ * Every command that takes a file uses this. Three commands used to disagree about it:
+ * `lint` read `argv[1]` unconditionally and handed `--foo` to `readFile`; `pipeline` refused
+ * outright when `argv[1]` began with `--`, so `pipeline --stakes HIGH brief.txt` printed usage;
+ * `run` scanned for the first non-flag but consulted a skip-list naming only its own flag.
+ * The same invocation shape therefore worked, printed usage, or died on ENOENT depending on
+ * which word came first.
+ *
+ * A leading `-` always marks a flag, so a filename cannot begin with one. That is the normal
+ * POSIX trade and is worth stating: pass `./-weird.txt` for such a file.
+ */
+export function fileArg(argv: readonly string[], from = 1): string | undefined {
+  for (let i = from; i < argv.length; i++) {
+    const a = argv[i] as string;
+    if (a.startsWith("-")) {
+      if (VALUE_FLAGS.has(a)) i++;
+      else if (OPTIONAL_NUMERIC_FLAGS.has(a) && /^\d+$/.test(argv[i + 1] ?? "")) i++;
+      continue;
+    }
+    return a;
+  }
+  return undefined;
+}
+
+/** The value after `--name`, or undefined. Shared so parsing and `fileArg` cannot disagree. */
+export const flagValue = (argv: readonly string[], name: string): string | undefined => {
+  const i = argv.indexOf(name);
+  return i === -1 ? undefined : argv[i + 1];
+};
 
 /**
  * What the evidence plane holds, and what is currently promoted.
@@ -90,7 +148,33 @@ async function cmdLint(file: string): Promise<number> {
   return worst === "FAIL" ? 1 : worst === "WARN" ? 3 : 0;
 }
 
-async function cmdRun(file: string): Promise<number> {
+/**
+ * One stage, end to end. `--stage` accepts `compile` and refuses everything else.
+ *
+ * It used to accept anything and run `compile` regardless: `run --stage harden brief.txt`
+ * printed `Stage "compile" did not run against a model.` The flag was parsed, skipped over by
+ * the argument scanner, and then discarded — `cmdRun` took only a filename.
+ *
+ * Refusing rather than honouring it is the accurate fix, and the reason is one layer down.
+ * `Orchestrator.run` imports `decide`/`reduce` directly from `core/src/stages/compile.js` and
+ * uses `command.stage_id` only to LABEL the revision it persists. Passing `harden` through
+ * would therefore write a revision recorded as `harden` whose output came from `compile` — a
+ * provenance lie, strictly worse than ignoring the flag, in a repository whose whole claim is
+ * that a stored record says what produced it. Running a different stage needs the Orchestrator
+ * to select one, which is real work and not a Shell's decision to fake.
+ */
+const RUNNABLE_STAGES = ["compile"] as const;
+
+async function cmdRun(file: string, stage: string): Promise<number> {
+  if (!(RUNNABLE_STAGES as readonly string[]).includes(stage)) {
+    console.error(
+      `nexusprompt: --stage ${stage} is not available on \`run\`.\n` +
+      `  The single-stage path runs ${RUNNABLE_STAGES.join(", ")} only — the Orchestrator is wired\n` +
+      `  to that one stage, and accepting another would record a revision under a stage name\n` +
+      `  that did not produce it. Use \`nexusprompt pipeline <file>\` for the full eleven.`,
+    );
+    return 2;
+  }
   const brief = await readFile(file, "utf8");
   const run_id = randomUUID().replace(/-/g, "").slice(0, 16);
 
@@ -137,10 +221,10 @@ async function cmdRun(file: string): Promise<number> {
  *   3  the run degraded, or the gates warned
  */
 async function cmdPipeline(file: string, argv: string[]): Promise<number> {
-  const flag = (name: string) => {
-    const i = argv.indexOf(`--${name}`);
-    return i === -1 ? undefined : argv[i + 1];
-  };
+  // Shared with `fileArg`, so the rule that decides which entries are values is the same rule
+  // that decides which entries are not the filename. The local helper this replaced took an
+  // undashed name and rebuilt `--${name}`, which meant the two could disagree silently.
+  const flag = (name: string) => flagValue(argv, `--${name}`);
 
   const brief = await readFile(file, "utf8");
   const run_id = randomUUID().replace(/-/g, "").slice(0, 16);
@@ -261,28 +345,19 @@ async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
 
-  if (cmd === "lint" && argv[1]) {
-    process.exit(await cmdLint(argv[1]));
+  // All three file-taking commands resolve their argument the same way. They used to use
+  // three different rules, which is why one invocation shape could work, print usage, or die
+  // on ENOENT depending only on which command it named.
+  const file = fileArg(argv);
+
+  if (cmd === "lint" && file) {
+    process.exit(await cmdLint(file));
   }
-  if (cmd === "run") {
-    // The file is the first argument that is not a flag or a flag value. The old
-    // `argv[length-1]` pick turned `run --stage compile` (no file) into
-    // readFile("compile") — a confusing ENOENT instead of usage help.
-    const FLAG_VALUE_COMMANDS = new Set(["--stage"]);
-    let file: string | undefined;
-    for (let i = 1; i < argv.length; i++) {
-      const a = argv[i];
-      if (a.startsWith("--")) {
-        if (FLAG_VALUE_COMMANDS.has(a)) i++; // skip the flag's value
-        continue;
-      }
-      file = a;
-      break;
-    }
-    if (file) process.exit(await cmdRun(file));
+  if (cmd === "run" && file) {
+    process.exit(await cmdRun(file, flagValue(argv, "--stage") ?? "compile"));
   }
-  if (cmd === "pipeline" && argv[1] && !argv[1].startsWith("--")) {
-    process.exit(await cmdPipeline(argv[1], argv));
+  if (cmd === "pipeline" && file) {
+    process.exit(await cmdPipeline(file, argv));
   }
   if (cmd === "evidence") {
     process.exit(await cmdEvidence());
@@ -321,7 +396,22 @@ exit: 0 clean · 1 a gate FAILed or a stage threw · 3 degraded or gates warned`
   process.exit(2);
 }
 
-main().catch((err) => {
-  console.error(`promptnexus: ${(err as Error).message}`);
-  process.exit(2);
-});
+/**
+ * Run only when executed, not when imported.
+ *
+ * `main()` used to be called unconditionally at module scope, so importing this file to reach
+ * anything in it — `fileArg`, the flag sets — parsed the TEST RUNNER's argv, printed the usage
+ * block, and killed the process with `process.exit(2)`. That is why the argument parser had no
+ * unit tests: it could not be imported. `shells/api/src/index.ts` has carried this guard since
+ * it was adopted; the CLI never got one.
+ *
+ * `pathToFileURL` rather than string-building a `file://` URL: on Windows the raw path is
+ * `C:\...`, which needs both separator translation and percent-encoding to compare equal to
+ * `import.meta.url`.
+ */
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(`promptnexus: ${(err as Error).message}`);
+    process.exit(2);
+  });
+}
