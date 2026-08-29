@@ -1,6 +1,6 @@
 # Testing and quality
 
-**1,155 tests across 30 files, 0 failing.** Runs offline in seconds.
+**1,249 tests across 31 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -22,7 +22,7 @@ npx vitest run --project contracts
 `core/test/purity.setup.ts` traps `fetch`, `Math.random`, `Date.now` and `new Date()` for the
 `core` project. It **cannot** trap the filesystem — see `01-architecture.md`.
 
-## The seven quality mechanisms, and what each one alone cannot see
+## The eight quality mechanisms, and what each one alone cannot see
 
 ### 1. Unit tests — must-fire *and* must-not-fire
 
@@ -158,6 +158,26 @@ a gate writes a value equal to the one already there. Probed with a real gate se
 `options.includeFences = true` against options that already had it true: 199 tests passed. The
 check now hands a FROZEN object, so ESM strict mode throws on any write rather than only on
 one that changes something.
+
+### 8. Demo mode, exhaustively — `core/test/demo-mode.test.ts`
+
+Every generating stage × every failure category, 72 reductions plus the chained cases. The
+structural honesty guarantee: a degraded stage must never emit text that reads as a real
+artifact, because `TRUTH_BOUNDARY.md`'s first entry leans on it.
+
+Five properties, and the fifth is the one that keeps the other four honest: a SUCCESSFUL
+outcome must NOT be marked. Without it, a stage that always marked would satisfy "always
+marked" trivially.
+
+The chained half exists because the defect is recorded rather than imagined — `harden`
+degrades, `refine` rewrites the placeholder clean, and the run still reports `demo_mode: true`
+while the artifact no longer says so. The guard is `shouldSkip: isDemoArtifact(c.prompt)`, and
+removing it from `refine` fails exactly two chains: the ones where `refine` runs after a
+degraded prompt-writing stage.
+
+Note the second direction, which is a different lie: a chain whose CRITIC degrades must leave
+the prompt UNMARKED, because that prompt was produced against a model. Marking it would make a
+real artifact look fabricated.
 
 ## Local green is not CI green
 
