@@ -102,6 +102,15 @@ export function resolvers(root = process.cwd()) {
      * was true, load-bearing, and quoted in prose — exactly the kind of claim that keeps
      * being repeated after it stops being true.
      */
+    /**
+     * Known limits in the manifest spec. Pinned because the open register stated "Five" while
+     * the spec held twelve -- and the register is where a reader goes to learn what is still
+     * wrong. `check:truth` already derives the count for the truth boundary; this makes the
+     * same number checkable wherever PROSE quotes it.
+     */
+    "manifest.known_limits": () =>
+      readJson(at("spec/manifest-shapes.json")).cases.filter((c) => c.status === "known-limit").length,
+
     "divergences.declared": () =>
       readJson(at("scripts/divergence-allowlist.json")).entries.length,
     "stages.built": () =>

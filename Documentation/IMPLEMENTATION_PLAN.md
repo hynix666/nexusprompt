@@ -294,16 +294,23 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 ### Phase 6 — Shells
 
-> **`shells/api` is present but NOT wired, and the plan-status list counts directories rather
-> than working shells.** It arrived on 2026-08-27 with four declared runtime dependencies —
-> `fastify`, `@fastify/cors`, `uuid`, `ajv` — none installed, so `tsc` failed on a missing
-> module and twenty-odd implicit `any` parameters and took `npm run verify` down with it. It is
-> excluded from the root typecheck (see `tsconfig.json`) and has no vitest project, so nothing
-> tests it.
+> **`shells/api` was adopted on 29 August 2026 — ADR-0012.** It arrived on 2026-08-27
+> unwired, with four declared runtime dependencies of which it imported two, and one it
+> imported but did not declare. It was excluded from the root typecheck and tested by nothing.
+> The paragraph that stood here said installing those dependencies was an ADR rather than a
+> build fix. That was right, and ADR-0012 is the ADR.
 >
-> Installing those dependencies is not a build fix. This repository's stated property is **zero
-> runtime dependencies**, and ending that is an ADR, not an `npm install`. Until one exists,
-> `cli` remains the only built shell and `api` is source that does not compile.
+> What forced the decision was not tidiness: a botched commit truncated `shells/api/package.json`
+> and `package-lock.json` mid-file, so `npm ci` refused outright and CI could not install the
+> project at all. A directory that is neither owned nor deleted stops being a question about
+> architecture and becomes an outage.
+>
+> It now compiles, is typechecked with everything else, and its routes and socket seam are
+> tested. The zero-runtime-dependency property is **scoped, not dropped**: `contracts`, `core`,
+> `application`, the adapters and `shells/cli` still ship nothing in `dependencies`;
+> `shells/api` ships `fastify` and `@fastify/sensible`. Nothing that computes a verdict, a
+> score or a revision imports outside the standard library, so the oracle, the anchor and every
+> gate stay reproducible with no registry involved.
 
 **Entry condition:** Phases 3 and 4.
 
@@ -313,7 +320,9 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 ### Phase 7 — Release truth
 
-**Entry condition:** a git remote exists. **Met 23 August 2026** — `origin` is `github.com:hynix666/nexusprompt`, private, and CI has run green. `ci.configured` reads `true` as of 22 August 2026 because `check:plan` derives it from the presence of a `.github` directory, and a workflow now exists. That is a narrower fact than it sounds: **the workflow has never run.** Configured and executed are different states, and only the first is checkable from inside this repository. This is a real blocker, not an undone task, and it is why every "CI enforces…" sentence in this documentation set has been rewritten to say what actually runs.
+**Entry condition:** a git remote exists. **Met 23 August 2026** — `origin` is `github.com:hynix666/nexusprompt`, private. `ci.configured` reads `true` because `check:plan` derives it from the presence of a `.github` directory.
+
+That derivation is narrower than it sounds, and the distinction is worth keeping even now that it has stopped biting: **configured and executed are different states, and only the first is checkable from inside this repository.** The workflow has in fact run many times — it gated every pull request from #17 to #28, and it caught a broken `npm ci` that no local command could see, because `npm install` repairs quietly and a checkout never runs `npm ci`. But nothing in this repository can verify that sentence; it is a claim about GitHub, made here in prose, and it will go stale the same way its predecessor did. Treat it as a report, not as a check.
 
 **Scope.** CI pipeline in the documented stage order; the `CAPABILITY_MATRIX.md` generator; the trace viewer; build-hash stamping and the reproducibility check.
 
@@ -334,7 +343,7 @@ Four documents cite "Phase 5" meaning the capability-matrix generator, from a nu
 | # | Risk | Likelihood | Impact | Mitigation | Status |
 |---|---|---|---|---|---|
 | R1 | A ported gate faithfully reproduces a source defect and every test passes | High — three shipped this way in the source | High | Differential oracle against the frozen linter | **Mitigated.** Observed catching two planted defects the full suite missed |
-| R2 | A gate port deliberately improves on the source, disagrees forever, and the oracle gets deleted | High once Phase 2 starts | Severe — loses R1's mitigation | Divergence allowlist with a mandatory reason | **Mitigated, 18 Aug 2026.** `scripts/divergence-allowlist.json`, enforced by the oracle; zero entries, which is correct. Drilled through 11 states including a stale entry and an entry too narrow for a systematic divergence — both refuse. The candidate this row named is not one: the source shares that false positive |
+| R2 | A gate port deliberately improves on the source, disagrees forever, and the oracle gets deleted | High once Phase 2 starts | Severe — loses R1's mitigation | Divergence allowlist with a mandatory reason | **Mitigated, 18 Aug 2026.** `scripts/divergence-allowlist.json`, enforced by the oracle; the allowlist holds 4 entries, each pinning both verdicts and naming an ADR. Drilled through 11 states including a stale entry and an entry too narrow for a systematic divergence — both refuse. The candidate this row named is not one: the source shares that false positive |
 | R3 | Cross-language arithmetic divergence in the three numeric gates | Medium | Medium — wrong verdicts, silently | Explicit `floor(x*100+0.5)/100`; no ambient tokenizer | Open — mitigation is documented, not yet exercised |
 | R4 | Documentation drifts from the code again | High — it has, repeatedly | High — it is the project's recurring defect | Machine-checked status block; `npm run check:plan` in `verify`; README status table | **Mitigated for numbers.** Prose remains unchecked |
 | R5 | ~~No CI, so every guard depends on someone running `npm run verify`~~ | — | — | `.github/workflows/verify.yml` runs `npm run verify` on every push and PR; first execution 23 August 2026 was green on a clean Ubuntu checkout | **Closed 23 August 2026.** |
