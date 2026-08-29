@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,10 +22,16 @@ import {
  * DIFFERENT BYTES for every artifact file.
  *
  * The cross-platform case is provable here without a second machine: git's object store holds
- * exactly the bytes a Linux checkout receives, so hashing `git show HEAD:<path>` is hashing
- * the other platform's working tree. The first test does that, and also computes what a naive
- * byte-hashing implementation would have produced — which does NOT match, and would have
- * failed on its first CI run while passing locally.
+ * exactly the bytes a Linux checkout receives, so reading `git show HEAD:<path>` is reading the
+ * other platform's working tree. The first test compares that against the working tree, file by
+ * file; the second builds both line-ending forms of one file and shows raw hashing separates
+ * them while normalised hashing does not.
+ *
+ * The second test is written that way because its first version was not. It asserted that the
+ * working tree DIFFERS from git's objects — true on the CRLF machine it was written on, false
+ * on Linux, where CI failed it with "expected 0 to be greater than 0". A platform-specific
+ * assertion inside a test for platform independence: the same mistake the hash was designed to
+ * avoid, made one layer up, and caught on the first CI run.
  */
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -65,26 +72,30 @@ describe("build hash — the reproducibility property", () => {
   });
 
   it("would NOT have agreed without line-ending normalisation", () => {
-    // The naive implementation, computed here rather than described, so the normalisation
-    // cannot be deleted as redundant. This is what raw byte-hashing gives on a CRLF checkout.
-    const paths = unmodifiedArtifactPaths();
+    /**
+     * The counter-example is SYNTHESISED, not read off the working tree.
+     *
+     * The first version of this test asserted that raw bytes differ from git's objects — true
+     * on the CRLF checkout it was written on, and false on Linux, where it failed with
+     * "expected 0 to be greater than 0". A platform-specific assertion inside a test for
+     * platform independence: the same mistake the hash itself was designed to avoid, made one
+     * layer up. CI caught it on the first run, which is the argument for CI.
+     *
+     * Building both line-ending forms here proves the property on any platform, and proves
+     * more than the original did — it does not depend on the checkout being anything.
+     */
+    const sha = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
-    // Raw bytes: how many unmodified artifact files differ from the other platform's checkout
-    // when nothing is normalised. On a CRLF working tree this is most of them.
-    const rawDiffering = paths.filter(
-      (p) => readFileSync(join(repoRoot, p), "utf8") !== git("show", `HEAD:${p}`),
-    );
+    // A real artifact file, in both the forms the two platforms check out.
+    const lf = git("show", `HEAD:${unmodifiedArtifactPaths()[0]}`).replace(/\r\n/g, "\n");
+    const crlf = lf.replace(/\n/g, "\r\n");
+    expect(lf).not.toBe(crlf); // the sample must contain line breaks, or this proves nothing
 
-    // If this is empty the working tree stopped being CRLF, and the test above has quietly
-    // stopped proving anything — find out why before trusting the hash across machines.
-    expect(rawDiffering.length).toBeGreaterThan(0);
+    // Raw byte-hashing: the two checkouts disagree. This is what the naive implementation gives.
+    expect(sha(lf)).not.toBe(sha(crlf));
 
-    // And the same files agree once normalised. Raw byte-hashing would have produced a hash
-    // that differs by platform: green locally, red on its first CI run.
-    const normalisedDiffering = rawDiffering.filter(
-      (p) => normalise(readFileSync(join(repoRoot, p), "utf8")) !== normalise(git("show", `HEAD:${p}`)),
-    );
-    expect(normalisedDiffering).toEqual([]);
+    // Normalised: they agree. This is what `build-hash.json` records, on either platform.
+    expect(sha(normalise(lf))).toBe(sha(normalise(crlf)));
   });
 
   it("is deterministic, and agrees with the committed file count", () => {
