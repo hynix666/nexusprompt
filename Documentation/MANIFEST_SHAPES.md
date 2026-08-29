@@ -5,7 +5,7 @@
 committed copy is not what the spec produces; `core/test/manifest-spec.test.ts` runs
 every case below against the real gate. See ADR-0010.
 
-135 cases · 123 specified · 12 known limit(s), of which **1** in the unsafe direction.
+161 cases · 148 specified · 13 known limit(s), of which **1** in the unsafe direction.
 
 A *known limit* records what the gate **actually does today**, not what it should —
 so the row is honest and the suite stays green, while `wanted` records the
@@ -734,6 +734,18 @@ B sits under a different heading; the manifest ended at the first non-declaratio
     ## BLOCK III
     Use [[A]] and [[B]].
 
+### `bound-comment-inside-declaration-run` → `FAIL`
+
+A comment line is not a declaration, so the run ends at it and B is outside the manifest. Consistent with prose ending a run, and it errs toward FAIL: an author sees the failure and moves the comment.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    <!-- TODO: rename this -->
+    - [[B]] - the other
+    
+    ## BLOCK III
+    Use [[A]] and [[B]].
+
 ## Fences
 
 ### `fence-backtick-example` → `FAIL`
@@ -1259,6 +1271,16 @@ An HTML heading renders as a heading and a reader sees no difference from the AT
     ## BLOCK III
     Use [[A]].
 
+### `limit-double-backtick-code-span` → `FAIL` — **known limit**, wants `PASS`
+
+A double-backtick span is a code span, so B is shown rather than used -- the same intent `edge-use-in-inline-code-span` pins for the single-backtick form. The span pattern is `` `[^`\n]*` ``, which matches the two opening backticks as an empty span and the two closing ones as another, leaving the key exposed. INHERITED, not introduced: sources/v5/prompt_lint.py line 276 uses the identical regex, so the two implementations agree and there is no divergence to declare -- the same shape as the CLAIM_DISCIPLINE false positive. Fixing it in the port alone would diverge from the oracle on all six gates that call the stripper. Visible-FAIL direction.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]]. Write ``[[B]]`` to show the syntax.
+
 ## Edges
 
 ### `edge-empty-section` → `FAIL`
@@ -1722,6 +1744,120 @@ An empty ATX heading, then the bare-phrase form on its own line -- which the rea
     ## BLOCK III
     Use [[A]].
 
+### `edge-use-in-html-block` → `FAIL`
+
+An HTML block is part of the prompt body and B interpolates. Note the asymmetry with `limit-html-table-declaration` and `limit-html-heading`: HTML is not parsed for DECLARATIONS, but a use inside it still counts. Both directions err toward FAIL, which is the safe one.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+    <div class="note">[[B]] goes here</div>
+
+### `edge-use-in-image-alt` → `FAIL`
+
+Alt text ships in the rendered prompt.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+    ![diagram of [[B]]](chart.png)
+
+### `edge-use-in-body-blockquote` → `FAIL`
+
+A blockquote in the BODY is instruction text. Contrast `reject-blockquoted-heading`: a quoted MANIFEST is someone else's document, a quoted instruction is still yours.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+    > Remember to include [[B]] verbatim.
+
+### `edge-use-in-nested-list` → `FAIL`
+
+List depth does not change whether a key interpolates.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+    - outer
+      - inner: [[B]]
+
+### `edge-use-in-body-table-cell` → `FAIL`
+
+A table in the BODY is content; only a table inside the manifest section declares. This is the pair to `bound-later-unrelated-table`, from the use side.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+    | Field | Value |
+    |---|---|
+    | id | [[B]] |
+
+### `edge-use-in-link-title` → `FAIL`
+
+A link title is rendered text. With `reject-key-in-markdown-link` (link text) and `edge-use-in-link-target` (the URL), all three positions in a link are now pinned.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]]. See [docs](https://example.test "about [[B]]").
+
+### `edge-use-between-code-spans` → `FAIL`
+
+The span regex is non-greedy within a line, so it removes `flag` and `run` and leaves B. The case where an over-reaching span pattern would swallow a real use between two illustrative ones.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]]. Set `flag` to [[B]] before `run`.
+
+### `edge-use-after-unclosed-code-span` → `FAIL`
+
+A lone backtick opens no span because the pattern needs a closing one on the same line. If it did open one, every use after it would vanish -- which is the false-clean shape this case exists to rule out.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]]. An unmatched ` backtick, then [[B]].
+
+### `edge-second-manifest-declares-too` → `PASS`
+
+Two manifest sections in one document both declare. `heading-two-manifests` pins the headings; this pins that the SECOND section's keys are honoured, so a document that grows a second manifest does not silently lose it.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]].
+    
+    ## Runtime Variables
+    - [[B]] - added later
+    
+    ## BLOCK IV
+    Use [[B]].
+
+### `edge-use-in-body-heading` → `FAIL`
+
+A key in a body heading renders and interpolates. `reject-key-in-heading-itself` covers a key in the MANIFEST heading; this covers any later one.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## Section about [[B]]
+    Body text.
+
 ## Options
 
 ### `option-fenced-use-stripped` → `PASS`
@@ -1759,3 +1895,145 @@ includeFences changes what counts as a USE; it must NOT make a fenced heading de
     ```
     
     Echo [[SECRET]].
+
+## What counts as a key
+
+### `key-empty-token` → `PASS`
+
+`[[]]` contains no character from the declared charset `[A-Za-z0-9_:-]`, so it is not a key token. Nothing interpolates and nothing needs declaring.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[]].
+
+### `key-space-only` → `PASS`
+
+A space is outside the charset; same reasoning as the empty token.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[ ]].
+
+### `key-digits-only` → `FAIL`
+
+Digits ARE in the charset, so `[[123]]` is a key -- used here and undeclared. Pinned because a numeric key looks like an index and is easy to read past.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[123]].
+
+### `key-underscore-only` → `FAIL`
+
+A one-character key is still a key. The charset has no minimum length and should not acquire one silently.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[_]].
+
+### `key-colon-namespaced` → `FAIL`
+
+A colon is in the charset, so namespaced keys work -- and an undeclared one fails like any other. Contrast `edge-dotted-key-is-not-a-key`: a dot is NOT in the charset, so the two shapes behave differently and both are pinned.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[host:tenant]].
+
+### `key-case-sensitive` → `FAIL`
+
+`[[A]]` is declared and `[[a]]` is used. The charset is case-sensitive, so these are different keys. A case slip is the most likely way to use an undeclared key by accident, and it must not pass silently.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[a]].
+
+### `key-very-long` → `FAIL`
+
+Nothing bounds key length, and a 200-character key is undeclared like any other. Pinned so a future length bound has to be a decision rather than an accident.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK]].
+
+### `key-trailing-space-inside` → `PASS`
+
+A space is outside the charset, so `[[B ]]` is not a key token. Matches `edge-key-with-nbsp-is-not-a-key`, which pins the same rule for a non-breaking space.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[B ]].
+
+### `key-adjacent-uses` → `FAIL`
+
+Two keys with no separator. Adjacency must not hide the second -- a global regex that consumed too much would report only A.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]][[B]] together.
+
+### `key-extra-closing-bracket` → `FAIL`
+
+`[[B]]` matches and the trailing bracket is prose. Compare `triple-bracket-declaration-double-use`, where a malformed DECLARATION must not license a use: malformed declarations lose, malformed uses still count.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[B]]].
+
+### `key-extra-opening-bracket` → `FAIL`
+
+The inner `[[B]]` is well formed. A stray leading bracket must not conceal a use -- concealment is the unsafe direction.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[[B]].
+
+### `key-unclosed` → `PASS`
+
+No closing pair, so no key token -- and nothing interpolates at runtime either, so there is nothing to report.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [[B.
+
+### `key-unopened` → `PASS`
+
+The same, from the other side.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and B]].
+
+### `key-single-brackets` → `PASS`
+
+Single brackets are Markdown link syntax, not a runtime key. Pinned because widening the token to single brackets would make every link a use.
+
+    ## Runtime Variables
+    - [[A]] - the thing
+    
+    ## BLOCK III
+    Use [[A]] and [B].
