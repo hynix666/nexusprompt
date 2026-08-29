@@ -1392,6 +1392,30 @@ describe("check-repo-hygiene", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("fires when a source directory is ignored", () => {
+    // Incident 587c814, "configure AO workspace ignores": /core/, /contracts/, /scripts/,
+    // /test/, /spec/, /sources/, /Documentation/, /.github/ and more were added to the ignore
+    // file. Tracked files stayed tracked so verify passed and nothing was deleted; what broke
+    // was `git add` of any NEW file. check:hygiene reported OK, because every rule it had
+    // asked what should be ignored and none asked what must not be.
+    const r = checkRepoHygiene(__dirnameShim + "/..", {
+      listTracked: () => ["core/src/index.ts"],
+      isIgnored: () => true,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/path\(s\) the project is MADE OF are ignored/);
+  });
+
+  it("does not fire when nothing required is ignored", () => {
+    // The must-not-fire half: a rule that always reported would be satisfied by ignoring
+    // everything, which is the state it exists to detect.
+    const r = checkRepoHygiene(__dirnameShim + "/..", {
+      listTracked: () => ["core/src/index.ts"],
+      isIgnored: () => false,
+    });
+    expect(r.failures.filter((f) => /MADE OF/.test(f))).toEqual([]);
+  });
+
   it("passes on the real repository, reading the real index", () => {
     // The one case that exercises `git ls-files`. If this fails, the repository itself is in
     // the state this checker was written for — read the failure, do not weaken the check.

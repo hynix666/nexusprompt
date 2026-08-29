@@ -1,6 +1,6 @@
 # Testing and quality
 
-**1,249 tests across 31 files, 0 failing.** Runs offline in seconds.
+**1,289 tests across 32 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -22,7 +22,7 @@ npx vitest run --project contracts
 `core/test/purity.setup.ts` traps `fetch`, `Math.random`, `Date.now` and `new Date()` for the
 `core` project. It **cannot** trap the filesystem — see `01-architecture.md`.
 
-## The eight quality mechanisms, and what each one alone cannot see
+## The nine quality mechanisms, and what each one alone cannot see
 
 ### 1. Unit tests — must-fire *and* must-not-fire
 
@@ -178,6 +178,25 @@ degraded prompt-writing stage.
 Note the second direction, which is a different lie: a chain whose CRITIC degrades must leave
 the prompt UNMARKED, because that prompt was produced against a model. Marking it would make a
 real artifact look fabricated.
+
+### 9. The comparator's refusal discipline — `core/test/comparator-refusal.test.ts`
+
+`refused` and `inconclusive` are different findings and must never collapse:
+
+  **refused** — the SUITE could not have separated the two configurations, whatever the data.
+  A statement about the instrument.
+  **inconclusive** — the suite could have, and did not. A statement about the configurations.
+
+The floor is a property of the suite's SIZE, not of the discordance a run happened to produce.
+The sweep that wrote this file initially conflated the two and reported thirteen violations
+against correct code — the property was wrong, not the comparator. Both sides of the line are
+now pinned, so the next reader inherits the distinction rather than the confusion.
+
+Also pinned: a refusal carries no delta (reporting one and noting the caveat gets the number
+quoted and the note dropped); correction must be able to turn a significant result
+non-significant, or it is decorative; and swapping the arms must negate the delta, flip the
+label, and change nothing else — an asymmetry there means the verdict depends on argument
+order, which every example-based test misses because examples pick an order.
 
 ## Local green is not CI green
 

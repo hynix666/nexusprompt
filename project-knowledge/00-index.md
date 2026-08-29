@@ -45,7 +45,7 @@ components were rejected by it.
 | Package manager | **npm workspaces** — *not* pnpm (pnpm is not installed; older docs say otherwise) |
 | Repo | `github.com/hynix666/nexusprompt` (private), branch `master`, CI green |
 | Headline command | `npm install && npm run verify` — ~30 s, offline. 21 checks before the suite |
-| Tests | 1,249 passing, 0 failing, across 31 files |
+| Tests | 1,289 passing, 0 failing, across 32 files |
 | Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |

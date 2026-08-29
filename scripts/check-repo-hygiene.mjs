@@ -103,6 +103,42 @@ export const MAX_TRACKED_BYTES = 4 * 1024 * 1024;
 /** Files that carry comments on purpose and are read by tools that accept them. */
 export const JSONC_ALLOWED = ["tsconfig.json"];
 
+/**
+ * Paths that must NEVER be ignored, whatever `.gitignore` says.
+ *
+ * Rules 1 and 2 check that the expensive things ARE ignored. Nothing checked the other
+ * direction, and on 29 August 2026 a commit titled "configure AO workspace ignores" added
+ * `/core/`, `/contracts/`, `/application/`, `/adapters/`, `/shells/`, `/scripts/`, `/test/`,
+ * `/spec/`, `/sources/`, `/Documentation/` and `/.github/` to the ignore file — the entire
+ * repository. `check:hygiene` reported OK, because every rule it had was about what should be
+ * ignored and none about what must not be.
+ *
+ * The damage is quiet by construction: already-tracked files stay tracked, so `verify` passes,
+ * the tests run, nothing is deleted. What breaks is the ability to ADD anything — every
+ * `git add` of a new source file is refused, and a file that ever leaves the index becomes
+ * invisible. It is the fourth `.gitignore` incident here and the first that inverts the file's
+ * purpose rather than emptying it.
+ *
+ * This is the same lesson the gate work keeps producing: a matcher checked in one direction
+ * only. `check:hygiene` was built after `.gitignore` was emptied three times, and it guarded
+ * exactly the failure that had already happened.
+ */
+export const NEVER_IGNORED = [
+  "contracts/index.ts",
+  "core/src/gates/registry.ts",
+  "application/src/orchestrator.ts",
+  "adapters/storage-local/src/index.ts",
+  "shells/cli/src/index.ts",
+  "scripts/check-repo-hygiene.mjs",
+  "test/checkers.test.ts",
+  "spec/manifest-shapes.json",
+  "sources/MANIFEST.json",
+  "Documentation/README.md",
+  "project-knowledge/00-index.md",
+  ".github/workflows/verify.yml",
+  "package.json",
+];
+
 const readText = (path) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 
 /** Rule lines only: comments and blanks carry no behaviour. */
@@ -195,6 +231,31 @@ export function checkRepoHygiene(root = process.cwd(), opts = {}) {
       `\`${path}\` is ${(bytes / 1048576).toFixed(1)} MB, over the ${MAX_TRACKED_BYTES / 1048576} MB ` +
       `bound. Large files are permanent: git keeps the blob whether or not a later commit ` +
       `removes it. If this one belongs here, raise the bound deliberately and say why.`,
+    );
+  }
+
+  // Rule 6: the other direction. Nothing that the project is made of may be ignored.
+  // Asked of git itself rather than by re-implementing pattern matching, because a
+  // hand-rolled matcher would be a third opinion about what `.gitignore` means.
+  const isIgnored = opts.isIgnored ?? ((p) => {
+    try {
+      // --no-index is load-bearing. Without it `check-ignore` reports a TRACKED path as
+      // not-ignored even when a pattern matches it, so every path below came back clean while
+      // the whole source tree was ignored. The question here is "would a NEW file here be
+      // ignored?", which is exactly what --no-index answers.
+      execFileSync("git", ["check-ignore", "-q", "--no-index", "--", p], { cwd: root, stdio: "ignore" });
+      return true; // exit 0 means git ignores it
+    } catch {
+      return false; // exit 1 means it does not
+    }
+  });
+  const ignoredButRequired = NEVER_IGNORED.filter((p) => isIgnored(p));
+  if (ignoredButRequired.length > 0) {
+    failures.push(
+      `${ignoredButRequired.length} path(s) the project is MADE OF are ignored — e.g. ` +
+      `${ignoredButRequired[0]}. Tracked files stay tracked, so the build still passes and ` +
+      `nothing is deleted; what breaks is adding anything new. Check .gitignore for a rule ` +
+      `that ignores a source directory.`,
     );
   }
 
