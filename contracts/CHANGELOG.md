@@ -16,6 +16,25 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-29
+
+### `audit-report` **1.0.0** (new)
+
+Output of the Nexus Quality Audit Core: a `PASS`/`FAIL` status, a violation list, a
+`determinism_score`, and a `silent_failure_risk` band. Landed in #38 alongside
+`prompts/nexus-audit-prompt.md`.
+
+This entry is retroactive, which is itself the note worth keeping. ADR-0002 requires a
+changelog entry with every schema change, and #38 added a schema without one — so the rule's
+own artifact was the thing that went missing. Three checks caught the merge (`check:matrix`,
+`check:truth`, and the conformance coverage rule); none of them was this file, because a
+changelog has no checker. Written up rather than quietly backfilled.
+
+No producer exists in this repository. See ADR-0013 and the `audit-report` entry in
+`contracts/pending-implementation.json`.
+
+---
+
 ## 2026-08-26 (convergence pass)
 
 ### `observability-event` **1.3.0** (minor)

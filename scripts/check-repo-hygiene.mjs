@@ -122,6 +122,27 @@ export const JSONC_ALLOWED = ["tsconfig.json"];
  * This is the same lesson the gate work keeps producing: a matcher checked in one direction
  * only. `check:hygiene` was built after `.gitignore` was emptied three times, and it guarded
  * exactly the failure that had already happened.
+ *
+ * ## Rule 7, and why the list above was not enough
+ *
+ * `NEVER_IGNORED` is a hand-picked sentinel — one file per top-level tree. On 29 August 2026 a
+ * fifth incident (#38) replaced the whole file with generic boilerplate, dropped `PDF/`, `LLM/`,
+ * `.promptnexus/` and `.nexusprompt/`, and ADDED `build-hash.json`. Rule 1 caught the four
+ * removals. Rule 6 walked past the addition, because `build-hash.json` is not a sentinel and
+ * nobody had thought to make it one — the same sparse-sentinel failure, one layer up.
+ *
+ * Rule 7 asks the question rule 6 was approximating, without the guessing: is any file IN THE
+ * INDEX ignored? That is derived from the repository rather than enumerated by hand, so it
+ * cannot be sparse. It subsumes rule 6 for every path that is currently tracked; rule 6 is kept
+ * because a sentinel still names what MUST exist, and a file deleted and then ignored would
+ * leave rule 7 with nothing to find.
+ *
+ * It also found a defect nobody had reported. `promptnexus-v5/` was written as a loose-archive
+ * rule and matches at ANY depth, so it also matched `sources/v5/promptnexus-v5/` — nine frozen,
+ * SHA-256-pinned source files, ignored. Tracked, so `verify:sources` passed and nothing looked
+ * wrong; but any one of them leaving the index would have become invisible, in the one directory
+ * whose whole purpose is that its contents are pinned. The extraction rules are now anchored
+ * with a leading `/`, which is what they always meant.
  */
 export const NEVER_IGNORED = [
   "contracts/index.ts",
@@ -256,6 +277,38 @@ export function checkRepoHygiene(root = process.cwd(), opts = {}) {
       `${ignoredButRequired[0]}. Tracked files stay tracked, so the build still passes and ` +
       `nothing is deleted; what breaks is adding anything new. Check .gitignore for a rule ` +
       `that ignores a source directory.`,
+    );
+  }
+
+  // Rule 7: rule 6, without the guessing. Every path in the index, asked at once.
+  const listIgnored = opts.listIgnored ?? ((paths) => {
+    if (paths.length === 0) return [];
+    const run = () =>
+      execFileSync("git", ["check-ignore", "--no-index", "--stdin", "-z"], {
+        cwd: root,
+        input: paths.join("\0") + "\0",
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      });
+    let out;
+    try {
+      out = run();
+    } catch (err) {
+      // Exit 1 means no path matched, which is the clean case and not a failure.
+      if (err.status === 1) out = err.stdout ?? "";
+      else throw err;
+    }
+    return out.split("\0").filter(Boolean);
+  });
+
+  const trackedAndIgnored = listIgnored(tracked);
+  if (trackedAndIgnored.length > 0) {
+    failures.push(
+      `${trackedAndIgnored.length} TRACKED file(s) are also ignored — e.g. ` +
+      `${trackedAndIgnored[0]}. A tracked file stays tracked whatever .gitignore says, so this ` +
+      `costs nothing today and everything later: the file cannot be re-added if it ever leaves ` +
+      `the index, and a fresh copy of it is invisible to \`git add\`. Anchor the rule to the ` +
+      `repository root with a leading slash, or narrow it.`,
     );
   }
 

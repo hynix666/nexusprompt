@@ -89,7 +89,7 @@ sentence in this knowledge base saying *stubbed* or *never executed* stops being
 | [05-configuration-and-deployment.md](./05-configuration-and-deployment.md) | Env vars, tsconfig, CI, `verify` composition, the corpus |
 | [06-testing-and-quality.md](./06-testing-and-quality.md) | Vitest projects, mutation probes, the differential oracle, fixture discipline |
 | [07-dependencies.md](./07-dependencies.md) | Eight dev dependencies and why each one is there |
-| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 12 ADRs, the truth boundary, the open register, and the recurring defect patterns |
+| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 13 ADRs, the truth boundary, the open register, and the recurring defect patterns |
 | [09-commands-and-workflows.md](./09-commands-and-workflows.md) | Every npm script, what it checks, and the common workflows |
 | [10-source-code-summary.md](./10-source-code-summary.md) | Key modules, reusable patterns, code idioms worth keeping |
 
@@ -120,7 +120,7 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `scripts/divergence-allowlist.json` | 4 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
-| `Documentation/` | 37 Markdown files: 12 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary |
+| `Documentation/` | 38 Markdown files: 13 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary |
 | `docs/superpowers/specs/` | The corpus-grounded spec that drove Phases α–ζ |
 | `test/` | Cross-cutting: contract conformance, evidence conformance, checker tests |
 | `.github/workflows/verify.yml` | CI. Runs `npm run verify` on every push and PR |

@@ -17,7 +17,7 @@ import { checkStages } from "../scripts/check-stages.mjs";
 import { checkCorpus, buildManifest } from "../scripts/check-corpus.mjs";
 import { checkCounts } from "../scripts/check-counts.mjs";
 import { checkFingerprint } from "../scripts/check-fingerprint.mjs";
-import { checkRepoHygiene } from "../scripts/check-repo-hygiene.mjs";
+import { checkRepoHygiene, NEVER_IGNORED } from "../scripts/check-repo-hygiene.mjs";
 import { collect, render } from "../scripts/generate-capability-matrix.mjs";
 
 /**
@@ -1288,6 +1288,11 @@ describe("check-repo-hygiene", () => {
     checkRepoHygiene(root, {
       listTracked: () => tracked,
       sizeOf: (p: string) => sizes[p] ?? 100,
+      // Fixture roots are temp directories, not repositories, and rule 7 asks git a question
+      // only a repository can answer. Injected rather than swallowed inside the checker: a git
+      // that cannot answer is a check that did not run, and that must fail loudly on the real
+      // tree rather than report OK.
+      listIgnored: () => [],
     });
 
   it("passes on a well-formed repository", () => {
@@ -1414,6 +1419,66 @@ describe("check-repo-hygiene", () => {
       isIgnored: () => false,
     });
     expect(r.failures.filter((f) => /MADE OF/.test(f))).toEqual([]);
+  });
+
+  it("fires when a TRACKED file is ignored", () => {
+    // Incident #38: `.gitignore` was replaced with boilerplate that added `build-hash.json` —
+    // a tracked file the artifact-hash check reads. Rule 6 walked past it, because its
+    // NEVER_IGNORED list is hand-picked and nobody had thought to name that file. Rule 7 asks
+    // the index instead of a list, so it cannot be sparse.
+    const r = checkRepoHygiene(__dirnameShim + "/..", {
+      listTracked: () => ["build-hash.json", "core/src/index.ts"],
+      isIgnored: () => false,
+      listIgnored: () => ["build-hash.json"],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/TRACKED file\(s\) are also ignored/);
+  });
+
+  it("does not fire when no tracked file is ignored", () => {
+    // The must-not-fire half. Without it, a rule 7 that always reported would satisfy the
+    // case above while saying nothing — the shape eight of eleven sweeps here started with.
+    const r = checkRepoHygiene(__dirnameShim + "/..", {
+      listTracked: () => ["core/src/index.ts"],
+      isIgnored: () => false,
+      listIgnored: () => [],
+    });
+    expect(r.failures.filter((f) => /TRACKED file\(s\) are also ignored/.test(f))).toEqual([]);
+  });
+
+  it("rule 7 is derived from the index, not from the sentinel list", () => {
+    // The distinction that motivated it: a path NOT in NEVER_IGNORED must still be caught.
+    // If this passes only because the path happens to be a sentinel, the rule adds nothing.
+    expect(NEVER_IGNORED).not.toContain("build-hash.json");
+    const r = checkRepoHygiene(__dirnameShim + "/..", {
+      listTracked: () => ["build-hash.json"],
+      isIgnored: () => false, // rule 6 sees nothing
+      listIgnored: () => ["build-hash.json"],
+    });
+    expect(r.failures.filter((f) => /MADE OF/.test(f))).toEqual([]); // rule 6 silent
+    expect(r.failures.filter((f) => /TRACKED file/.test(f))).toHaveLength(1); // rule 7 speaks
+  });
+
+  it("the real repository has no tracked file that is ignored", () => {
+    // This found nine: `promptnexus-v5/` was written for a loose archive extraction and matches
+    // at ANY depth, so it also matched `sources/v5/promptnexus-v5/` — frozen, SHA-256-pinned
+    // files, ignored. Tracked, so verify:sources passed and nothing looked wrong. The
+    // extraction rules are anchored with a leading `/` now. If this fails, a rule has been
+    // written unanchored again; anchor it rather than deleting this test.
+    const root = __dirnameShim + "/..";
+    const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+      .split("\n").filter(Boolean);
+    expect(tracked.length).toBeGreaterThan(100);
+    let ignored: string[] = [];
+    try {
+      const out = execFileSync("git", ["check-ignore", "--no-index", "--stdin"], {
+        cwd: root, input: tracked.join("\n"), encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
+      });
+      ignored = out.split("\n").filter(Boolean);
+    } catch (err) {
+      if ((err as { status?: number }).status !== 1) throw err; // 1 = nothing matched
+    }
+    expect(ignored).toEqual([]);
   });
 
   it("passes on the real repository, reading the real index", () => {
