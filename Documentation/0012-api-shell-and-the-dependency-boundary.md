@@ -1,6 +1,6 @@
 # ADR-0012: The API shell is adopted, and the zero-dependency property is scoped rather than lost
 
-**Status:** Accepted — 29 August 2026
+**Status:** Accepted — 29 August 2026 · amended 29 August 2026 (§ *Execution shape: a server, not functions*)
 **Amends:** ADR-0004 (dual Shell strategy), as amended by ADR-0006 — the Shell inventory gains
 a third member the earlier ADRs did not name.
 **Related:** ADR-0001 (five-layer architecture), ADR-0005 (Application/orchestration boundary).
@@ -107,6 +107,42 @@ zero.
 **To revisit.** Whether the API shell should be able to reach a provider at all. Today
 `compile` can, through the Orchestrator, and no run in this repository has ever reached one —
 so the question is untested rather than answered. See `Documentation/TRUTH_BOUNDARY.md`.
+
+## Amendment — execution shape: a server, not functions
+
+The original decision adopted the shell and left one question open: *whether the API shell
+should be able to reach a provider at all*, and by extension how it is deployed.
+`TRUTH_BOUNDARY.md` lists that under "to revisit". A Vercel project pointed at this repository
+forced the question, having failed on every commit since it was created.
+
+**Decision: `shells/api` is a long-running server. It is not a set of serverless functions.**
+
+Two structural facts made this the honest answer rather than a preference:
+
+- **The layer boundary and the deployment boundary disagree.** Eleven imports in `shells/api`
+  reach outside it, into `contracts/`, `application/` and `adapters/`. That is not sloppiness —
+  ADR-0001 requires relative cross-layer imports, never package names, and
+  `scripts/check-boundaries.mjs` enforces it. Any deployment rooted at `shells/api` therefore
+  cannot see the layers the Shell depends on. The Shell's root is the repository, because the
+  architecture says so.
+- **The entry point owns a socket.** `createApiServer().listen()` binds and holds a port. A
+  serverless handler would have to invert that — no `listen`, one request per invocation, cold
+  state per call — which is a different program, not a different configuration.
+
+**Consequence for deployment:** the host must run a process and check out the whole repository.
+`npm start -w @nexusprompt/shell-api` is the command; `PORT` and `HOST` come from the
+environment. A platform rooted at a subdirectory needs "include files outside the root
+directory" enabled, or it will not build.
+
+**What was rejected, and why it mattered to reject it explicitly.** The fastest way to a green
+deployment check was to add an empty output directory. That deploys nothing and manufactures a
+passing check — precisely the failure this repository spent a week eliminating, and worse here
+than elsewhere because a deployment check is the one signal a reader would take as evidence
+that the thing runs somewhere.
+
+Serverless remains available later and is a real ADR, not a config change: it needs a handler
+wrapper, a decision about per-invocation cold state, and an answer to the provider-reach
+question this ADR still leaves open.
 
 ## Alternatives rejected
 
