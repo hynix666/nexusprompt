@@ -1,17 +1,29 @@
 # Contract changelog
 
-> **2026-08-29 (artifact-reference lineage — implementation).** The `revision-entry` 1.4.0
-> schema bump (landed first, per ADR-0002) is now producer-backed:
-> `contracts/index.ts` gained `input_ref`/`output_ref` on `RevisionEntry` (nullable,
-> `null` = "not retained here"), the `ContentKind` type, and the `ContentStore` port
-> (`put` idempotent by content address / `get` / `has` — no `update`, no `delete`).
-> `adapters/content-local` implements it: one sharded file per content item, `wx`-flag
-> writes, bytes verified against the ref's sha-256 at every boundary, corruption thrown
-> never returned. `CONTRACT_VERSIONS["revision-entry"]` now stamps 1.4.0 into every
-> `execution_provenance`. The release gate gained the `dangling-ref` precondition:
-> `decidePromotion` takes `contentRefs` + a `refExists` oracle and refuses a promotion
-> whose evidence names content that no longer resolves. Conformance:
-> `test/content-conformance.test.ts` (14 cases, coverage-asserted over `adapters/`).
+> **2026-08-29 (artifact-reference lineage — implementation, corrected).** The
+> `revision-entry` schema bump is producer-backed: `contracts/index.ts` gained
+> `input_ref`/`output_ref` on `RevisionEntry` (nullable, `null` = "not retained here"), the
+> `ContentKind` type, and the `ContentStore` port (`put` idempotent by content address /
+> `get` / `has` — no `update`, no `delete`). `adapters/content-local` implements it: one
+> sharded file per content item, `wx`-flag writes, bytes verified against the ref's sha-256
+> at every boundary, corruption thrown never returned.
+>
+> **This note previously claimed more than had been built, and the correction is the point.**
+> As first written it said the release gate "refuses a promotion whose evidence names content
+> that no longer resolves" — but `application/src/release.ts` passed neither `contentRefs` nor
+> `refExists`, both optional, so the gate never ran outside its own tests. `buildRevision`
+> likewise accepted ref arguments no call site supplied, and no composition root constructed a
+> store, so every revision recorded `null`. A contract, a port, an adapter and a gate had
+> landed with nothing connecting them — the same shape as the `truncate_suite` cap that was
+> returned and never read, and the exact pattern this entry names in the sentence below.
+>
+> Now wired: `composePipeline` constructs `LocalContentStore`, `runPipeline` retains each
+> generating stage's input assembly and output body and stores the resulting refs, and
+> `promote()` resolves refs through the store and hands `decidePromotion` a real oracle.
+> Retention failure records `null` and emits a `DEGRADE` event rather than aborting the run or
+> fabricating a pointer. Conformance: `test/content-conformance.test.ts` (17 cases,
+> coverage-asserted over `adapters/`), plus end-to-end retention and `dangling-ref` tests that
+> fail when the wiring is removed.
 
 [ADR-0002](../Documentation/0002-contract-first-design.md) requires a version bump **and a
 changelog entry** for every schema change. Versions have always lived in each schema's `$id`;
@@ -26,6 +38,35 @@ Versioning, as applied here:
   making an optional field required.
 - **minor** — additive. A new optional field; a widened enum.
 - **patch** — wording only. Descriptions, examples, `$comment`. No shape change.
+
+---
+
+## 2026-08-29 (artifact-reference lineage — hardening)
+
+### `revision-entry` 1.4.0 → **2.0.0** (major)
+
+Two defects in 1.4.0, both found by review within the hour, both fixed by tightening.
+
+**The ref fields were optional in the schema and required in TypeScript.**
+`contracts/index.ts` declared `input_ref: string | null` — a property that is always present,
+whose value may be null — while the schema left both out of `required`. An entry omitting them
+validated and violated the type at the same time. Absence encodes nothing that `null` does not
+already say more clearly, so `required` is the direction that resolves it: every producer must
+state retention explicitly, and "not retained here" is a value rather than a silence.
+
+**Both fields accepted all three content kinds.** `input_ref` and `output_ref` shared one
+pattern, so a `stage-output` pointer validated as an input and swapping the two fields passed
+unnoticed — in the one plane whose entire job is saying which artifact a pointer names.
+`input_ref` is now pinned to `stage-input`; `output_ref` accepts `stage-output` or
+`generation-response`, because a retained provider response is an output. That split follows
+the design's §5.2, which writes a `generation-response` ref "when a provider response is
+retained for replay".
+
+**Major, because both changes tighten.** Nothing had to change to satisfy them: `buildRevision`
+and the Orchestrator already set both fields, and the only refs anything writes are
+`stage-input` and `stage-output` in the fields that now require them. Safe to tighten now
+precisely because 1.4.0 shipped with no producer — a version with no stored instances is the
+cheapest possible moment to correct its shape.
 
 ---
 

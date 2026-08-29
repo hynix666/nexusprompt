@@ -264,6 +264,37 @@ describe("revision-entry", () => {
     // Proves the formats plugin is registered. Without it ajv ignores `format`
     // entirely, and "last Tuesday" would validate.
     expect(validators["revision-entry"]({ ...revision, timestamp: "last Tuesday" })).toBe(false);
+
+    /**
+     * revision-entry 2.0.0 — the ref fields, mutated from the revision just produced.
+     *
+     * 1.4.0 left both optional while `contracts/index.ts` declared them present, so an entry
+     * omitting them satisfied the schema and violated the type. And both accepted all three
+     * kinds, so a stage-output pointer validated as an input — a field swap no checker could
+     * see, in a plane whose whole purpose is saying which artifact a pointer names.
+     */
+    for (const key of ["input_ref", "output_ref"]) {
+      const without = { ...(revision as unknown as Record<string, unknown>) };
+      delete without[key];
+      expect(validators["revision-entry"](without), `missing ${key}`).toBe(false);
+    }
+    // null is the honest "not retained here" and stays valid — required is about presence.
+    expect(report(validators["revision-entry"], { ...revision, input_ref: null, output_ref: null })).toBe(true);
+
+    const H = "a".repeat(64);
+    expect(report(validators["revision-entry"], {
+      ...revision, input_ref: `npx:stage-input:${H}:local-bundle`,
+      output_ref: `npx:stage-output:${H}:local-bundle`,
+    })).toBe(true);
+    // A retained provider response is an output, so it is valid there and only there.
+    expect(validators["revision-entry"]({ ...revision, output_ref: `npx:generation-response:${H}:export` })).toBe(true);
+    expect(validators["revision-entry"]({ ...revision, input_ref: `npx:generation-response:${H}:export` })).toBe(false);
+    // The swap 1.4.0 could not detect.
+    expect(validators["revision-entry"]({ ...revision, input_ref: `npx:stage-output:${H}:local-bundle` })).toBe(false);
+    expect(validators["revision-entry"]({ ...revision, output_ref: `npx:stage-input:${H}:local-bundle` })).toBe(false);
+    // And the grammar still refuses what it always did.
+    expect(validators["revision-entry"]({ ...revision, input_ref: `npx:stage-input:${H}:elsewhere` })).toBe(false);
+    expect(validators["revision-entry"]({ ...revision, input_ref: "../../etc/passwd" })).toBe(false);
   });
 });
 

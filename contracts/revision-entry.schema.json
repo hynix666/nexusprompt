@@ -1,48 +1,116 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/revision-entry/1.4.0",
+  "$id": "https://promptnexus.dev/contracts/revision-entry/2.0.0",
   "title": "RevisionEntry",
   "description": "One stage execution. freshness and status are independent: a revision can be SUCCEEDED and STALE at once.",
   "type": "object",
-  "required": ["revision_id", "run_id", "stage_id", "timestamp", "input_hash", "output_hash", "gate_results", "freshness", "status", "execution_provenance", "retention_scope"],
+  "required": [
+    "revision_id",
+    "run_id",
+    "stage_id",
+    "timestamp",
+    "input_hash",
+    "output_hash",
+    "gate_results",
+    "freshness",
+    "status",
+    "execution_provenance",
+    "retention_scope",
+    "input_ref",
+    "output_ref"
+  ],
   "additionalProperties": false,
   "properties": {
-    "revision_id": { "type": "string", "minLength": 1 },
-    "run_id": { "type": "string", "minLength": 1 },
-    "stage_id": { "type": "string" },
+    "revision_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_id": {
+      "type": "string"
+    },
     "parent_revision_ids": {
       "description": "The revisions whose output this one was computed from — the revisions this one was computed from. NOTE: the pipeline currently records the PRECEDING revision in execution order, which is not always true lineage — cost_estimate names preview as its parent though it reads only ctx.prompt. Deriving real lineage needs each stage to declare which context keys it consumes; until then this field is execution order and the open register says so. Populated since 1.3.1; it existed from 1.0.0 and nothing wrote it, so the staleness cascade fell back to array position and marked entries stale because of where they sat rather than what they depended on. A store must not assume a single parent or a linear chain: the field is an array because a bundle may hold independent branches, and a cascade that walks position cannot tell them apart.",
-      "type": "array", "items": { "type": "string" }
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
-    "timestamp": { "type": "string", "format": "date-time" },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
     "stage_attempt": {
       "description": "Provider attempts made during THIS execution of the stage, not executions of the stage. A retried call reports 3 here; hardcoding 1 once made a revision claim one attempt and mean three. Re-executions are counted by feedback_round.",
-      "type": "integer", "minimum": 1
+      "type": "integer",
+      "minimum": 1
     },
     "feedback_round": {
       "description": "Which gate-feedback round produced this revision. 0 or absent is the first pass. A reflexive run re-executes refine and lint, so a bundle holds each of them more than once; without this field the second pair is distinguishable only by position, which is the same gap SKIPPED was added to close in mirror image. Bounded by reliability-budget.json max_feedback_rounds, because every extra round is two more stages against the depth budget.",
-      "type": "integer", "minimum": 0
+      "type": "integer",
+      "minimum": 0
     },
-    "input_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "output_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "output_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "input_ref": {
-      "description": "Pointer to the retained stage-input content, so events and lineage never embed bodies. Grammar: npx:<kind>:<sha256>:<scope_hint> where kind is stage-input|stage-output|generation-response and scope_hint is local-bundle|db|export. Nullable and optional: null means not retained here (the honest state), never silently dropped. The hash inside the ref is UNKEYED sha-256 — content addressing must be verifiable by anyone holding the artifact, unlike the keyed observability fingerprints in input_hash/output_hash. Resolving a ref is an Application-layer effect; Core never reads through one.",
-      "type": ["string", "null"],
-      "pattern": "^npx:(stage-input|stage-output|generation-response):[0-9a-f]{64}:(local-bundle|db|export)$"
+      "description": "Pointer to the retained stage-input content, so events and lineage never embed bodies. Grammar: npx:stage-input:<sha256>:<scope_hint> where scope_hint is local-bundle|db|export. The kind is pinned to stage-input for THIS field: 1.4.0 accepted all three kinds in both ref fields, so a stage-output pointer validated as an input and a swap of the two fields passed unnoticed. Required and nullable: null means not retained here (the honest state), never silently dropped. Required because absence encodes nothing that null does not already say, and 1.4.0's optionality disagreed with the TypeScript interface, which has always declared the property present. The hash inside the ref is UNKEYED sha-256 — content addressing must be verifiable by anyone holding the artifact, unlike the keyed observability fingerprints in input_hash/output_hash. Resolving a ref is an Application-layer effect; Core never reads through one.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^npx:stage-input:[0-9a-f]{64}:(local-bundle|db|export)$"
     },
     "output_ref": {
-      "description": "Pointer to the retained stage-output content — the replayable artifact REVISIONS_AND_EXPORTS.md's replay row depends on. Same grammar and rules as input_ref; a ref that no longer resolves (evicted/deleted content) renders as content-unavailable in exports, never silently dropped or fabricated.",
-      "type": ["string", "null"],
-      "pattern": "^npx:(stage-input|stage-output|generation-response):[0-9a-f]{64}:(local-bundle|db|export)$"
+      "description": "Pointer to the retained stage-output content — the replayable artifact REVISIONS_AND_EXPORTS.md's replay row depends on. Grammar: npx:(stage-output|generation-response):<sha256>:<scope_hint>. Both output kinds are permitted here because a retained provider response is an output; neither is valid in input_ref. Required and nullable, as input_ref; a ref that no longer resolves (evicted/deleted content) renders as content-unavailable in exports, never silently dropped or fabricated.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^npx:(stage-output|generation-response):[0-9a-f]{64}:(local-bundle|db|export)$"
     },
-    "gate_results": { "type": "array" },
-    "freshness": { "enum": ["FRESH", "STALE"] },
+    "gate_results": {
+      "type": "array"
+    },
+    "freshness": {
+      "enum": [
+        "FRESH",
+        "STALE"
+      ]
+    },
     "status": {
       "description": "SKIPPED means the stage was deliberately not run — a depth plan omitted it, a stakes tier did not reach it, or its input was a degraded placeholder. Distinct from CANCELLED (stopped) and from absence (never reached): without it, a reloaded bundle cannot tell a skip from a truncated run.",
-      "enum": ["SUCCEEDED", "DEMO", "FAILED", "CANCELLED", "SKIPPED"]
+      "enum": [
+        "SUCCEEDED",
+        "DEMO",
+        "FAILED",
+        "CANCELLED",
+        "SKIPPED"
+      ]
     },
-    "provider_used": { "type": ["string", "null"] },
-    "execution_provenance": { "type": "object" },
-    "retention_scope": { "enum": ["LOCAL_BUNDLE", "DB", "EXPORT"] }
+    "provider_used": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "execution_provenance": {
+      "type": "object"
+    },
+    "retention_scope": {
+      "enum": [
+        "LOCAL_BUNDLE",
+        "DB",
+        "EXPORT"
+      ]
+    }
   }
 }

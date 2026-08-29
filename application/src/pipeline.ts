@@ -22,6 +22,7 @@ import { invokeWithRetry } from "./invoke.js";
 import type {
   EventSink, ExecutionProvenance, GenerationResult, PipelineCommand, ProviderFailure,
   ProviderTransport, RevisionEntry, RevisionStore, StageId, GateResult, ObservabilityEvent, EventType,
+  ContentStore,
 } from "../../contracts/index.js";
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
@@ -40,8 +41,40 @@ export interface PipelineRunOptions {
    * undeclared budget means.
    */
   budget?: Budget | null;
+  /**
+   * Where stage input and output bodies are retained, or absent to retain nothing.
+   *
+   * Absent is a real deployment (nothing was wired before this existed) and it produces
+   * `input_ref: null` / `output_ref: null` — the honest "not retained here". What it must
+   * never produce is a ref that resolves to nothing, which is why the ref is only written
+   * after `put` has returned.
+   */
+  content?: ContentStore | null;
   coreBuildHash?: string;
   configFingerprint?: string | null;
+}
+
+/**
+ * Retain one body and return the ref that names it, or null when nothing is retained.
+ *
+ * The ref is built FROM the bytes, so `put`'s "bytes must hash to their address" check can
+ * never fail here — and the ref is returned only after the write lands. A revision therefore
+ * either names content that was successfully stored or says null; there is no third state in
+ * which a pointer exists and its content never did.
+ */
+async function retain(
+  content: ContentStore | null | undefined,
+  kind: "stage-input" | "stage-output",
+  body: string,
+): Promise<string | null> {
+  if (!content) return null;
+  const bytes = new TextEncoder().encode(body);
+  // Unkeyed, deliberately: content addressing must be verifiable by anyone holding the
+  // artifact, unlike the keyed observability fingerprints. Stated in the schema description.
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  const ref = `npx:${kind}:${digest}:local-bundle`;
+  await content.put(ref, bytes);
+  return ref;
 }
 
 /** What one stage did. `skipped` is a real outcome, distinct from succeeded and degraded. */
@@ -376,9 +409,34 @@ export async function runPipeline(
       continue;
     }
 
+    /**
+     * Retention, at the one point the Application already owns the effect.
+     *
+     * A retention failure does NOT abort the run and does NOT fabricate a ref: the refs stay
+     * null — the honest "not retained here" — and the failure is evented so it is not silent.
+     * Aborting would leave the truncated bundle this module's history is full of; a fabricated
+     * ref would be worse still, since the `dangling-ref` gate would then refuse a promotion
+     * over content that was never written rather than content that was lost.
+     */
+    let inputRef: string | null = null;
+    let outputRef: string | null = null;
+    const outputBody = summarize(stage.id, ctx);
+    try {
+      inputRef = await retain(opts.content, "stage-input",
+        JSON.stringify({ system: request.system ?? null, messages: request.messages }));
+      outputRef = await retain(opts.content, "stage-output", outputBody);
+    } catch (err) {
+      emit("DEGRADE", {
+        component: `application/pipeline`,
+        failure_code: "content_retention_failed",
+        verdict: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+      });
+    }
+
     const revision = buildRevision({
       run_id, stage_id: stage.id, inputHash: stageInputHash,
-      outputText: summarize(stage.id, ctx),
+      outputText: outputBody,
+      inputRef, outputRef,
       attempts,
       status: degraded ? "DEMO" : "SUCCEEDED",
       provider: degraded ? null : (outcome as GenerationResult).provider_id,

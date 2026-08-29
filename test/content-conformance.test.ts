@@ -167,6 +167,44 @@ describe.each(IMPLEMENTATIONS)("ContentStore conformance — %s", (_name, make) 
     await expect(store.get(ref)).rejects.toThrow(/corruption/i);
   });
 
+  it("has() reports a corrupted file as NOT intact, rather than merely present", async () => {
+    /**
+     * The gap this closes. `has` was `existsSync(path)` and nothing more, so a tampered
+     * file answered `true` while `get` on the same file threw. `has` is the oracle behind
+     * the `dangling-ref` promotion precondition, which means the gate built to stop a
+     * promotion certifying unreachable evidence was the one caller that could not see
+     * corrupt evidence.
+     *
+     * It throws rather than returning false, matching `get` and matching what
+     * `decidePromotion` requires of its oracle: a broken store must not be able to
+     * masquerade as "all content gone".
+     */
+    const root = mkroot();
+    const store = new LocalContentStore(root);
+    const ref = refFor(BYTES_A);
+    await store.put(ref, new TextEncoder().encode(BYTES_A));
+    expect(await store.has(ref)).toBe(true);
+
+    const hash = sha256(BYTES_A);
+    writeFileSync(join(root, hash.slice(0, 2), `${hash.slice(2)}.bin`), "tampered bytes");
+    await expect(store.has(ref)).rejects.toThrow(/corruption/i);
+  });
+
+  it("has() still returns false for content that is simply absent", async () => {
+    // The must-not-throw half: an evicted or never-written ref is a plain `false`, not an
+    // error. Without this, a `has` that threw on everything would satisfy the case above.
+    const store = new LocalContentStore(mkroot());
+    expect(await store.has(refFor("never written"))).toBe(false);
+  });
+
+  it("get() returns null for absent content without a pre-existence check", async () => {
+    // `get` used to `existsSync` and then read, so content evicted between the two
+    // rejected with ENOENT instead of returning the documented null — and eviction is the
+    // exact scenario this plane exists to survive. Reading first makes ENOENT the answer.
+    const store = new LocalContentStore(mkroot());
+    await expect(store.get(refFor("never written"))).resolves.toBeNull();
+  });
+
   it("detects corruption on a duplicate put instead of blessing it", async () => {
     const root = mkroot();
     const store = new LocalContentStore(root);

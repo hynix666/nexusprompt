@@ -1,8 +1,10 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LocalEvidenceStore } from "../../adapters/evidence-local/src/index.js";
+import { LocalContentStore } from "../../adapters/content-local/src/index.js";
+import { createHash } from "node:crypto";
 import { promote, rollback, freezeBaseline, current, EvidenceMissing } from "../src/release.js";
 import { decidePromotion } from "../../core/src/release/promote.js";
 import type { Comparison, EvalRun, EvidenceStore } from "../../contracts/index.js";
@@ -20,6 +22,12 @@ import type { JudgeAdmission } from "../../core/src/eval/judge-policy.js";
 
 const temps: string[] = [];
 afterEach(() => { while (temps.length) rmSync(temps.pop()!, { recursive: true, force: true }); });
+/** A temp directory that the shared afterEach cleans up. */
+const mkdir = (): string => {
+  const d = mkdtempSync(join(tmpdir(), "pnx-content-"));
+  temps.push(d);
+  return d;
+};
 const mkstore = (): EvidenceStore => {
   const d = mkdtempSync(join(tmpdir(), "pnx-release-"));
   temps.push(d);
@@ -475,5 +483,67 @@ describe("the gate is pure, so it can be asked without a store", () => {
     });
     expect(decision.promoted).toBe(true);
     expect(decision.promotion!.configuration_id).toBe(CONFIG);
+  });
+});
+
+/**
+ * The gate, through the Application — which is where it had never run.
+ *
+ * `decidePromotion` accepted `contentRefs`/`refExists` from the day the precondition landed,
+ * both optional, and `application/src/release.ts` passed neither. So every Core-level test
+ * above passed while a real promotion over evicted evidence was admitted exactly as before.
+ * These drive `promote()` against a real `LocalContentStore`.
+ */
+describe("dangling-ref — wired through promote(), against a real content store", () => {
+  const BODY = "the compiled prompt body";
+  const refFor = (s: string) =>
+    `npx:stage-output:${createHash("sha256").update(new TextEncoder().encode(s)).digest("hex")}:local-bundle`;
+
+  it("refuses a promotion whose evidence names content that was evicted", async () => {
+    const store = mkstore();
+    await seed(store);
+    const content = new LocalContentStore(mkdir());
+    const { decision } = await promote(store, {
+      ...request,
+      contentRefs: [refFor(BODY)], // never written
+      content,
+    });
+    expect(decision.promoted).toBe(false);
+    expect(decision.refusals.map((r) => r.code)).toContain("dangling-ref");
+  });
+
+  it("promotes when the content is actually there — the must-not-refuse half", async () => {
+    // Without this, a gate that refused whenever a store was supplied would satisfy the case
+    // above while making every promotion impossible.
+    const store = mkstore();
+    await seed(store);
+    const content = new LocalContentStore(mkdir());
+    const ref = refFor(BODY);
+    await content.put(ref, new TextEncoder().encode(BODY));
+    const { decision } = await promote(store, { ...request, contentRefs: [ref], content });
+    expect(decision.refusals.map((r) => r.code)).not.toContain("dangling-ref");
+    expect(decision.promoted).toBe(true);
+  });
+
+  it("keeps the pre-lineage behaviour when no content store is supplied", async () => {
+    // Absent oracle means reachability is not checked — the deployment kept no content plane.
+    const store = mkstore();
+    await seed(store);
+    const { decision } = await promote(store, { ...request, contentRefs: [refFor(BODY)] });
+    expect(decision.promoted).toBe(true);
+  });
+
+  it("lets a corrupt store throw rather than reporting every ref as gone", async () => {
+    // `has` throws on corruption, and decidePromotion requires that: a broken disk must not
+    // masquerade as "all content evicted", which would be a wrong refusal wearing right words.
+    const store = mkstore();
+    await seed(store);
+    const root = mkdir();
+    const content = new LocalContentStore(root);
+    const ref = refFor(BODY);
+    await content.put(ref, new TextEncoder().encode(BODY));
+    const hash = createHash("sha256").update(new TextEncoder().encode(BODY)).digest("hex");
+    writeFileSync(join(root, hash.slice(0, 2), `${hash.slice(2)}.bin`), "tampered");
+    await expect(promote(store, { ...request, contentRefs: [ref], content })).rejects.toThrow(/corruption/i);
   });
 });

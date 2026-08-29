@@ -18,6 +18,7 @@ import type { PipelineRunOptions } from "../../../application/src/pipeline.js";
 import { LocalProxyProvider } from "../../../adapters/provider-local-proxy/src/index.js";
 import { LocalRevisionStore } from "../../../adapters/storage-local/src/index.js";
 import { LocalEvidenceStore } from "../../../adapters/evidence-local/src/index.js";
+import { LocalContentStore } from "../../../adapters/content-local/src/index.js";
 import type { EventSink } from "../../../contracts/index.js";
 
 export interface CompositionOptions {
@@ -26,6 +27,8 @@ export interface CompositionOptions {
   runsDir?: string;
   /** Where evidence is retained. Defaults to `.nexusprompt/evidence` under cwd. */
   evidenceDir?: string;
+  /** Where stage bodies are retained. Defaults to `.nexusprompt/content` under cwd. */
+  contentDir?: string;
 }
 
 const defaultRunsDir = (opts: CompositionOptions) =>
@@ -54,6 +57,21 @@ export function composePipeline(opts: CompositionOptions): PipelineRunOptions {
   return {
     provider: new LocalProxyProvider(),
     store: new LocalRevisionStore(defaultRunsDir(opts)),
+    /**
+     * The content plane, wired.
+     *
+     * `revision-entry` 2.0.0's `input_ref`/`output_ref` and the `dangling-ref` promotion
+     * precondition both landed before anything constructed a `ContentStore`, so every
+     * revision recorded `null` and the gate had nothing to check. Naming the adapter here is
+     * what turns those from a declared shape into a retained artifact.
+     *
+     * A separate directory from `runs/` and `evidence/`, for the reason the evidence store
+     * already records: the three have different lifetimes. Run bundles evict at eight,
+     * evidence is append-only, and content is shared BY HASH across runs — putting it under
+     * a directory with a retention policy would delete an artifact a surviving run still
+     * cites.
+     */
+    content: new LocalContentStore(opts.contentDir ?? join(process.cwd(), ".nexusprompt", "content")),
     sink: opts.sink,
   };
 }
