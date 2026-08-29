@@ -146,8 +146,9 @@ than what it cost, which is the number the budget is enforced against.
 |---|---|---|
 | `.nexusprompt/runs/<run_id>.json` | `storage-local` | one bundle per run; 8 kept, evicted whole |
 | `.nexusprompt/evidence/<kind>/<id>.json` | `evidence-local` | one file per record, immutable |
+| `.nexusprompt/content/<2-hex>/<62-hex>.bin` | `content-local` | one file per body, content-addressed and sharded |
 
-Both are gitignored. `.promptnexus/` is the pre-rename directory, still ignored.
+All three are gitignored. `.promptnexus/` is the pre-rename directory, still ignored.
 
 **`evidence-local` writes with the `wx` flag** — a duplicate `(kind, id)` fails in the
 syscall, not in a check. There is no read-modify-write, so there is no cycle to interleave.
@@ -156,6 +157,26 @@ runs there already race.)
 
 Ids reaching either store are validated against `^[A-Za-z0-9_-]{1,64}$` before being used as
 a path component.
+
+### `ContentStore` — the content plane (`put` / `get` / `has`)
+
+Added with the artifact-reference lineage work. **No `update`, no `delete`** — a corrected
+artifact is a new artifact. Three distinctions carry it:
+
+- **Content is MATERIAL, evidence is EVENTS.** `evidence-local` *refuses* a duplicate
+  `(kind, id)` because a record is a thing that happened once. `content-local` treats a second
+  `put` of the same bytes as a **no-op success**, because the same bytes re-derived are the same
+  material. Both use `wx`; they differ in what an `EEXIST` means.
+- **A ref is a content address**, so `put` refuses bytes that do not hash to it. The grammar is
+  `npx:<kind>:<sha256>:<scope_hint>`, enforced at the boundary because refs become path
+  components. The hash is **unkeyed**, unlike the keyed observability fingerprints — content
+  addressing has to be verifiable by anyone holding the artifact.
+- **`has` verifies, it does not stat.** It shipped as `existsSync` alone and therefore reported
+  a tampered file as present — while `get` on the same file threw. `has` is the oracle behind
+  the `dangling-ref` promotion gate, so the one caller it was written for was the one that could
+  not see corruption. It now reads and hashes, and throws on a mismatch rather than returning
+  false, because `decidePromotion` requires that a broken store cannot masquerade as
+  "all content gone".
 
 ---
 

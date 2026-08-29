@@ -91,4 +91,15 @@ dependency set.
   `@promptnexus/*` names as `extraneous`, and `npm ci` would have produced a broken tree.
   Regenerated with `npm install --package-lock-only`. **Renaming workspace packages requires
   regenerating the lockfile.**
+- It went stale a second way on 29 August, and the trigger is broader than renaming: **ADDING
+  a workspace does it too.** `adapters/content-local/package.json` matched the `adapters/*`
+  glob and never reached the lock file, so CI failed at Install with
+  `Missing: @nexusprompt/adapters-content-local@ from lock file` while every local command
+  stayed green — `npm install` repairs a stale lock quietly, and a checkout never runs
+  `npm ci`. Reproduce it the way it appears: `rm -rf node_modules && npm ci`.
+- **Third-party GitHub Actions are pinned to commit SHAs**, not mutable major tags, with the
+  version in a trailing comment. A tag can be repointed by whoever owns the action, and this
+  workflow runs `npm ci` and the whole suite — `tj-actions/changed-files` was compromised
+  exactly that way in March 2025. The trade is that a SHA does not update itself: treat it as
+  a dependency pin, and re-resolve the tag when bumping rather than trusting the comment.
 - `esbuild`'s postinstall script is blocked locally by `allowScripts` and runs normally in CI.

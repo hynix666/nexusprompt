@@ -16,11 +16,11 @@ differential oracle.
 
 | Command | What it checks |
 |---|---|
-| `npm run check:hygiene` | The repository's shape: pinned `.gitignore` rules, a rule-count floor, nothing vendored in the index, no tracked file over 4 MB. **Runs first in `verify`** |
+| `npm run check:hygiene` | The repository's shape, in **seven** rules: pinned `.gitignore` rules, a rule-count floor, nothing vendored in the index at any depth, no tracked file over 4 MB, every tracked `.json` parses, no required path ignored, and **no tracked file ignored** (rule 7, derived from the index rather than a sentinel list). **Runs first in `verify`** |
 | `npm run lint:boundaries` | Core imports no effectful builtin, no adapter, no Application. 53 files, 160 imports |
 | `npm run typecheck` | `tsc --noEmit`, strict + 3 extra flags |
 | `npm run verify:sources` | Re-hashes 420 frozen files against `sources/MANIFEST.json` |
-| `npm run check:counts` | Re-derives every pinned number in the docs from the tree. 42 occurrences of 37 pins, including 9 in this knowledge base |
+| `npm run check:counts` | Re-derives every pinned number in the docs from the tree. 44 occurrences of 39 pins, including 9 in this knowledge base |
 | `npm run check:plan` | 16 machine-checked claims in `IMPLEMENTATION_PLAN.md` |
 | `npm run check:citations` | Every catalog citation internally consistent (195 records) |
 | `npm run check:catalog` | `import:catalog --check` — the committed catalog is what the importer produces |
@@ -32,7 +32,7 @@ differential oracle.
 | `npm run check:matrix` | The committed capability matrix is what the repo produces |
 | `npm run check:manifest-spec` | The committed manifest-shapes document is what `spec/manifest-shapes.json` produces |
 | `npm run check:fence-explanation` | The fence explainer's data is what the real gate produces. It was committed unwired for a day, which is the state this repository has a checker against |
-| `npm run check:hash` | The artifact hash: 75 runtime files, LF-normalised so a CRLF and an LF checkout of one commit agree. Fails when a runtime source changed without the hash being regenerated |
+| `npm run check:hash` | The artifact hash: 77 runtime files, LF-normalised so a CRLF and an LF checkout of one commit agree. Fails when a runtime source changed without the hash being regenerated |
 | `npm run check:truth` | Re-derives the eight truth-boundary entries from the tree. Fails when a boundary moves — the first provider answer, a divergence retired, a known limit fixed |
 | `npm run check:fingerprint` | Fails on provider model drift; reports **"not armed"** until a run reaches a provider |
 | `npm run check:corpus` | Re-hashes 661 local PDFs. **Deliberately outside `verify`** |
@@ -62,10 +62,25 @@ npm run docs:manifest-spec   # regenerate MANIFEST_SHAPES.md from spec/manifest-
 npm run docs:truth           # regenerate TRUTH_BOUNDARY.md from spec/truth-boundary.json
 npm run build:hash           # regenerate build-hash.json after a runtime source change
 npm run cli -- lint <file>
-npm run cli -- pipeline <file> --stakes HIGH --reflexive 2
+npm run cli -- run --stage compile <file>
+npm run cli -- pipeline <file> --stakes HIGH --reflexive 2 --max-calls 40
 npm run cli -- gates
 npm run cli -- evidence
 ```
+
+Three things about the CLI surface, all of them earned:
+
+- **One argument parser.** `lint`, `run` and `pipeline` resolve their file through the same
+  `fileArg`, so a flag may come before or after it. They used to disagree: `lint --foo` handed
+  `--foo` to `readFile` and died on `ENOENT`, `pipeline --stakes HIGH brief.txt` printed usage
+  and exited 2, and `run` consulted a skip-list naming only its own flag.
+- **`--stage` refuses anything but `compile`.** It used to accept any value and run `compile`
+  regardless. Honouring it is not a Shell's call to fake: `Orchestrator.run` imports
+  `decide`/`reduce` straight from `compile.js` and uses `stage_id` only to *label* the revision,
+  so `--stage harden` would persist a record naming a stage that did not produce its output.
+- **`--max-calls N` is the pipeline's budget**, checked against the worst case for the plan
+  actually selected — generating stages, plus one per feedback round, times retries. Omitted
+  means unbounded; a malformed value exits 2 rather than becoming a run with no budget.
 
 ---
 

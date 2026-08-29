@@ -6,8 +6,12 @@
 `test/contract-conformance.test.ts` validates every schema against a value the running system
 actually produced.
 
-`contracts/pending-implementation.json` is now **empty** — the terminal state, not a
-milestone. Every schema has a producer.
+`contracts/pending-implementation.json` held **one** entry as of 29 August: `audit-report`,
+whose producer is a language model following `prompts/nexus-audit-prompt.md` — not code in this
+repository. It reached the empty terminal state earlier and left it, which is what the seam is
+for (ADR-0013). The limit is stated in the entry: **a schema no code reads is a schema nothing
+keeps honest**, so its `additionalProperties: false` and eight required fields constrain a
+document only once something checks a document against them.
 
 ## Version inventory
 
@@ -16,18 +20,19 @@ milestone. Every schema has a producer.
 | `gate-result` | 1.3.0 | One gate's verdict |
 | `pipeline-outcome` | 1.0.0 | What a Shell receives |
 | `provider-failure` | 1.0.0 | Typed, classified failure |
-| `revision-entry` | 1.3.1 | One stage execution, persisted. `parent_revision_ids` populated since 1.3.1 |
-| `observability-event` | 1.2.0 | Keyed hashes only |
+| `revision-entry` | **2.0.0** | One stage execution, persisted. `parent_revision_ids` populated since 1.3.1; `input_ref`/`output_ref` added 1.4.0 and **required** at 2.0.0 |
+| `observability-event` | 1.3.0 | Keyed hashes only. Adds `REVISION_SUPERSEDED` |
 | `technique-record` | 1.3.0 | Catalog entry (195 records) |
 | `configuration` | 1.3.0 | The versioned artifact — **not** the prompt |
 | `eval-suite` | 2.0.1 | |
 | `eval-case` | 1.2.0 | |
-| `eval-run` | 1.1.0 | |
+| `eval-run` | **2.0.0** | `provenance` shaped at 2.0.0 — was an unconstrained `object` |
 | `comparison` | 2.2.0 | |
 | `judge-verdict` | 1.1.0 | |
 | `baseline` | 2.0.0 | |
 | `promotion` | 1.0.0 | |
 | `routing-policy` | 1.0.0 | |
+| `audit-report` | 1.0.0 | **No producer here** — written by a model following `prompts/nexus-audit-prompt.md` (ADR-0013) |
 
 Versioning rule (ADR-0002): **major** = a consumer reading the old shape breaks · **minor** =
 additive · **patch** = wording only. Every bump needs a `contracts/CHANGELOG.md` entry.
