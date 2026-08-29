@@ -265,7 +265,20 @@ async function main(): Promise<void> {
     process.exit(await cmdLint(argv[1]));
   }
   if (cmd === "run") {
-    const file = argv[argv.indexOf("--stage") === -1 ? 1 : argv.length - 1];
+    // The file is the first argument that is not a flag or a flag value. The old
+    // `argv[length-1]` pick turned `run --stage compile` (no file) into
+    // readFile("compile") — a confusing ENOENT instead of usage help.
+    const FLAG_VALUE_COMMANDS = new Set(["--stage"]);
+    let file: string | undefined;
+    for (let i = 1; i < argv.length; i++) {
+      const a = argv[i];
+      if (a.startsWith("--")) {
+        if (FLAG_VALUE_COMMANDS.has(a)) i++; // skip the flag's value
+        continue;
+      }
+      file = a;
+      break;
+    }
     if (file) process.exit(await cmdRun(file));
   }
   if (cmd === "pipeline" && argv[1] && !argv[1].startsWith("--")) {
