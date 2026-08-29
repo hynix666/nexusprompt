@@ -27,7 +27,7 @@
     "lint:sources": "node scripts/verify-sources.mjs",
     "cli": "tsx shells/cli/src/index.ts",
     "api": "tsx shells/api/src/index.ts",
-    "test:api": "vitest run --project api",
+    "test:shells": "vitest run --project shells",
     "differential": "tsx scripts/differential.ts",
     "check:depth": "node scripts/check-depth-budget.mjs",
     "eval": "tsx scripts/run-eval.ts",
