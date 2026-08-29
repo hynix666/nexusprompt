@@ -81,7 +81,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "lint:sources",
     "test",
     "test:app",
-    "test:api",
+    "test:shells",
     "test:core",
     "typecheck",
     "verify",

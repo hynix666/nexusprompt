@@ -1489,3 +1489,56 @@ describe("check-repo-hygiene", () => {
     expect(r.ok).toBe(true);
   });
 });
+
+/**
+ * Every `--project` a script names is a project that exists.
+ *
+ * `npm run test:api` ran `vitest run --project api` and failed with "No projects matched the
+ * filter" from the moment the duplicate `api` project was removed — the project went, the
+ * script did not. It stayed broken because nothing looks at it: `verify` runs `npm test`,
+ * which has no filter, so a filtered script can rot indefinitely while every check is green.
+ *
+ * That is the same shape as every other defect this suite guards: a claim with no checker.
+ * The scripts table is a claim about what a contributor can run.
+ */
+describe("package.json --project filters", () => {
+  const root = __dirnameShim + "/..";
+
+  /**
+   * Read from the config source rather than from a hand-kept list, so adding a project makes
+   * this pass and removing one makes it fail. A regex over `name:` inside the projects array
+   * is enough here and its weakness is worth stating: it would miss a name built at runtime.
+   * None is, and the assertion below fails loudly if that ever stops being true.
+   */
+  const declaredProjects = (): string[] => {
+    const cfg = readFileSync(join(root, "vitest.config.ts"), "utf8");
+    return [...cfg.matchAll(/\bname:\s*"([^"]+)"/g)].map((m) => m[1]);
+  };
+
+  const filteredScripts = (): Array<[string, string]> => {
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    return Object.entries(pkg.scripts as Record<string, string>)
+      .flatMap(([name, body]) =>
+        [...body.matchAll(/--project[= ]([\w.-]+)/g)].map((m) => [name, m[1]] as [string, string]));
+  };
+
+  it("the reader finds the projects that exist — otherwise the check below is vacuous", () => {
+    // Without this, a regex that matched nothing would make every filter "valid".
+    expect(declaredProjects().sort()).toEqual(["adapters", "application", "contracts", "core", "shells"]);
+    expect(filteredScripts().length).toBeGreaterThan(0);
+  });
+
+  it("every --project names a project vitest.config.ts defines", () => {
+    const projects = new Set(declaredProjects());
+    const broken = filteredScripts().filter(([, project]) => !projects.has(project));
+    expect(broken).toEqual([]);
+  });
+
+  it("catches a filter naming a project that does not exist", () => {
+    // The planted defect, in the exact shape that shipped: `--project api` with no `api`.
+    const projects = new Set(declaredProjects());
+    expect(projects.has("api")).toBe(false);
+    const planted: Array<[string, string]> = [["test:api", "api"], ["test:core", "core"]];
+    expect(planted.filter(([, p]) => !projects.has(p))).toEqual([["test:api", "api"]]);
+  });
+});
