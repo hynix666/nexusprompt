@@ -27,6 +27,7 @@ import type {
 import { decidePromotion, rollbackOf } from "../../core/src/release/promote.js";
 import type { PromotionDecision, PromotionRefusal } from "../../core/src/release/promote.js";
 import type { JudgeAdmission } from "../../core/src/eval/judge-policy.js";
+import type { ContentStore } from "../../contracts/index.js";
 
 export class EvidenceMissing extends Error {
   constructor(readonly kind: string, readonly id: string) {
@@ -88,6 +89,15 @@ export interface PromoteInput {
   /** What the promotion claims. Absent means quality; "cost" is refused, with the reason. */
   justification?: "quality" | "cost";
   supersedes?: string | null;
+  /**
+   * Content refs the evidence names, and the store that resolves them.
+   *
+   * Both optional, and absent means the pre-lineage behaviour: pointer identity is checked
+   * and reachability is not. Supplying `content` without `refs` is meaningful too — it
+   * asserts "this evidence names no retained content", which the gate then trivially passes.
+   */
+  contentRefs?: readonly string[] | null;
+  content?: ContentStore | null;
 }
 
 export interface PromoteResult {
@@ -115,7 +125,35 @@ export async function promote(store: EvidenceStore, input: PromoteInput): Promis
   ]);
   const baselineRun = await load<EvalRun>(store, "eval-run", baseline.run_id);
 
+  /**
+   * Resolve every ref BEFORE deciding, because `decidePromotion` is Core and its oracle is
+   * synchronous — Core composes the decision, the Application performs the effect.
+   *
+   * This is the wiring the `dangling-ref` precondition shipped without: `decidePromotion`
+   * accepted `contentRefs`/`refExists` from the day it landed, both optional, and the only
+   * caller passed neither — so the gate that refuses a promotion over evicted evidence never
+   * ran outside its own tests. A gate nothing invokes is the same defect as a budget cap
+   * nothing reads.
+   *
+   * `has` throws on a corrupt store rather than returning false, and that throw is allowed to
+   * propagate: `decidePromotion` requires exactly this ("a present-but-failing oracle must
+   * throw rather than return false, so a broken content store cannot masquerade as 'all
+   * content gone'"). Refusing every promotion because the disk is broken would be a wrong
+   * refusal wearing the right words.
+   */
+  let refExists: ((ref: string) => boolean) | null = null;
+  if (input.content) {
+    const refs = [...new Set(input.contentRefs ?? [])];
+    const present = new Set<string>();
+    for (const ref of refs) {
+      if (await input.content.has(ref)) present.add(ref);
+    }
+    refExists = (ref: string) => present.has(ref);
+  }
+
   const decision = decidePromotion({
+    contentRefs: [...(input.contentRefs ?? [])],
+    refExists,
     promotion_id: input.promotion_id,
     promoted_at: input.promoted_at,
     promoted_by: input.promoted_by,

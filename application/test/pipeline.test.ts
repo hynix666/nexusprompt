@@ -1,4 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { LocalContentStore } from "../../adapters/content-local/src/index.js";
 import { runPipeline } from "../src/pipeline.js";
 import { planFor, PIPELINE, DEPTH_PLAN } from "../../core/src/stages/pipeline.js";
 import { plannedPipelineCalls } from "../../core/src/eval/budget.js";
@@ -824,5 +829,62 @@ describe("budget admission — the pipeline path", () => {
       cmd({ ...STANDARD_CTX, depth: "TINY" }), { ...opts(new ScriptedProvider(), new BundleStore()), budget },
     );
     expect(tiny.stages.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Content retention, end to end.
+ *
+ * `input_ref`/`output_ref` and the `ContentStore` port landed together with no producer:
+ * `buildRevision` accepted ref arguments no call site passed, and no composition root built
+ * a store, so every revision recorded `null` and the replay guarantee in
+ * REVISIONS_AND_EXPORTS.md that [AUDIT B-4] was raised about stayed unbacked.
+ *
+ * The load-bearing assertion is not "a ref is present" — it is that the ref RESOLVES to the
+ * bytes the revision claims, because a pointer to nothing is worse than an honest null.
+ */
+describe("content retention — refs name bytes that are actually there", () => {
+  const mkContentRoot = () => {
+    const d = mkdtempSync(join(tmpdir(), "pnx-pipe-content-"));
+    contentRoots.push(d);
+    return d;
+  };
+  const contentRoots: string[] = [];
+  afterEach(() => { while (contentRoots.length) rmSync(contentRoots.pop()!, { recursive: true, force: true }); });
+
+  it("writes refs that resolve, and content matching the revision's output hash", async () => {
+    const store = new BundleStore();
+    const content = new LocalContentStore(mkContentRoot());
+    await runPipeline(
+      cmd({ depth: "STANDARD", stakes: "HIGH", testMessage: "How do I get a refund?" }),
+      { ...opts(new ScriptedProvider(), store), content },
+    );
+
+    const entries = await store.getRun("run-1");
+    const retained = entries.filter((e) => e.output_ref !== null);
+    expect(retained.length).toBeGreaterThan(0);
+
+    for (const e of retained) {
+      expect(e.input_ref, `${e.stage_id} input_ref`).toMatch(/^npx:stage-input:[0-9a-f]{64}:local-bundle$/);
+      expect(e.output_ref, `${e.stage_id} output_ref`).toMatch(/^npx:stage-output:[0-9a-f]{64}:local-bundle$/);
+      // The pointer resolves, and to the very bytes whose digest the revision recorded.
+      const bytes = await content.get(e.output_ref!);
+      expect(bytes, `${e.stage_id} content missing`).not.toBeNull();
+      expect(createHash("sha256").update(bytes!).digest("hex")).toBe(e.output_hash);
+      expect(await content.get(e.input_ref!)).not.toBeNull();
+    }
+  });
+
+  it("records null rather than a fabricated ref when no store is wired", async () => {
+    // The other direction, and the one that must never regress into a dangling pointer:
+    // absent store means "not retained here", stated honestly on every entry.
+    const store = new BundleStore();
+    await runPipeline(
+      cmd({ depth: "STANDARD", stakes: "HIGH", testMessage: "How do I get a refund?" }),
+      opts(new ScriptedProvider(), store),
+    );
+    const entries = await store.getRun("run-1");
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries.every((e) => e.input_ref === null && e.output_ref === null)).toBe(true);
   });
 });

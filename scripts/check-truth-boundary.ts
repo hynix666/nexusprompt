@@ -51,7 +51,7 @@ import { pathToFileURL } from "node:url";
 import { listGates, SOURCE_GATE_COUNT } from "../core/src/gates/registry.js";
 import { floorDiscordant } from "../core/src/eval/sizing.js";
 import { observe } from "./check-fingerprint.mjs";
-import { isArtifactPath } from "./build-hash.mjs";
+import { isArtifactPath, computeBuildHash } from "./build-hash.mjs";
 import { implausibleKeyReason } from "./run-eval.js";
 
 const SPEC = "spec/truth-boundary.json";
@@ -285,12 +285,21 @@ export const PROBES: Record<string, Probe> = {
    * the three cannot borrow the strongest's credibility by sitting in the same sentence.
    */
   reproducibility(root) {
-    const hashFile = readJson(root, "build-hash.json");
     const hashSource = readText(root, "scripts/build-hash.mjs");
     const anchor = readJson(root, "eval/gate-recall-anchor.json");
     const pkg = readJson(root, "package.json");
     return {
-      artifact_files: hashFile.files,
+      /**
+       * Re-derived from the tree, not read from `build-hash.json`.
+       *
+       * It used to be `readJson(root, "build-hash.json").files`, which made this boundary
+       * compare an artifact against itself: when a commit added a runtime file without
+       * regenerating the hash, `check:hash` failed while `check:truth` reported "9
+       * boundaries hold" against the stale count. A number a checker takes from the file it
+       * is supposed to bound cannot contradict it — and this spec's own header promises the
+       * checker "re-derives every pinned number from the tree".
+       */
+      artifact_files: computeBuildHash(root).files,
       // The property the whole claim rests on: a CRLF checkout and an LF checkout agree.
       hash_is_lf_normalised: /replace\(\/\\r\\n\/g, "\\n"\)/.test(hashSource),
       // Asked of the real predicate, not of its source text: what the hash covers is a

@@ -35,7 +35,6 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ContentStore, RetentionScope } from "../../../contracts/index.js";
 
@@ -48,6 +47,13 @@ import type { ContentStore, RetentionScope } from "../../../contracts/index.js";
  */
 const REF_PATTERN =
   /^npx:(stage-input|stage-output|generation-response):([0-9a-f]{64}):(local-bundle|db|export)$/;
+
+/** One message for the one thing that must never be blessed: bytes that are not their address. */
+const corruption = (hash: string): Error =>
+  new Error(
+    `Content store corruption at ${hash.slice(0, 12)}…: resident bytes do not hash to their ` +
+      `own address. Refusing to treat them as the content this ref names — investigate the store.`,
+  );
 
 export class LocalContentStore implements ContentStore {
   readonly retention_scope: RetentionScope = "LOCAL_BUNDLE";
@@ -93,62 +99,95 @@ export class LocalContentStore implements ContentStore {
       );
     }
 
-    if (existsSync(path)) {
-      // Already here. Content is material: verify the resident copy still hashes to the
-      // address, then treat the write as a no-op success. An EEXIST whose bytes no
-      // longer match would be a corrupt store — fail loudly rather than bless it.
-      const resident = await readFile(path);
-      const residentHash = createHash("sha256").update(resident).digest("hex");
-      if (residentHash !== hash) {
-        throw new Error(
-          `Content store corruption at ${hash.slice(0, 12)}…: resident bytes no longer hash ` +
-            `to their own address. Refusing to overwrite silently — investigate the store.`,
-        );
-      }
-      return;
-    }
-
     await mkdir(join(this.root, hash.slice(0, 2)), { recursive: true });
     try {
       // `wx` — fail if it exists. One syscall that cannot be interleaved; a concurrent
       // put of the same bytes loses the race and lands in the EEXIST handler below,
       // which re-verifies and returns success. Either way the invariant holds: the
       // resident bytes always hash to the address they live under.
+      //
+      // This is the ONLY existence test on the write path. There used to be an
+      // `existsSync(path)` pre-check above carrying a byte-identical copy of the handler
+      // below — which contradicted this file's own header ("Nothing reads-then-writes"),
+      // because a check followed by a write is exactly that cycle, and left two copies of
+      // the corruption message to keep in sync. `wx` needs no pre-check to be correct.
       await writeFile(path, bytes, { flag: "wx" });
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "EEXIST") {
-        const resident = await readFile(path);
-        const residentHash = createHash("sha256").update(resident).digest("hex");
-        if (residentHash === hash) return;
-        throw new Error(
-          `Content store corruption at ${hash.slice(0, 12)}…: resident bytes do not hash to ` +
-            `their own address. Refusing to overwrite silently — investigate the store.`,
-        );
+        // Already here. Content is material: verify the resident copy still hashes to the
+        // address, then treat the write as a no-op success. An EEXIST whose bytes no
+        // longer match is a corrupt store — fail loudly rather than bless it.
+        if (await this.residentMatches(path, hash)) return;
+        throw corruption(hash);
       }
       throw err;
     }
   }
 
+  /**
+   * Do the bytes on disk still hash to the address they live under?
+   *
+   * `null` when the file is gone. Shared by `put`, `get` and `has` so the three cannot
+   * drift about what "present" means — `has` used to answer that question with a bare
+   * `existsSync` and therefore reported a tampered file as present, which is the one
+   * reading the integrity gate must never get wrong.
+   */
+  private async residentMatches(path: string, hash: string): Promise<boolean | null> {
+    let resident: Buffer;
+    try {
+      resident = await readFile(path);
+    } catch (err) {
+      // Gone between our decision to read and the read itself. "Not here" is a real
+      // answer; eviction is the whole scenario this plane exists to survive.
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw err;
+    }
+    return createHash("sha256").update(resident).digest("hex") === hash;
+  }
+
   async get(ref: string): Promise<Uint8Array | null> {
-    const { path } = this.pathFor(ref);
-    if (!existsSync(path)) return null;
-    // Null is "not here" (evicted, deleted, or never written) — never "here but wrong".
+    // `hash` comes from `pathFor`, which already parsed and validated the ref. This used
+    // to re-run `REF_PATTERN.exec(ref)![2]` a second time, with a non-null assertion whose
+    // safety depended on that earlier parse having happened — a coupling nothing stated.
+    const { path, hash } = this.pathFor(ref);
+    let bytes: Buffer;
+    try {
+      bytes = await readFile(path);
+    } catch (err) {
+      // Null is "not here" (evicted, deleted, or never written) — never "here but wrong".
+      // Read first and let ENOENT answer, rather than `existsSync` then read: content can
+      // be evicted between the two, and the caller that correctly handles null would get
+      // an ENOENT rejection instead.
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw err;
+    }
     // If bytes exist under an address they must BE that address's content; a mismatch is
     // store corruption and gets thrown, not returned.
-    const bytes = await readFile(path);
-    const actual = createHash("sha256").update(bytes).digest("hex");
-    const expected = REF_PATTERN.exec(ref)![2];
-    if (actual !== expected) {
-      throw new Error(
-        `Content store corruption at ${expected.slice(0, 12)}…: bytes on disk do not hash to ` +
-          `their own address. Refusing to return content the ref cannot vouch for.`,
-      );
-    }
+    if (createHash("sha256").update(bytes).digest("hex") !== hash) throw corruption(hash);
     return new Uint8Array(bytes);
   }
 
+  /**
+   * Present means present AND intact.
+   *
+   * This was `existsSync(path)` alone, which reported a tampered file as present — so the
+   * `dangling-ref` promotion gate, the caller this method's own doc names, was the one
+   * caller that could not detect corruption. `get` threw on exactly the same file.
+   *
+   * Corruption throws rather than returning false, matching `get` and matching what
+   * `decidePromotion` requires of its oracle: "a present-but-failing oracle must throw
+   * rather than return false, so a broken content store cannot masquerade as 'all content
+   * gone'." False is reserved for genuinely absent content.
+   *
+   * The cost is a read where there used to be a stat. That is the correct trade for a
+   * method whose answer gates a promotion: an existence check that cannot see corruption
+   * is not checking the thing its caller needs.
+   */
   async has(ref: string): Promise<boolean> {
-    const { path } = this.pathFor(ref);
-    return existsSync(path);
+    const { path, hash } = this.pathFor(ref);
+    const matches = await this.residentMatches(path, hash);
+    if (matches === null) return false;
+    if (!matches) throw corruption(hash);
+    return true;
   }
 }
