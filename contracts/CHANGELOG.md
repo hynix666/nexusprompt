@@ -16,6 +16,38 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-29 (provenance)
+
+### `eval-run` **2.0.0** (major)
+
+`provenance` was `{"type": "object"}` with a prose description listing nine fields and
+requiring none of them. A run carrying `provenance: {}` validated. So did one that never said
+which transport answered.
+
+That is the wrong field to leave open. `runSuite` DEFAULTS to the pinned stub, and
+`provenance.provider` is the only thing separating a run that is evidence about a model from
+one that is evidence about this system's accounting — the distinction the truth boundary's
+first entry rests on, and the distinction `npm run eval -- --live` exists to make. A schema
+that could not tell a stubbed run from a live one was not describing the field that carries
+the difference.
+
+Now `required: ["core_build_hash", "configuration_id", "suite_version", "provider"]`, each
+`minLength: 1` so present-but-empty fails the same way absent does, with the remaining five
+typed and nullable — `model_id`, `decoding`, `topology`, `grader_id`, `budget`. Null on those
+is meaningful and stays permitted: `grader_id: null` means no judge was involved, never that a
+judge was fine.
+
+`additionalProperties: false`, matching `cost` and the root object. An EvalRun is evidence; an
+unrecognised key in it is a claim no consumer can interpret.
+
+**Major, because it tightens.** Nothing in the repository had to change to satisfy it — the run
+`runSuite` produces already carried all four — which is the useful part of landing the schema
+against a real value rather than a hand-built one: the constraint is exactly as strong as what
+the system already does, and no stronger. The conformance suite now mutates that real run nine
+ways and asserts each is refused, plus one that asserts the unmutated original still validates.
+
+---
+
 ## 2026-08-29
 
 ### `audit-report` **1.0.0** (new)

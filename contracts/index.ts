@@ -173,7 +173,7 @@ export const CONTRACT_VERSIONS = {
   "pipeline-outcome": "1.0.0",
   "revision-entry": "1.3.1",
   "observability-event": "1.3.0",
-  "eval-run": "1.1.0",
+  "eval-run": "2.0.0",
   comparison: "2.2.0",
   configuration: "1.3.0",
   "judge-verdict": "1.1.0",
