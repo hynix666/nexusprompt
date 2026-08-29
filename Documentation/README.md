@@ -4,6 +4,10 @@ This is the documentation set for the merged system: one pure Core (16-gate lint
 
 Every count and file name above has been checked against the source artifacts — see [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md) for the evidence and for the ten claims that did not survive that check.
 
+## Verification
+
+- [`VERIFICATION_REPORT.md`](./VERIFICATION_REPORT.md) — **Latest verification results**: 27 checks passed, 1,316 tests across 32 files, evaluation outcomes, security posture, and prioritized improvement recommendations
+
 ## Reading order
 
 **New contributors**, in order:
