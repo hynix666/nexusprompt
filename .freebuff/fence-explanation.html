@@ -91,7 +91,6 @@
   @media (min-width: 56rem) { .demo { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: start; } }
 
   .toggle { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden; }
-  .toggle button:focus-visible { position: relative; z-index: 1; }
   .toggle button {
     appearance: none; border: none; background: transparent; cursor: pointer;
     font-family: var(--mono-display); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em;
@@ -216,15 +215,12 @@
           <button type="button" id="btn-new" aria-pressed="true">NEW READER</button>
         </div>
 
-        <div class="doc" style="margin-top:1rem" aria-labelledby="doc-cap"
-             aria-describedby="doc-summary">
           <div class="doc-cap" id="doc-cap">manifest-sample.md — fence state per line</div>
           <div class="doc-summary" id="doc-summary" role="status" aria-live="polite"></div>
           <!-- lines injected by script -->
         </div>
       </div>
 
-      <div class="verdict" id="verdict" data-safe="true" aria-live="polite" aria-atomic="true">
         <span class="verdict-chip" id="verdict-chip">FAIL — VISIBLE, AND CORRECT</span>
         <p id="verdict-head">Line 8 uses <code>[[A]]</code>. The gate returns <strong>FAIL</strong>.</p>
         <p class="why" id="verdict-why">
@@ -316,27 +312,19 @@
   </div>
 </footer>
 
-<script src="fence-explanation-data.js"></script>
 <script>
   (() => {
     "use strict";
 
-    // The generated contract is injected below by the build step.
-    const CONTRACT = window.FENCE_EXPLANATION_CONTRACT;
-    const LINES = CONTRACT.readers;
 
     const VERDICTS = {
       old: {
         safe: "false",
         chip: "PASS — A SILENT FALSE CLEAN",
-        head: "Line 8 uses [[A]]. The gate returns PASS — and should not.",
-        why: CONTRACT.readers.old.gate_message + ' The old reader accepts line 3 as a closer, so the declaration is visible to the gate.',
       },
       new: {
         safe: "true",
         chip: "FAIL — VISIBLE, AND CORRECT",
-        head: "Line 8 uses [[A]]. The gate returns FAIL.",
-        why: CONTRACT.readers.new.gate_message + ' The sample remains fenced until the bare closer.',
       },
     };
 
@@ -354,8 +342,6 @@
       doc.querySelectorAll(".line").forEach((n) => n.remove());
       const frag = document.createDocumentFragment();
 
-      LINES[mode].lines.forEach((line, i) => {
-        const state = line.state;
         const row = document.createElement("div");
         row.className = "line";
 
@@ -365,14 +351,6 @@
 
         const code = document.createElement("span");
         code.className = "code";
-        code.textContent = line.t === "" ? " " : line.t;
-
-        if (state === "in") row.classList.add("inside");
-        if (line.note) {
-          row.classList.add(line.note[0]);
-          const cm = document.createElement("span");
-          cm.className = "cm";
-          cm.textContent = line.note[1];
           code.appendChild(cm);
         } else if (state === "open" || state === "close") {
           const cm = document.createElement("span");
@@ -392,19 +370,10 @@
 
       // Keep the important intermediate state visible, not just the final verdict.
       // This summary is also the accessible equivalent of the visual line annotations.
-      const state = CONTRACT.readers[mode];
-      summary.textContent = `line 3: ${state.lines[2].state === "close" ? "closer accepted" : "content"} · manifest: ${state.declared.length ? state.declared.join(", ") : "none"} · use: ${state.used.join(", ")}`;
 
       const v = VERDICTS[mode];
       verdict.dataset.safe = v.safe;
       chip.textContent = v.chip;
-      head.replaceChildren();
-      head.append("Line 8 uses ", document.createElement("code"), ". The gate returns ");
-      head.querySelector("code").textContent = "[[A]]";
-      const result = document.createElement("strong");
-      result.textContent = mode === "old" ? "PASS" : "FAIL";
-      head.append(result, mode === "old" ? " — and should not." : ".");
-      why.textContent = v.why;
 
       btnOld.setAttribute("aria-pressed", String(mode === "old"));
       btnNew.setAttribute("aria-pressed", String(mode === "new"));
