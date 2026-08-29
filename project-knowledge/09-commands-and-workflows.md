@@ -32,6 +32,7 @@ differential oracle.
 | `npm run check:matrix` | The committed capability matrix is what the repo produces |
 | `npm run check:manifest-spec` | The committed manifest-shapes document is what `spec/manifest-shapes.json` produces |
 | `npm run check:fence-explanation` | The fence explainer's data is what the real gate produces. It was committed unwired for a day, which is the state this repository has a checker against |
+| `npm run check:hash` | The artifact hash: 75 runtime files, LF-normalised so a CRLF and an LF checkout of one commit agree. Fails when a runtime source changed without the hash being regenerated |
 | `npm run check:truth` | Re-derives the eight truth-boundary entries from the tree. Fails when a boundary moves — the first provider answer, a divergence retired, a known limit fixed |
 | `npm run check:fingerprint` | Fails on provider model drift; reports **"not armed"** until a run reaches a provider |
 | `npm run check:corpus` | Re-hashes 661 local PDFs. **Deliberately outside `verify`** |
@@ -59,6 +60,7 @@ npm test                 npm run test:core        npm run test:app
 npm run docs:matrix          # regenerate CAPABILITY_MATRIX.md
 npm run docs:manifest-spec   # regenerate MANIFEST_SHAPES.md from spec/manifest-shapes.json
 npm run docs:truth           # regenerate TRUTH_BOUNDARY.md from spec/truth-boundary.json
+npm run build:hash           # regenerate build-hash.json after a runtime source change
 npm run cli -- lint <file>
 npm run cli -- pipeline <file> --stakes HIGH --reflexive 2
 npm run cli -- gates
