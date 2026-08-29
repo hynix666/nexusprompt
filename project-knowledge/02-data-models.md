@@ -1,6 +1,6 @@
 # Data models and schemas
 
-15 JSON Schemas in `contracts/`, each with a versioned `$id`
+16 JSON Schemas in `contracts/`, each with a versioned `$id`
 (`https://promptnexus.dev/contracts/<name>/<version>`), plus TypeScript bindings in
 `contracts/index.ts`. **The schema is authoritative over the type**, and
 `test/contract-conformance.test.ts` validates every schema against a value the running system
