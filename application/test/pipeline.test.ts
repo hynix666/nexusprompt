@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { runPipeline } from "../src/pipeline.js";
 import { planFor, PIPELINE, DEPTH_PLAN } from "../../core/src/stages/pipeline.js";
+import { plannedPipelineCalls } from "../../core/src/eval/budget.js";
 import { PASS_SENTINEL } from "../../core/src/stages/critique.js";
 import { COMPILER_SYSTEM } from "../../core/src/stages/stage-kit.js";
 import { STAGE_IDS } from "../../contracts/index.js";
@@ -719,5 +720,109 @@ describe("gate feedback as a control signal", () => {
     const plan = planFor("COMPREHENSIVE").map((s) => s.id);
     const span = plan.indexOf("lint") - plan.indexOf("refine");
     expect(span).toBe(1);
+  });
+});
+
+/**
+ * Budget admission on the pipeline path.
+ *
+ * This path had none. `admitRun` existed and the evaluation path used it; the ELEVEN-STAGE
+ * path — the one the CLI wires a real `LocalProxyProvider` into — called it zero times, so a
+ * declared budget bounded the suite runner and nothing else.
+ *
+ * The load-bearing assertion is not "it refuses". It is that it refuses having made ZERO
+ * provider calls: a budget checked after the first call is a report, not a budget.
+ */
+describe("budget admission — the pipeline path", () => {
+  const STANDARD_CTX = { depth: "STANDARD", stakes: "HIGH", testMessage: "How do I get a refund?" };
+
+  it("refuses before dispatch, with nothing spent and nothing persisted", async () => {
+    const provider = new ScriptedProvider();
+    const store = new BundleStore();
+    await expect(
+      runPipeline(cmd(STANDARD_CTX), {
+        ...opts(provider, store),
+        budget: { on_exceed: "refuse", max_provider_calls: 2, max_usd: null },
+      }),
+    ).rejects.toThrow(/refused before dispatch/);
+
+    expect(provider.seen).toHaveLength(0);
+    expect(store.runs.size).toBe(0);
+  });
+
+  it("admits the same run when the budget covers it — the must-not-refuse half", async () => {
+    // Without this, a rule that refused everything would satisfy the case above while making
+    // the pipeline unusable. The bound is 9 generating stages x 3 attempts = 27.
+    const provider = new ScriptedProvider();
+    const result = await runPipeline(cmd(STANDARD_CTX), {
+      ...opts(provider, new BundleStore()),
+      budget: { on_exceed: "refuse", max_provider_calls: 27, max_usd: null },
+    });
+    expect(result.stages).toHaveLength(11);
+    expect(provider.seen.length).toBeGreaterThan(0);
+  });
+
+  it("the bound it enforces is never below what the run actually spends", async () => {
+    /**
+     * The direction that matters. A bound sitting below the truth authorises a spend it does
+     * not cover — the failure a budget exists to prevent — so it is checked against the
+     * runner rather than against arithmetic, at every feedback cap the reliability budget
+     * permits.
+     */
+    for (const rounds of [0, 1, 2, 3]) {
+      const provider = new ScriptedProvider();
+      const bound = plannedPipelineCalls({
+        plan: planFor("STANDARD").map((s) => ({ id: s.id as string, kind: s.kind })),
+        feedbackRounds: rounds,
+        maxAttempts: 3,
+      });
+      const result = await runPipeline(
+        cmd({ ...STANDARD_CTX, ...(rounds === 0 ? {} : { topology: { kind: "reflexive", max_iterations: rounds } }) }),
+        { ...opts(provider, new BundleStore()), budget: { on_exceed: "refuse", max_provider_calls: bound, max_usd: null } },
+      );
+      expect(result.stages.length, `rounds=${rounds}`).toBeGreaterThan(0);
+      expect(provider.seen.length, `rounds=${rounds} spent ${provider.seen.length} of ${bound}`)
+        .toBeLessThanOrEqual(bound);
+    }
+  });
+
+  it("admits with no budget declared, exactly as the evaluation path does", async () => {
+    // The two paths must not disagree about what an undeclared budget means.
+    const result = await runPipeline(cmd(STANDARD_CTX), opts(new ScriptedProvider(), new BundleStore()));
+    expect(result.stages).toHaveLength(11);
+    expect(result.budget_unenforced).toEqual([]);
+  });
+
+  it("reports a declared max_usd as UNENFORCED rather than as within budget", async () => {
+    // No caller supplies a cost estimate and `runSuite` is never given a token rate, so a
+    // dollar cap is enforced at neither end. The run proceeds — that fail-open is pinned in
+    // core/test/eval.test.ts — but it no longer proceeds silently.
+    const result = await runPipeline(cmd(STANDARD_CTX), {
+      ...opts(new ScriptedProvider(), new BundleStore()),
+      budget: { on_exceed: "refuse", max_provider_calls: 100, max_usd: 0.01 },
+    });
+    expect(result.budget_unenforced).toHaveLength(1);
+    expect(result.budget_unenforced[0]).toContain("max_usd");
+  });
+
+  it("sizes from the plan actually selected, not from a nominal eleven", async () => {
+    // A TINY plan has fewer generating stages, so a budget that refuses STANDARD admits it.
+    const tinyBound = plannedPipelineCalls({
+      plan: planFor("TINY").map((s) => ({ id: s.id as string, kind: s.kind })), maxAttempts: 3,
+    });
+    const standardBound = plannedPipelineCalls({
+      plan: planFor("STANDARD").map((s) => ({ id: s.id as string, kind: s.kind })), maxAttempts: 3,
+    });
+    expect(tinyBound).toBeLessThan(standardBound);
+
+    const budget = { on_exceed: "refuse" as const, max_provider_calls: tinyBound, max_usd: null };
+    await expect(
+      runPipeline(cmd({ ...STANDARD_CTX, depth: "STANDARD" }), { ...opts(new ScriptedProvider(), new BundleStore()), budget }),
+    ).rejects.toThrow(/refused before dispatch/);
+
+    const tiny = await runPipeline(
+      cmd({ ...STANDARD_CTX, depth: "TINY" }), { ...opts(new ScriptedProvider(), new BundleStore()), budget },
+    );
+    expect(tiny.stages.length).toBeGreaterThan(0);
   });
 });

@@ -17,6 +17,7 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   planForContext, decideGateFeedback, type PipelineContext } from "../../core/src/stages/pipeline.js";
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
+import { admitRun, plannedPipelineCalls, type Budget } from "../../core/src/eval/budget.js";
 import { invokeWithRetry } from "./invoke.js";
 import type {
   EventSink, ExecutionProvenance, GenerationResult, PipelineCommand, ProviderFailure,
@@ -33,6 +34,12 @@ export interface PipelineRunOptions {
   sleep?: (ms: number) => Promise<void>;
   /** Attempts including the first, shared with the Orchestrator. */
   maxAttempts?: number;
+  /**
+   * What this run may spend. Absent means no budget was declared, which `admitRun` admits —
+   * the same rule the evaluation path follows, so the two cannot disagree about what an
+   * undeclared budget means.
+   */
+  budget?: Budget | null;
   coreBuildHash?: string;
   configFingerprint?: string | null;
 }
@@ -56,6 +63,13 @@ export interface PipelineRunResult {
   /** True when any stage threw. Distinct from demo_mode: a throw is a defect, not an outage. */
   failed: boolean;
   revision_ids: string[];
+  /**
+   * Caps that were declared and could not be checked — empty when everything declared was
+   * applied. Carried out rather than swallowed: "declared and unenforced" is a third state,
+   * and a run that reports nothing about it is indistinguishable from one that was fully
+   * within budget.
+   */
+  budget_unenforced: string[];
 }
 
 /**
@@ -133,6 +147,46 @@ export async function runPipeline(
    * one plan.
    */
   const plan = planForContext(ctx);
+
+  /**
+   * Admission, before the first provider call.
+   *
+   * This path had none. `admitRun` existed and `application/src/eval.ts` used it, but the
+   * ELEVEN-STAGE path — the one `shells/cli/src/composition-root.ts` wires a real
+   * `LocalProxyProvider` into — called it zero times. A budget could be declared on a
+   * Configuration and the pipeline would spend past it without ever reading it, which made
+   * `eval-run.cost.budget_exceeded` unfalsifiable on the only path that reaches a model
+   * interactively.
+   *
+   * Sized from the plan actually selected and the feedback cap actually declared, not from a
+   * nominal eleven — `planForContext` returns six stages at TINY. Core owns the arithmetic
+   * (`plannedPipelineCalls`) so the runner cannot drift from the number the budget was
+   * checked against.
+   *
+   * Throws rather than returning a short result, matching `runSuite`. A refused run that came
+   * back as a `PipelineRunResult` with no stages is indistinguishable from a run that
+   * degraded at stage one, and this module's own history is of bundles silently truncated at
+   * however far they got.
+   */
+  const admission = admitRun({
+    budget: opts.budget,
+    plannedCalls: plannedPipelineCalls({
+      plan,
+      feedbackRounds: ctx.topology?.kind === "reflexive" ? (ctx.topology.max_iterations ?? 0) : 0,
+      maxAttempts: opts.maxAttempts ?? 3,
+    }),
+  });
+  if (!admission.admit) {
+    // No event: nothing was dispatched, so there is nothing to observe, and the existing
+    // event types all mean something else. `DEGRADE` in particular is what a stage emits when
+    // it threw — borrowing it here would put a refusal into the count of degradations, which
+    // is the kind of overloading `STAGE_SKIPPED` was added to end. An event type for this is a
+    // contract change and belongs in its own PR (ADR-0002).
+    throw new Error(
+      `Pipeline run "${run_id}" ${admission.reason}\n` +
+        `  Raise the budget, lower --reflexive, or run a shallower depth. Nothing was spent.`,
+    );
+  }
 
   for (let i = 0; i < plan.length; i++) {
     const stage = plan[i];
@@ -365,6 +419,7 @@ export async function runPipeline(
     demo_mode: anyDemo,
     failed: anyFailed,
     revision_ids,
+    budget_unenforced: admission.unenforced,
   };
 }
 

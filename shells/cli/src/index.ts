@@ -147,6 +147,26 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
   const stakes = flag("stakes") ?? "MEDIUM";
   const events: ObservabilityEvent[] = [];
 
+  /**
+   * `--max-calls` must be a positive integer when given at all.
+   *
+   * A silently-dropped budget flag is worse than no flag: the operator believes a cap is in
+   * force and it is not. `run-eval.ts` refuses the same way for the same reason, and the
+   * truth boundary's `live_requires_declared_budget` is the entry that rests on it.
+   */
+  const maxCallsRaw = flag("max-calls");
+  let maxCalls: number | undefined;
+  if (maxCallsRaw !== undefined) {
+    maxCalls = Number(maxCallsRaw);
+    if (!Number.isInteger(maxCalls) || maxCalls < 1) {
+      console.error(
+        `nexusprompt: --max-calls must be a positive integer; got ${JSON.stringify(maxCallsRaw)}.\n` +
+        `  A budget that cannot be parsed must not become a run with no budget.`,
+      );
+      return 2;
+    }
+  }
+
   // `--reflexive` with no number means one round; the flag is opt-in either way.
   const reflexiveFlag = argv.indexOf("--reflexive");
   const reflexive = reflexiveFlag === -1
@@ -174,7 +194,19 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
         }),
       },
     },
-    { ...composePipeline({ sink: { emit: (e) => events.push(e) } }), coreBuildHash: "cli" },
+    {
+      ...composePipeline({ sink: { emit: (e) => events.push(e) } }),
+      coreBuildHash: "cli",
+      /**
+       * Opt-in, and absent means unbounded — the same rule `admitRun` states and the
+       * evaluation path follows. Made reachable because the pipeline path is the one that
+       * wires a real provider, and a budget no shell can declare is a guard nothing can
+       * exercise.
+       */
+      ...(maxCalls === undefined ? {} : {
+        budget: { on_exceed: "refuse" as const, max_provider_calls: maxCalls, max_usd: null },
+      }),
+    },
   );
 
   const plan = result.stages;
@@ -186,6 +218,12 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
   const mark = (s: string) =>
     s === "SUCCEEDED" ? C.pass("ok  ") : s === "SKIPPED" ? C.dim("skip") : s === "DEMO" ? C.warn("demo") : C.fail("FAIL");
   for (const s of plan) console.log(`  ${mark(s.status)} ${s.stage_id}`);
+
+  // A declared cap that could not be checked is reported, not swallowed. Silence here would
+  // be indistinguishable from "the cap held".
+  for (const u of result.budget_unenforced) {
+    console.log(C.warn(`\nbudget NOT enforced: ${u}`));
+  }
 
   const rounds = result.context.feedbackRounds ?? 0;
   if (rounds) {
@@ -255,6 +293,12 @@ pipeline options:
   --reflexive [N]                            route a gate FAIL back to refine, at most N
                                              times (default 1). Each round costs two more
                                              stage executions against the depth budget.
+  --max-calls N                              refuse before dispatch if the run could need
+                                             more than N provider calls. Checked against the
+                                             WORST case for the plan selected — generating
+                                             stages, plus one per feedback round, times
+                                             retries — so a run that fits is guaranteed to
+                                             fit. Omit it and no budget is enforced.
 
 Stakes selects depth: LOW runs six of eleven stages, SAFETY-CRITICAL all eleven.
 Without ANTHROPIC_API_KEY the run degrades and every stage says so — that is the

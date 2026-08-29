@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -104,4 +104,50 @@ describe("nexusprompt pipeline", () => {
     expect(out).toContain("nexusprompt pipeline <file>");
     expect(out).toContain("--stakes");
   }, 120_000);
+});
+
+/**
+ * `--max-calls`, driven the way a person drives it.
+ *
+ * The budget reaches the runner through the composition root, and a flag that never reaches
+ * the runner is exactly the class of wiring bug this file exists for. Asserted through the
+ * Shell for that reason: `runPipeline` accepting a `budget` proves nothing about whether the
+ * CLI supplies one.
+ */
+describe("nexusprompt pipeline --max-calls", () => {
+  it("refuses a run the cap cannot cover, and exits non-zero", () => {
+    const r = runCli(["pipeline", "BRIEF", "--stakes", "SAFETY-CRITICAL", "--max-calls", "1"]);
+    // 3 is the degraded-run code and 1 is a gate FAIL; a refusal is neither. It throws, so
+    // the CLI dies with an uncaught error rather than reaching any of its own exit codes.
+    expect([0, 1, 3]).not.toContain(r.code);
+    expect(r.out).toMatch(/refused before dispatch/);
+    // Nothing was persisted: a refused run is not a run, so the bundle store is never created.
+    expect(existsSync(join(r.cwd, ".nexusprompt", "runs"))).toBe(false);
+  });
+
+  it("admits a run the cap covers — the must-not-refuse half", () => {
+    // Without this, `--max-calls` could refuse unconditionally and still pass the case above.
+    // 3, not 0: there is no API key here, so the run degrades — which is the honest outcome
+    // and the same code the un-budgeted run above returns. What matters is that it RAN.
+    const r = runCli(["pipeline", "BRIEF", "--stakes", "SAFETY-CRITICAL", "--max-calls", "999"]);
+    expect(r.code).toBe(3);
+    expect(r.out).not.toMatch(/refused before dispatch/);
+    expect(existsSync(join(r.cwd, ".nexusprompt", "runs"))).toBe(true);
+  });
+
+  it("rejects a malformed cap instead of running unbounded", () => {
+    // The dangerous failure is the quiet one: a flag that does not parse becoming a run with
+    // no budget, while the operator believes a cap is in force.
+    for (const bad of ["0", "-5", "abc", "2.5"]) {
+      const r = runCli(["pipeline", "BRIEF", "--max-calls", bad]);
+      expect(r.code, `--max-calls ${bad}`).toBe(2);
+      expect(r.out, `--max-calls ${bad}`).toMatch(/must be a positive integer/);
+    }
+  });
+
+  it("runs unbounded when the flag is absent, and says nothing about a budget", () => {
+    const r = runCli(["pipeline", "BRIEF", "--stakes", "LOW"]);
+    expect(r.code).toBe(3);
+    expect(r.out).not.toMatch(/refused before dispatch|budget NOT enforced/);
+  });
 });
