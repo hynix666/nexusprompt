@@ -74,7 +74,7 @@ machine-checked entries. Read that before quoting any number from anywhere else 
 
 | Path | Purpose |
 |---|---|
-| `contracts/` | 16 versioned JSON Schemas — the sole cross-boundary interface |
+| `contracts/` | 17 versioned JSON Schemas — the sole cross-boundary interface |
 | `core/` | Pure logic: gates, stages, catalog, evaluation, statistics, routing, release. No I/O, no clock, no randomness |
 | `application/` | Owns every effect — provider, judge, store, sink, cache, budget, retry |
 | `adapters/` | Swappable implementations: provider, storage, evidence |
@@ -139,7 +139,7 @@ and says so by being its own command. It passes: 661 files re-hashed in about tw
 
 Every number quoted above is re-derived by `check:counts` from the repository, so a figure
 in this README cannot drift from the tree without failing the build. There are
-16 gates, 11 stages, 16 contracts, 195 catalog records,
+16 gates, 11 stages, 17 contracts, 195 catalog records,
 599 corpus documents and 420 frozen source files — each of those is a
 pin, not a claim.
 

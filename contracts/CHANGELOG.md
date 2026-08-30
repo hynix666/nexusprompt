@@ -193,6 +193,42 @@ schema on disk, so bumping a schema without this table is a build failure.
 
 ## 2026-08-25 (SPB defect-parity audit)
 
+---
+
+## 2026-08-30 (atomic run manifest)
+
+### `run-manifest` **1.0.0** (new) + `RevisionStore.commitManifest?` (optional port capability)
+
+A whole semantic run as one immutable, atomically published unit: the run's revisions
+plus every content ref they cite, published through a temporary file finalized with an
+exclusive `link` — never `rename`, which silently replaces an existing destination, so
+a check-then-rename window could destroy a committed manifest. `link(2)` fails with
+`EEXIST` when the destination exists, on POSIX and Windows alike, so immutability is
+enforced by the kernel rather than by a check-then-act race. `commitManifest` shares
+`append`'s per-root serialisation chain: the critical section is the DIRECTORY, and
+publication, appends, and eviction must never interleave.
+
+Three rules a reader must be able to rely on without asking the writer:
+
+- **One mode per run id.** A run is either a legacy append-only `<run_id>.json` bundle
+  or a `<run_id>.manifest.json` semantic manifest — never both. Both files under one
+  run id are an error (`mixed-lineage`), and readers must never merge the two. Legacy
+  bundles remain readable without conversion; there is no implicit migration.
+- **Immutable after publication.** No overwrite, no in-place mutation, no `markStale`
+  cascade into a committed manifest — a run that must change is re-published under a
+  new run id. `append` to a run that already has a manifest is refused (`mixed-lineage`).
+- **Metadata only.** `content_refs` is exactly the set of non-null `input_ref`/
+  `output_ref` values across revisions — no duplicates, no extras, no bodies. It is
+  the deletion sweep's live set: a ref missing from here will be reclaimed, a ref
+  present here but never cited is a leak.
+
+`commitManifest` is an OPTIONAL capability on the `RevisionStore` port (recorded here
+rather than versioned for the port half, for the same reason `markStale` was): stores
+without semantic-mode support simply don't declare it, and callers feature-detect.
+The `run-manifest` **schema** is versioned normally — its `$id` is the authority.
+
+---
+
 ### `revision-entry` **1.3.1** (patch)
 
 `parent_revision_ids` gains a description. It has existed since 1.0.0 with no description

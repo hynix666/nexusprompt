@@ -50,7 +50,7 @@ components were rejected by it.
 | Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
-| Contracts | 16 JSON Schemas, all validated against produced values |
+| Contracts | 17 JSON Schemas, all validated against produced values |
 | Adapters | 4 built (provider-local-proxy, storage-local, evidence-local, content-local) |
 | Shells | 2 built — `cli` and `api` (adopted 29 Aug, ADR-0012; typechecked and tested). 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
 | Source size | ~28,600 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/ spec/` |
@@ -84,7 +84,7 @@ sentence in this knowledge base saying *stubbed* or *never executed* stops being
 | File | Contents |
 |---|---|
 | [01-architecture.md](./01-architecture.md) | Five layers, four planes, five pipelines, `decide → invoke → reduce`, the two purity guards |
-| [02-data-models.md](./02-data-models.md) | All 16 contracts with fields, versions, and the reasoning behind the sharp ones |
+| [02-data-models.md](./02-data-models.md) | All 17 contracts with fields, versions, and the reasoning behind the sharp ones |
 | [03-apis-and-interfaces.md](./03-apis-and-interfaces.md) | Ports, CLI surface, the one external API, exit codes |
 | [04-business-logic.md](./04-business-logic.md) | Gates, stages, statistics, the release gate, routing, judge policy |
 | [05-configuration-and-deployment.md](./05-configuration-and-deployment.md) | Env vars, tsconfig, CI, `verify` composition, the corpus |
@@ -103,7 +103,7 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 
 | Path | Purpose |
 |---|---|
-| `contracts/` | 16 versioned JSON Schemas + `index.ts` TypeScript bindings. The sole cross-boundary interface |
+| `contracts/` | 17 versioned JSON Schemas + `index.ts` TypeScript bindings. The sole cross-boundary interface |
 | `contracts/CHANGELOG.md` | Why every version moved. ADR-0002 requires an entry per bump |
 | `core/src/gates/` | 16 pure gate implementations + registry |
 | `core/src/stages/` | 11 pipeline stages + `pipeline.ts` (depth plan, gate feedback) |

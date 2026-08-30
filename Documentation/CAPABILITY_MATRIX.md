@@ -32,9 +32,10 @@ enforces, so this table and that test cannot disagree.
 | `provider-failure` | 1.0.0 | validated |
 | `revision-entry` | 2.0.0 | validated |
 | `routing-policy` | 1.0.0 | validated |
+| `run-manifest` | 1.0.0 | validated |
 | `technique-record` | 1.3.0 | validated |
 
-**15 of 16** schemas are validated against a value the system produced.
+**16 of 17** schemas are validated against a value the system produced.
 
 ### Columns this table does not have
 

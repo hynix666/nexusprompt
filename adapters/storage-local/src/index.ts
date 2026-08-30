@@ -7,7 +7,7 @@
  * retained or evicted whole.
  */
 
-import { mkdir, readFile, readdir, writeFile, rename } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile, rename, link } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { rm } from "node:fs/promises";
@@ -16,6 +16,7 @@ import type {
   RevisionEntry,
   RevisionStore,
   RunBundleSummary,
+  RunManifest,
 } from "../../../contracts/index.js";
 
 const MAX_BUNDLES = 8;
@@ -81,6 +82,21 @@ async function renameWithRetry(from: string, to: string, attempts = 5): Promise<
   }
 }
 
+/**
+ * The storage MODE of a run on disk.
+ *
+ * A run is either a legacy append-only `<run_id>.json` bundle or a semantic
+ * `<run_id>.manifest.json` manifest — never both. `mixed` exists only as a
+ * defensive state for files that appeared outside this store (a run with both
+ * files is refused on read and REMOVED in both modes on eviction, never kept).
+ */
+type RunMode = "legacy" | "semantic" | "mixed";
+
+/** Internal summary that carries the mode so eviction deletes the right file. */
+interface ModeBundleSummary extends RunBundleSummary {
+  mode: RunMode;
+}
+
 export class LocalRevisionStore implements RevisionStore {
   constructor(private readonly root: string) {}
 
@@ -93,16 +109,147 @@ export class LocalRevisionStore implements RevisionStore {
     return join(this.root, `${run_id}.json`);
   }
 
+  /**
+   * The semantic manifest path, derived from the SAME validated stem as the
+   * legacy bundle: `<root>/<run_id>.manifest.json`. Composed from the run id
+   * (already validated by `bundlePath`) rather than from the suffixed legacy
+   * path, so the two names can never drift apart.
+   */
+  private manifestPath(run_id: string): string {
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(run_id)) {
+      throw new Error(`Refusing to use "${run_id}" as a run id — expected [A-Za-z0-9_-]{1,64}.`);
+    }
+    return join(this.root, `${run_id}.manifest.json`);
+  }
+
   async append(entry: RevisionEntry): Promise<void> {
     const path = this.bundlePath(entry.run_id); // validates the id before it reaches the chain
     return serialise(this.root, async () => {
       await mkdir(this.root, { recursive: true });
+      // One mode per run: a run that already has a semantic manifest can never
+      // grow a legacy bundle beside it — the two formats must never be merged.
+      if (existsSync(this.manifestPath(entry.run_id))) {
+        throw new Error(
+          `mixed-lineage: run "${entry.run_id}" already has a semantic manifest; append is refused.`,
+        );
+      }
       const bundle = existsSync(path)
         ? (JSON.parse(await readFile(path, "utf8")) as RevisionEntry[])
         : [];
       bundle.push(entry);
       await this.writeAtomic(path, JSON.stringify(bundle, null, 2));
       await this.evict();
+    });
+  }
+
+  /**
+   * Validate a manifest BEFORE anything touches disk.
+   *
+   * Checks: version pinned to 1.0.0, valid run id matching every revision,
+   * unique revision ids, non-empty revisions, unique content refs that EXACTLY
+   * cover every non-null input_ref/output_ref (no duplicates, no extras, no
+   * missing), and parseable ISO timestamps. Everything else (shape of each
+   * revision) is the contract's job, not the adapter's.
+   */
+  private validateManifest(manifest: RunManifest): void {
+    if (manifest.manifest_version !== "1.0.0") {
+      throw new Error(`invalid manifest: unsupported manifest_version "${manifest.manifest_version}".`);
+    }
+    try {
+      this.bundlePath(manifest.run_id); // runs the run-id grammar
+    } catch {
+      throw new Error(`invalid manifest: run id "${manifest.run_id}" is not a valid run id.`);
+    }
+    if (!Array.isArray(manifest.revisions) || manifest.revisions.length === 0) {
+      throw new Error("invalid manifest: revisions must be a non-empty array.");
+    }
+    if (!Number.isFinite(Date.parse(manifest.created_at)) || !Number.isFinite(Date.parse(manifest.committed_at))) {
+      throw new Error("invalid manifest: created_at/committed_at must be ISO timestamps.");
+    }
+    const ids = new Set<string>();
+    const refs = new Set<string>();
+    for (const r of manifest.revisions) {
+      if (!r || typeof r.revision_id !== "string" || r.revision_id.length === 0) {
+        throw new Error("invalid manifest: every revision needs a revision_id.");
+      }
+      if (r.run_id !== manifest.run_id) {
+        throw new Error(
+          `invalid manifest: revision "${r.revision_id}" carries run_id "${r.run_id}", expected "${manifest.run_id}".`,
+        );
+      }
+      if (ids.has(r.revision_id)) {
+        throw new Error(`invalid manifest: duplicate revision_id "${r.revision_id}".`);
+      }
+      ids.add(r.revision_id);
+      if (!Number.isFinite(Date.parse(r.timestamp))) {
+        throw new Error(`invalid manifest: revision "${r.revision_id}" has a non-ISO timestamp.`);
+      }
+      for (const ref of [r.input_ref, r.output_ref]) {
+        if (ref !== null) refs.add(ref);
+      }
+    }
+    if (!Array.isArray(manifest.content_refs)) {
+      throw new Error("invalid manifest: content_refs must be an array.");
+    }
+    const declared = new Set(manifest.content_refs);
+    if (declared.size !== manifest.content_refs.length) {
+      throw new Error("invalid manifest: content_refs contains duplicates.");
+    }
+    for (const ref of refs) {
+      if (!declared.has(ref)) {
+        throw new Error(`invalid manifest: referenced content "${ref}" is missing from content_refs.`);
+      }
+    }
+    for (const ref of declared) {
+      if (!refs.has(ref)) {
+        throw new Error(`invalid manifest: content_refs entry "${ref}" is cited by no revision.`);
+      }
+    }
+  }
+
+  /**
+   * Publish a semantic run manifest ATOMICALLY.
+   *
+   * Runs inside the same per-root chain as `append`: the critical section is the
+   * DIRECTORY (append also runs eviction, which reads every bundle), and
+   * publication has exactly the same directory-wide footprint. The mode checks
+   * happen INSIDE the chain — an append that won the race before us must be
+   * visible here, and a manifest we publish must be seen by later appends.
+   *
+   * Final publication is `link`, never `rename`: rename silently replaces an
+   * existing destination on POSIX, so check-then-rename leaves a window in which
+   * a second commitManifest destroys the first manifest. link(2) is exclusive by
+   * construction (EEXIST when the destination exists, POSIX and Windows alike),
+   * so immutability is enforced by the kernel, not by a check-then-act race.
+   */
+  async commitManifest(manifest: RunManifest): Promise<void> {
+    this.validateManifest(manifest); // before the chain: fail fast, touch nothing
+    const finalPath = this.manifestPath(manifest.run_id);
+    const legacyPath = this.bundlePath(manifest.run_id);
+    return serialise(this.root, async () => {
+      await mkdir(this.root, { recursive: true });
+      if (existsSync(legacyPath)) {
+        throw new Error(
+          `mixed-lineage: run "${manifest.run_id}" already has a legacy bundle; commitManifest is refused.`,
+        );
+      }
+      if (existsSync(finalPath)) {
+        throw new Error(
+          `immutable manifest: run "${manifest.run_id}" is already published and cannot be overwritten.`,
+        );
+      }
+      const tempPath = `${finalPath}.${randomUUID().slice(0, 8)}.tmp`;
+      await writeFile(tempPath, JSON.stringify(manifest, null, 2), { flag: "wx" });
+      try {
+        // Exclusive final publication: link fails with EEXIST if the final path
+        // appeared after the check above (e.g. another process), and — unlike
+        // rename — never replaces an existing destination on ANY platform.
+        await link(tempPath, finalPath);
+      } catch (err) {
+        await rm(tempPath, { force: true });
+        throw err;
+      }
+      await rm(tempPath, { force: true });
     });
   }
 
@@ -131,7 +278,17 @@ export class LocalRevisionStore implements RevisionStore {
 
   async getRun(run_id: string): Promise<RevisionEntry[]> {
     const path = this.bundlePath(run_id);
-    if (!existsSync(path)) return [];
+    const mPath = this.manifestPath(run_id);
+    const legacy = existsSync(path);
+    const semantic = existsSync(mPath);
+    if (legacy && semantic) {
+      throw new Error(`mixed-lineage: run "${run_id}" has both a legacy bundle and a semantic manifest.`);
+    }
+    if (semantic) {
+      const manifest = JSON.parse(await readFile(mPath, "utf8")) as RunManifest;
+      return manifest.revisions;
+    }
+    if (!legacy) return [];
     return JSON.parse(await readFile(path, "utf8")) as RevisionEntry[];
   }
 
@@ -160,7 +317,21 @@ export class LocalRevisionStore implements RevisionStore {
    * `freshness` is independent of `status` — an entry stays SUCCEEDED while becoming STALE.
    */
   async markStale(run_id: string, from_revision_id: string): Promise<void> {
-    const path = this.bundlePath(run_id);
+    // Semantic immutability first: a committed manifest can never be mutated —
+    // staling entries inside it would rewrite history. A run with BOTH files is
+    // refused outright (mixed-lineage), never silently treated as legacy.
+    const mPath = this.manifestPath(run_id);
+    const legacyPath = this.bundlePath(run_id);
+    if (existsSync(mPath) && existsSync(legacyPath)) {
+      throw new Error(`mixed-lineage: run "${run_id}" has both a legacy bundle and a semantic manifest.`);
+    }
+    if (existsSync(mPath)) {
+      throw new Error(
+        `immutable manifest: run "${run_id}" is a semantic manifest; markStale would mutate committed history.`,
+      );
+    }
+
+    const path = legacyPath;
     if (!existsSync(path)) return;
     const bundle = JSON.parse(await readFile(path, "utf8")) as RevisionEntry[];
 
@@ -201,22 +372,68 @@ export class LocalRevisionStore implements RevisionStore {
     const doomed = bundles
       .sort((a, b) => a.last_timestamp.localeCompare(b.last_timestamp))
       .slice(0, bundles.length - MAX_BUNDLES);
-    for (const b of doomed) await rm(this.bundlePath(b.run_id), { force: true });
+    for (const b of doomed) {
+      // Delete the file that matches the run's MODE. The old code always deleted
+      // the legacy path — once manifests exist that would count them toward the
+      // bound but delete a file that does not exist, silently exceeding it.
+      if (b.mode === "semantic") {
+        await rm(this.manifestPath(b.run_id), { force: true });
+      } else {
+        await rm(this.bundlePath(b.run_id), { force: true });
+      }
+      if (b.mode === "mixed") {
+        // A mixed run must never survive eviction half-deleted: remove both.
+        await rm(this.manifestPath(b.run_id), { force: true });
+        await rm(this.bundlePath(b.run_id), { force: true });
+      }
+    }
   }
 
-  private async readAll(): Promise<RunBundleSummary[]> {
+  private async readAll(): Promise<ModeBundleSummary[]> {
     if (!existsSync(this.root)) return [];
-    const files = (await readdir(this.root)).filter((f) => f.endsWith(".json"));
-    const out: RunBundleSummary[] = [];
-    for (const f of files) {
-      const entries = JSON.parse(await readFile(join(this.root, f), "utf8")) as RevisionEntry[];
-      if (!entries.length) continue;
-      out.push({
-        run_id: entries[0].run_id,
-        entries: entries.length,
-        first_timestamp: entries[0].timestamp,
-        last_timestamp: entries[entries.length - 1].timestamp,
-      });
+    const out: ModeBundleSummary[] = [];
+    const byRun = new Map<string, ModeBundleSummary>();
+    for (const f of await readdir(this.root)) {
+      // Readers ignore one temp pattern: `<final>.<uuid>.tmp` — both legacy and
+      // manifest temp files match this and are never counted or parsed.
+      if (f.includes(".tmp.")) continue;
+      let parsed: ModeBundleSummary | null = null;
+      if (f.endsWith(".manifest.json")) {
+        const manifest = JSON.parse(await readFile(join(this.root, f), "utf8")) as RunManifest;
+        const entries = manifest.revisions;
+        if (!entries.length) continue;
+        parsed = {
+          run_id: manifest.run_id,
+          entries: entries.length,
+          first_timestamp: entries[0].timestamp,
+          last_timestamp: entries[entries.length - 1].timestamp,
+          mode: "semantic",
+        };
+      } else if (f.endsWith(".json")) {
+        const entries = JSON.parse(await readFile(join(this.root, f), "utf8")) as RevisionEntry[];
+        if (!entries.length) continue;
+        parsed = {
+          run_id: entries[0].run_id,
+          entries: entries.length,
+          first_timestamp: entries[0].timestamp,
+          last_timestamp: entries[entries.length - 1].timestamp,
+          mode: "legacy",
+        };
+      }
+      if (!parsed) continue;
+      // A run with BOTH files on disk (outside corruption — this store refuses
+      // to create that state) collapses into ONE mixed summary: listed once,
+      // and eviction removes both files rather than retaining either half.
+      const existing = byRun.get(parsed.run_id);
+      if (existing) {
+        existing.mode = "mixed";
+        existing.entries += parsed.entries;
+        existing.first_timestamp = [existing.first_timestamp, parsed.first_timestamp].sort()[0];
+        existing.last_timestamp = [existing.last_timestamp, parsed.last_timestamp].sort()[1];
+      } else {
+        byRun.set(parsed.run_id, parsed);
+        out.push(parsed);
+      }
     }
     return out;
   }

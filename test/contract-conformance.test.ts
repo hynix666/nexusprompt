@@ -75,6 +75,7 @@ const validators: Record<string, ValidateFunction> = {
   "pipeline-outcome": ajv.compile(load("pipeline-outcome")),
   "provider-failure": ajv.compile(load("provider-failure")),
   "revision-entry": ajv.compile(load("revision-entry")),
+  "run-manifest": ajv.compile(load("run-manifest")),
   "observability-event": ajv.compile(load("observability-event")),
   "technique-record": ajv.compile(load("technique-record")),
   "configuration": ajv.compile(load("configuration")),
@@ -296,6 +297,87 @@ describe("revision-entry", () => {
     expect(validators["revision-entry"]({ ...revision, input_ref: `npx:stage-input:${H}:elsewhere` })).toBe(false);
     expect(validators["revision-entry"]({ ...revision, input_ref: "../../etc/passwd" })).toBe(false);
   });
+});
+
+describe("run-manifest", () => {
+  /**
+   * Bouwt een manifest rond een of meer echte revisies. De content_refs worden
+   * afgeleid zoals de adapter dat doet: precies de niet-null refs van de
+   * revisies, ontdubbeld.
+   */
+  const manifestFrom = (revisions: RevisionEntry[], run_id = "run-manifest") => ({
+    manifest_version: "1.0.0" as const,
+    run_id,
+    created_at: "2026-08-30T12:00:00.000Z",
+    committed_at: "2026-08-30T12:01:00.000Z",
+    revisions,
+    content_refs: [
+      ...new Set(
+        revisions.flatMap((r) => [r.input_ref, r.output_ref]).filter((v): v is string => v !== null),
+      ),
+    ],
+  });
+
+  // Lazy on purpose: `withRefs` derives from the revision produced in beforeAll,
+  // so it must be computed inside each test, not at describe-collection time —
+  // spreading `revision` at collection time would spread `undefined`.
+  const withRefs = () => ({
+    ...revision,
+    input_ref: `npx:stage-input:${"a".repeat(64)}:local-bundle`,
+    output_ref: `npx:stage-output:${"a".repeat(64)}:local-bundle`,
+  });
+
+  it("validates a complete immutable run manifest", () => {
+    const r2 = { ...withRefs(), revision_id: "rev-2" };
+    expect(report(validators["run-manifest"], manifestFrom([withRefs(), r2]))).toBe(true);
+  });
+
+  it("accepts a manifest whose revisions retained nothing (leeg is de eerlijke staat)", () => {
+    expect(report(validators["run-manifest"], manifestFrom([revision]))).toBe(true);
+  });
+
+  it("rejects duplicate content refs", () => {
+    const m = manifestFrom([withRefs()]);
+    expect(validators["run-manifest"]({ ...m, content_refs: [m.content_refs[0], m.content_refs[0]] })).toBe(false);
+  });
+
+  it("rejects a content ref outside the ref grammar", () => {
+    const m = manifestFrom([withRefs()]);
+    expect(validators["run-manifest"]({ ...m, content_refs: ["../../etc/passwd"] })).toBe(false);
+  });
+
+  it("rejects an unknown manifest version", () => {
+    const m = manifestFrom([withRefs()]);
+    expect(validators["run-manifest"]({ ...m, manifest_version: "2.0.0" })).toBe(false);
+  });
+
+  it("rejects an empty revisions array", () => {
+    const m = manifestFrom([withRefs()]);
+    expect(validators["run-manifest"]({ ...m, revisions: [] })).toBe(false);
+  });
+
+  it("rejects a manifest missing a required field", () => {
+    const m = manifestFrom([withRefs()]);
+    const { committed_at, ...without } = m;
+    expect(validators["run-manifest"](without)).toBe(false);
+  });
+
+  it("rejects a non date-time timestamp", () => {
+    const m = manifestFrom([withRefs()]);
+    expect(validators["run-manifest"]({ ...m, committed_at: "last Tuesday" })).toBe(false);
+  });
+
+  it("rejects an extra field — the contract is closed", () => {
+    const m = manifestFrom([withRefs()]);
+    expect(validators["run-manifest"]({ ...m, invented: "x" })).toBe(false);
+  });
+
+  /**
+   * Dat elke revision tot hetzelfde run_id behoort kan een JSON-schema niet
+   * cross-valideren; die regel geldt op de opslaggrens (Task 2 van het plan:
+   * `commitManifest` weigert een manifest waarvan een revision een ander
+   * run_id draagt).
+   */
 });
 
 describe("observability-event", () => {

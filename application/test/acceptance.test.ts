@@ -169,6 +169,91 @@ describe("acceptance: provider unreachable", () => {
   });
 });
 
+/* ── run manifests: legacy readability + semantic mode ──────────────────── */
+
+/**
+ * Integration coverage on the real adapter: legacy bundles stay readable, a
+ * semantic manifest publishes atomically and reads back, and the two modes
+ * never mix under one run id.
+ */
+describe("run manifests: legacy readability and semantic mode", () => {
+  const H = "a".repeat(64);
+  const mkEntry = (runId: string, revId: string) => ({
+    revision_id: revId, run_id: runId, stage_id: "compile" as const,
+    parent_revision_ids: [], timestamp: new Date(1_760_000_000_000).toISOString(),
+    stage_attempt: 1, input_hash: H, output_hash: H,
+    input_ref: `npx:stage-input:${H}:local-bundle`,
+    output_ref: `npx:stage-output:${H}:local-bundle`,
+    gate_results: [], freshness: "FRESH" as const, status: "SUCCEEDED" as const,
+    provider_used: null,
+    execution_provenance: { core_build_hash: "t", contract_versions: {}, provider_model_fingerprint: null, config_fingerprint: null },
+    retention_scope: "LOCAL_BUNDLE" as const,
+  });
+  const mkManifest = (runId: string) => ({
+    manifest_version: "1.0.0" as const,
+    run_id: runId,
+    created_at: "2026-08-30T12:00:00.000Z",
+    committed_at: "2026-08-30T12:01:00.000Z",
+    revisions: [mkEntry(runId, "m1"), mkEntry(runId, "m2")],
+    content_refs: [
+      `npx:stage-input:${H}:local-bundle`,
+      `npx:stage-output:${H}:local-bundle`,
+    ],
+  });
+
+  it("keeps legacy bundles readable without conversion", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnx-mf-"));
+    const store = new LocalRevisionStore(root);
+    await store.append(mkEntry("legacy-run", "l1"));
+    await store.append(mkEntry("legacy-run", "l2"));
+
+    const entries = await store.getRun("legacy-run");
+    expect(entries).toHaveLength(2);
+    expect(entries.map((e) => e.revision_id)).toEqual(["l1", "l2"]);
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("publishes a semantic manifest and reads back its revisions", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnx-mf-"));
+    const store = new LocalRevisionStore(root);
+    await store.commitManifest!(mkManifest("semantic-run"));
+
+    const entries = await store.getRun("semantic-run");
+    expect(entries).toHaveLength(2);
+    expect(entries.map((e) => e.revision_id)).toEqual(["m1", "m2"]);
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("refuses append to a run that already has a semantic manifest", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnx-mf-"));
+    const store = new LocalRevisionStore(root);
+    await store.commitManifest!(mkManifest("semantic-run"));
+    await expect(store.append(mkEntry("semantic-run", "late"))).rejects.toThrow(/mixed-lineage/i);
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("refuses commitManifest for a run that already has a legacy bundle", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnx-mf-"));
+    const store = new LocalRevisionStore(root);
+    await store.append(mkEntry("legacy-run", "l1"));
+    await expect(store.commitManifest!(mkManifest("legacy-run"))).rejects.toThrow(/mixed-lineage/i);
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("refuses overwriting an already published manifest", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnx-mf-"));
+    const store = new LocalRevisionStore(root);
+    await store.commitManifest!(mkManifest("semantic-run"));
+    await expect(store.commitManifest!(mkManifest("semantic-run"))).rejects.toThrow(/immutable/i);
+
+    await rm(root, { recursive: true, force: true });
+  });
+});
+
 describe("acceptance: provider reachable", () => {
   it("returns model output, status SUCCEEDED, demo_mode false", async () => {
     const { orchestrator, command, store, root } = await harness(
@@ -218,6 +303,7 @@ describe("acceptance: provider reachable", () => {
   });
 });
 
+
 /* ── contract conformance ────────────────────────────────────────────────── */
 
 describe("PipelineOutcome conforms to its schema", () => {
@@ -242,6 +328,7 @@ describe("PipelineOutcome conforms to its schema", () => {
     await rm(root, { recursive: true, force: true });
   });
 });
+
 
 /* ── run-bundle retention ────────────────────────────────────────────────── */
 
@@ -301,6 +388,7 @@ describe("storage-local retains whole run bundles", () => {
     await rm(root, { recursive: true, force: true });
   });
 });
+
 
 /* ── the staleness cascade ───────────────────────────────────────────────── */
 
@@ -433,3 +521,4 @@ describe("markStale cascades along lineage, not append order", () => {
     await rm(root, { recursive: true, force: true });
   });
 });
+
