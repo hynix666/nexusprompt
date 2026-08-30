@@ -19,6 +19,7 @@ import {
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { admitRun, plannedPipelineCalls, type Budget } from "../../core/src/eval/budget.js";
 import { invokeWithRetry } from "./invoke.js";
+import { redactingSink } from "./redaction.js";
 import type {
   EventSink, ExecutionProvenance, GenerationResult, PipelineCommand, ProviderFailure,
   ProviderTransport, RevisionEntry, RevisionStore, StageId, GateResult, ObservabilityEvent, EventType,
@@ -146,6 +147,21 @@ export async function runPipeline(
     ...(command.context ?? {}),
   };
 
+  /**
+   * Every event this run emits passes the redaction check first.
+   *
+   * The claim that "the sink enforces redaction structurally, not as a convention for call
+   * sites" described `observability/sink.ts`, which does not exist — so it WAS a convention,
+   * and sweep fourteen found it broken on the error path. Wrapping here makes the check
+   * unavoidable for every `emit` below, including ones added later by someone who never read
+   * this comment, which is the only version of "structural" worth the word.
+   *
+   * The bodies are read through a callback because `ctx.prompt` is rewritten as stages run; a
+   * snapshot would stop covering the artifact halfway through the run.
+   */
+  const sink = redactingSink(opts.sink, () => [ctx.brief, ctx.prompt, ctx.spec, ctx.critique]
+    .filter((b): b is string => typeof b === "string"));
+
   const stages: StageRecord[] = [];
   const revision_ids: string[] = [];
   let anyDemo = false;
@@ -165,7 +181,7 @@ export async function runPipeline(
     event_type: EventType,
     detail: Partial<Omit<ObservabilityEvent, "event_id" | "event_type" | "run_id" | "timestamp" | "layer" | "schema_version">> = {},
   ) =>
-    opts.sink.emit({
+    sink.emit({
       event_id: randomUUID(),
       event_type,
       run_id,
@@ -286,7 +302,16 @@ export async function runPipeline(
      */
     const failStage = async (err: unknown): Promise<void> => {
       anyFailed = true;
-      const message = err instanceof Error ? err.message : String(err);
+      /**
+       * The error's TYPE, never its message.
+       *
+       * `err.message` is whatever produced the error, and sweep fourteen showed what that
+       * means: a provider adapter throwing a parse error that quoted its payload put the
+       * prompt body into four `DEGRADE` events. A name is bounded and says as much as an
+       * operator needs to route the failure; the message belongs in a log the operator owns,
+       * not in the event spine that promises to carry hashes only.
+       */
+      const message = err instanceof Error ? err.name : "UnknownError";
       const revision = buildRevision({
         run_id, stage_id: stage.id, inputHash,
         outputText: "", status: "FAILED", provider: null, gate_results: [],
@@ -453,7 +478,8 @@ export async function runPipeline(
       emit("DEGRADE", {
         component: `application/pipeline`,
         failure_code: "content_retention_failed",
-        verdict: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+        // Type, not message — see the note on `failStage`.
+        verdict: err instanceof Error ? err.name : "UnknownError",
       });
     }
 
@@ -548,7 +574,8 @@ export async function runPipeline(
       emit("DEGRADE", {
         component: "application/pipeline",
         failure_code: "content_sweep_failed",
-        verdict: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+        // Type, not message — see the note on `failStage`.
+        verdict: err instanceof Error ? err.name : "UnknownError",
       });
     }
   }

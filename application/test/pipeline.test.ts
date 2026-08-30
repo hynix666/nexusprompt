@@ -935,3 +935,68 @@ describe("content retention — refs name bytes that are actually there", () => 
     expect(entries.every((e) => e.input_ref === null && e.output_ref === null)).toBe(true);
   });
 });
+
+/**
+ * Sweep fourteen — an error message must not carry the brief into the event stream.
+ *
+ * `failStage` forwarded `err.message` into `DEGRADE.verdict`. A provider adapter that throws a
+ * parse error quoting its payload therefore put the prompt body into four events, against
+ * `PRIVACY_AND_SECURITY.md`'s first claim. Two layers stop it now, and this exercises both
+ * through the real runner: the call site forwards the error's TYPE, and `redactingSink` catches
+ * anything that still carries a body.
+ */
+describe("no prompt body reaches the event stream", () => {
+  const BRIEF = "A support assistant answering enterprise billing questions, confidentially.";
+
+  class QuotingProvider implements ProviderTransport {
+    readonly provider_id = "quoting";
+    async generate(): Promise<GenerationResult> {
+      // What a real adapter does when it echoes the payload it failed on.
+      throw new Error(`upstream rejected payload: ${BRIEF}`);
+    }
+    async healthCheck() {
+      return { ok: true, checked_at: "1970-01-01T00:00:00.000Z", latency_ms: 0,
+               degradation_state: "NONE" as const, failing_dependency: null };
+    }
+  }
+
+  it("a throwing adapter that quotes the brief leaks nothing, and the run survives", async () => {
+    const events: ObservabilityEvent[] = [];
+    const result = await runPipeline(
+      { ...command({ run_id: "redact-1" }), input: { brief: BRIEF },
+        context: { depth: "TINY", stakes: "LOW" } },
+      { provider: new QuotingProvider(), store: new BundleStore(),
+        sink: { emit: (e) => events.push(e) }, now: () => new Date(1_760_000_000_000),
+        sleep: async () => {}, maxAttempts: 1, coreBuildHash: "test" },
+    );
+
+    // The stage failed, so the path under test was actually reached.
+    expect(events.some((e) => e.event_type === "DEGRADE")).toBe(true);
+    // And the run still produced a result rather than dying of a logging concern.
+    expect(result.stages.length).toBeGreaterThan(0);
+
+    for (const e of events) {
+      for (const [field, value] of Object.entries(e)) {
+        if (typeof value !== "string") continue;
+        expect(value.includes(BRIEF.slice(0, 40)), `${e.event_type}.${field} carried the brief`).toBe(false);
+      }
+    }
+  });
+
+  it("a normal run emits events and none of them carry the brief or the output", async () => {
+    // The must-not-fire half at the integration level: redaction must not be achieved by
+    // emitting nothing.
+    const events: ObservabilityEvent[] = [];
+    await runPipeline(
+      { ...command({ run_id: "redact-2" }), input: { brief: BRIEF },
+        context: { depth: "TINY", stakes: "LOW" } },
+      { ...opts(new ScriptedProvider(), new BundleStore()), sink: { emit: (e) => events.push(e) } },
+    );
+    expect(events.length).toBeGreaterThan(5);
+    for (const e of events) {
+      for (const value of Object.values(e)) {
+        if (typeof value === "string") expect(value).not.toContain(BRIEF.slice(0, 40));
+      }
+    }
+  });
+});

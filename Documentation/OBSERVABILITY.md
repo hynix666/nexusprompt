@@ -22,7 +22,18 @@ The authoritative definition is the `ObservabilityEvent` schema in [`CONTRACTS.m
 
 An earlier revision of this document specified a seven-field event carrying only `run_id`, `contract_id`, hashes, `verdict`, `timestamp`, and `layer`. That shape could not express the degrade/recover events, retry history, or causal ordering this same document claims — the fields above exist specifically to close that gap.
 
-No field carries prompt body content — only hashes. This is enforced in `observability/sink.ts` itself (a redaction check runs before any event is written), not left as a convention for call sites to honor. The sink rejects, rather than truncates, any payload containing a body.
+No field carries prompt body content — only hashes.
+
+**Corrected 29 August 2026 (sweep fourteen).** This paragraph named `observability/sink.ts` as the enforcement point. That module has never existed, no sink module has ever been tracked, and every sink in the repository is an inline lambda — so the property *was* the "convention for call sites to honor" the sentence disowned, and the convention was broken: `failStage` copied `err.message` into `DEGRADE.verdict`, so a provider adapter throwing a parse error that quotes its payload put the brief into four events. Measured, not inferred.
+
+Two layers now, and the reason there are two is that the first is exactly the per-call-site discipline the old claim was wrong to assume:
+
+1. **Call sites forward an error's TYPE, never its message.** A name is bounded and routes a failure as well as a message does; the message belongs in an operator's own log, not in the spine that promises hashes only.
+2. **`application/src/redaction.ts` wraps the sink** and no `emit` can bypass it. It compares every string field against the bodies the run is holding — brief, spec, prompt, critique — and replaces any field sharing a 32-character verbatim run with a marker containing none of it.
+
+**What that check can and cannot decide.** "Does this string contain a prompt body?" is not decidable in general, and a checker claiming otherwise would repeat the overreach this correction exists to fix. What is decidable is whether a field shares a long verbatim run with a body *this run holds*. So it catches a body copied, sliced or embedded — a truncated body is still a body, which is why the window sits below the 200-character slice `failStage` used. It does not catch a paraphrase, a body from another run, or a body shorter than the window, because lowering the threshold makes ordinary English collide.
+
+**It substitutes rather than throws.** The earlier wording said the sink "rejects, rather than truncates". Rejecting the *payload* is right and still holds: no body reaches the sink. Rejecting by throwing was not — `failStage` emits from inside a catch, so a quoted brief turned a gracefully degrading run into an aborted one, losing the artifact to a logging concern. A privacy control should fail closed on the body, not on availability.
 
 ## Fingerprint and retention policy
 
