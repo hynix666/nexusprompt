@@ -45,6 +45,7 @@
  *      unreadable.
  */
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -52,7 +53,9 @@ import { listGates, SOURCE_GATE_COUNT } from "../core/src/gates/registry.js";
 import { floorDiscordant } from "../core/src/eval/sizing.js";
 import { observe } from "./check-fingerprint.mjs";
 import { isArtifactPath, computeBuildHash } from "./build-hash.mjs";
-import { implausibleKeyReason } from "./run-eval.js";
+// Moved out of `scripts/run-eval.ts` with the rest of the live-run preconditions when
+// `--dry-run` gave them a second caller. Same predicate, same probe.
+import { implausibleKeyReason } from "../core/src/eval/preflight.js";
 
 const SPEC = "spec/truth-boundary.json";
 const OUT = "Documentation/TRUTH_BOUNDARY.md";
@@ -119,18 +122,54 @@ export const PROBES: Record<string, Probe> = {
       // placeholder that is still sitting in the user environment.
       placeholder_key_refused: implausibleKeyReason("<your key>") !== null,
       real_shaped_key_accepted: implausibleKeyReason("sk-ant-api03-" + "x".repeat(64)) === null,
-      // Derived from the source, not by running the command, and the reason is worth stating.
-      // A behavioural probe would have to invoke `--live` with a key — and if the guard it
-      // tests were ever removed, the probe ITSELF would dispatch the run. A check that
-      // generates network traffic exactly when it fails is worse than one that reads a line.
-      // `--max-calls 0` is not a safe substitute either: flag validation rejects it before the
-      // budget path is reached. Verified behaviourally once, by hand, 29 August 2026: a
-      // well-shaped key with no `--max-calls` exits 2 with "no budget declared", no call made.
-      // Unreadable source reads as NOT verified, never as fine. Same rule the fingerprint
-      // watch applies to a null fingerprint: absence of evidence is recorded as absence.
+      /**
+       * Behavioural now, and `--dry-run` is what made that safe.
+       *
+       * This used to grep `run-eval.ts` for `/LIVE && MAX_CALLS === undefined/`, with a
+       * comment explaining that a behavioural probe was too dangerous: it would have to
+       * invoke `--live` with a key, and if the guard it tests were ever removed the probe
+       * ITSELF would dispatch the run. A check that generates network traffic exactly when
+       * it fails is worse than one that reads a line. That reasoning was correct.
+       *
+       * It stopped being correct when `--dry-run` landed. `if (DRY_RUN) return 0;` sits above
+       * the line that constructs a provider, so the probe can now exercise the real decision
+       * path and still be structurally incapable of dispatching — including in the failure
+       * case, which is the property the source grep was substituting for.
+       *
+       * The grep also demonstrated its own weakness on the way out: moving the decision into
+       * `core/src/eval/preflight.ts` reported the guarantee as BROKEN when it was intact, and
+       * only a by-hand behavioural check distinguished "the guard is gone" from "the line
+       * moved". A probe that fails on a refactor is a probe that gets edited to pass.
+       *
+       * The source check survives as a PRECONDITION rather than the measurement: if the
+       * early return is missing, this returns false without spawning anything, because that
+       * is exactly the state in which spawning would be unsafe. Unreadable source reads as
+       * NOT verified, never as fine.
+       */
       live_requires_declared_budget: (() => {
         try {
-          return /LIVE && MAX_CALLS === undefined/.test(readText(root, "scripts/run-eval.ts"));
+          const src = readText(root, "scripts/run-eval.ts");
+          if (!/if \(DRY_RUN\) return 0;/.test(src)) return false;
+
+          const r = spawnSync(
+            process.execPath,
+            [
+              join(root, "node_modules/tsx/dist/cli.mjs"),
+              join(root, "scripts/run-eval.ts"),
+              "--live", "--dry-run",
+            ],
+            {
+              cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+              // Key-shaped, obviously not a key. Long enough to clear the plausibility floor
+              // so the run reaches the BUDGET check, which is the thing under test.
+              env: {
+                ...process.env,
+                ANTHROPIC_API_KEY: `sk-ant-api03-NOT-A-REAL-KEY-truth-probe-${"x".repeat(40)}`,
+              },
+            },
+          );
+          const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+          return r.status === 2 && /no budget declared/.test(out);
         } catch {
           return false;
         }
