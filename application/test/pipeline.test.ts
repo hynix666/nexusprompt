@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -920,6 +920,36 @@ describe("content retention — refs name bytes that are actually there", () => 
         }
       }
     }
+  });
+
+  it("does not reclaim when the store cannot account for what this run retained", async () => {
+    /**
+     * Sweep fifteen. The guard read the run back from the store and required its refs to appear
+     * in the live set — and `[].every()` is TRUE, so a bundle that was empty, lost or corrupted
+     * reported the enumeration as trustworthy and the sweep reclaimed everything. Measured: a
+     * bundle wrecked by concurrent appends left 0 surviving revisions and all 12 retained
+     * bodies were then deleted.
+     *
+     * A store that forgets everything is the sharpest version of that, and the run must still
+     * refuse to reclaim, because it KNOWS what it wrote regardless of what the store admits.
+     */
+    class ForgetfulStore extends BundleStore {
+      override async getRun() { return []; }
+      override async listRecent() { return []; }
+    }
+    const content = new LocalContentStore(mkContentRoot());
+    const store = new ForgetfulStore();
+
+    await runPipeline(
+      { ...command({ run_id: "forget-1" }), context: { depth: "TINY", stakes: "LOW" } },
+      { ...opts(new ScriptedProvider(), store), content },
+    );
+
+    // The run retained content; the store denies holding any of it. Nothing may be reclaimed.
+    const shards = readdirSync(contentRoots[contentRoots.length - 1]!, { withFileTypes: true })
+      .filter((d) => d.isDirectory());
+    const files = shards.flatMap((d) => readdirSync(join(contentRoots[contentRoots.length - 1]!, d.name)));
+    expect(files.length, "content was reclaimed despite an unaccountable store").toBeGreaterThan(0);
   });
 
   it("records null rather than a fabricated ref when no store is wired", async () => {

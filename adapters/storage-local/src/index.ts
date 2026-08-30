@@ -7,10 +7,11 @@
  * retained or evicted whole.
  */
 
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import type {
   RevisionEntry,
   RevisionStore,
@@ -18,6 +19,67 @@ import type {
 } from "../../../contracts/index.js";
 
 const MAX_BUNDLES = 8;
+
+/**
+ * One promise chain per run id, so appends to the same bundle cannot interleave.
+ *
+ * `append` is read → parse → push → write. Sweep fifteen measured what that costs without
+ * serialisation: **two** concurrent appends kept one entry and silently dropped the other;
+ * eleven kept three; thirty kept two. Revisions vanished with no error anywhere, and once
+ * content retention landed those revisions took their bodies with them — the reclaim saw
+ * nothing pointing at them and deleted the lot.
+ *
+ * This is a per-process guard and says so. It makes the API safe for concurrent callers in one
+ * process, which is what `RevisionStore` promises to anyone holding one. It does NOT make two
+ * OS processes sharing a directory safe — that needs a lock file or a real database, and
+ * `storage-db` is where that belongs. The atomic write below is what keeps the cross-process
+ * case from producing a CORRUPT bundle rather than merely a lost entry.
+ */
+const chains = new Map<string, Promise<unknown>>();
+
+/**
+ * The critical section is the DIRECTORY, not one bundle.
+ *
+ * Keying the chain on the bundle path was the obvious choice and it was wrong: `append` mutates
+ * one file, but it also calls `evict`, which reads EVERY bundle and deletes the oldest. So two
+ * appends to different runs still collide — and on Windows they collide loudly, because
+ * `rename` over a file another handle has open fails with `EPERM`. Measured: per-path
+ * serialisation turned 0 thrown appends into 7, all `EPERM: operation not permitted, rename`,
+ * while a reader in `readAll` held the target open.
+ *
+ * Keying on the root serialises every append to one store within this process. That is the
+ * correct scope for a store whose write path spans the directory, and it costs nothing here:
+ * the pipeline awaits each append anyway, and the store is bounded to eight bundles.
+ */
+
+const serialise = <T>(key: string, work: () => Promise<T>): Promise<T> => {
+  const prior = chains.get(key) ?? Promise.resolve();
+  // `.catch` so one failed append does not poison every later one on the same run.
+  const next = prior.catch(() => {}).then(work);
+  chains.set(key, next.catch(() => {}));
+  return next;
+};
+
+/**
+ * `rename` over an existing file, retried briefly.
+ *
+ * On Windows a rename onto a path another handle has open fails with `EPERM`/`EBUSY` — a
+ * reader in another PROCESS, or an antivirus scanner, is enough. The in-process chain removes
+ * the cause this repository can control; this covers the one it cannot. Bounded and short: if
+ * a handle is still held after these attempts the error is real and gets thrown, because a
+ * silent give-up would leave the temp file and lose the write.
+ */
+async function renameWithRetry(from: string, to: string, attempts = 5): Promise<void> {
+  for (let i = 1; ; i++) {
+    try {
+      return await rename(from, to);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (i >= attempts || (code !== "EPERM" && code !== "EBUSY" && code !== "EACCES")) throw err;
+      await new Promise((r) => setTimeout(r, i * 10));
+    }
+  }
+}
 
 export class LocalRevisionStore implements RevisionStore {
   constructor(private readonly root: string) {}
@@ -32,14 +94,39 @@ export class LocalRevisionStore implements RevisionStore {
   }
 
   async append(entry: RevisionEntry): Promise<void> {
-    await mkdir(this.root, { recursive: true });
-    const path = this.bundlePath(entry.run_id);
-    const bundle = existsSync(path)
-      ? (JSON.parse(await readFile(path, "utf8")) as RevisionEntry[])
-      : [];
-    bundle.push(entry);
-    await writeFile(path, JSON.stringify(bundle, null, 2));
-    await this.evict();
+    const path = this.bundlePath(entry.run_id); // validates the id before it reaches the chain
+    return serialise(this.root, async () => {
+      await mkdir(this.root, { recursive: true });
+      const bundle = existsSync(path)
+        ? (JSON.parse(await readFile(path, "utf8")) as RevisionEntry[])
+        : [];
+      bundle.push(entry);
+      await this.writeAtomic(path, JSON.stringify(bundle, null, 2));
+      await this.evict();
+    });
+  }
+
+  /**
+   * Write to a temporary name, then rename over the target.
+   *
+   * `writeFile` truncates and then writes, so a concurrent reader can observe an empty or
+   * half-written file — sweep fifteen saw `SyntaxError: Unexpected end of JSON input` thrown
+   * out of `append` itself, and a `getRun` racing a write would fail the same way. `rename`
+   * within one directory is atomic, so a reader sees either the old bundle or the new one and
+   * never a partial one. That property holds across processes, which the in-process chain
+   * above cannot give.
+   *
+   * The temp name carries a uuid so two writers cannot collide on it.
+   */
+  private async writeAtomic(path: string, contents: string): Promise<void> {
+    const tmp = `${path}.${randomUUID().slice(0, 8)}.tmp`;
+    await writeFile(tmp, contents);
+    try {
+      await renameWithRetry(tmp, path);
+    } catch (err) {
+      await rm(tmp, { force: true });
+      throw err;
+    }
   }
 
   async getRun(run_id: string): Promise<RevisionEntry[]> {
