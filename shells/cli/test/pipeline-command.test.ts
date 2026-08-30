@@ -228,3 +228,39 @@ describe("nexusprompt pipeline — flags before the file", () => {
     expect(r.out).toMatch(/nexusprompt — usage/);
   });
 });
+
+/**
+ * The checker that watches for model swaps must read the directory the CLI writes.
+ *
+ * It did not. `check-fingerprint.mjs` had `const RUNS = ".promptnexus/runs"` — the
+ * pre-ADR-0009 name — while `composePipeline` writes `.nexusprompt/runs`. So the watch read
+ * a directory the product stopped using, counted one stale bundle left over from before the
+ * rename, and reported "not armed" no matter how many runs happened. Its own remedy said to
+ * "run the pipeline once to write a bundle to .promptnexus/runs", naming a command that
+ * writes somewhere else.
+ *
+ * Nothing caught it because both halves were hard-coded and neither was asked about the
+ * other — `bundleOf` above has read the right directory the whole time, in this same file.
+ *
+ * Driven end to end and DEGRADED on purpose: a keyless run persists revisions with null
+ * fingerprints, which is enough to prove the two agree about where bundles live without
+ * needing a model, a daemon or a key.
+ */
+describe("check:fingerprint reads what the CLI writes", () => {
+  it("observes a bundle the CLI just persisted", async () => {
+    const { code, cwd } = runCli(["pipeline", "BRIEF", "--stakes", "LOW"]);
+    expect(code).toBe(3);  // degraded, which is the honest outcome with no provider
+
+    const { observe } = await import("../../../scripts/check-fingerprint.mjs");
+    const seen = observe(cwd);
+
+    // Entries found — the directories agree. This is the assertion the bug broke: before
+    // the fix `observe` looked under `.promptnexus/` and found nothing here at all.
+    expect(seen.entries).toBeGreaterThan(0);
+
+    // And every one is UNAVAILABLE rather than an observation, because no model answered.
+    // A null fingerprint must never be counted as agreement about which model is live.
+    expect(seen.unavailable).toBe(seen.entries);
+    expect(seen.observations).toEqual([]);
+  });
+});
