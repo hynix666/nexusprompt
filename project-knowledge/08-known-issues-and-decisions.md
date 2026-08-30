@@ -280,6 +280,7 @@ reads as enforced and is not, which is strictly worse than an absent one:
 | `input_ref` / `output_ref` | `buildRevision` took ref arguments no call site supplied, and no composition root built a `ContentStore` |
 | `admitRun` on the SINGLE-STAGE path | `Orchestrator.run` dispatched three times and admitted zero, with no `budget` option a caller could supply (sweep twelve) |
 | `delete(run_id, confirmation)` | named in `PRIVACY_AND_SECURITY.md` with a signature and a confirmation flow; exists in no port and no adapter (sweep thirteen) |
+| the observability redaction check | `OBSERVABILITY.md` named `observability/sink.ts` as the enforcement point. That directory has never existed and no sink module was ever tracked, so the guarantee was the per-call convention the sentence disowned — and it was broken on the error path (sweep fourteen) |
 
 ### The sibling: enforced, but in the wrong place
 
@@ -387,3 +388,5 @@ Eight occurrences. See `06-testing-and-quality.md`.
 | **A push does not reliably trigger a CI run here** | More than once the newest commit had no run at all while `gh pr checks` showed the previous head's result. `gh workflow run verify.yml --ref <branch>` and then match the run's `headSha` |
 | **Adding a workspace without `npm install`** | `adapters/content-local/package.json` matched the `adapters/*` glob but was absent from the lock file. `npm install` repairs that quietly; **`npm ci` refuses outright**, so every local command stayed green while CI could not install the project at all |
 | Clearing `node_modules` on Windows | Workspace links are directory junctions and a recursive delete traverses them into the real source directories. It deleted 107 tracked files once. Recoverable only because they were committed |
+| **Running a derived check before staging a new file** | `build:hash`, `check:truth` and most checkers here derive their file list from `git ls-files`, which does not list untracked files. A new file is therefore invisible exactly once — on the run before you stage it — and the local check passes on a number that is right about nothing. Stage, then check |
+| **A stale PR head is not merely a hazard to your own merges** | Twice now GitHub's PR object lagged `origin/<branch>` and a merge dropped the newer commit. The second time the API disagreed for over five minutes and something else merged it before the refresh. When `headRefOid` disagrees with `git rev-parse origin/<branch>`, the PR is unsafe for ANYONE to merge; close and reopen forces the refresh |

@@ -194,9 +194,33 @@ artifact is a new artifact. Three distinctions carry it:
 
 ## Observability
 
-`ObservabilityEvent` carries **keyed hashes only**. The sink *rejects* rather than truncates
-if a prompt body appears. Fingerprints are keyed because bare digests of short prompts are
-correlatable.
+`ObservabilityEvent` carries **hashes only**. Fingerprints are meant to be keyed because bare
+digests of short prompts are correlatable.
+
+**Corrected by sweep fourteen.** This paragraph used to say "the sink *rejects* rather than
+truncates if a prompt body appears", following `OBSERVABILITY.md`, which named
+`observability/sink.ts` as the enforcement point. That directory has never existed and no sink
+module was ever tracked — every sink is an inline lambda — so the property was a per-call
+convention, and the convention was broken: `failStage` copied `err.message` into
+`DEGRADE.verdict`, so an adapter throwing a parse error that quoted its payload put the brief
+into four events.
+
+Two layers now, because the first is the discipline the old claim disowned:
+
+- **Call sites forward an error's TYPE, never its message.** Bounded, and it routes a failure as
+  well as a message does.
+- **`application/src/redaction.ts` wraps the sink**, so no `emit` can bypass it. Every string
+  field is compared against the bodies the run holds; one sharing a 32-character verbatim run is
+  replaced by a marker containing none of it. The window sits *below* the 200-character slice
+  `failStage` used — a truncated body is still a body.
+
+It **substitutes rather than throws**, which is a deliberate departure from the old wording.
+Rejecting the payload is right and still holds; rejecting by throwing killed the run, because
+`failStage` emits from inside a catch — a quoted brief turned a gracefully degrading run into an
+aborted one, losing the artifact to a logging concern. Fail closed on the body, not availability.
+
+The guarantee is bounded and says so: it catches a body copied, sliced or embedded from *this*
+run, not a paraphrase, a body from another run, or one shorter than the window.
 
 > Known gap: keyed fingerprints are documented; the code still uses bare `sha256`. See
 > `08-known-issues-and-decisions.md`.
