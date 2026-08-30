@@ -25,6 +25,7 @@ import type {
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { invokeWithRetry as sharedInvoke } from "./invoke.js";
 import { decide, reduce } from "../../core/src/stages/compile.js";
+import { admitRun, type Budget } from "../../core/src/eval/budget.js";
 
 export interface OrchestratorOptions {
   provider: ProviderTransport;
@@ -32,6 +33,11 @@ export interface OrchestratorOptions {
   sink: EventSink;
   /** Attempts including the first. Retries only ever happen on retriable failures. */
   maxAttempts?: number;
+  /**
+   * What this single-stage run may spend. Absent means no budget was declared, which
+   * `admitRun` admits — the same rule the pipeline and evaluation paths follow.
+   */
+  budget?: Budget | null;
   /** Injected so tests need no wall clock and no sleeping. */
   now?: () => Date;
   sleep?: (ms: number) => Promise<void>;
@@ -45,6 +51,7 @@ export class Orchestrator {
   private readonly store: RevisionStore;
   private readonly sink: EventSink;
   private readonly maxAttempts: number;
+  private readonly budget: Budget | null;
   private readonly now: () => Date;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly coreBuildHash: string;
@@ -54,6 +61,7 @@ export class Orchestrator {
     this.store = opts.store;
     this.sink = opts.sink;
     this.maxAttempts = opts.maxAttempts ?? 3;
+    this.budget = opts.budget ?? null;
     this.now = opts.now ?? (() => new Date());
     this.sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
     this.coreBuildHash = opts.coreBuildHash ?? "dev";
@@ -64,6 +72,23 @@ export class Orchestrator {
     const received = this.emit(command.run_id, "PIPELINE_COMMAND_RECEIVED", null, {
       component: "orchestrator",
     });
+
+    /**
+     * Admission, before the first provider call.
+     *
+     * The single-stage path is small — one stage, so at most `maxAttempts` calls — but "small"
+     * is not "bounded", and until sweep twelve it was the last path that could reach a provider
+     * with no budget expressible at all. The pipeline path had the same gap and it was closed
+     * in #40; leaving this one open kept the guarantee uneven for no reason a caller could see.
+     */
+    const admission = admitRun({ budget: this.budget, plannedCalls: this.maxAttempts });
+    if (!admission.admit) {
+      throw new Error(
+        `Run "${command.run_id}" ${admission.reason}
+` +
+          `  Raise the budget or run without one. Nothing was spent.`,
+      );
+    }
 
     // ── decide (Core, pure) ────────────────────────────────────────────────
     const request = decide(command.input, command.run_id);

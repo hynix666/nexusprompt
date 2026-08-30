@@ -18,6 +18,8 @@
  * rule, so "did not run" is a first-class outcome rather than an absent one.
  */
 
+
+import reliabilityBudget from "../../../contracts/reliability-budget.json" with { type: "json" };
 import type {
   GenerationRequest, GenerationResult, ProviderFailure, StageId, GateResult,
 } from "../../../contracts/index.js";
@@ -35,6 +37,25 @@ import * as cost from "./cost-estimate.js";
 import * as tone from "./tone-check.js";
 import type { GateOptions } from "../gates/registry.js";
 import { isDemoArtifact } from "./stage-kit.js";
+
+/**
+ * The ceiling on gate-feedback rounds, read from the contract rather than restated.
+ *
+ * `check:depth` fails the build when `11 stages + rounds x 2` breaches the declared error
+ * budget, and `reliability-budget.json` says so in its own words: "check:depth enforces the
+ * worst case, so raising this cap fails the build unless the floor or the target moves."
+ *
+ * That was true of the FILE and false of the RUNTIME. Nothing consulted this number at run
+ * time: `decideGateFeedback` took `ctx.topology.max_iterations` as the cap, and the CLI's
+ * `--reflexive N` accepts any N. Measured before the clamp — `--reflexive 10` produced **10
+ * rounds and 31 stage executions**, where 0.995^31 = 85.6%, below the 90% end-to-end target
+ * the same file declares and four stages past the headroom `check:depth` itself prints.
+ *
+ * Imported, not copied, so the build-time guarantee and the run-time one cannot drift. The
+ * catalog registry already imports JSON this way; a static import is data, not an effect, so
+ * Core stays pure.
+ */
+export const MAX_FEEDBACK_ROUNDS: number = reliabilityBudget.max_feedback_rounds;
 
 /**
  * Everything one run accumulates.
@@ -340,14 +361,17 @@ export function decideGateFeedback(
     return { retry: false, reason: "topology is not reflexive" };
   }
 
-  const cap = ctx.topology.max_iterations ?? 0;
+  const asked = ctx.topology.max_iterations ?? 0;
+  const cap = Math.min(asked, MAX_FEEDBACK_ROUNDS);
   const spent = ctx.feedbackRounds ?? 0;
   if (spent >= cap) {
     return {
       retry: false,
       reason: cap === 0
         ? "no max_iterations declared, so no rounds are permitted"
-        : `feedback cap reached (${spent} of ${cap})`,
+        : asked > cap
+          ? `feedback cap reached (${spent} of ${cap}; ${asked} was requested, clamped to the declared max_feedback_rounds)`
+          : `feedback cap reached (${spent} of ${cap})`,
     };
   }
 

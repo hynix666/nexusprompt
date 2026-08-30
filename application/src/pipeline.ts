@@ -15,7 +15,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import {
-  planForContext, decideGateFeedback, type PipelineContext } from "../../core/src/stages/pipeline.js";
+  planForContext, decideGateFeedback, MAX_FEEDBACK_ROUNDS, type PipelineContext } from "../../core/src/stages/pipeline.js";
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { admitRun, plannedPipelineCalls, type Budget } from "../../core/src/eval/budget.js";
 import { invokeWithRetry } from "./invoke.js";
@@ -24,6 +24,16 @@ import type {
   ProviderTransport, RevisionEntry, RevisionStore, StageId, GateResult, ObservabilityEvent, EventType,
   ContentStore,
 } from "../../contracts/index.js";
+
+/**
+ * Re-exported so a Shell can honour the cap without importing Core.
+ *
+ * `shells/cli` needs the number to refuse `--reflexive` above it, and the boundary rule
+ * (ADR-0001, amended by 0005) forbids a Shell importing Core directly — `lint:boundaries`
+ * refused the direct import, which is the guard doing its job. The Application layer is the
+ * protocol a Shell may call, so the constant travels the same way every other decision does.
+ */
+export { MAX_FEEDBACK_ROUNDS } from "../../core/src/stages/pipeline.js";
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
@@ -205,7 +215,12 @@ export async function runPipeline(
     budget: opts.budget,
     plannedCalls: plannedPipelineCalls({
       plan,
-      feedbackRounds: ctx.topology?.kind === "reflexive" ? (ctx.topology.max_iterations ?? 0) : 0,
+      // Clamped the same way Core clamps it, so the reservation matches what can actually
+      // happen. Reserving for a requested 10 when Core will grant 3 is not unsafe, but it is
+      // a budget refusing runs it did not need to refuse.
+      feedbackRounds: ctx.topology?.kind === "reflexive"
+        ? Math.min(ctx.topology.max_iterations ?? 0, MAX_FEEDBACK_ROUNDS)
+        : 0,
       maxAttempts: opts.maxAttempts ?? 3,
     }),
   });
