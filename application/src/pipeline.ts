@@ -35,6 +35,15 @@ import type {
  */
 export { MAX_FEEDBACK_ROUNDS } from "../../core/src/stages/pipeline.js";
 
+/**
+ * How many bundles to consult when recomputing the live content set.
+ *
+ * Must be at least what the store retains, or the sweep would reclaim content a surviving
+ * bundle still cites. `storage-local` keeps 8; asking for more is harmless — `listRecent`
+ * returns what exists — and asking for fewer is the one way this becomes destructive.
+ */
+const BUNDLE_SWEEP_LIMIT = 64;
+
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
 export interface PipelineRunOptions {
@@ -478,6 +487,70 @@ export async function runPipeline(
       output_hash: revision.output_hash,
     });
     emit("REVISION_PERSISTED", { component: `core/stages/${stage.id}`, output_hash: revision.output_hash });
+  }
+
+  /**
+   * Reclaim content that eviction orphaned.
+   *
+   * `storage-local` retains eight run bundles and evicts the ninth whole, but content lives in
+   * its own directory precisely so it is not on a bundle's lifetime — which meant, until sweep
+   * thirteen, that evicting a bundle reclaimed nothing at all. Measured over twelve runs: eight
+   * bundles survived and **20 of 60 content files were orphaned**. Bounded in bundles,
+   * unbounded in bytes.
+   *
+   * The live set is recomputed from the surviving bundles rather than tracked, so it is
+   * sharing-safe without a refcount: content backing two runs is named while either survives.
+   *
+   * Failure here does NOT fail the run. The artifact is written and persisted by this point;
+   * refusing to return it because a disk reclaim went wrong would trade a real result for a
+   * housekeeping error. It is evented instead, so an unbounded store cannot grow silently.
+   */
+  if (opts.content) {
+    try {
+      const live = new Set<string>();
+      for (const summary of await opts.store.listRecent(BUNDLE_SWEEP_LIMIT)) {
+        for (const e of await opts.store.getRun(summary.run_id)) {
+          if (e.input_ref) live.add(e.input_ref);
+          if (e.output_ref) live.add(e.output_ref);
+        }
+      }
+
+      /**
+       * Refuse to sweep unless the enumeration can be trusted.
+       *
+       * The live set is built from `listRecent`, which the port describes as a RECENT listing
+       * with a limit — not an authoritative enumeration. `storage-local` happens to return
+       * every retained bundle when asked for more than it keeps, but nothing in the contract
+       * promises that, and an implementation that under-reports would make this delete content
+       * a surviving revision still cites. That failure is silent, permanent, and worse than the
+       * leak it replaces.
+       *
+       * The run that just finished is certainly live, so its own refs must appear. If they do
+       * not, the enumeration is incomplete and the only safe move is to reclaim nothing. Caught
+       * exactly this way: a test store whose `listRecent` returned `[]` sent the sweep after
+       * every file on disk.
+       */
+      const ownRefs = (await opts.store.getRun(run_id))
+        .flatMap((e) => [e.input_ref, e.output_ref])
+        .filter((r): r is string => r !== null);
+      const enumerationTrustworthy = ownRefs.every((r) => live.has(r));
+
+      if (!enumerationTrustworthy) {
+        emit("DEGRADE", {
+          component: "application/pipeline",
+          failure_code: "content_sweep_skipped",
+          verdict: `listRecent did not report this run, so the live set is incomplete; ${ownRefs.length} own ref(s) unaccounted for. Nothing reclaimed.`,
+        });
+      } else {
+        await opts.content.sweep(live);
+      }
+    } catch (err) {
+      emit("DEGRADE", {
+        component: "application/pipeline",
+        failure_code: "content_sweep_failed",
+        verdict: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+      });
+    }
   }
 
   return {

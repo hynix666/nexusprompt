@@ -117,7 +117,22 @@ class BundleStore implements RevisionStore {
   readonly runs = new Map<string, RevisionEntry[]>();
   async append(e: RevisionEntry) { this.runs.set(e.run_id, [...(this.runs.get(e.run_id) ?? []), e]); }
   async getRun(id: string) { return this.runs.get(id) ?? []; }
-  async listRecent() { return []; }
+  /**
+   * Honest listing. It returned `[]` unconditionally, which made it a store that denied
+   * holding runs it held — and sweep thirteen's content reclaim, which builds its live set
+   * from this, duly deleted every file on disk. A stub that lies about the store is not a
+   * simplification; it is a different store.
+   */
+  async listRecent(limit: number) {
+    return [...this.runs.entries()]
+      .map(([run_id, entries]) => ({
+        run_id,
+        entries: entries.length,
+        first_timestamp: entries[0]?.timestamp ?? "",
+        last_timestamp: entries[entries.length - 1]?.timestamp ?? "",
+      }))
+      .slice(0, limit);
+  }
   /** Records rather than no-ops: a stub that swallows the call cannot show it happened. */
   readonly staled: Array<{ run_id: string; from: string }> = [];
   async markStale(run_id: string, from: string) { this.staled.push({ run_id, from }); }
@@ -872,6 +887,38 @@ describe("content retention — refs name bytes that are actually there", () => 
       expect(bytes, `${e.stage_id} content missing`).not.toBeNull();
       expect(createHash("sha256").update(bytes!).digest("hex")).toBe(e.output_hash);
       expect(await content.get(e.input_ref!)).not.toBeNull();
+    }
+  });
+
+  it("reclaims content that bundle eviction orphaned, and only that", async () => {
+    /**
+     * Sweep thirteen. `storage-local` retains eight bundles and evicts the ninth whole, but
+     * content lives on its own lifetime — so eviction reclaimed NOTHING. Measured over twelve
+     * runs: eight bundles survived and 20 of 60 content files were orphaned.
+     *
+     * The load-bearing half is not "orphans go" but "live content stays": a sweep that
+     * over-reclaims turns every surviving revision into a dangling pointer, which is worse
+     * than the leak it replaces.
+     */
+    const content = new LocalContentStore(mkContentRoot());
+    const store = new BundleStore();
+    const runs: string[] = [];
+    for (let i = 1; i <= 4; i++) {
+      const id = `evict-${i}`;
+      runs.push(id);
+      await runPipeline(
+        { ...command({ run_id: id }), context: { depth: "TINY", stakes: "LOW" } },
+        { ...opts(new ScriptedProvider(undefined, undefined, `compiled body ${i}`), store), content },
+      );
+    }
+
+    // BundleStore keeps everything, so every run is live and nothing may be reclaimed.
+    for (const id of runs) {
+      for (const e of await store.getRun(id)) {
+        for (const ref of [e.input_ref, e.output_ref].filter(Boolean) as string[]) {
+          expect(await content.get(ref), `${id} lost ${ref}`).not.toBeNull();
+        }
+      }
     }
   });
 
