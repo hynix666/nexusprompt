@@ -41,6 +41,47 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-30 (wave two — a local model can answer badly)
+
+### `provider-failure` 1.0.0 → **1.1.0** (minor — widened enum)
+
+Adds `MALFORMED_RESPONSE` to `category`. Landing before any adapter or Core code that reads
+it, per ADR-0002.
+
+**What the eight existing values have in common, and why it matters.** `TIMEOUT`,
+`RATE_LIMIT`, `AUTH`, `UNAVAILABLE`, `INVALID_REQUEST`, `CONTENT_FILTER`, `INTERNAL` and
+`CANCELLED` differ in cause and in whether retrying helps. Structurally they are one thing:
+**no response arrived.** Every consumer downstream has been able to assume that, and one
+consumer depends on it completely — `demoPlaceholder` produces text that says, in words,
+*"No output was produced."*
+
+A local model changes that. It answers, and the answer can be unusable: JSON wrapped in
+prose, a truncated object, a fence that never closes. The call succeeded. Something came
+back. Classifying that as `UNAVAILABLE` or `INTERNAL` would make the placeholder assert
+something false about a run that did reach a model — and `⟦WORKFLOW DEMO — no model⟧` would
+stop meaning "no model", which is the one fact it exists to carry.
+
+So the distinction is carried by the category rather than inferred later. `providerAnswered`
+in `contracts/index.ts` is the single predicate; adding a category forces a decision there
+instead of defaulting into the demo path, where a wrong answer is invisible.
+
+**Minor, not major.** A widened enum, by this file's own rule. Nothing switches exhaustively
+on `category` — checked across `core/`, `application/`, `adapters/` and `shells/` — so no
+consumer breaks. What a consumer written before 1.1.0 *cannot* do is tell the two situations
+apart, which is exactly why the value had to be added rather than reused.
+
+**Not `STRUCTURED_OUTPUT_FAILURE`,** which is what the proposal documents called it. That
+name scopes the value to structured output, and the situation is more general: an empty
+completion and a truncated one are the same structural event. `MALFORMED_RESPONSE` also
+mirrors `INVALID_REQUEST` — our request was bad, versus their response was bad.
+
+`retriable` is left to the adapter and will usually be **true** here: a stochastic model
+resampled may well parse. That is a second real difference from `AUTH`, which never will.
+
+No code reads this value yet. Core's mapping and the Ollama adapter follow in their own PRs.
+
+---
+
 ## 2026-08-29 (sweep thirteen — reclamation)
 
 ### `ContentStore.sweep(live)` — port addition, not a schema

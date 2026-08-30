@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/provider-failure/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/provider-failure/1.1.0",
   "title": "ProviderFailure",
   "description": "A typed provider failure. Adapters return this instead of throwing, so the Application can classify without parsing messages and Core never sees an exception.",
   "type": "object",
@@ -9,7 +9,8 @@
   "properties": {
     "request_id": { "type": "string", "minLength": 1 },
     "category": {
-      "enum": ["TIMEOUT", "RATE_LIMIT", "AUTH", "UNAVAILABLE", "INVALID_REQUEST", "CONTENT_FILTER", "INTERNAL", "CANCELLED"]
+      "description": "Why the request did not yield usable output. Every value except MALFORMED_RESPONSE means NO RESPONSE ARRIVED. MALFORMED_RESPONSE means one did and could not be used — a model answered, and answering badly is not the same as not answering. That distinction is what decides which placeholder Core produces, so it must be carried by the category rather than inferred downstream (ADR-0014).",
+      "enum": ["TIMEOUT", "RATE_LIMIT", "AUTH", "UNAVAILABLE", "INVALID_REQUEST", "CONTENT_FILTER", "INTERNAL", "CANCELLED", "MALFORMED_RESPONSE"]
     },
     "retriable": { "type": "boolean" },
     "reason_code": { "type": "string", "minLength": 1 },

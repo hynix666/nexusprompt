@@ -55,6 +55,7 @@ Every count and file name above has been checked against the source artifacts �
 | [0011](./0011-qutm-baseline-floor.md) | `QUTM_CEILING` does not arm below a named baseline floor | Accepted — authorises 1 divergence entry under 0007 |
 | [0012](./0012-api-shell-and-the-dependency-boundary.md) | The API shell is adopted; the zero-dependency property is scoped, not lost | Accepted — amends 0004/0006 |
 | [0013](./0013-audit-report-contract-without-a-producer.md) | `audit-report` is accepted with its producer outside this repository | Accepted |
+| [0014](./0014-malformed-response-is-not-demo-mode.md) | A malformed response is not demo mode — it gets its own failure category and placeholder | Accepted |
 
 An amended ADR stays in force except where its amendment supersedes it; the amendment states which parts. Where an ADR and `ARCHITECTURE.md` disagree on current shape, `ARCHITECTURE.md` is authoritative.
 
