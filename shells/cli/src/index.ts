@@ -46,7 +46,7 @@ const paint = (v: string) => (v === "PASS" ? C.pass(v) : v === "WARN" ? C.warn(v
  * confusing `ENOENT` the file-argument fix exists to prevent.
  */
 export const VALUE_FLAGS: ReadonlySet<string> = new Set([
-  "--stage", "--stakes", "--depth", "--test", "--max-calls",
+  "--stage", "--stakes", "--depth", "--test", "--max-calls", "--model",
 ]);
 
 /**
@@ -229,6 +229,26 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
   const brief = await readFile(file, "utf8");
   const run_id = randomUUID().replace(/-/g, "").slice(0, 16);
   const stakes = flag("stakes") ?? "MEDIUM";
+
+  /**
+   * `--model NAME` sends the run to a model on this machine instead of through the proxy.
+   *
+   * Not the shell's first route to a model — `LocalProxyProvider` reaches api.anthropic.com
+   * when `ANTHROPIC_API_KEY` is set. It is the first FREE one. Every persisted revision here
+   * carries a null fingerprint and `check:fingerprint` reports "not armed" because the only
+   * runs anyone made were keyless ones that degraded, and `npm run eval -- --local` reaches a
+   * model but persists nothing. So the sole way to store a revision that is evidence about a
+   * model was to spend money.
+   */
+  const localModel = flag("model");
+  if (localModel !== undefined && localModel.trim() === "") {
+    console.error(
+      "nexusprompt: --model needs a model name, e.g. --model llama3.1:8b.\n" +
+      "  `ollama list` shows what this machine has pulled. Without --model the run uses the\n" +
+      "  local proxy, reaches no model, and labels every stage as demo output.",
+    );
+    return 2;
+  }
   const events: ObservabilityEvent[] = [];
 
   /**
@@ -302,7 +322,13 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
       },
     },
     {
-      ...composePipeline({ sink: { emit: (e) => events.push(e) } }),
+      ...composePipeline({
+        sink: { emit: (e) => events.push(e) },
+        // Absent keeps the degrading proxy. Naming a model is the whole opt-in: there is no
+        // default, because one this machine has not pulled 404s in a way that reads like an
+        // outage, and one it has bakes a local accident into shared wiring.
+        ...(localModel === undefined ? {} : { localModel }),
+      }),
       coreBuildHash: "cli",
       /**
        * Opt-in, and absent means unbounded — the same rule `admitRun` states and the
@@ -410,10 +436,20 @@ pipeline options:
                                              stages, plus one per feedback round, times
                                              retries — so a run that fits is guaranteed to
                                              fit. Omit it and no budget is enforced.
+  --model NAME                               run against a model on this machine through
+                                             Ollama on loopback — no key, no cost, no
+                                             network beyond localhost. \`ollama list\` shows
+                                             what is pulled. Omit it and the run uses the
+                                             local proxy, reaches no model, and labels every
+                                             stage as demo output.
 
 Stakes selects depth: LOW runs six of eleven stages, SAFETY-CRITICAL all eleven.
-Without ANTHROPIC_API_KEY the run degrades and every stage says so — that is the
-honesty guarantee working, not a failure.
+
+Two transports, and --model picks between them. Without it the run uses the local
+proxy, which reaches api.anthropic.com and needs ANTHROPIC_API_KEY — so with no
+key set it degrades and every stage says so, which is the honesty guarantee
+working rather than a failure, and WITH one set it spends money. With --model the
+run never leaves this machine and costs nothing.
 
 exit: 0 clean · 1 a gate FAILed or a stage threw · 3 degraded or gates warned`);
   process.exit(2);

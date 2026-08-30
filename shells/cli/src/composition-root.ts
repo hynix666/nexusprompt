@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { Orchestrator } from "../../../application/src/orchestrator.js";
 import type { PipelineRunOptions } from "../../../application/src/pipeline.js";
 import { LocalProxyProvider } from "../../../adapters/provider-local-proxy/src/index.js";
+import { OllamaProvider } from "../../../adapters/provider-ollama/src/index.js";
 import { LocalRevisionStore } from "../../../adapters/storage-local/src/index.js";
 import { LocalEvidenceStore } from "../../../adapters/evidence-local/src/index.js";
 import { LocalContentStore } from "../../../adapters/content-local/src/index.js";
@@ -29,14 +30,47 @@ export interface CompositionOptions {
   evidenceDir?: string;
   /** Where stage bodies are retained. Defaults to `.nexusprompt/content` under cwd. */
   contentDir?: string;
+  /**
+   * Ask a model on this machine instead of the degrading proxy.
+   *
+   * Absent — the default — keeps `LocalProxyProvider`, which is a real client for
+   * api.anthropic.com and reads `ANTHROPIC_API_KEY` from the environment. So the default is
+   * not "reaches nothing": with a key set it reaches a hosted model and spends money, and
+   * without one it degrades into a labelled placeholder for every stage. The second case is
+   * the only one anyone here has run, which is why eleven persisted revisions carry eleven
+   * null fingerprints and `check:fingerprint` reports "not armed".
+   *
+   * What was missing was a transport that costs nothing. `--local` on the eval runner reaches
+   * one, but the eval path persists no revisions, so no run this repository has STORED is
+   * evidence about a model, and the only way to change that was to spend money.
+   *
+   * Naming a model is required and has no default, for the reason the adapter states: a
+   * default naming a model this machine has not pulled produces a 404 that reads like an
+   * outage, and one it has pulled bakes a local accident into shared wiring.
+   */
+  localModel?: string;
 }
 
 const defaultRunsDir = (opts: CompositionOptions) =>
   opts.runsDir ?? join(process.cwd(), ".nexusprompt", "runs");
 
+/**
+ * Which transport a run gets, decided in the one file allowed to name an adapter.
+ *
+ * Two callers — the orchestrator and the pipeline — so the choice lives here rather than
+ * being made twice. A shell that picked its own provider would put the decision back in
+ * `index.ts`, which is the arrangement `check-boundaries.mjs` has an exemption for exactly
+ * one file to avoid.
+ */
+function chooseProvider(opts: CompositionOptions): LocalProxyProvider | OllamaProvider {
+  return opts.localModel === undefined
+    ? new LocalProxyProvider()
+    : new OllamaProvider({ model: opts.localModel });
+}
+
 export function composeOrchestrator(opts: CompositionOptions): Orchestrator {
   return new Orchestrator({
-    provider: new LocalProxyProvider(),
+    provider: chooseProvider(opts),
     store: new LocalRevisionStore(defaultRunsDir(opts)),
     sink: opts.sink,
   });
@@ -55,7 +89,7 @@ export function composeOrchestrator(opts: CompositionOptions): Orchestrator {
  */
 export function composePipeline(opts: CompositionOptions): PipelineRunOptions {
   return {
-    provider: new LocalProxyProvider(),
+    provider: chooseProvider(opts),
     store: new LocalRevisionStore(defaultRunsDir(opts)),
     /**
      * The content plane, wired.
