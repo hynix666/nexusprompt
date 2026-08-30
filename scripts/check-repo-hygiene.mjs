@@ -55,7 +55,7 @@
  * Exit 0 clean · 1 a hygiene rule is broken · 2 the repository cannot be inspected.
  */
 
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -99,6 +99,27 @@ export const containsDir = (path, dir) => path === dir || path.startsWith(`${dir
 
 /** Largest legitimate tracked file is 0.81 MB. Fivefold headroom, still catches a blob. */
 export const MAX_TRACKED_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Rule 8's ceilings for what may sit in the working tree neither tracked NOR ignored.
+ *
+ * Rules 1 and 2 check that expensive things ARE ignored. Rules 6 and 7 check that nothing
+ * the project is made of IS ignored. Between them sits the state that has actually caused
+ * every incident here: a directory that is neither, which `git add -A` sweeps in whole.
+ *
+ * The five incidents were all this shape. `.gitignore` emptied three times; 3,677 dependency
+ * files tracked in one commit; 327 unintended files swept into a four-file change because six
+ * archives appeared between a `git status` and the commit that followed it. In each case the
+ * bytes were sitting untracked and unignored at the moment somebody typed the wrong command.
+ *
+ * A note in CLAUDE.md saying "never `git add -A` here" is a rule a person has to remember.
+ * This is the same rule as a failing build.
+ *
+ * Two ceilings because the hazard has two shapes: a 2 GB corpus, and a directory of thousands
+ * of small files. Either alone is enough to make the next accident expensive.
+ */
+export const MAX_UNTRACKED_BYTES = 25 * 1024 * 1024;
+export const MAX_UNTRACKED_FILES = 500;
 
 /** Files that carry comments on purpose and are read by tools that accept them. */
 export const JSONC_ALLOWED = ["tsconfig.json"];
@@ -337,7 +358,98 @@ export function checkRepoHygiene(root = process.cwd(), opts = {}) {
     }
   }
 
+  /**
+   * Rule 8: nothing large may sit neither tracked nor ignored.
+   *
+   * `git status --porcelain` collapses an untracked directory to one entry, which is exactly
+   * the granularity wanted: the fix is one `.gitignore` line per entry, not per file.
+   *
+   * Walking stops as soon as a ceiling is passed. In the failing case that is fast because it
+   * bails; in the passing case there is almost nothing to walk. A check that took a minute on
+   * a 2 GB tree would be a check somebody moves out of `verify`.
+   */
+  const untracked = opts.listUntracked ?? gitUntracked;
+  let bytes = 0;
+  let files = 0;
+  const offenders = [];
+
+  for (const entry of untracked(root)) {
+    const [entryBytes, entryFiles] = measure(join(root, entry));
+    if (entryFiles === 0 && entryBytes === 0) continue;
+    offenders.push({ entry, bytes: entryBytes, files: entryFiles });
+    bytes += entryBytes;
+    files += entryFiles;
+  }
+
+  if (bytes > MAX_UNTRACKED_BYTES || files > MAX_UNTRACKED_FILES) {
+    const worst = offenders.sort((a, b) => b.bytes - a.bytes).slice(0, 3)
+      .map((o) => `${o.entry} (${(o.bytes / 1048576).toFixed(0)} MB, ${o.files} file(s))`)
+      .join(", ");
+    failures.push(
+      `${(bytes / 1048576).toFixed(0)} MB across ${files} file(s) sit in the working tree ` +
+      `neither tracked nor ignored — largest: ${worst}. ` +
+      `That is the exact state every incident here began from: five times, something ran ` +
+      `\`git add -A\` while archives were sitting loose, and once that swept 3,677 dependency ` +
+      `files into a single commit. Ignore each entry or delete it; the fix is one .gitignore ` +
+      `line per entry, and the ceiling is ${(MAX_UNTRACKED_BYTES / 1048576)} MB / ` +
+      `${MAX_UNTRACKED_FILES} files.`,
+    );
+  }
+
   return { ok: failures.length === 0, failures, trackedCount: tracked.length, ruleCount: rules.length };
+}
+
+/** Top-level untracked, unignored entries. Directories collapse to one entry, as git reports them. */
+function gitUntracked(root) {
+  let out;
+  try {
+    out = execFileSync("git", ["status", "--porcelain", "-z", "--untracked-files=normal"], {
+      cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch {
+    // Not a git repository. Every fixture root in the suite is one of these, and "no repo"
+    // means "nothing is untracked" rather than a failure — the rules that DO apply to a
+    // fixture are the ones injecting their own lists. A real checkout that cannot be
+    // inspected is caught by the .gitignore fatal above, which runs first.
+    return [];
+  }
+  return out
+    .split("\0")
+    .filter((line) => line.startsWith("?? "))
+    .map((line) => line.slice(3))
+    .filter(Boolean);
+}
+
+/**
+ * Bytes and file count under a path, stopping once either ceiling is passed.
+ *
+ * Returns what it counted rather than the true total: the message only needs enough to name
+ * the offender, and finishing the walk on a 2 GB directory to produce a more precise number
+ * nobody acts on differently is time spent in every `verify`.
+ */
+function measure(abs) {
+  let bytes = 0;
+  let files = 0;
+  const stack = [abs];
+  while (stack.length > 0) {
+    if (bytes > MAX_UNTRACKED_BYTES || files > MAX_UNTRACKED_FILES) break;
+    const current = stack.pop();
+    let st;
+    try {
+      st = statSync(current);
+    } catch {
+      continue; // Vanished between listing and walking. Not this rule's problem.
+    }
+    if (st.isDirectory()) {
+      try {
+        for (const child of readdirSync(current)) stack.push(join(current, child));
+      } catch { /* unreadable directory: counted as nothing rather than crashing verify */ }
+    } else {
+      bytes += st.size;
+      files += 1;
+    }
+  }
+  return [bytes, files];
 }
 
 function main() {

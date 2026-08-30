@@ -1,5 +1,17 @@
 # NexusPrompt Improvement Implementation Plan
 
+> **Status, 30 August 2026 — historical.** This document and its companion
+> [`IMPROVEMENT_RECOMMENDATIONS.md`](./IMPROVEMENT_RECOMMENDATIONS.md) are an earlier
+> improvement initiative: ten recommendations and a 12–16 week plan to act on them. They are
+> **not** the repository's live plan. That is [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md),
+> the only one of the three with a checker (`npm run check:plan`) holding its numbers to the
+> tree.
+>
+> Kept rather than deleted because the analysis behind the ten recommendations is real and
+> several have since been done by other routes. Read it as a record of what was recommended,
+> not as a list of what is outstanding. Moved here from the repository root on 30 August 2026:
+> the doc set is where documents live.
+
 ## Executive Summary
 
 This plan addresses 10 prioritized improvement recommendations for NexusPrompt, organized into three phases over approximately 12-16 weeks. The focus is on transitioning from demo/stub mode to production-ready validation while maintaining the project's exceptional verification standards.

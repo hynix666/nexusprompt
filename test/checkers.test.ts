@@ -1437,6 +1437,82 @@ describe("check-repo-hygiene", () => {
     expect(r.failures.join("\n")).toMatch(/TRACKED file\(s\) are also ignored/);
   });
 
+  /**
+   * Rule 8: the state between rules 1–2 and rules 6–7.
+   *
+   * Rules 1 and 2 check that expensive things ARE ignored. Rules 6 and 7 check that nothing
+   * the project is made of IS ignored. Neither covers a directory that is NEITHER — which is
+   * the state every incident here actually began from, because that is what `git add -A`
+   * sweeps in. It was measured at 2,022 MB across six entries when this rule was written.
+   *
+   * `listUntracked` is injected for the same reason `listTracked` is: a fixture needs neither
+   * a git repository nor gigabytes on disk.
+   */
+  it("fires when something large sits neither tracked nor ignored", () => {
+    const root = mkroot("pnx-untracked-");
+    mkdirSync(join(root, "Articles"), { recursive: true });
+    // 30 MB in one file, over the 25 MB ceiling.
+    writeFileSync(join(root, "Articles", "paper.pdf"), Buffer.alloc(30 * 1024 * 1024));
+    writeFileSync(join(root, ".gitignore"), readFileSync(join(__dirnameShim, "..", ".gitignore"), "utf8"));
+
+    const r = checkRepoHygiene(root, {
+      listTracked: () => ["core/src/index.ts"],
+      // Rules 6 and 7 shell out to git; a fixture root is not a repository. Injected so this
+      // case exercises rule 8 alone.
+      isIgnored: () => false,
+      listIgnored: () => [],
+      listUntracked: () => ["Articles/"],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/neither tracked nor ignored/);
+    expect(r.failures.join("\n")).toMatch(/git add -A/);
+  });
+
+  it("fires on many small files even when the bytes are trivial", () => {
+    // The hazard has two shapes. The 3,677-dependency-file incident was not about size —
+    // a ceiling on bytes alone would have walked straight past it.
+    const root = mkroot("pnx-untracked-many-");
+    mkdirSync(join(root, "junk"), { recursive: true });
+    for (let i = 0; i < 600; i++) writeFileSync(join(root, "junk", `f${i}.txt`), "x");
+    writeFileSync(join(root, ".gitignore"), readFileSync(join(__dirnameShim, "..", ".gitignore"), "utf8"));
+
+    const r = checkRepoHygiene(root, {
+      listTracked: () => ["core/src/index.ts"],
+      // Rules 6 and 7 shell out to git; a fixture root is not a repository. Injected so this
+      // case exercises rule 8 alone.
+      isIgnored: () => false,
+      listIgnored: () => [],
+      listUntracked: () => ["junk/"],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/neither tracked nor ignored/);
+  });
+
+  it("does not fire on a small amount of untracked scratch", () => {
+    // The must-not-fire half. A rule that fired on any untracked file at all would be
+    // deleted by whoever it first inconvenienced — an editor swapfile is not an incident.
+    const root = mkroot("pnx-untracked-ok-");
+    writeFileSync(join(root, "scratch.txt"), "a note to self");
+    writeFileSync(join(root, ".gitignore"), readFileSync(join(__dirnameShim, "..", ".gitignore"), "utf8"));
+
+    const r = checkRepoHygiene(root, {
+      listTracked: () => ["core/src/index.ts"],
+      // Rules 6 and 7 shell out to git; a fixture root is not a repository. Injected so this
+      // case exercises rule 8 alone.
+      isIgnored: () => false,
+      listIgnored: () => [],
+      listUntracked: () => ["scratch.txt"],
+    });
+    expect(r.failures.filter((f) => /neither tracked nor ignored/.test(f))).toEqual([]);
+  });
+
+  it("does not fire on this repository — the state Wave A left it in", () => {
+    // Regression guard for the cleanup itself. If loose archives accumulate again, this is
+    // the test that says so before anyone runs the wrong git command.
+    const r = checkRepoHygiene(__dirnameShim + "/..");
+    expect(r.failures.filter((f) => /neither tracked nor ignored/.test(f))).toEqual([]);
+  });
+
   it("does not fire when no tracked file is ignored", () => {
     // The must-not-fire half. Without it, a rule 7 that always reported would satisfy the
     // case above while saying nothing — the shape eight of eleven sweeps here started with.

@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## What this directory actually is
 
@@ -54,6 +54,7 @@ Consequences worth knowing before proposing changes:
 - **Demo mode is a two-part mechanism.** The Application classifies a provider failure; Core deterministically maps the classified failure to a `⟦WORKFLOW DEMO — no model⟧` placeholder. This is a structural honesty guarantee — output is never fabricated when a provider is unreachable — and the `CLAIM_DISCIPLINE` gate enforces that demo output never presents itself as live.
 - **Shells never import each other.** `toolkit-ui` reuses the pipeline experience through a shared presentation package, not by importing `pipeline-ui`. This is what makes per-Shell rollback true. See `0006-shell-composition-and-shared-ui.md`.
 - **Local storage retains run bundles, not entries.** Eight complete runs, kept or evicted whole. The source's entry-based cap of 8 could not hold a nine-stage run, and the pipeline has since grown to eleven — any entry-based bound is a hostage to stage count.
+- **Semantic run manifests must remain a separate storage mode from legacy bundles.** If a future manifest format is added beside `<run_id>.json`, readers must never merge the two; both files under one run ID are an error, and legacy bundles remain readable without implicit migration. Atomic publication must make only complete manifests visible.
 - **`freshness` and `status` on a `RevisionEntry` are independent.** A revision can be `SUCCEEDED` and `STALE` simultaneously.
 - **Observability carries keyed hashes only.** No prompt bodies, ever — the sink rejects rather than truncates. Fingerprints are keyed because bare digests of short prompts are correlatable.
 - **`resolution.detectable_delta` is score granularity — `1/n` — not statistical resolution.** These are different floors and both are enforced. Granularity is declared on the suite and pinned by `check:sizing`; the statistical floor is *derived* by the comparator and never declared, because a declared one is exactly the number that drifted. The schema conflated them until `eval-suite` 2.0.1.
@@ -96,6 +97,8 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 | Command | What it does |
 |---|---|
 | `npm run verify` | hygiene → boundaries → typecheck → source freeze → tests → differential oracle. The whole check. |
+| `npx vitest run --project contracts test/content-conformance.test.ts` | Focused ContentStore conformance: address validation, wx/idempotent writes, concurrency, sharding, and corruption behavior. |
+| `npx vitest run --project application application/test/release.test.ts` | Focused promotion/release coverage, including dangling-reference precondition fire and must-not-fire cases. |
 | `npm run check:hygiene` | The repository's own SHAPE, not its content: pinned `.gitignore` rules, a floor on the rule count, nothing tracked under `node_modules/` `PDF/` `LLM/`, no tracked file over 4 MB. Written after `.gitignore` was emptied by automated commits **three times** — the third also tracked 3,677 dependency files. |
 | `npm run lint:boundaries` | Import-boundary rule (`scripts/check-boundaries.mjs`). |
 | `npm run verify:sources` | Re-hashes all 420 frozen files against `MANIFEST.json`. |
@@ -120,8 +123,6 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 **`check:corpus` is green and deliberately outside `verify`.** All 661 files are at `PDF/`, re-hashed against `scripts/corpus-manifest.json` in about two seconds. It sits outside `verify` because `PDF/` is gitignored — 2 GB of third-party papers whose canonical home is arXiv — so a clean checkout has never had it, and folding the check into `verify` would make the headline command fail for every adopter. If it ever reports missing files, do **not** regenerate the manifest with `--write`: that silently accepts the disappearance of the evidence base. Find the corpus instead.
 
 **CI runs `npm run verify` on every push and pull request** (`.github/workflows/verify.yml`), first executed 23 August 2026 and green. The stage order is meaningful and `verify` follows it: boundaries and schema validation first, then Core tests, then Application, adapters, cross-shell parity, adversarial corpus, reproducibility last. **`check:corpus` is deliberately outside `verify`** — it re-hashes 2 GB of gitignored PDFs, so it can never pass on a clean checkout; it is a local-asset check with its own command. Older documents saying "there is no CI" predate this.
-
-**`vercel.json` exists only to switch Vercel off**, and carries no comment because it cannot: `check:hygiene` parses every tracked `.json` and only `tsconfig.json` may hold comments, so the reason lives here. A `nexusprompt-api` Vercel project has been attached to this repository since before it could build one, and it has failed on **every commit since `c9d5d3c`** — the API shell starts with `tsx src/index.ts`, there is no `build` script anywhere, and `tsx` is a devDependency a production install would omit. `{"git": {"deploymentEnabled": false}}` stops it attempting. It is a stopgap: the Vercel project and its GitHub App access still exist, and removing those is account-level work no token in this repository can do. If a real deployment target is ever wanted, delete this file rather than working around it.
 
 ## Two guards, and what each one actually covers
 

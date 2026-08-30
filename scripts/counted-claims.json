@@ -136,6 +136,18 @@
       "reason": "Third currently-true pin. Also the number CLAUDE.md is most likely to be trusted on without checking."
     },
     {
+      "document": "AGENTS.md",
+      "pattern": "([\\d,]+) Markdown files describing",
+      "resolver": "docs.markdown_files",
+      "reason": "The Codex-facing sibling of CLAUDE.md, and it drifted for exactly the reason CLAUDE.md is pinned: loaded into every session, believed before any file is read. It said 37 while there were 43, and was invisible to this checker because it was untracked."
+    },
+    {
+      "document": "AGENTS.md",
+      "pattern": "([\\d,]+) files extracted from five archives",
+      "resolver": "sources.frozen_files",
+      "reason": "Same sentence, same file, same hazard as the CLAUDE.md pin above it."
+    },
+    {
       "document": "README.md",
       "pattern": "(\\d[\\d,]*) versioned JSON Schemas",
       "resolver": "contracts.schemas",
