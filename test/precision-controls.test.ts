@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import { execSync } from "node:child_process";
 
 /**
  * Precision Control Tests - Negative Cases
@@ -473,7 +472,7 @@ describe("Precision Measurement Framework", () => {
     const totalCleanCases = 12; // PC-01 through PC-12
     
     // Simulate test results (in real implementation, this comes from gate execution)
-    const trueNegatives = 12; // All clean cases passed
+    const trueNegatives = totalCleanCases; // All clean cases passed
     const falsePositives = 0; // None incorrectly flagged
     
     const precision = trueNegatives / (trueNegatives + falsePositives);
