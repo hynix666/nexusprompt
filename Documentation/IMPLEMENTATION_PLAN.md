@@ -68,6 +68,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "api",
     "cli",
     "differential",
+    "doctor",
     "docs:fence-explanation",
     "docs:manifest-spec",
     "docs:matrix",

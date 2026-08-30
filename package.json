@@ -52,7 +52,8 @@
     "docs:fence-explanation": "tsx scripts/generate-fence-explanation-data.ts",
     "check:fence-explanation": "tsx scripts/generate-fence-explanation-data.ts --check",
     "build:hash": "node scripts/build-hash.mjs --write",
-    "check:hash": "node scripts/build-hash.mjs --check"
+    "check:hash": "node scripts/build-hash.mjs --check",
+    "doctor": "tsx scripts/doctor.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",
