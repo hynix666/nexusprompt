@@ -1,0 +1,92 @@
+# lint — gates firing, and not firing, on four real prompts — WARNs, exit 3
+# regenerate: npm run docs:examples · check: npm run check:examples
+
+lint ./examples/prompts/clean.md   16 of 16 gates ported
+  PASS SECRET_LEAK_SCAN
+  PASS CLAIM_DISCIPLINE
+  PASS PLACEHOLDER_AUDIT
+  PASS RUNTIME_KEY_UNDECLARED
+  PASS SOURCE_LEDGER_MISSING
+  PASS ORPHAN_CLAIMS
+  PASS GUARDRAIL_GAP
+  PASS TOKEN_SPAM
+  PASS RECURSION_MACHINERY_PRESENT
+  PASS RAG_SHIELD_GAP
+  PASS DUPLICATE_INSTRUCTION
+  PASS DELIMITER_ENTROPY
+  PASS TOKEN_BUDGET
+  PASS QUTM_CEILING
+  PASS CONTEXT_LIMIT
+  PASS ADVERSARIAL_RESILIENCE
+
+  exit 0
+
+────────────────────────────────────────────────────────────────────────
+
+lint ./examples/prompts/leaking-secret.md   16 of 16 gates ported
+  WARN SECRET_LEAK_SCAN
+       Possible secret or PII in the compiled prompt: generic_sk_key. Heuristic — verify before treating as a leak.
+  PASS CLAIM_DISCIPLINE
+  PASS PLACEHOLDER_AUDIT
+  PASS RUNTIME_KEY_UNDECLARED
+  PASS SOURCE_LEDGER_MISSING
+  PASS ORPHAN_CLAIMS
+  PASS GUARDRAIL_GAP
+  PASS TOKEN_SPAM
+  PASS RECURSION_MACHINERY_PRESENT
+  PASS RAG_SHIELD_GAP
+  PASS DUPLICATE_INSTRUCTION
+  PASS DELIMITER_ENTROPY
+  PASS TOKEN_BUDGET
+  PASS QUTM_CEILING
+  PASS CONTEXT_LIMIT
+  PASS ADVERSARIAL_RESILIENCE
+
+  exit 3
+
+────────────────────────────────────────────────────────────────────────
+
+lint ./examples/prompts/overclaiming.md   16 of 16 gates ported
+  PASS SECRET_LEAK_SCAN
+  WARN CLAIM_DISCIPLINE
+       Unhedged claim(s): 100% accurate, guarantees. State what was verified instead of asserting a guarantee.
+  PASS PLACEHOLDER_AUDIT
+  PASS RUNTIME_KEY_UNDECLARED
+  PASS SOURCE_LEDGER_MISSING
+  PASS ORPHAN_CLAIMS
+  PASS GUARDRAIL_GAP
+  PASS TOKEN_SPAM
+  PASS RECURSION_MACHINERY_PRESENT
+  PASS RAG_SHIELD_GAP
+  PASS DUPLICATE_INSTRUCTION
+  PASS DELIMITER_ENTROPY
+  PASS TOKEN_BUDGET
+  PASS QUTM_CEILING
+  PASS CONTEXT_LIMIT
+  PASS ADVERSARIAL_RESILIENCE
+
+  exit 3
+
+────────────────────────────────────────────────────────────────────────
+
+lint ./examples/prompts/secret-inside-a-fence.md   16 of 16 gates ported
+  PASS SECRET_LEAK_SCAN
+  PASS CLAIM_DISCIPLINE
+  PASS PLACEHOLDER_AUDIT
+  PASS RUNTIME_KEY_UNDECLARED
+  PASS SOURCE_LEDGER_MISSING
+  PASS ORPHAN_CLAIMS
+  PASS GUARDRAIL_GAP
+  PASS TOKEN_SPAM
+  PASS RECURSION_MACHINERY_PRESENT
+  PASS RAG_SHIELD_GAP
+  PASS DUPLICATE_INSTRUCTION
+  PASS DELIMITER_ENTROPY
+  PASS TOKEN_BUDGET
+  PASS QUTM_CEILING
+  PASS CONTEXT_LIMIT
+  PASS ADVERSARIAL_RESILIENCE
+
+  exit 0
+
+────────────────────────────────────────────────────────────────────────
