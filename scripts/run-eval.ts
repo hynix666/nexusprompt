@@ -105,6 +105,83 @@ const intFlag = (name: string): number | undefined => {
 };
 
 /**
+ * Every flag this script accepts, and whether it consumes the token after it.
+ *
+ * A table rather than nine scattered `argv.includes` calls, because an unrecognised flag used
+ * to be ignored in silence. `npm run eval -- --provider ollama-local --model llama3.1:8b
+ * --max-calls 100` — from a study merged on 30 August 2026, now in
+ * `proposals/external-analysis-2026-08/` — exits 0 at `score 1.000` against pinned stubs.
+ * The REPORT is honest: it prints "14 pinned provider call(s), no network", and
+ * `provenance.provider` records `pinned-stub`. What was missing is a refusal at the point the
+ * operator's request and this script's transport disagree, which is the same shape as a
+ * budget that is not declared: the answer given is not wrong, it is to a different question.
+ *
+ * The `--flag=value` form is deliberately NOT accepted here. `flagValue` matches an exact
+ * token, so `--trials=5` never set trials and silently ran one — refusing it is the point.
+ *
+ * `test/eval-flags.test.ts` re-derives these names from THIS FILE's source, so a tenth flag
+ * added the old way fails the suite instead of quietly re-opening the hole.
+ */
+export const KNOWN_FLAGS: Readonly<Record<string, "boolean" | "value">> = Object.freeze({
+  live: "boolean",
+  local: "boolean",
+  "dry-run": "boolean",
+  compare: "boolean",
+  json: "boolean",
+  suite: "value",
+  model: "value",
+  "max-calls": "value",
+  trials: "value",
+});
+
+/** `--provider` is the one that actually happened, so it gets the sentence that explains it. */
+const FLAG_HINTS: Readonly<Record<string, string>> = Object.freeze({
+  "--provider":
+    "  Transport is chosen with --live or --local — never by naming a provider. Without\n" +
+    "  either, the suite runs against pinned stubs, which is a real answer but not the one\n" +
+    "  --provider was asking for.",
+});
+
+const flagList = (): string =>
+  Object.entries(KNOWN_FLAGS)
+    .map(([n, kind]) => (kind === "value" ? `--${n} <value>` : `--${n}`))
+    .join(", ");
+
+/**
+ * The whole of argv's well-formedness, as one pure decision.
+ *
+ * Pure and argv-taking rather than reading the module-level `LIVE`/`LOCAL`, so a test can
+ * ask it about an argv the test process does not have. Returns the operator's message or
+ * `null`; `main` decides that a message means exit 2.
+ */
+export function flagError(argv: readonly string[]): string | null {
+  const unknown = argv.filter((t) => t.startsWith("--") && t !== "--" && !(t.slice(2) in KNOWN_FLAGS));
+  if (unknown.length > 0) {
+    const hints = unknown.map((f) => FLAG_HINTS[f]).filter((h): h is string => h !== undefined);
+    return (
+      `eval: unrecognised flag ${unknown.join(", ")}.\n\n` +
+      `  Accepted: ${flagList()}.\n` +
+      (hints.length > 0 ? `\n${hints.join("\n")}\n` : "")
+    );
+  }
+
+  // `--model` is read into `localModel` and consulted only by the local transport, so under
+  // any other transport it is accepted and inert — the operator names a model and none is
+  // used. Keyed on the FLAG, never on the resolved model: `OLLAMA_MODEL` is a legitimate
+  // fallback in the environment, and refusing a plain `npm run eval` because a shell happens
+  // to export it would break the offline default this repository runs on.
+  if (argv.includes("--model") && !argv.includes("--local")) {
+    return (
+      "eval: --model names a model for the local transport, but --local was not given.\n\n" +
+      "  Add --local to run against it, or drop --model. A stub run reaches no model at all,\n" +
+      "  and a live run's model is not chosen here."
+    );
+  }
+
+  return null;
+}
+
+/**
  * `--dry-run` decides, prints and stops. Nothing is dispatched.
  *
  * It exists because the only way to find out whether a live invocation was well-formed was to
@@ -235,6 +312,10 @@ async function main(): Promise<number> {
   let TRIALS: number;
   let MAX_CALLS: number | undefined;
   try {
+    // Before anything is parsed, and long before anything is dispatched: a flag this script
+    // does not have means the operator asked for a run it cannot do.
+    const bad = flagError(process.argv);
+    if (bad !== null) throw new FlagError(bad);
     TRIALS = intFlag("trials") ?? 1;
     MAX_CALLS = intFlag("max-calls");
   } catch (err) {
