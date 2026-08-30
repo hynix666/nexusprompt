@@ -1,0 +1,13 @@
+⟦WORKFLOW DEMO — no model⟧
+
+Stage "calibrate" did not run against a model.
+Provider: local-proxy · category: AUTH · reason: no_api_key
+Detail: ANTHROPIC_API_KEY is not set in this process's environment.
+
+No output was produced. The text you are reading is a placeholder,
+not model output, and nothing below it was generated.
+
+Input received:
+```
+⟦WORKFLOW DEMO — no model⟧ Stage "deconstruct" did not run against a model. Provider: local-proxy · category: AUTH · reason: no_api_key Detail: ANTHROPIC_API_K…
+```
