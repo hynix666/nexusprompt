@@ -1,6 +1,6 @@
 # Testing and quality
 
-**1,365 tests across 34 files, 0 failing.** Runs offline in seconds.
+**1,374 tests across 35 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -245,6 +245,26 @@ And the class the dropped commit belonged to: **`npm ci` is the one command a lo
 never runs.** Adding a workspace without regenerating the lock file leaves every local command
 green while CI cannot install the project. Reproduce that failure the way it appears —
 `rm -rf node_modules && npm ci` — not the way it hides, with `npm install`.
+
+## The sweeps, and the instrument problem
+
+Twelve adversarial sweeps have run against this repository's own guarantees. **Nine of the
+twelve produced a first result that was about the INSTRUMENT rather than the code** — a probe
+that could not have failed, a matcher too narrow, a comparison of a value against itself.
+
+That ratio is the finding, not an embarrassment. It means the default state of a new check is
+*broken in the direction that reports success*, so a sweep's first job is proving its own
+instrument can fail:
+
+- **Show it firing on a planted defect** before trusting a clean result.
+- **Show the measurement is tight.** Sweep twelve checked 72 configurations for "spend never
+  exceeds the admitted bound" and found none — a result worth nothing until the tightest
+  configuration turned out to spend *exactly* its bound (4 of 4, mean 63%). Against a bound
+  three times real spend, "no violations" is arithmetic, not evidence.
+- **Expect the instrument to be an instance of what it hunts.** Sweep twelve's admission guard
+  matched `provider.generate(` and missed `this.inner.generate(` — a sparse matcher, in the file
+  written to catch sparse matchers. Its own stale-exemption rule caught it: a module was declared
+  a delegate while the predicate insisted it did not dispatch, and one of the two had to be wrong.
 
 ## The recurring failure: fixtures too uniform to discriminate
 

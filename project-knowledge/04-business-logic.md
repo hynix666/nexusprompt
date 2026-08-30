@@ -87,6 +87,28 @@ executions — so `check:depth` prices it:
 *"Why 3?"* is answered by arithmetic. `revision-entry` 1.3.0 adds `feedback_round` so a
 bundle longer than its plan carries a record of why.
 
+**And until sweep twelve the arithmetic bound the BUILD and nothing else.** `check:depth`
+priced the cap; `decideGateFeedback` took `ctx.topology.max_iterations` as the cap and never
+consulted `reliability-budget.json`; the CLI's `--reflexive N` accepted any N. Measured against
+the real runner, `--reflexive 10` produced **10 rounds and 31 stage executions**:
+
+```
+depth 17   91.83%  OK                     the declared cap
+depth 21   90.01%  OK                     the headroom check:depth itself prints
+depth 31   85.61%  BELOW the 90% target   --reflexive 10
+```
+
+The file even said so in its own words — *"check:depth enforces the worst case, so raising this
+cap fails the build unless the floor or the target moves"* — which was true of the file and
+false of the runtime. You never had to raise the cap; you passed a bigger number on the command
+line.
+
+Core clamps against `MAX_FEEDBACK_ROUNDS` now, **imported from the contract rather than
+restated**, so the build-time and run-time numbers cannot drift. The reason names the clamp when
+it bites, because a cap that silently substitutes a smaller number answers a different question
+than the one asked — and the CLI refuses above the cap outright rather than clamping. The
+budget estimate clamps too, so it stops reserving calls for rounds Core will not grant.
+
 ## 3. Statistics — `core/src/eval/sizing.ts`, `compare.ts`
 
 ### The exact significance floor
@@ -288,13 +310,26 @@ the p-value **underflows to zero at 1,075 discordant units** (now clamped).
 executed suite is not an `EvalRun` — its aggregate would be a score over whichever cases
 happened to fit, published under the name of a suite that means something else.
 
-Four things it got wrong, all fixed 29 August and all the same shape — a cap that reads as
-enforced and is not:
+**Five** things it got wrong, all fixed 29 August and all the same shape — a cap that reads as
+enforced and is not. The fifth was found by sweep twelve, by asking which modules dispatch to a
+provider and which of those admit:
+
+- **`Orchestrator.run` could not be bounded at all.** It reached a provider three times and
+  called `admitRun` zero times, with no `budget` option for a caller to supply — the same gap
+  as the pipeline's, on the path `nexusprompt run` uses. The exposure is one stage and at most
+  `maxAttempts` calls, which is small; *small* is not *bounded*, and the asymmetry was invisible
+  to a caller. **The instance was the lesser half of that fix**:
+  `application/test/provider-admission.test.ts` now derives the question from the source —
+  every module under `application/src` that dispatches must admit — so a future path cannot skip
+  it. Delegations (`invoke.ts`, the retry loop being bounded; `cache.ts`, a wrapper that spends
+  nothing of its own) are declared with reasons and fail when stale.
+
 
 - **The eleven-stage path never called it.** `application/src/pipeline.ts` referenced
   `admitRun` zero times, and that is the path the CLI wires a real provider into. It is sized
   now by `plannedPipelineCalls(plan, …)` from the plan *actually selected* — `planForContext`
-  returns six stages at TINY — plus one generating execution per feedback round, times
+  returns six stages at TINY — plus one generating execution per feedback round (clamped to the
+  declared cap), times
   attempts. The per-round figure is **measured, not read**: at caps of 0/1/2/3 an eleven-stage
   run performs 8/9/10/11 provider calls.
 - **`truncate_suite` admitted with a cap nothing honoured.** It returned `admit: true` and a

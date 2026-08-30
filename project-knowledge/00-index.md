@@ -46,7 +46,7 @@ components were rejected by it.
 | Package manager | **npm workspaces** — *not* pnpm (pnpm is not installed; older docs say otherwise) |
 | Repo | `github.com/hynix666/nexusprompt` (private), branch `master`, CI green |
 | Headline command | `npm install && npm run verify` — ~30 s, offline. 25 checks before the suite |
-| Tests | 1,365 passing, 0 failing, across 34 files |
+| Tests | 1,374 passing, 0 failing, across 35 files |
 | Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
@@ -54,9 +54,9 @@ components were rejected by it.
 | Adapters | 4 built (provider-local-proxy, storage-local, evidence-local, content-local) |
 | Shells | 2 built — `cli` and `api` (adopted 29 Aug, ADR-0012; typechecked and tested). 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
 | Source size | ~28,600 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/ spec/` |
-| Artifact hash | `abb7d5349556995b…` over 77 runtime files, LF-normalised so a Windows and a Linux checkout agree |
+| Artifact hash | `c100abe839620011…` over 77 runtime files, LF-normalised so a Windows and a Linux checkout agree |
 | Truth boundary | 9 machine-checked entries stating what this repository establishes and what it does **not** |
-| Commits | 124 — and note that a commit stating this number changes it, which is why it is not pinned |
+| Commits | 126 — and note that a commit stating this number changes it, which is why it is not pinned |
 | Licence | MIT |
 
 ### The three zeros (unchanged, and the point)
