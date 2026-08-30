@@ -247,6 +247,25 @@ export interface ContentStore {
   get(ref: string): Promise<Uint8Array | null>;
   /** Existence without the read — the integrity gate's need, and the deletion sweep's. */
   has(ref: string): Promise<boolean>;
+  /**
+   * Reclaim every stored item NOT in `live`. Returns how many were removed.
+   *
+   * This is garbage collection, not deletion, and the distinction is what keeps the "written
+   * once, never edited" invariant intact: an item named by a live ref is never touched, so no
+   * reader can lose content out from under it. Passing the live set — rather than a ref to
+   * remove — is what makes it sharing-safe BY CONSTRUCTION. Content is addressed by hash, so
+   * one file can back many runs; a `delete(ref)` primitive would have no way to know whether
+   * some other run still cites those bytes, and would either corrupt that run or leak.
+   *
+   * Added because bundle eviction reclaimed nothing. `storage-local` retains eight run bundles
+   * and evicts the ninth, but content lives in its own directory: measured over twelve runs,
+   * eight bundles survived and **20 of 60 content files were orphaned** — bounded in bundles,
+   * unbounded in bytes, which is the number that fills a disk.
+   *
+   * An empty `live` set reclaims everything, and that is correct rather than a footgun: it is
+   * what a caller that has just established there are no surviving runs is asking for.
+   */
+  sweep(live: ReadonlySet<string>): Promise<number>;
 }
 
 export interface RunBundleSummary {

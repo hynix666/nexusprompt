@@ -4,7 +4,7 @@
 
 1. **No prompt bodies in logs, ever.** The observability spine's sink enforces redaction structurally (see `OBSERVABILITY.md`) — this is not a per-call discipline left to individual developers.
 2. **No provider API keys reach the browser**, regardless of which provider adapter is configured. Both `provider-local-proxy` and `provider-hosted-server` hold keys server-side only.
-3. **Storage adapters are the only place user prompt content persists.** `adapters/storage-local` (browser-local, bounded to the 8 most recent complete run bundles, typed-DELETE confirmation before clearing) and `adapters/storage-db` (MySQL, multi-user) both implement `RevisionStore` and neither leaks content to the observability spine beyond hashes. The engine is MySQL because that is what the inherited Drizzle setup uses (`drizzle-orm/mysql-core`); earlier drafts said Postgres.
+3. **Storage adapters are the only place user prompt content persists.** `adapters/storage-local` (bounded to the 8 most recent complete run bundles; the typed-DELETE confirmation described in earlier drafts is **not built**) and `adapters/storage-db` (MySQL, multi-user) both implement `RevisionStore` and neither leaks content to the observability spine beyond hashes. The engine is MySQL because that is what the inherited Drizzle setup uses (`drizzle-orm/mysql-core`); earlier drafts said Postgres.
 4. **Fingerprints in events are keyed, not bare digests.** An unkeyed hash of a short or templated prompt is correlatable and dictionary-attackable by anyone holding the event stream. `input_hash`/`output_hash` use a deployment-scoped key held by the Application layer's event port (see `OBSERVABILITY.md`).
 
 ## Tenancy, identity, and retention
@@ -16,9 +16,34 @@ The hosted deployment shape makes multi-tenancy claims, so the constraints below
 | Tenant scope on every request | `tenant_context_ref` on `GenerationRequest`; the Application resolves it and refuses an unscoped request in the hosted shape |
 | Authorization outcome | Denials surface as a typed `ProviderFailure` with category `AUTH` and a safe reason code — never as raw provider or DB errors |
 | Storage isolation | `storage-db` scopes every `RevisionStore` operation by tenant; `getRun` and `listRecent` cannot return another tenant's `run_id` even when one is supplied directly |
-| Deletion | `delete(run_id, confirmation)` removes the complete run bundle including retained `input_ref`/`output_ref` content; events retain only hashes and are unaffected |
+| Deletion | **Target state — not built.** `delete(run_id, confirmation)` exists in no port and no adapter: `RevisionStore` has `append`, `getRun`, `listRecent` and `markStale`, and `ContentStore` has no delete by design. What DOES exist is reclamation, which is a different thing — see below |
 | Retention | Set per deployment and stated per entry via `retention_scope` (`LOCAL_BUNDLE`, `DB`, `EXPORT`). Event retention is configured separately from content retention |
 | Audit access | Reading another user's revision content is an authorized operation that emits its own event; the trace viewer shows hashes only and needs no content access |
+
+### What reclamation is, and what it is not — as of sweep thirteen
+
+Bundle eviction reclaims orphaned content now. It did not before: `storage-local` retained
+eight bundles and evicted the ninth whole while content lived on its own lifetime, so twelve
+runs left **eight bundles and 20 of 60 content files orphaned** — bounded in bundles, unbounded
+in bytes, which is the number that fills a disk.
+
+`ContentStore.sweep(live)` reclaims everything no live ref names. It takes the live SET rather
+than a ref to remove, and that shape is the guarantee: content is addressed by hash, so one file
+can back many runs, and a `delete(ref)` primitive could not tell whether some other run still
+cites those bytes. It would either corrupt that run or leak. Recomputing the live set from the
+surviving bundles is sharing-safe without a reference count.
+
+**Reclamation is not deletion, and must not be read as an erasure guarantee.** It removes what
+nothing points at. It offers no way to erase content a surviving run still cites, which is what
+a subject-erasure request actually asks for — and because content deduplicates by hash, two
+users submitting identical text share one file, so erasure for one is not a file removal at all.
+
+A real `delete(run_id, confirmation)` needs three things this repository does not have: a port
+method, a decision about what erasure means for deduplicated content shared across runs, and an
+authoritative enumeration of stored runs. `listRecent` is a *recent* listing with a limit, not
+an enumeration — the reclaim above refuses to run rather than trust it when the just-completed
+run is absent from what it reports, because a sweep over an incomplete live set deletes content
+that is still cited.
 
 In the local-proxy shape there is a single implicit tenant, and `tenant_context_ref` is null. The isolation rules above are still enforced by `storage-db` when it is configured, so switching deployment shape never silently relaxes them.
 

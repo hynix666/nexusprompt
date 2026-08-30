@@ -33,7 +33,7 @@
  * debug listings equally miserable. `storage-db` will make its own choice when it exists.
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, readdir, unlink } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import type { ContentStore, RetentionScope } from "../../../contracts/index.js";
@@ -189,5 +189,62 @@ export class LocalContentStore implements ContentStore {
     if (matches === null) return false;
     if (!matches) throw corruption(hash);
     return true;
+  }
+
+  /**
+   * Mark and sweep: everything on disk that no live ref names is reclaimed.
+   *
+   * Sharing-safe by construction. A file backing two runs is named by a live ref as long as
+   * either survives, so it is kept without anyone counting references — which is the whole
+   * reason the signature takes the live SET rather than a ref to remove. Refcounting would
+   * need a durable counter that survives crashes and stays correct under concurrent puts;
+   * recomputing the live set from the surviving bundles needs neither.
+   *
+   * Malformed refs in `live` are ignored rather than thrown on. A caller assembling the set
+   * from stored revisions is not proposing an operation on them, and refusing the whole sweep
+   * because one historical entry is unparseable would mean the leak never gets reclaimed —
+   * failing closed here fails *open* on disk usage. `get` and `has` still refuse them, which
+   * is where a malformed ref actually matters.
+   */
+  async sweep(live: ReadonlySet<string>): Promise<number> {
+    const keep = new Set<string>();
+    for (const ref of live) {
+      const match = REF_PATTERN.exec(ref);
+      if (match) keep.add(match[2] as string);
+    }
+
+    let removed = 0;
+    let shards: string[];
+    try {
+      shards = await readdir(this.root);
+    } catch (err) {
+      // Nothing written yet is nothing to reclaim.
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0;
+      throw err;
+    }
+
+    for (const shard of shards) {
+      if (!/^[0-9a-f]{2}$/.test(shard)) continue;
+      let files: string[];
+      try {
+        files = await readdir(join(this.root, shard));
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
+        throw err;
+      }
+      for (const file of files) {
+        const rest = /^([0-9a-f]{62})\.bin$/.exec(file);
+        if (!rest) continue;
+        if (keep.has(shard + rest[1])) continue;
+        try {
+          await unlink(join(this.root, shard, file));
+          removed++;
+        } catch (err) {
+          // Already gone: another sweep or an operator got there first. Not an error.
+          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        }
+      }
+    }
+    return removed;
   }
 }

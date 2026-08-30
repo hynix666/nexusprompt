@@ -150,6 +150,67 @@ describe.each(IMPLEMENTATIONS)("ContentStore conformance — %s", (_name, make) 
     expect(shards.every((d) => /^[0-9a-f]{2}$/.test(d))).toBe(true);
   });
 
+  it("sweep reclaims what no live ref names, and nothing else", async () => {
+    // The leak sweep thirteen measured: bundle eviction reclaimed NOTHING, because content
+    // lives on its own lifetime. Twelve runs left eight bundles and 20 of 60 content files
+    // orphaned — bounded in bundles, unbounded in bytes.
+    const store = make();
+    const keep = refFor(BYTES_A);
+    const drop = refFor(BYTES_B);
+    await store.put(keep, new TextEncoder().encode(BYTES_A));
+    await store.put(drop, new TextEncoder().encode(BYTES_B));
+
+    const removed = await store.sweep(new Set([keep]));
+    expect(removed).toBe(1);
+    expect(await store.has(keep)).toBe(true);
+    expect(await store.get(drop)).toBeNull();
+  });
+
+  it("sweep keeps content named by ANY live ref — sharing-safety", async () => {
+    // Content is addressed by hash, so one file can back many runs. This is why the signature
+    // takes the live SET rather than a ref to remove: a `delete(ref)` primitive cannot know
+    // whether some other run still cites those bytes, and would either corrupt it or leak.
+    const store = make();
+    const shared = refFor(BYTES_A);
+    // The same bytes under a different kind — a different ref naming ONE file.
+    const alias = refFor(BYTES_A, "stage-input");
+    await store.put(shared, new TextEncoder().encode(BYTES_A));
+
+    expect(await store.sweep(new Set([alias]))).toBe(0);
+    expect(await store.has(shared)).toBe(true);
+  });
+
+  it("sweep with an empty live set reclaims everything", async () => {
+    // The must-fire extreme. A sweep that never removed anything would satisfy the
+    // sharing-safety case above while leaving the leak exactly as it was.
+    const store = make();
+    await store.put(refFor(BYTES_A), new TextEncoder().encode(BYTES_A));
+    await store.put(refFor(BYTES_B), new TextEncoder().encode(BYTES_B));
+    expect(await store.sweep(new Set())).toBe(2);
+    expect(await store.get(refFor(BYTES_A))).toBeNull();
+  });
+
+  it("sweep is idempotent and safe on an empty store", async () => {
+    const store = make();
+    expect(await store.sweep(new Set())).toBe(0);
+    await store.put(refFor(BYTES_A), new TextEncoder().encode(BYTES_A));
+    expect(await store.sweep(new Set([refFor(BYTES_A)]))).toBe(0);
+    expect(await store.sweep(new Set([refFor(BYTES_A)]))).toBe(0);
+  });
+
+  it("sweep ignores a malformed live ref rather than refusing the whole reclaim", async () => {
+    // A caller assembling the live set from stored revisions is not proposing an operation on
+    // them. Refusing the sweep because one historical entry is unparseable would mean the leak
+    // is never reclaimed — failing closed here fails OPEN on disk usage.
+    const store = make();
+    const keep = refFor(BYTES_A);
+    await store.put(keep, new TextEncoder().encode(BYTES_A));
+    await store.put(refFor(BYTES_B), new TextEncoder().encode(BYTES_B));
+    const removed = await store.sweep(new Set([keep, "not-a-ref", "../../etc/passwd"]));
+    expect(removed).toBe(1);
+    expect(await store.has(keep)).toBe(true);
+  });
+
   it("declares where it retains", async () => {
     expect(["LOCAL_BUNDLE", "DB", "EXPORT"]).toContain(make().retention_scope);
   });

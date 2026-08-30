@@ -41,6 +41,30 @@ Versioning, as applied here:
 
 ---
 
+## 2026-08-29 (sweep thirteen — reclamation)
+
+### `ContentStore.sweep(live)` — port addition, not a schema
+
+Recorded here rather than versioned, for the reason `RevisionStore.markStale` was: `ContentStore`
+is a port, not a wire contract. No artifact carries its shape, so there is no `$id` to move.
+
+**Why it had to exist.** `storage-local` retains eight run bundles and evicts the ninth whole,
+but content lives on its own lifetime by design — so eviction reclaimed nothing at all. Measured
+over twelve runs: eight bundles survived and **20 of 60 content files were orphaned**. Bounded in
+bundles, unbounded in bytes.
+
+**Why it takes the live SET rather than a ref to remove.** Content is addressed by hash, so one
+file can back many runs. A `delete(ref)` primitive cannot know whether another run still cites
+those bytes — it would either corrupt that run or leak. Passing the live set makes it
+sharing-safe by construction, with no reference count to keep correct across crashes.
+
+This does NOT make the port mutable: an item named by a live ref is never touched, so "written
+once, never edited" still holds. Reclaiming what nothing points at is garbage collection, not
+deletion — and `Documentation/PRIVACY_AND_SECURITY.md` now says so, because it had claimed a
+`delete(run_id, confirmation)` that exists in no port and no adapter.
+
+---
+
 ## 2026-08-29 (artifact-reference lineage — hardening)
 
 ### `revision-entry` 1.4.0 → **2.0.0** (major)
