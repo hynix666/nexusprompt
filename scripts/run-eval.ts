@@ -5,8 +5,14 @@
  *   npm run eval                 run the smoke suite, print the verdict
  *   npm run eval -- --json       emit the EvalRun for a baseline or a comparison
  *   npm run eval -- --compare    run the baseline and the degraded variant, compare them
+ *   npm run eval -- --local      run against a model on this machine (Ollama, no key, no cost)
  *   npm run eval -- --live --dry-run --max-calls N
  *                                decide, print the plan, dispatch nothing
+ *
+ * Three transports, and only one per run. The stub is free and offline; `--local` reaches an
+ * Ollama daemon on loopback and needs a model named; `--live` reaches api.anthropic.com and
+ * needs a key AND a declared budget. `provenance.provider` records which answered, which is
+ * the only thing separating evidence about a model from evidence about this accounting.
  *
  * Composition root for evaluation: the only place a concrete suite path is named.
  *
@@ -33,6 +39,7 @@ import { MemoryCacheStore } from "../application/src/cache.js";
 import { isPipelineCase } from "../application/src/pipeline-eval.js";
 // Naming a concrete adapter is what a composition root is for.
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
+import { OllamaProvider } from "../adapters/provider-ollama/src/index.js";
 import { compare } from "../core/src/eval/compare.js";
 import { detectorsWithoutProbes, probesWithoutDetectors, deadDetectors } from "../core/src/eval/probes.js";
 import { preflight, type PreflightVerdict } from "../core/src/eval/preflight.js";
@@ -53,6 +60,19 @@ const DEGRADED = "degraded-prompt";
  * to Anthropic, so it happens only when the flag is given explicitly.
  */
 const LIVE = process.argv.includes("--live");
+
+/**
+ * `--local` swaps the pinned stubs for a model running on this machine.
+ *
+ * The third transport, and the cheapest one: no credential, no money, no network beyond
+ * loopback. It is what makes an honest measured run possible at all here — `--live` needs a
+ * key and a budget, and until one exists every figure this repository reports came from the
+ * pinned stub.
+ *
+ * Mutually exclusive with `--live`. Accepting both would leave the composition root picking
+ * one silently, and the run would record a `provenance.provider` the operator did not choose.
+ */
+const LOCAL = process.argv.includes("--local");
 
 const flagValue = (name: string): string | undefined => {
   const i = process.argv.indexOf(`--${name}`);
@@ -105,6 +125,16 @@ const DRY_RUN = process.argv.includes("--dry-run");
 function refusalMessage(v: Extract<PreflightVerdict, { ok: false }>, trials: number): string {
   const { plan } = v;
   switch (v.reason) {
+    case "no_local_model":
+      return (
+        "eval --local: no model named.\n\n" +
+        "  A local run asks an Ollama daemon for a specific model, and there is no default —\n" +
+        "  a default names one this machine may not have pulled. Say which:\n\n" +
+        "    PowerShell   $env:OLLAMA_MODEL = 'llama3.2'\n" +
+        "    bash / zsh   export OLLAMA_MODEL=llama3.2\n\n" +
+        "  `ollama list` shows what is already pulled. Unlike --live this costs nothing and\n" +
+        "  needs no key, so there is no budget to declare."
+      );
     case "key_missing":
       return (
         "eval --live: ANTHROPIC_API_KEY is not set in this process's environment.\n\n" +
@@ -159,7 +189,17 @@ function printPlan(plan: PreflightVerdict["plan"], suiteId: string, dry: boolean
     `    planned     ${plan.plannedCalls} provider call(s), worst case, nothing cached\n` +
     `    budget      ${plan.maxCalls === null ? "NONE DECLARED" : `${plan.maxCalls} call(s), refuse on exceed`}\n` +
     `    admission   ${plan.admission.reason}\n` +
-    `    destination api.anthropic.com (hard-coded, frozen allowlist)\n`,
+    // The transport, said plainly. A plan that named the wrong destination would be worse
+    // than one that named none — `provenance.provider` is what separates evidence about a
+    // model from evidence about this system's accounting, and the plan should agree with it.
+    `    transport   ${plan.transport}\n` +
+    `    destination ${
+      plan.transport === "live"
+        ? "api.anthropic.com (hard-coded, frozen allowlist)"
+        : plan.transport === "local"
+          ? "an Ollama daemon on loopback (no network beyond this machine, no cost)"
+          : "the pinned stub (nothing leaves this process)"
+    }\n`,
   );
 
   for (const u of plan.admission.unenforced) {
@@ -285,12 +325,30 @@ async function main(): Promise<number> {
    * believing they had validated an invocation, when a stubbed run needs no key, applies no
    * budget and spends nothing, so approving it says nothing about the run they meant.
    */
-  if (DRY_RUN && !LIVE) {
+  /**
+   * One transport per run, chosen explicitly.
+   *
+   * Accepting both flags would leave this composition root picking one silently, and the
+   * artifact would record a `provenance.provider` the operator did not choose — which is the
+   * one field separating evidence about a model from evidence about this system's accounting.
+   */
+  if (LIVE && LOCAL) {
     console.error(
-      "eval --dry-run: --dry-run plans a live run, and this invocation has no --live.\n\n" +
-      "  Without --live the suite runs against pinned stubs: no key is read, no budget\n" +
-      "  applies, and nothing is spent. There is no plan to approve.\n\n" +
-      "  Add --live to plan a real run, or drop --dry-run and just run it.",
+      "eval: --live and --local name two different transports.\n\n" +
+      "  --live  sends the suite to api.anthropic.com. Needs a key and a declared budget.\n" +
+      "  --local sends it to an Ollama daemon on this machine. Needs a model named.\n\n" +
+      "  Pick one. The run records which answered, and it cannot record both.",
+    );
+    return 2;
+  }
+
+  if (DRY_RUN && !LIVE && !LOCAL) {
+    console.error(
+      "eval --dry-run: --dry-run plans a run against a real transport, and this invocation\n" +
+      "  names neither --live nor --local.\n\n" +
+      "  Against pinned stubs no key is read, no budget applies, and nothing is spent. There\n" +
+      "  is no plan to approve.\n\n" +
+      "  Add --live or --local to plan a real run, or drop --dry-run and just run it.",
     );
     return 2;
   }
@@ -312,13 +370,17 @@ async function main(): Promise<number> {
    * `process.env`; routing it through this script would put it one careless log line away from
    * a terminal, and `implausibleKeyReason` is written never to quote it back.
    */
+  /** Explicit flag wins; `OLLAMA_MODEL` is the fallback. No default model name anywhere. */
+  const localModel = flagValue("model") ?? process.env.OLLAMA_MODEL;
+
   const verdict = preflight({
-    live: LIVE,
+    transport: LIVE ? "live" : LOCAL ? "local" : "stub",
     key: process.env.ANTHROPIC_API_KEY,
     budget: configuration.budget,
     trials: TRIALS,
     caseCount: data.suite.case_ids.length,
     decoding: configuration.decoding,
+    localModel,
   });
 
   if (!verdict.ok) {
@@ -326,7 +388,7 @@ async function main(): Promise<number> {
     return 2;
   }
 
-  if (LIVE) printPlan(verdict.plan, data.suite.suite_id, DRY_RUN);
+  if (LIVE || LOCAL) printPlan(verdict.plan, data.suite.suite_id, DRY_RUN);
 
   /**
    * A dry run stops here, having dispatched nothing.
@@ -339,9 +401,20 @@ async function main(): Promise<number> {
    */
   if (DRY_RUN) return 0;
 
+  /**
+   * Naming a concrete adapter is what a composition root is for. Everything below still sees
+   * only the `ProviderTransport` port.
+   *
+   * The cache is on for both real transports, for different reasons. Hosted: a second
+   * identical request must report a non-zero cache read, which is the only way to tell a
+   * working cache from a silently invalidated one. Local: a 27B model on CPU takes seconds
+   * per call, so a repeat is worth minutes rather than money.
+   */
   const liveWiring = LIVE
     ? { provider: new LocalProxyProvider(), cache: new MemoryCacheStore() }
-    : {};
+    : LOCAL
+      ? { provider: new OllamaProvider({ model: localModel }), cache: new MemoryCacheStore() }
+      : {};
 
   /**
    * A budget refusal is an expected outcome, not a crash.

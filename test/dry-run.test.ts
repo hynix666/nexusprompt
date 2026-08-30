@@ -26,7 +26,7 @@ function run(args: string[], env: Record<string, string | undefined> = {}): { co
   try {
     const out = execFileSync(process.execPath, [TSX, SCRIPT, ...args], {
       cwd: process.cwd(), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, ANTHROPIC_API_KEY: undefined, ...env },
+      env: { ...process.env, ANTHROPIC_API_KEY: undefined, OLLAMA_MODEL: undefined, ...env },
     });
     return { code: 0, out };
   } catch (err) {
@@ -36,12 +36,41 @@ function run(args: string[], env: Record<string, string | undefined> = {}): { co
 }
 
 describe("eval --dry-run", () => {
-  it("refuses without --live, rather than approving a plan that means nothing", () => {
+  it("refuses without a real transport, rather than approving a plan that means nothing", () => {
     // A stubbed run reads no key, applies no budget and spends nothing. Printing a cheerful
     // free plan would leave the operator believing they had validated the run they meant.
     const { code, out } = run(["--dry-run"]);
     expect(code).toBe(2);
-    expect(out).toContain("plans a live run");
+    expect(out).toContain("names neither --live nor --local");
+  });
+
+  it("plans a LOCAL run too, and says which transport it is for", () => {
+    // `--dry-run` was written when there were two transports. A third arrived, and a dry run
+    // that only understood the hosted one would send anyone planning a local run back to
+    // finding out by starting it — which is the thing this flag exists to avoid.
+    const { code, out } = run(
+      ["--local", "--dry-run"],
+      { OLLAMA_MODEL: "some-model" },
+    );
+    expect(code).toBe(0);
+    expect(out).toContain("transport   local");
+    expect(out).toContain("no cost");
+    // No key and no budget are demanded of a transport that needs neither.
+    expect(out).not.toContain("ANTHROPIC_API_KEY");
+  });
+
+  it("refuses a local run with no model named", () => {
+    const { code, out } = run(["--local", "--dry-run"], { OLLAMA_MODEL: "" });
+    expect(code).toBe(2);
+    expect(out).toContain("no model named");
+  });
+
+  it("refuses --live and --local together", () => {
+    // Accepting both would leave the composition root picking one silently, and the run would
+    // record a `provenance.provider` the operator did not choose.
+    const { code, out } = run(["--live", "--local"], { ANTHROPIC_API_KEY: FAKE_KEY });
+    expect(code).toBe(2);
+    expect(out).toContain("two different transports");
   });
 
   it("approves a well-formed live plan and exits 0", () => {

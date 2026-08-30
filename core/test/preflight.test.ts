@@ -19,7 +19,7 @@ const budget = (max: number): Budget => ({
 });
 
 const base = {
-  live: true as boolean,
+  transport: "live" as import("../src/eval/preflight.js").Transport,
   key: GOOD_KEY as string | undefined,
   budget: budget(100) as Budget | null | undefined,
   trials: 1,
@@ -75,7 +75,7 @@ describe("preflight — must NOT fire", () => {
     // a missing key would make `npm run eval` require a credential to run offline, which is
     // the opposite of what the stub is for.
     for (const key of [undefined, "", "<your key>", GOOD_KEY]) {
-      const v = preflight({ ...base, live: false, key, budget: null });
+      const v = preflight({ ...base, transport: "stub", key, budget: null });
       expect(v.ok, `offline with key ${JSON.stringify(key)}`).toBe(true);
     }
   });
@@ -153,7 +153,7 @@ describe("preflight — ordering and agreement", () => {
         for (const cap of [1, 14, 100, 1400, 9999]) {
           for (const decoding of [STOCHASTIC, DETERMINISTIC]) {
             const b = budget(cap);
-            const v = preflight({ live: true, key: GOOD_KEY, budget: b, trials, caseCount, decoding });
+            const v = preflight({ transport: "live", key: GOOD_KEY, budget: b, trials, caseCount, decoding });
             const truth = admitRun({
               budget: b,
               plannedCalls: plannedCalls(caseCount, trials, decoding),

@@ -134,8 +134,8 @@
       "id": "documented-far-exceeds-built",
       "title": "The documentation describes a platform; the repository runs a slice",
       "probe": "builtSurface",
-      "establishes": "A vertical slice that genuinely works: sixteen gates, eleven stages, four adapters, and a CLI that drives a full pipeline run. It cuts through every layer along the riskiest path in the design — a provider failure reaching a Core reduction and coming back out labelled — and `npm run verify` proves it in about ten seconds.",
-      "does_not_establish": "That the system in the 42 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies. What the two built Shells lack is presentation, not capability — both drive the full pipeline through the Application protocol — which is why the gap is stated as scope rather than as a shortfall.",
+      "establishes": "A vertical slice that genuinely works: sixteen gates, eleven stages, five adapters, and a CLI that drives a full pipeline run. One of those adapters can reach a model without a credential or a budget — `provider-ollama` talks to a daemon on loopback — so the slice now includes a transport capable of producing evidence rather than only of degrading honestly. It cuts through every layer along the riskiest path in the design — a provider failure reaching a Core reduction and coming back out labelled — and `npm run verify` proves it in about ten seconds.",
+      "does_not_establish": "That the system in the 42 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of the five the documentation specifies are absent — `provider-hosted-server` and `storage-db` — and note that the built set and the target set are NOT the same set: `content-local` and `provider-ollama` were built here and are in neither documented five, so five built against a target of five does not mean the target is met. Reading those two numbers as a fraction is the mistake this sentence exists to prevent. Two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies. What the two built Shells lack is presentation, not capability — both drive the full pipeline through the Application protocol — which is why the gap is stated as scope rather than as a shortfall.",
       "expect": {
         "documentation_markdown_files": 42,
         "gates_built": 16,
@@ -144,6 +144,7 @@
           "content-local",
           "evidence-local",
           "provider-local-proxy",
+          "provider-ollama",
           "storage-local"
         ],
         "adapters_target": 5,
@@ -216,7 +217,7 @@
       "establishes": "Three things reproduce here, and they are reported separately because they are not equally strong. (1) SAME INPUT, SAME VERDICTS: the gates are pure, denied every effectful builtin by a static check that reads every file under core/src, and 2,784 oracle verdicts agree with a SHA-256-pinned second implementation. (2) SAME SEED, SAME SUITE: the 4,906-case anchor regenerates from seed 1 and check:anchor fails if the committed file is not what the generator produces. (3) SAME SOURCE, SAME HASH: 78 artifact files digest to one hash, and content is normalised to LF first because core.autocrlf is true here — so the hash a Windows checkout computes is the hash a Linux checkout computes, which is the only version of the claim worth making.",
       "does_not_establish": "That this project has reproducible builds in the sense that phrase usually carries. NOTHING IS COMPILED. There is no bundle, no lockstep toolchain pin, no hermetic sandbox; tsx transpiles at run time, and the hash covers source text plus dependency pins rather than a produced binary. The three claims also have genuinely different strengths and must never be merged into one sentence: the first is enforced by a second implementation and a purity guard, the second by a regeneration check, the third only by a digest of files somebody could edit together. Collapsing them lets the weakest borrow the strongest's credibility, which is the specific move this document exists to prevent.",
       "expect": {
-        "artifact_files": 80,
+        "artifact_files": 81,
         "hash_is_lf_normalised": true,
         "hash_excludes_tests_and_tooling": true,
         "hash_excludes_itself": true,

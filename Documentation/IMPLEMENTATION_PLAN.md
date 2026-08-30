@@ -27,6 +27,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "content-local",
     "evidence-local",
     "provider-local-proxy",
+    "provider-ollama",
     "storage-local"
   ],
   "shells": [
@@ -107,7 +108,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
 
 ## Where the work actually is
 
-The completed work is a **vertical slice**, not a set of finished layers. It cuts through contracts, Core, Application, both adapters, and a Shell at a depth of one gate-pair and one stage. That matters for reading everything below: the architecture is proven end to end, and almost all remaining work is *widening* existing layers rather than building new ones.
+The completed work is a **vertical slice**, not a set of finished layers. It cuts through contracts, Core, Application, the adapters, and a Shell at a depth of one gate-pair and one stage. That matters for reading everything below: the architecture is proven end to end, and almost all remaining work is *widening* existing layers rather than building new ones.
 
 ```
                         built          target
@@ -115,7 +116,7 @@ contracts   ████████████████████       1
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
-adapters    ████████████████████▒▒▒▒   4 of 5 (hosted-server, storage-db absent)
+adapters    ████████████████████▒▒▒▒   5 built; hosted-server and storage-db still absent
 shells      █████████████▒▒▒▒▒▒▒▒       2 of 3 — cli runs the full pipeline; api exposes the first REST slice
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
 release     █████████████▒▒▒▒▒▒▒       gate + matrix generator + CI workflow; never executed, no build hash
@@ -137,7 +138,7 @@ Extract, hash, and pin the prior artifacts so every later claim about "the sourc
 
 ### Phase 1 — Vertical slice ✅ complete
 
-One gate pair, one stage, both adapters at slice depth, the CLI, the differential oracle, the boundary checker, and the contract conformance suite.
+One gate pair, one stage, the storage and provider adapters at slice depth, the CLI, the differential oracle, the boundary checker, and the contract conformance suite.
 
 **Exit gate:** `npm run verify` — boundaries, typecheck, source freeze, plan check, tests, oracle. *Passing. 26 planted defects were probed against it; 26 caught, 0 survived.*
 

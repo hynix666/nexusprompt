@@ -67,7 +67,24 @@ export type PreflightReason =
   | "key_missing"
   | "key_implausible"
   | "budget_undeclared"
-  | "budget_refused";
+  | "budget_refused"
+  | "no_local_model";
+
+/**
+ * Which transport a run will use, because the preconditions differ per transport.
+ *
+ * This replaced a boolean `live`. The boolean worked while there were two cases — stub and
+ * hosted — and stopped working the moment a third arrived: a local model needs no credential
+ * and spends no money, so demanding a key and a budget would refuse every local run for
+ * reasons that do not apply to it. Widening `live` to mean "not the stub" would have been the
+ * cheaper edit and the wrong one, because the checks it gates are specifically about spending
+ * someone else's money.
+ *
+ *   stub   nothing to check. Free, offline, no credential.
+ *   local  a model must be NAMED. No key, no budget — an unauthenticated daemon on loopback.
+ *   live   a plausible key AND a declared budget, both refused up front.
+ */
+export type Transport = "stub" | "local" | "live";
 
 /**
  * What the run would cost, whether or not it is allowed to proceed.
@@ -85,6 +102,8 @@ export interface PreflightPlan {
   plannedCalls: number;
   /** Null when no budget was declared. */
   maxCalls: number | null;
+  /** Which transport this plan is for. Recorded so a printed plan cannot mislabel itself. */
+  transport: Transport;
   /** `admitRun`'s verdict — including its `unenforced` list, which a dry run should surface. */
   admission: Admission;
 }
@@ -105,14 +124,16 @@ export type PreflightVerdict =
  * budget to check. Saying "ok" there is not a waiver, it is the accurate answer.
  */
 export function preflight(input: {
-  live: boolean;
+  transport: Transport;
   key: string | undefined;
   budget: Budget | null | undefined;
   trials: number;
   caseCount: number;
   decoding: Decoding;
+  /** The model a local run will ask for. Ignored by the other transports. */
+  localModel?: string | undefined;
 }): PreflightVerdict {
-  const { live, key, budget, trials, caseCount, decoding } = input;
+  const { transport, key, budget, trials, caseCount, decoding, localModel } = input;
 
   const deterministic = isDeterministic(decoding);
   const planned = plannedCalls(caseCount, trials, decoding);
@@ -125,10 +146,36 @@ export function preflight(input: {
     deterministic,
     plannedCalls: planned,
     maxCalls: budget?.max_provider_calls ?? null,
+    transport,
     admission,
   };
 
-  if (!live) return { ok: true, plan };
+  // The stub spends nothing, needs no key and has no budget to check. Saying "ok" here is
+  // not a waiver, it is the accurate answer.
+  if (transport === "stub") return { ok: true, plan };
+
+  /**
+   * A local run needs one thing: a model that is actually named.
+   *
+   * No key — the daemon is unauthenticated on loopback. No budget — the run is free, and
+   * requiring `--max-calls` for a run that cannot spend anything is friction that teaches
+   * people the budget flag is bureaucracy rather than a control.
+   *
+   * The model is checked HERE as well as in the adapter, and that duplication is deliberate:
+   * the adapter refuses per request, which for a fourteen-case suite means fourteen identical
+   * refusals after the run has started. This refuses once, before it starts.
+   */
+  if (transport === "local") {
+    if (!localModel) {
+      return {
+        ok: false,
+        reason: "no_local_model",
+        detail: "no model named for the local transport",
+        plan,
+      };
+    }
+    return { ok: true, plan };
+  }
 
   if (key === undefined || key === "") {
     return { ok: false, reason: "key_missing", detail: "ANTHROPIC_API_KEY is not set", plan };

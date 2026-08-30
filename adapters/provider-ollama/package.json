@@ -1,0 +1,6 @@
+{
+  "name": "@nexusprompt/adapters-provider-ollama",
+  "license": "MIT",
+  "private": true,
+  "type": "module"
+}

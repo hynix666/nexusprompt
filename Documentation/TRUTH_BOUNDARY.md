@@ -153,9 +153,9 @@ that event is a failing build, not a note in a backlog.
 
 `documented-far-exceeds-built` · probe `builtSurface`
 
-**Establishes.** A vertical slice that genuinely works: sixteen gates, eleven stages, four adapters, and a CLI that drives a full pipeline run. It cuts through every layer along the riskiest path in the design — a provider failure reaching a Core reduction and coming back out labelled — and `npm run verify` proves it in about ten seconds.
+**Establishes.** A vertical slice that genuinely works: sixteen gates, eleven stages, five adapters, and a CLI that drives a full pipeline run. One of those adapters can reach a model without a credential or a budget — `provider-ollama` talks to a daemon on loopback — so the slice now includes a transport capable of producing evidence rather than only of degrading honestly. It cuts through every layer along the riskiest path in the design — a provider failure reaching a Core reduction and coming back out labelled — and `npm run verify` proves it in about ten seconds.
 
-**Does not establish.** That the system in the 42 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of five are absent, and two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies. What the two built Shells lack is presentation, not capability — both drive the full pipeline through the Application protocol — which is why the gap is stated as scope rather than as a shortfall.
+**Does not establish.** That the system in the 42 documentation files exists. Those were written target-state and in the present tense before any code existed, so a sentence saying the platform 'implements' something is a specification, not a report. Two adapters of the five the documentation specifies are absent — `provider-hosted-server` and `storage-db` — and note that the built set and the target set are NOT the same set: `content-local` and `provider-ollama` were built here and are in neither documented five, so five built against a target of five does not mean the target is met. Reading those two numbers as a fraction is the mistake this sentence exists to prevent. Two Shells of four — `pipeline-ui` and `toolkit-ui` — have no code at all. `shells/api` counts as built as of 29 August 2026 (ADR-0012): it compiles, is typechecked with everything else, and its routes and socket seam are tested. It is also the newest and least exercised thing here, and it is the only part of the repository with runtime dependencies. What the two built Shells lack is presentation, not capability — both drive the full pipeline through the Application protocol — which is why the gap is stated as scope rather than as a shortfall.
 
 **Pinned:**
 
@@ -168,6 +168,7 @@ that event is a failing build, not a note in a backlog.
     "content-local",
     "evidence-local",
     "provider-local-proxy",
+    "provider-ollama",
     "storage-local"
   ],
   "adapters_target": 5,
@@ -250,7 +251,7 @@ that event is a failing build, not a note in a backlog.
 
 ```json
 {
-  "artifact_files": 80,
+  "artifact_files": 81,
   "hash_is_lf_normalised": true,
   "hash_excludes_tests_and_tooling": true,
   "hash_excludes_itself": true,

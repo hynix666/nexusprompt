@@ -209,7 +209,44 @@ const CHECKS: Array<(root: string) => Finding> = [
   },
 
   /**
-   * The local model, and the two files that make it look configured when it is not.
+   * The local transport: is a daemon there, and is a model named?
+   *
+   * Spawned rather than awaited, because every other check here is synchronous and making
+   * `doctor()` async to accommodate one HTTP call would ripple through its whole test suite
+   * for no gain. The child does the same `/api/tags` probe `OllamaProvider.healthCheck` does.
+   *
+   * Never a failure. A checkout with no Ollama is a healthy checkout — the local transport is
+   * an option, not a requirement, and reporting its absence as broken is how a diagnostic
+   * teaches people to ignore it.
+   */
+  () => {
+    const model = process.env.OLLAMA_MODEL;
+    const probe =
+      "fetch('http://127.0.0.1:11434/api/tags',{signal:AbortSignal.timeout(2000)})" +
+      ".then(r=>r.json()).then(j=>console.log((j.models||[]).length)).catch(()=>console.log('-'))";
+    const r = spawnSync(process.execPath, ["-e", probe], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    const pulled = (r.stdout ?? "").trim();
+
+    if (pulled === "-" || pulled === "") {
+      return {
+        name: "local model", status: "warn", detail: "no Ollama daemon on 127.0.0.1:11434",
+        note: "Optional. With one running and OLLAMA_MODEL set, `npm run eval -- --local` runs the suite against a model on this machine — no key, no cost.",
+      };
+    }
+    if (!model) {
+      return {
+        name: "local model", status: "warn", detail: `Ollama is running with ${pulled} model(s), but OLLAMA_MODEL is not set`,
+        note: "`ollama list` shows what is pulled. There is no default model on purpose — a default names one this machine may not have.",
+      };
+    }
+    return {
+      name: "local model", status: "ok", detail: `Ollama is running · OLLAMA_MODEL=${model}`,
+      note: "`npm run eval -- --local` runs the suite against it. `--dry-run` prints the plan first.",
+    };
+  },
+
+  /**
+   * The dropped ONNX export, and the two files that make it look configured when it is not.
    *
    * `LLM/` carries `config.json` and `generation_config.json`, so listing the directory
    * suggests a working export. ONNX Runtime GenAI reads `genai_config.json`, which is absent,
@@ -218,12 +255,12 @@ const CHECKS: Array<(root: string) => Finding> = [
    */
   (root) => {
     if (!existsSync(join(root, "LLM"))) {
-      return { name: "local model", status: "ok", detail: "not present (nothing depends on it)" };
+      return { name: "LLM/ export", status: "ok", detail: "not present (nothing depends on it)" };
     }
     const genai = existsSync(join(root, "LLM/genai_config.json"));
     return genai
-      ? { name: "local model", status: "warn", detail: "genai_config.json present — but nothing here loads a local model yet" }
-      : { name: "local model", status: "warn", detail: "present, not drivable",
+      ? { name: "LLM/ export", status: "warn", detail: "genai_config.json present — but nothing here loads this export" }
+      : { name: "LLM/ export", status: "warn", detail: "present, not drivable",
           note: "genai_config.json is absent. config.json and generation_config.json are Transformers configs, not the GenAI one, and its parameters must not be guessed." };
   },
 ];
@@ -264,7 +301,7 @@ function liveReadiness(root: string): Finding {
   catch { /* reported as unknown below */ }
 
   const v = preflight({
-    live: true, key, budget: null, trials: 1, caseCount,
+    transport: "live", key, budget: null, trials: 1, caseCount,
     decoding: { temperature: null, seed: null },
   });
 
