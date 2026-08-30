@@ -1,9 +1,14 @@
 # Improvement Recommendations
 
-**Document ID:** ADR-0014 (proposed)  
-**Status:** Approved for Implementation  
-**Created:** 2024  
-**Related:** [`/IMPROVEMENT_PLAN.md`](../IMPROVEMENT_PLAN.md), [`VERIFICATION_REPORT.md`](./VERIFICATION_REPORT.md)
+**Status:** Historical — an earlier improvement initiative, not the live plan.  
+**Related:** [`IMPROVEMENT_PLAN.md`](./IMPROVEMENT_PLAN.md) (its companion), [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) (the live, machine-checked one), [`VERIFICATION_REPORT.md`](./VERIFICATION_REPORT.md)
+
+> **Corrected 30 August 2026.** This header claimed *Document ID: ADR-0014 (proposed)* and
+> *Created: 2024*. It is not an ADR and never entered the sequence; ADR-0014 is
+> [`0014-malformed-response-is-not-demo-mode.md`](./0014-malformed-response-is-not-demo-mode.md),
+> landed on 30 August 2026. A document claiming a number in a sequence it is not in is
+> exactly what the ADR index exists to make checkable — and the link to
+> `../IMPROVEMENT_PLAN.md` went dangling when that file moved into this directory.
 
 ---
 
