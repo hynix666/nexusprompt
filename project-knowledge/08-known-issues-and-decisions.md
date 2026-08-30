@@ -22,6 +22,7 @@ Status line points forward. Where an ADR and `ARCHITECTURE.md` disagree about cu
 | 0012 | `shells/api` adopted as the third Shell; zero-runtime-dependency scoped to below the Shell layer (amends 0004/0006) |
 | 0013 | `audit-report` accepted with its producer **outside** this repository — the pending seam exists for exactly this ordering |
 | 0014 | A malformed response is **not** demo mode — a model that answered badly still answered, so it gets its own category and its own placeholder |
+| 0015 | Local inference is Ollama over loopback HTTP, zero-dependency, with **no** JSON repair — no stage asks a model for JSON, and a silent repairer launders |
 
 ## The truth boundary
 
