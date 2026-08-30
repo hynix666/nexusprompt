@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   PIPELINE, DEPTH_PLAN, DEPTH_OF, planFor, planForContext, resolveDepth,
-  decideGateFeedback, type PipelineContext,
+  decideGateFeedback, MAX_FEEDBACK_ROUNDS, type PipelineContext,
 } from "../src/stages/pipeline.js";
 import { DEMO_MARKER } from "../src/stages/stage-kit.js";
 import { isClean } from "../src/stages/critique.js";
@@ -181,5 +183,62 @@ describe("decideGateFeedback", () => {
       ctx = { ...ctx, ...d.patch };
     }
     expect(rounds).toEqual([1, 2]);
+  });
+});
+
+/**
+ * Sweep twelve — the declared feedback cap is enforced at RUN time, not only at build time.
+ *
+ * `contracts/reliability-budget.json` caps rounds at 3 and says so in its own words:
+ * "check:depth enforces the worst case, so raising this cap fails the build unless the floor
+ * or the target moves." That was true of the FILE and false of the RUNTIME. `decideGateFeedback`
+ * took `ctx.topology.max_iterations` as the cap and nothing consulted the budget, so
+ * `--reflexive 10` was simply granted.
+ *
+ * Measured against the real runner before the clamp: **10 rounds and 31 stage executions**,
+ * where the declared 99.5% per-stage floor yields 0.995^31 = 85.6% against a 90% end-to-end
+ * target — and four stages past the headroom `check:depth` itself prints.
+ */
+describe("gate feedback is bounded by the declared reliability budget", () => {
+  it("the cap comes from the contract, not from a copy of it", () => {
+    const budget = JSON.parse(
+      readFileSync(join(process.cwd(), "contracts/reliability-budget.json"), "utf8"),
+    );
+    expect(MAX_FEEDBACK_ROUNDS).toBe(budget.max_feedback_rounds);
+    expect(MAX_FEEDBACK_ROUNDS).toBeGreaterThan(0);
+  });
+
+  it("refuses a round past the declared cap however many were requested", () => {
+    // Spent exactly the cap: the next round must be refused even though the caller asked for
+    // far more. This is the assertion that was false before the clamp.
+    const d = decideGateFeedback(
+      failing({ topology: { kind: "reflexive", max_iterations: 10 }, feedbackRounds: MAX_FEEDBACK_ROUNDS }),
+      FULL,
+    );
+    expect(d.retry).toBe(false);
+    expect(d.reason).toContain("clamped");
+    expect(d.reason).toContain(String(MAX_FEEDBACK_ROUNDS));
+  });
+
+  it("still grants rounds below the cap — the must-not-refuse half", () => {
+    // Without this, a clamp that refused everything would satisfy the case above while making
+    // the reflexive topology useless.
+    const d = decideGateFeedback(
+      failing({ topology: { kind: "reflexive", max_iterations: 10 }, feedbackRounds: 0 }),
+      FULL,
+    );
+    expect(d.retry).toBe(true);
+    expect(d.resumeAt).toBe("refine");
+  });
+
+  it("a request BELOW the cap is honoured as asked, not raised to it", () => {
+    // The clamp is a ceiling, never a floor. Asking for 1 must still stop at 1.
+    const d = decideGateFeedback(
+      failing({ topology: { kind: "reflexive", max_iterations: 1 }, feedbackRounds: 1 }),
+      FULL,
+    );
+    expect(d.retry).toBe(false);
+    expect(d.reason).toContain("feedback cap reached (1 of 1)");
+    expect(d.reason).not.toContain("clamped");
   });
 });

@@ -20,7 +20,7 @@ import { pathToFileURL } from "node:url";
 import { lint, listPortedGates, worstVerdict } from "../../../application/src/lint.js";
 import { composeEvidence, composeOrchestrator, composePipeline } from "./composition-root.js";
 import { current } from "../../../application/src/release.js";
-import { runPipeline } from "../../../application/src/pipeline.js";
+import { runPipeline, MAX_FEEDBACK_ROUNDS } from "../../../application/src/pipeline.js";
 import type { ObservabilityEvent, PipelineCommand } from "../../../contracts/index.js";
 
 const C = {
@@ -256,6 +256,29 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
   const reflexive = reflexiveFlag === -1
     ? undefined
     : Math.max(1, Number.parseInt(flag("reflexive") ?? "", 10) || 1);
+
+  /**
+   * Refuse above the declared cap rather than clamp silently.
+   *
+   * Core clamps as the backstop, so no caller can exceed it — but a Shell that accepted
+   * `--reflexive 10` and quietly ran 3 would answer a different question than the one asked.
+   * `contracts/reliability-budget.json` caps rounds because every round is two more stage
+   * executions against the error budget: at 10 rounds a run reaches depth 31, where the
+   * declared per-stage floor yields 85.6% against a 90% target.
+   */
+  if (reflexive !== undefined && reflexive > MAX_FEEDBACK_ROUNDS) {
+    console.error(
+      `nexusprompt: --reflexive ${reflexive} exceeds the declared max_feedback_rounds ` +
+      `(${MAX_FEEDBACK_ROUNDS}).
+` +
+      `  Every round is two more stage executions against the error budget in
+` +
+      `  contracts/reliability-budget.json. Raising the cap is a deliberate change there,
+` +
+      `  and \`npm run check:depth\` fails the build if the budget cannot carry it.`,
+    );
+    return 2;
+  }
 
   const result = await runPipeline(
     {
