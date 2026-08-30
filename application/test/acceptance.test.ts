@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Ajv } from "ajv";
@@ -439,6 +439,66 @@ describe("markStale cascades along lineage, not append order", () => {
       sib: "FRESH",                     // must-not-fire — later in the array, no lineage
       "sib-child": "FRESH",
     });
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("refuses a pre-1.3.1 bundle rather than reporting that nothing else is affected", async () => {
+    /**
+     * The silent half of this feature, and the reason a refusal is the right answer.
+     *
+     * `parent_revision_ids` is not in the schema's `required` list — its description says
+     * "Populated since 1.3.1; it existed from 1.0.0 and nothing wrote it" — so a bundle
+     * written before then has the field ABSENT. `(e.parent_revision_ids ?? [])` read that as
+     * "descends from nothing": the named revision went STALE, every descendant stayed FRESH,
+     * and the call returned successfully. The caller's question was "what does this
+     * invalidate?" and the answer given was "nothing else".
+     */
+    const root = await mkdtemp(join(tmpdir(), "pnx-st0-"));
+    const store = new LocalRevisionStore(root);
+
+    for (const e of [entry("root", []), entry("edited", ["root"]), entry("child", ["edited"])]) {
+      await store.append(e);
+    }
+    // Strip the field the way a pre-1.3.1 writer left it: absent, not empty.
+    const file = join(root, "run-s.json");
+    const legacy = JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>[];
+    for (const e of legacy) delete e.parent_revision_ids;
+    await writeFile(file, JSON.stringify(legacy, null, 2));
+
+    await expect(store.markStale("run-s", "edited")).rejects.toThrow(/unlineaged bundle/i);
+
+    // And it refused rather than half-answering: nothing on disk was touched.
+    expect((await store.getRun("run-s")).map((e) => e.freshness)).toEqual(["FRESH", "FRESH", "FRESH"]);
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("does not refuse a root revision, whose empty parent list is legitimate", async () => {
+    // The discriminating half. Keyed on ABSENT, never on empty — the orchestrator writes
+    // `parent_revision_ids: []` for a root, and refusing those would refuse every bundle.
+    const root = await mkdtemp(join(tmpdir(), "pnx-st0b-"));
+    const store = new LocalRevisionStore(root);
+    for (const e of [entry("root", []), entry("child", ["root"])]) await store.append(e);
+
+    await store.markStale("run-s", "root");
+    expect(await freshness(store)).toEqual({ root: "STALE", child: "STALE" });
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("stays quiet on an unlineaged bundle that does not contain the named revision", async () => {
+    // Nothing to stale, so "no such revision" is truthful whatever the lineage looks like.
+    // Ordering: the containment check runs BEFORE the refusal, deliberately.
+    const root = await mkdtemp(join(tmpdir(), "pnx-st0c-"));
+    const store = new LocalRevisionStore(root);
+    await store.append(entry("root", []));
+    const file = join(root, "run-s.json");
+    const legacy = JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>[];
+    for (const e of legacy) delete e.parent_revision_ids;
+    await writeFile(file, JSON.stringify(legacy, null, 2));
+
+    await expect(store.markStale("run-s", "not-in-this-bundle")).resolves.toBeUndefined();
 
     await rm(root, { recursive: true, force: true });
   });

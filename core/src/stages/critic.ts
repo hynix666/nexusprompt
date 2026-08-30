@@ -16,7 +16,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { buildRequest, failurePlaceholder, MAX_TOKENS } from "./stage-kit.js";
+import { buildRequest, failurePlaceholder, MAX_TOKENS, refuseForgedMarker } from "./stage-kit.js";
 
 export const STAGE_ID = "critic" as const;
 
@@ -100,13 +100,16 @@ export function reduce(
   input: CriticInput,
   outcome: GenerationResult | ProviderFailure,
 ): CriticState {
-  const isFailure = "category" in outcome;
+  // A forged marker is a provider failure, decided before the branch so every stage
+  // inherits it through the placeholder path it already has.
+  const settled = refuseForgedMarker(outcome);
+  const isFailure = "category" in settled;
   if (isFailure) {
-    const report = failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure);
+    const report = failurePlaceholder(STAGE_ID, input.prompt, settled as ProviderFailure);
     // DEGRADED, not PASS: a critic that never ran has certified nothing.
     return { verdict: "DEGRADED", report, demo_mode: true };
   }
-  const report = (outcome as GenerationResult).content;
+  const report = (settled as GenerationResult).content;
   return { verdict: parseVerdict(report), report, demo_mode: false };
 }
 

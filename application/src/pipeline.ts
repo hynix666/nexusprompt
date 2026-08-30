@@ -18,6 +18,7 @@ import {
   planForContext, decideGateFeedback, MAX_FEEDBACK_ROUNDS, type PipelineContext } from "../../core/src/stages/pipeline.js";
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { admitRun, plannedPipelineCalls, type Budget } from "../../core/src/eval/budget.js";
+import { refuseForgedMarker } from "../../core/src/stages/stage-kit.js";
 import { invokeWithRetry } from "./invoke.js";
 import { redactingSink } from "./redaction.js";
 import type {
@@ -450,7 +451,19 @@ export async function runPipeline(
       await failStage(err);
       continue;
     }
-    const { outcome, attempts } = invoked;
+    const { outcome: raw, attempts } = invoked;
+    /**
+     * Settled BEFORE `degraded` is read, or the run and its artifact disagree.
+     *
+     * `refuseForgedMarker` reclassifies a completion carrying one of the pipeline's
+     * placeholder markers as `MALFORMED_RESPONSE`, and each stage's `reduce` applies it — so
+     * the artifact becomes the UNUSABLE placeholder either way. But `degraded` was computed
+     * from the RAW outcome, which is still a success, so `anyDemo` stayed false: the run
+     * would report `demo_mode: false` beside an artifact saying a model's answer could not be
+     * used. Same defect as the one being closed, one layer up. Calling the same Core decision
+     * here makes the two agree by construction rather than by both being remembered.
+     */
+    const outcome = refuseForgedMarker(raw);
     const degraded = isFailure(outcome);
     if (degraded) anyDemo = true;
 

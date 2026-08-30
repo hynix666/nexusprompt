@@ -32,7 +32,7 @@ import type {
   GateResult,
 } from "../../../contracts/index.js";
 import { runGates } from "../gates/registry.js";
-import { fillTemplate, buildRequest, failurePlaceholder, DEMO_MARKER } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder, DEMO_MARKER, refuseForgedMarker } from "./stage-kit.js";
 
 export const STAGE_ID = "compile" as const;
 
@@ -113,11 +113,14 @@ export function reduce(
   input: CompileInput,
   outcome: GenerationResult | ProviderFailure,
 ): ReducedState {
-  const isFailure = "category" in outcome;
+  // A forged marker is a provider failure, decided before the branch so every stage
+  // inherits it through the placeholder path it already has.
+  const settled = refuseForgedMarker(outcome);
+  const isFailure = "category" in settled;
 
   const text = isFailure
-    ? failurePlaceholder(STAGE_ID, input.previous ?? input.brief, outcome as ProviderFailure)
-    : (outcome as GenerationResult).content;
+    ? failurePlaceholder(STAGE_ID, input.previous ?? input.brief, settled as ProviderFailure)
+    : (settled as GenerationResult).content;
 
   return {
     output: { text },
