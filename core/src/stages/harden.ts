@@ -11,7 +11,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, demoPlaceholder } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder } from "./stage-kit.js";
 
 export const STAGE_ID = "harden" as const;
 
@@ -56,7 +56,7 @@ export function reduce(
     // prompt would make a failed hardening indistinguishable from a successful one that
     // needed no changes — the pipeline would report a guardrailed prompt it never made.
     prompt: isFailure
-      ? demoPlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure)
+      ? failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure)
       : (outcome as GenerationResult).content,
     demo_mode: isFailure,
   };

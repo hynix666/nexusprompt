@@ -32,7 +32,7 @@ import type {
   GateResult,
 } from "../../../contracts/index.js";
 import { runGates } from "../gates/registry.js";
-import { fillTemplate, buildRequest, demoPlaceholder, DEMO_MARKER } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder, DEMO_MARKER } from "./stage-kit.js";
 
 export const STAGE_ID = "compile" as const;
 
@@ -116,7 +116,7 @@ export function reduce(
   const isFailure = "category" in outcome;
 
   const text = isFailure
-    ? demoPlaceholder(STAGE_ID, input.previous ?? input.brief, outcome as ProviderFailure)
+    ? failurePlaceholder(STAGE_ID, input.previous ?? input.brief, outcome as ProviderFailure)
     : (outcome as GenerationResult).content;
 
   return {

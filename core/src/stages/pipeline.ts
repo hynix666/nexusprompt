@@ -36,7 +36,7 @@ import * as preview from "./preview.js";
 import * as cost from "./cost-estimate.js";
 import * as tone from "./tone-check.js";
 import type { GateOptions } from "../gates/registry.js";
-import { isDemoArtifact } from "./stage-kit.js";
+import { isPlaceholderArtifact } from "./stage-kit.js";
 
 /**
  * The ceiling on gate-feedback rounds, read from the contract rather than restated.
@@ -156,9 +156,9 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
   },
   {
     id: "harden", kind: "generating",
-    // Cannot harden a placeholder. See `isDemoArtifact` — a transforming stage handed a
+    // Cannot harden a placeholder. See `isPlaceholderArtifact` — a transforming stage handed a
     // degraded artifact must decline, or it launders the marker off it.
-    shouldSkip: (c) => isDemoArtifact(c.prompt),
+    shouldSkip: (c) => isPlaceholderArtifact(c.prompt),
     decide: (c, r) => harden.decide({ prompt: c.prompt ?? "" }, r),
     reduce: (c, o) => ({
       prompt: harden.reduce({ prompt: c.prompt ?? "" }, o).prompt,
@@ -172,7 +172,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
     // prompt-consuming stage still calling out, spending a request to review a placeholder
     // whose critique `refine` then skips anyway. You cannot critique a non-artifact any
     // more than you can harden one.
-    shouldSkip: (c) => isDemoArtifact(c.prompt),
+    shouldSkip: (c) => isPlaceholderArtifact(c.prompt),
     reduceSkipped: () => ({ critique: "[SKIPPED] No compiled prompt to review — the build degraded." }),
     decide: (c, r) => critique.decide({ prompt: c.prompt ?? "" }, r),
     reduce: (c, o) => ({ critique: critique.reduce({ prompt: c.prompt ?? "" }, o).critique }),
@@ -184,7 +184,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
     // a clean-looking artifact from output no model made, which is the laundering the demo
     // marker exists to prevent.
     shouldSkip: (c) =>
-      isDemoArtifact(c.prompt) || refine.shouldSkip({ prompt: c.prompt ?? "", critique: c.critique ?? "" }),
+      isPlaceholderArtifact(c.prompt) || refine.shouldSkip({ prompt: c.prompt ?? "", critique: c.critique ?? "" }),
     decide: (c, r) => refine.decide({ prompt: c.prompt ?? "", critique: c.critique ?? "" }, r),
     reduce: (c, o) => ({
       prompt: refine.reduce({ prompt: c.prompt ?? "", critique: c.critique ?? "" }, o).prompt,
@@ -204,7 +204,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
     id: "critic", kind: "generating",
     // A PASS about a placeholder is a clean verdict on a non-artifact — the same thing the
     // stale-verdict clearing above exists to prevent, arrived at from the other direction.
-    shouldSkip: (c) => isDemoArtifact(c.prompt) || critic.shouldSkip({ prompt: c.prompt ?? "", stakes: c.stakes }),
+    shouldSkip: (c) => isPlaceholderArtifact(c.prompt) || critic.shouldSkip({ prompt: c.prompt ?? "", stakes: c.stakes }),
     decide: (c, r) => critic.decide({ prompt: c.prompt ?? "", lint: c.lint, stakes: c.stakes }, r),
     reduce: (c, o) => {
       const s = critic.reduce({ prompt: c.prompt ?? "", lint: c.lint, stakes: c.stakes }, o);
@@ -219,7 +219,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
     id: "preview", kind: "generating",
     // Previewing a placeholder sends it to a live model AS the system prompt and stores a
     // clean, shippable-looking reply as the run demonstration of a prompt never compiled.
-    shouldSkip: (c) => isDemoArtifact(c.prompt),
+    shouldSkip: (c) => isPlaceholderArtifact(c.prompt),
     reduceSkipped: () => ({ preview: "[SKIPPED] No compiled prompt to preview — the build degraded." }),
     decide: (c, r) => preview.decide({ prompt: c.prompt, testMessage: c.testMessage ?? "" }, r),
     reduce: (c, o) => ({ preview: preview.reduce({ prompt: c.prompt, testMessage: c.testMessage ?? "" }, o).reply }),
@@ -230,7 +230,7 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
   },
   {
     id: "tone_check", kind: "generating",
-    shouldSkip: (c) => isDemoArtifact(c.prompt) || tone.shouldSkip({ prompt: c.prompt ?? "", depth: c.depth }),
+    shouldSkip: (c) => isPlaceholderArtifact(c.prompt) || tone.shouldSkip({ prompt: c.prompt ?? "", depth: c.depth }),
     decide: (c, r) => tone.decide({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, r),
     reduce: (c, o) => {
       const s = tone.reduce({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, o);
@@ -384,7 +384,7 @@ export function decideGateFeedback(
     return { retry: false, reason: "this depth plan omits refine or lint" };
   }
 
-  if (isDemoArtifact(ctx.prompt)) {
+  if (isPlaceholderArtifact(ctx.prompt)) {
     return { retry: false, reason: "the prompt is a demo placeholder — nothing real to refine" };
   }
 

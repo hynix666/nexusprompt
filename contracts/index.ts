@@ -92,17 +92,32 @@ export interface GenerationResult {
  * Adapters classify; the Application branches; Core maps the classified category to a
  * placeholder. Nothing downstream re-derives the distinction from a message.
  */
-export type FailureCategory =
-  | "TIMEOUT"
-  | "RATE_LIMIT"
-  | "AUTH"
-  | "UNAVAILABLE"
-  | "INVALID_REQUEST"
-  | "CONTENT_FILTER"
-  | "INTERNAL"
-  | "CANCELLED"
+/**
+ * The values, as an array the type is derived FROM rather than a union restated beside one.
+ *
+ * A union cannot be enumerated at runtime, so every exhaustive test over categories had to
+ * hand-write the list — and `core/test/demo-mode.test.ts` did, in a sweep whose header claims
+ * it covers "every generating stage against every failure category". That list had eight
+ * entries when the ninth landed, so the sweep would have gone on reporting exhaustive
+ * coverage of a set it no longer covered. A hand-picked list is a sparse matcher.
+ *
+ * `MALFORMED_RESPONSE` last, matching the schema's enum order; a conformance test asserts the
+ * two agree, so TypeScript and JSON Schema cannot drift apart silently.
+ */
+export const FAILURE_CATEGORIES = [
+  "TIMEOUT",
+  "RATE_LIMIT",
+  "AUTH",
+  "UNAVAILABLE",
+  "INVALID_REQUEST",
+  "CONTENT_FILTER",
+  "INTERNAL",
+  "CANCELLED",
   /** A response arrived and could not be used. The only value here that means the model answered. */
-  | "MALFORMED_RESPONSE";
+  "MALFORMED_RESPONSE",
+] as const;
+
+export type FailureCategory = (typeof FAILURE_CATEGORIES)[number];
 
 /**
  * Did the provider actually answer?

@@ -13,7 +13,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { buildRequest, demoPlaceholder, MAX_TOKENS } from "./stage-kit.js";
+import { buildRequest, failurePlaceholder, MAX_TOKENS } from "./stage-kit.js";
 
 export const STAGE_ID = "preview" as const;
 
@@ -57,7 +57,7 @@ export function reduce(
   const isFailure = "category" in outcome;
   return {
     reply: isFailure
-      ? demoPlaceholder(STAGE_ID, input.testMessage, outcome as ProviderFailure)
+      ? failurePlaceholder(STAGE_ID, input.testMessage, outcome as ProviderFailure)
       : (outcome as GenerationResult).content,
     demo_mode: isFailure,
     used_fallback: !input.prompt,

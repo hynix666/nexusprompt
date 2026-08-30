@@ -21,8 +21,16 @@ export interface Detector {
   run(outcome: PipelineOutcome, expectation: EvalCase["expectation"]): { passed: boolean; detail: string };
 }
 
-/** The literal, not the imported constant — a test that imports what it checks cannot fail. */
+/**
+ * The literals, not the imported constants — a test that imports what it checks cannot fail.
+ *
+ * Deliberate double entry. Changing a marker in `stage-kit.ts` breaks these detectors, and
+ * someone has to come here and agree. That is the point: the marker text is the honesty
+ * guarantee's whole surface, and it should not be possible to reword it in one place.
+ */
 const DEMO_MARKER = "⟦WORKFLOW DEMO — no model⟧";
+const UNUSABLE_MARKER = "⟦MODEL ANSWERED — OUTPUT UNUSABLE⟧";
+const MARKERS = [DEMO_MARKER, UNUSABLE_MARKER] as const;
 
 const DETECTORS: readonly Detector[] = Object.freeze([
   {
@@ -63,7 +71,19 @@ const DETECTORS: readonly Detector[] = Object.freeze([
     id: "demo-labelled-when-degraded",
     run: (o) => {
       if (!o.demo_mode) return { passed: true, detail: "not degraded" };
-      const marked = o.output.text.includes(DEMO_MARKER);
+      /**
+       * Either marker counts as labelled, and the reason is worth stating.
+       *
+       * `demo_mode` is set for ANY provider failure, including `MALFORMED_RESPONSE` — a model
+       * that answered unusably. Core emits `UNUSABLE_MARKER` there rather than the demo one
+       * (ADR-0014), so a detector matching only `DEMO_MARKER` would report DEGRADED BUT
+       * UNLABELLED about output that is, in fact, labelled — a false alarm on the one
+       * detector whose whole job is catching unlabelled placeholders.
+       *
+       * Still exact literals, not a loosened pattern: `degraded-with-lookalike-marker` and
+       * its unusable-marker twin both plant near-miss text that must NOT satisfy this.
+       */
+      const marked = MARKERS.some((m) => o.output.text.includes(m));
       return { passed: marked, detail: marked ? "labelled" : "DEGRADED BUT UNLABELLED" };
     },
   },
