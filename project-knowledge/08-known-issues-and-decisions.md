@@ -277,6 +277,28 @@ reads as enforced and is not, which is strictly worse than an absent one:
 | `--stage` on `nexusprompt run` | parsed, skipped over by the argument scanner, then discarded; `cmdRun` hardcoded `compile` |
 | the `dangling-ref` promotion gate | `decidePromotion` accepted `contentRefs`/`refExists`, both optional, and the only caller passed neither |
 | `input_ref` / `output_ref` | `buildRevision` took ref arguments no call site supplied, and no composition root built a `ContentStore` |
+| `admitRun` on the SINGLE-STAGE path | `Orchestrator.run` dispatched three times and admitted zero, with no `budget` option a caller could supply (sweep twelve) |
+
+### The sibling: enforced, but in the wrong place
+
+Sweep twelve found a variant worth separating, because the usual tell does not catch it. The
+mechanism **was** wired, tested, and enforcing — at build time, over a file, while the runtime
+read a different number entirely.
+
+`contracts/reliability-budget.json` caps gate-feedback rounds at 3 and `check:depth` fails the
+build when the worst-case depth breaches the error budget at that cap. The file says so in its
+own words: *"raising this cap fails the build unless the floor or the target moves."* But
+`decideGateFeedback` took `ctx.topology.max_iterations` as the cap and consulted the budget
+never, so `--reflexive 10` was simply granted: 10 rounds, **31 stage executions**, 85.6%
+attainable against a 90% target — ten stages past the headroom `check:depth` prints.
+
+Nothing was unwired. Nobody had to raise the cap. The guarantee was about a number the runtime
+never read, and the fix was to make Core **import** the contract rather than restate it, so the
+two cannot drift.
+
+**Ask of any declared constant: who reads it at run time?** A checker reading it is not the
+same as the code obeying it, and a build-time proof over a file says nothing about a process
+that takes the value from somewhere else.
 
 **The tell is an optional parameter with no production caller.** Every one of these type-checks,
 tests green at the unit level, and is described in prose as working. Three of them shipped with
@@ -291,6 +313,10 @@ Two habits catch it, and neither is code review at the diff:
 - **Mutation-prove at the layer that ships.** Un-wiring the content store failed only the
   artifact-hash *checksum* until an end-to-end retention test existed — a checksum noticing that
   bytes moved is not a test noticing that behaviour changed.
+- **Turn the finding into the question.** Sweep twelve fixed one unadmitted path and then
+  installed the predicate that found it, derived from the source. Fixing the instance without
+  installing the question leaves the third occurrence to be found by hand, which is exactly how
+  the first two were found.
 
 ### Fixtures too uniform to discriminate
 

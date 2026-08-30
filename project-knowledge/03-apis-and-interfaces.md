@@ -24,7 +24,7 @@ Invoked in-repo as `npm run cli -- <args>`.
 | `--stakes LOW\|MEDIUM\|HIGH\|SAFETY-CRITICAL` | selects depth (default `MEDIUM`) |
 | `--depth TINY\|MINIMAL\|STANDARD\|COMPREHENSIVE` | overrides the stakes mapping |
 | `--test "<message>"` | the turn the `preview` stage tries |
-| `--reflexive [N]` | route a gate FAIL back to `refine`, at most N times (default 1) |
+| `--reflexive [N]` | route a gate FAIL back to `refine`, at most N times (default 1). **Refused above the declared `max_feedback_rounds`** — every round is two more stage executions against the error budget, and Core clamps as the backstop |
 
 Stakes selects depth: `LOW` runs 6 of 11 stages, `SAFETY-CRITICAL` all 11. Each reflexive
 round costs **two** more stage executions against the depth budget.

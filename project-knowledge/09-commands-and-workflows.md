@@ -81,6 +81,11 @@ Three things about the CLI surface, all of them earned:
 - **`--max-calls N` is the pipeline's budget**, checked against the worst case for the plan
   actually selected — generating stages, plus one per feedback round, times retries. Omitted
   means unbounded; a malformed value exits 2 rather than becoming a run with no budget.
+- **`--reflexive N` is refused above the declared cap**, not clamped. The number lives in
+  `contracts/reliability-budget.json`, Core imports it rather than restating it, and Core clamps
+  as the backstop so no caller can exceed it. Before sweep twelve the cap bound the build and
+  nothing else: `--reflexive 10` ran 10 rounds and 31 stage executions, at 85.6% attainable
+  against a 90% target.
 
 ---
 
