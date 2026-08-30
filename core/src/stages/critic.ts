@@ -16,7 +16,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { buildRequest, demoPlaceholder, MAX_TOKENS } from "./stage-kit.js";
+import { buildRequest, failurePlaceholder, MAX_TOKENS } from "./stage-kit.js";
 
 export const STAGE_ID = "critic" as const;
 
@@ -102,7 +102,7 @@ export function reduce(
 ): CriticState {
   const isFailure = "category" in outcome;
   if (isFailure) {
-    const report = demoPlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure);
+    const report = failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure);
     // DEGRADED, not PASS: a critic that never ran has certified nothing.
     return { verdict: "DEGRADED", report, demo_mode: true };
   }

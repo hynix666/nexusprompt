@@ -130,6 +130,20 @@ export const PROBE_CORPUS: readonly MutationProbe[] = Object.freeze([
     mutate: (o) => ({ ...withText(o, "[WORKFLOW DEMO - no model] nothing was produced"), demo_mode: true }),
   },
   {
+    id: "unusable-with-lookalike-marker",
+    detector_id: "demo-labelled-when-degraded",
+    expectation: NONE,
+    /**
+     * The same trap for the second marker (ADR-0014).
+     *
+     * The detector was widened to accept `UNUSABLE_MARKER` so that a model which answered
+     * unusably is not reported as unlabelled. Widening a matcher is how a false clean gets
+     * shipped, so the new branch gets the near-miss probe the old one has: square brackets
+     * and a hyphen instead of the real delimiters, reading correctly and matching nothing.
+     */
+    mutate: (o) => ({ ...withText(o, "[MODEL ANSWERED - OUTPUT UNUSABLE] nothing usable came back"), demo_mode: true }),
+  },
+  {
     id: "degraded-fabricates-system-prompt",
     detector_id: "no-fabrication-when-degraded",
     expectation: NONE,

@@ -14,7 +14,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, demoPlaceholder, MAX_TOKENS } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder, MAX_TOKENS } from "./stage-kit.js";
 
 export const STAGE_ID = "tone_check" as const;
 
@@ -93,7 +93,7 @@ export function reduce(
   if (isFailure) {
     return {
       voice: "MINOR_DRIFT",
-      report: demoPlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure),
+      report: failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure),
       demo_mode: true,
     };
   }

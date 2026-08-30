@@ -13,7 +13,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, demoPlaceholder } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder } from "./stage-kit.js";
 import { isClean } from "./critique.js";
 
 export const STAGE_ID = "refine" as const;
@@ -64,7 +64,7 @@ export function reduce(
   const isFailure = "category" in outcome;
   return {
     prompt: isFailure
-      ? demoPlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure)
+      ? failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure)
       : (outcome as GenerationResult).content,
     demo_mode: isFailure,
     skipped: false,

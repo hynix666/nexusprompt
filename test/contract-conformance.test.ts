@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Ajv, type ValidateFunction } from "ajv";
-import { providerAnswered, type FailureCategory } from "../contracts/index.js";
+import { providerAnswered, FAILURE_CATEGORIES, type FailureCategory } from "../contracts/index.js";
 import { GuardedJudge } from "../application/src/judge.js";
 import addFormatsImport from "ajv-formats";
 
@@ -291,6 +291,13 @@ describe("provider-failure", () => {
     const answered = declared.filter((c) => providerAnswered(c as FailureCategory));
     expect(declared).toHaveLength(9);
     expect(answered).toEqual(["MALFORMED_RESPONSE"]);
+  });
+
+  it("the TypeScript categories and the schema enum are the same list", () => {
+    // Two declarations of one set, in two languages, neither generated from the other. This
+    // is the seam where they drift: the schema is what validates an artifact, the union is
+    // what the compiler enforces, and a value added to one alone fails in only one of them.
+    expect([...FAILURE_CATEGORIES]).toEqual(load("provider-failure").properties.category.enum);
   });
 });
 

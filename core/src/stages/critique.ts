@@ -13,7 +13,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, demoPlaceholder } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder } from "./stage-kit.js";
 
 export const STAGE_ID = "critique" as const;
 
@@ -68,7 +68,7 @@ export function reduce(
     // as reviewed-and-clean that no reviewer ever saw. The placeholder cannot collide with
     // it — it opens with the demo marker — and a test asserts exactly that.
     critique: isFailure
-      ? demoPlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure)
+      ? failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure)
       : (outcome as GenerationResult).content,
     demo_mode: isFailure,
   };

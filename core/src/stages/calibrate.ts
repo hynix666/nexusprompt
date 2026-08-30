@@ -9,7 +9,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, demoPlaceholder } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder } from "./stage-kit.js";
 
 export const STAGE_ID = "calibrate" as const;
 
@@ -50,7 +50,7 @@ export function reduce(
   const isFailure = "category" in outcome;
   return {
     calibration: isFailure
-      ? demoPlaceholder(STAGE_ID, input.previous ?? input.brief, outcome as ProviderFailure)
+      ? failurePlaceholder(STAGE_ID, input.previous ?? input.brief, outcome as ProviderFailure)
       : (outcome as GenerationResult).content,
     demo_mode: isFailure,
   };

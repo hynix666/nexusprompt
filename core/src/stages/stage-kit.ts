@@ -11,13 +11,34 @@
  */
 
 import { createHash } from "node:crypto";
+import { providerAnswered } from "../../../contracts/index.js";
 import type { GenerationRequest, ProviderFailure } from "../../../contracts/index.js";
 
-/** The marker. One definition; the detectors deliberately re-declare the literal instead. */
+/** No model answered. One definition; the detectors deliberately re-declare the literal. */
 export const DEMO_MARKER = "⟦WORKFLOW DEMO — no model⟧";
 
 /**
- * Is this text a degraded placeholder rather than a real artifact?
+ * A model answered, and the answer could not be used.
+ *
+ * A distinct marker rather than a variant of the one above, because the two facts are
+ * different and the demo placeholder says, in words, "No output was produced" — which is
+ * false about a run where a model produced 800 tokens of unparseable text. See ADR-0014.
+ */
+export const UNUSABLE_MARKER = "⟦MODEL ANSWERED — OUTPUT UNUSABLE⟧";
+
+/**
+ * Every marker Core can emit in place of real output.
+ *
+ * A list rather than two constants used separately, because the predicate below must never
+ * know about a subset. That is not hypothetical: the predicate below existed precisely because
+ * a placeholder had been laundered into clean-looking output once already, and a second
+ * marker the predicate did not recognise would reopen the same hole on the path that now
+ * actually reaches a model.
+ */
+export const PLACEHOLDER_MARKERS = [DEMO_MARKER, UNUSABLE_MARKER] as const;
+
+/**
+ * Is this text a placeholder rather than a real artifact?
  *
  * Load-bearing once stages are chained. Assembling the pipeline surfaced a laundering
  * hole: `harden` degrades, `prompt` becomes a labelled placeholder, and `refine` then
@@ -29,9 +50,13 @@ export const DEMO_MARKER = "⟦WORKFLOW DEMO — no model⟧";
  * "the run knows it degraded", it is "output produced without a model never presents itself
  * as though it had one". A transforming stage handed a placeholder must decline rather than
  * produce, because a placeholder is not a prompt and there is nothing to transform.
+ *
+ * Renamed from `isDemoArtifact` when the second marker landed. That name would have been
+ * a lie by omission at eight call sites in `pipeline.ts`, each of which is a `shouldSkip`
+ * guard standing between a placeholder and a stage that would transform it.
  */
-export const isDemoArtifact = (text: string | undefined): boolean =>
-  typeof text === "string" && text.includes(DEMO_MARKER);
+export const isPlaceholderArtifact = (text: string | undefined): boolean =>
+  typeof text === "string" && PLACEHOLDER_MARKERS.some((m) => text.includes(m));
 
 /**
  * The shared compiler identity, sent as the system prompt on every non-preview stage call.
@@ -263,16 +288,54 @@ const truncate = (s: string, n: number): string => {
  * making. Without the fence a brief containing "100% accurate" makes CLAIM_DISCIPLINE warn
  * about the *input's* overclaim as though the placeholder had asserted it.
  */
-export function demoPlaceholder(stage_id: string, echo: string, failure: ProviderFailure): string {
+export function failurePlaceholder(stage_id: string, echo: string, failure: ProviderFailure): string {
+  /**
+   * Which of the two situations this is, decided by the category rather than by a message.
+   *
+   * `providerAnswered` lives in `contracts/` beside the enum it reads, so a category added
+   * later forces a decision there instead of defaulting into the demo branch — which is
+   * where being wrong is invisible, because the placeholder would go on asserting that
+   * nothing was produced about a run that produced something.
+   */
+  const answered = providerAnswered(failure.category);
+
+  const head = answered
+    ? [
+        UNUSABLE_MARKER,
+        "",
+        `Stage "${stage_id}" reached a model, and the response could not be used.`,
+      ]
+    : [
+        DEMO_MARKER,
+        "",
+        `Stage "${stage_id}" did not run against a model.`,
+      ];
+
+  /**
+   * The body differs in exactly the claim that differs, and nowhere else.
+   *
+   * The demo half says nothing was produced. The unusable half must not say that — it is
+   * the false sentence ADR-0014 exists to prevent — but it also must not show the model's
+   * actual response: that text is the thing that could not be trusted, and reproducing it
+   * here would hand the next stage something to launder.
+   */
+  const body = answered
+    ? [
+        "A model ran and produced output. That output is not shown, because it could not be",
+        "parsed and is not something to carry forward. The text you are reading is a",
+        "placeholder, not model output, and nothing below it was generated.",
+      ]
+    : [
+        "No output was produced. The text you are reading is a placeholder,",
+        "not model output, and nothing below it was generated.",
+      ];
+
   return [
-    DEMO_MARKER,
-    "",
-    `Stage "${stage_id}" did not run against a model.`,
+    ...head,
     `Provider: ${failure.provider_id} · category: ${failure.category} · reason: ${failure.reason_code}`,
     `Detail: ${failure.safe_message}`,
     "",
-    "No output was produced. The text you are reading is a placeholder,",
-    "not model output, and nothing below it was generated.",
+    ...body,
     "",
     "Input received:",
     "```",
