@@ -1,6 +1,6 @@
 # Testing and quality
 
-**1,380 tests across 35 files, 0 failing.** Runs offline in seconds.
+**1,393 tests across 36 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -132,7 +132,7 @@ already paid that once with a CRLF-anchored regex in `check-plan`.
 
 ### 6. The artifact hash — `npm run check:hash`
 
-77 runtime files (contracts, Core, Application, adapter and Shell sources, plus `package.json`
+78 runtime files (contracts, Core, Application, adapter and Shell sources, plus `package.json`
 and the lockfile) digested to one hash. NOT tests, scripts, spec or Documentation: those decide
 what is *checked*, not what runs, and a hash that churns on a moved comment is a hash people
 stop reading.
@@ -233,13 +233,30 @@ commit was the one that added `adapters/content-local` to `package-lock.json`, s
 not `npm ci` at all; `build-hash.json` survived only because both commits happened to touch it.
 
 **Verify the PR's `headRefOid` equals the commit you pushed before merging.** A green run is not
-enough — the run can be green on a commit that is not the one about to be squashed. Comparing
+enough — the run can be green on a commit that is not the one about to be squashed.
+
+**It has now happened twice, and the second time the check could not prevent it.** In sweep
+fourteen the API's `headRefOid` and its commits list both still named the previous head more
+than five minutes after the push, while `git rev-parse origin/<branch>` reported the new one.
+The merge took the branch as the API knew it and dropped the correction, putting master red
+again. Two things follow: **when the API's head disagrees with `origin/<branch>` the PR is not
+safely mergeable by anyone**, and closing and reopening forces the refresh — which only helps
+if you get there before whatever else merges it. Comparing
 local `HEAD`, `origin/<branch>` and the API's `headRefOid` takes one command and is the only
 check that would have caught it:
 
 ```bash
 git rev-parse HEAD; git rev-parse origin/<branch>; gh pr view <n> --json headRefOid --jq .headRefOid
 ```
+
+**A fourth cause, and the only one about the working tree rather than the platform.** Sweep
+fourteen's CI failed on `check:truth` — declared 77 artifact files, derived 78 — minutes after a
+green local `verify`. `build:hash` and the truth probe both derive their file list from
+`git ls-files`, and the new file was still UNTRACKED, so git did not list it and both computed
+77. `git add` made it real and CI saw the truth. The other three causes are environmental; this
+one is that a brand-new file is invisible to every checker that asks git what exists, which is
+most of them here — and it is invisible exactly once, on the run before you stage it. **Stage
+the file, then run the derived checks.**
 
 And the class the dropped commit belonged to: **`npm ci` is the one command a local checkout
 never runs.** Adding a workspace without regenerating the lock file leaves every local command
@@ -248,8 +265,8 @@ green while CI cannot install the project. Reproduce that failure the way it app
 
 ## The sweeps, and the instrument problem
 
-Thirteen adversarial sweeps have run against this repository's own guarantees. **Ten of the
-thirteen produced a first result that was about the INSTRUMENT rather than the code** — a probe
+Fourteen adversarial sweeps have run against this repository's own guarantees. **Eleven of the
+fourteen produced a first result that was about the INSTRUMENT rather than the code** — a probe
 that could not have failed, a matcher too narrow, a comparison of a value against itself.
 
 Sweep thirteen changed what that costs. Every earlier instance produced a **false clean**: the
@@ -278,6 +295,13 @@ instrument can fail:
   matched `provider.generate(` and missed `this.inner.generate(` — a sparse matcher, in the file
   written to catch sparse matchers. Its own stale-exemption rule caught it: a module was declared
   a delegate while the predicate insisted it did not dispatch, and one of the two had to be wrong.
+- **A guard behaving correctly can look like a guard working.** The sharpest instrument failure
+  so far, from sweep fourteen. The probe planted a marker string and confirmed no event carried
+  it — except the marker was invented inside the probe, so it was not a body the run held, and
+  the redaction guard ignored it *correctly*. Clean result, guard never exercised, and it would
+  have been reported as working. It only fired once the planted error quoted the REAL brief.
+  **Ask what the guard would have to see to fire, then check the probe actually presents that** —
+  not merely that the probe presents something and the result is clean.
 
 ## The recurring failure: fixtures too uniform to discriminate
 
