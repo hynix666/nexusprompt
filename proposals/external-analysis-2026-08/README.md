@@ -37,18 +37,25 @@ Every one of its ten `npm run eval` invocations passes `--provider ollama-local`
 `scripts/run-eval.ts` accepts `--live`, `--local`, `--dry-run`, `--compare`, `--json`,
 `--suite`, `--model`, `--max-calls` and `--trials`. There is no `--provider`.
 
-The consequence is worse than a command that errors. Transport is selected by `--live` or
-`--local`, and neither is present in any command the study gives, so every one of them runs
-against **pinned stubs** while the reader believes a local model answered. Its headline
-example —
+Transport is selected by `--live` or `--local`, and neither appears in any command the study
+gives, so every one of them runs against **pinned stubs**. Run as written:
 
 ```
-npm run eval -- --provider ollama-local --model llama3.2:3b --max-calls 5
+npm run eval -- --provider ollama-local --model llama3.1:8b --max-calls 100
+  configuration f938ffde188f · 14 pinned provider call(s), no network
+  14/14 cases · score 1.000
 ```
 
-— names a model, spends nothing, reaches nothing, and reports a pass. `provenance.provider`
-in the resulting `EvalRun` would read `pinned-stub`, which is the field that exists to keep a
-run that is evidence about a model separate from one that is evidence about the accounting.
+Exit 0. `--provider` was ignored — the runner does not reject unrecognised flags. `--model` is
+a real flag, was accepted, and was inert: it is read into `localModel` and only consulted when
+the transport is `local`, so naming a model under the stub transport does nothing and says
+nothing.
+
+**The report itself is honest** — *"14 pinned provider call(s), no network"* is exactly what
+happened, and `provenance.provider` on the resulting `EvalRun` reads `pinned-stub`. What is
+missing is a refusal at the point where the operator's request and the runner's transport
+disagree. The study's own headline command (`--max-calls 5`) does refuse, but for an unrelated
+reason: 14 planned calls exceed the budget.
 
 Its executive summary also states the system has *"zero provider calls ever made (verified in
 TRUTH_BOUNDARY.md)"* and is dated **December 2025**. The `provider-ollama` adapter it describes
@@ -69,11 +76,11 @@ as proposals rather than instructions, which is how the surrounding text present
 
 ## The one finding worth acting on
 
-Not a documentation defect. `scripts/run-eval.ts` **ignores unrecognised flags silently**,
-which is what lets `--provider ollama-local` produce a confident stub run rather than a
-refusal. A runner that cannot tell an operator they asked for a transport it does not have is
-the same failure mode as a suite accepted by the wrong runner — the case
-`isPipelineCase` exists to prevent.
+Not a documentation defect, and not an honesty defect in the output. `scripts/run-eval.ts`
+**ignores unrecognised flags silently**, and accepts `--model` under a transport that cannot
+use one. Both are the same shape: the runner cannot tell an operator that what they asked for
+is not what it is about to do. It reports the run it actually performed, correctly — but a
+misspelled transport flag should refuse before dispatch, the way an undeclared budget does.
 
 ## Recovering the originals
 
