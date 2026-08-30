@@ -29,7 +29,7 @@ enforces, so this table and that test cannot disagree.
 | `observability-event` | 1.3.0 | validated |
 | `pipeline-outcome` | 1.0.0 | validated |
 | `promotion` | 1.0.0 | validated |
-| `provider-failure` | 1.0.0 | validated |
+| `provider-failure` | 1.1.0 | validated |
 | `revision-entry` | 2.0.0 | validated |
 | `routing-policy` | 1.0.0 | validated |
 | `run-manifest` | 1.0.0 | validated |

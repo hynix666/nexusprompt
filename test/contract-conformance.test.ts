@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Ajv, type ValidateFunction } from "ajv";
+import { providerAnswered, type FailureCategory } from "../contracts/index.js";
 import { GuardedJudge } from "../application/src/judge.js";
 import addFormatsImport from "ajv-formats";
 
@@ -241,6 +242,55 @@ describe("provider-failure", () => {
 
   it("rejects an undeclared extra field — the contract is closed", () => {
     expect(validators["provider-failure"]({ ...adapterFailure, raw_response: "…" })).toBe(false);
+  });
+
+  /**
+   * 1.1.0. No code produces one yet — the contract lands before the adapter and the Core
+   * mapping, per ADR-0002 — so this is the only thing holding the schema to its intent.
+   */
+  it("accepts MALFORMED_RESPONSE, the one category that means the model ANSWERED", () => {
+    const malformed = {
+      ...adapterFailure,
+      category: "MALFORMED_RESPONSE",
+      // Usually true here, and that is a real difference from AUTH: a stochastic model
+      // resampled may well parse, where a refused credential never will.
+      retriable: true,
+      reason_code: "unparseable_json",
+      safe_message: "the response could not be parsed as JSON",
+    };
+    expect(report(validators["provider-failure"], malformed)).toBe(true);
+  });
+
+  it("still rejects the name the proposal documents used", () => {
+    // `STRUCTURED_OUTPUT_FAILURE` scopes the value to structured output; an empty completion
+    // and a truncated one are the same structural event and neither is about structure.
+    // Pinned so the rejected name cannot drift back in as a second spelling (ADR-0014).
+    expect(validators["provider-failure"](
+      { ...adapterFailure, category: "STRUCTURED_OUTPUT_FAILURE" },
+    )).toBe(false);
+  });
+
+  it("providerAnswered separates the one category that means a response arrived", () => {
+    // The predicate, not a list at each call site. A new category added without a decision
+    // here would default into the demo path, where the wrong answer is invisible: a
+    // placeholder saying "No output was produced" about a run that produced something.
+    expect(providerAnswered("MALFORMED_RESPONSE")).toBe(true);
+    for (const c of [
+      "TIMEOUT", "RATE_LIMIT", "AUTH", "UNAVAILABLE",
+      "INVALID_REQUEST", "CONTENT_FILTER", "INTERNAL", "CANCELLED",
+    ] as const) {
+      expect(providerAnswered(c), c).toBe(false);
+    }
+  });
+
+  it("the predicate covers every category the schema declares", () => {
+    // Derived, not enumerated. The list above is a hand-written set and would go stale the
+    // moment a tenth category lands; this asks the schema what it allows and requires every
+    // value to have been decided about.
+    const declared = load("provider-failure").properties.category.enum as string[];
+    const answered = declared.filter((c) => providerAnswered(c as FailureCategory));
+    expect(declared).toHaveLength(9);
+    expect(answered).toEqual(["MALFORMED_RESPONSE"]);
   });
 });
 

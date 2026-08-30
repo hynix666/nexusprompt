@@ -77,6 +77,21 @@ export interface GenerationResult {
   timings_ms?: { total?: number };
 }
 
+/**
+ * Why a request did not yield usable output.
+ *
+ * The first eight all mean the same structural thing: **no response arrived**. A timeout, a
+ * refused credential, a filtered request and a cancelled call differ in cause and in whether
+ * retrying helps, but in every one of them the model produced nothing.
+ *
+ * `MALFORMED_RESPONSE` is the odd one, and it is the reason this union is documented rather
+ * than merely listed. It means a response DID arrive and could not be used. Answering badly
+ * is not the same as not answering, and collapsing the two would make the demo placeholder —
+ * whose text is literally "No output was produced" — into a false statement. See ADR-0014.
+ *
+ * Adapters classify; the Application branches; Core maps the classified category to a
+ * placeholder. Nothing downstream re-derives the distinction from a message.
+ */
 export type FailureCategory =
   | "TIMEOUT"
   | "RATE_LIMIT"
@@ -85,7 +100,20 @@ export type FailureCategory =
   | "INVALID_REQUEST"
   | "CONTENT_FILTER"
   | "INTERNAL"
-  | "CANCELLED";
+  | "CANCELLED"
+  /** A response arrived and could not be used. The only value here that means the model answered. */
+  | "MALFORMED_RESPONSE";
+
+/**
+ * Did the provider actually answer?
+ *
+ * One predicate, so no call site has to remember which categories mean "nothing came back".
+ * Adding a category forces a decision here rather than defaulting into the demo path, which
+ * is where the wrong answer is invisible: a new category that silently reads as "no response"
+ * would produce a placeholder saying nothing was produced about a run that produced something.
+ */
+export const providerAnswered = (category: FailureCategory): boolean =>
+  category === "MALFORMED_RESPONSE";
 
 export interface ProviderFailure {
   request_id: string;
@@ -169,7 +197,7 @@ export interface PipelineOutcome {
  */
 export const CONTRACT_VERSIONS = {
   "gate-result": "1.3.0",
-  "provider-failure": "1.0.0",
+  "provider-failure": "1.1.0",
   "pipeline-outcome": "1.0.0",
   "revision-entry": "2.0.0",
   "observability-event": "1.3.0",
