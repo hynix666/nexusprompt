@@ -42,7 +42,7 @@ import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.j
 import { OllamaProvider } from "../adapters/provider-ollama/src/index.js";
 import { compare } from "../core/src/eval/compare.js";
 import { detectorsWithoutProbes, probesWithoutDetectors, deadDetectors } from "../core/src/eval/probes.js";
-import { preflight, type PreflightVerdict } from "../core/src/eval/preflight.js";
+import { preflight, type PreflightVerdict, type Transport } from "../core/src/eval/preflight.js";
 import type { Configuration, EvalSuite } from "../contracts/index.js";
 
 /** The configuration a variant names, so two runs differ in exactly one recorded field. */
@@ -73,6 +73,41 @@ const LIVE = process.argv.includes("--live");
  * one silently, and the run would record a `provenance.provider` the operator did not choose.
  */
 const LOCAL = process.argv.includes("--local");
+
+/**
+ * Which transport this run uses, named once.
+ *
+ * `LIVE ? "live" : LOCAL ? "local" : "stub"` was written out at the `preflight` call and
+ * nowhere else, so every other site that needed to know re-derived it from `LIVE` alone —
+ * and re-derived it as a two-way choice. Deriving it once is what makes the report and the
+ * preflight incapable of disagreeing about what the run is. Safe at module scope: it reads
+ * argv and cannot throw, unlike the flag parsing that had to move into `main()`.
+ */
+const TRANSPORT: Transport = LIVE ? "live" : LOCAL ? "local" : "stub";
+
+/**
+ * How a run describes the calls it made — three transports, not two.
+ *
+ * This was `LIVE ? "live" : "pinned"`, a two-way branch written when there were two
+ * transports. `--local` landed with ADR-0015 and fell into the else, so a run against a real
+ * model on this machine printed `14 pinned provider call(s), no network`. Measured: a
+ * `--local --model phi4-mini:latest` run took 69 seconds, reached the daemon fourteen times,
+ * and said `pinned`.
+ *
+ * That is the worst direction for this particular sentence to be wrong in. `provenance.provider`
+ * recorded `ollama-local` correctly the whole time, so the artifact was right and only the
+ * line a person reads was wrong — which is exactly the gap between a run that is evidence
+ * about a model and one that is evidence about the accounting.
+ *
+ * Pure and transport-taking so all three can be asserted without a daemon, a key, or money.
+ */
+export function callsPhrase(transport: Transport, calls: number): string {
+  const noun =
+    transport === "live" ? "live provider call(s)"
+    : transport === "local" ? "local provider call(s), loopback only"
+    : "pinned provider call(s), no network";
+  return `${calls} ${noun}`;
+}
 
 const flagValue = (name: string): string | undefined => {
   const i = process.argv.indexOf(`--${name}`);
@@ -455,7 +490,7 @@ async function main(): Promise<number> {
   const localModel = flagValue("model") ?? process.env.OLLAMA_MODEL;
 
   const verdict = preflight({
-    transport: LIVE ? "live" : LOCAL ? "local" : "stub",
+    transport: TRANSPORT,
     key: process.env.ANTHROPIC_API_KEY,
     budget: configuration.budget,
     trials: TRIALS,
@@ -519,14 +554,24 @@ async function main(): Promise<number> {
   }
   const { run, perCase } = result;
 
-  if (LIVE) {
+  /**
+   * Printed for BOTH real transports, not just the paid one.
+   *
+   * `provenance.provider` is the single field separating evidence about a model from
+   * evidence about this accounting, and it was shown only under `--live`. So the transport a
+   * person can actually run — no key, no cost — was the one that never told them which
+   * provider answered. Gating a fact on whether it was expensive to obtain is backwards.
+   */
+  if (TRANSPORT !== "stub") {
     const c = run.cost;
     console.log(
-      `\n  live provider — ${run.provenance.provider}\n` +
+      `\n  ${TRANSPORT} provider — ${run.provenance.provider}\n` +
       `    provider calls  ${c.provider_calls}\n` +
       `    cache hits      ${c.cache_hits ?? 0}\n` +
       `    tokens          ${c.tokens_in} in / ${c.tokens_out} out\n` +
-      `    usd             ${c.usd === null ? "unmeasured (no rate supplied)" : c.usd}\n` +
+      // A local run spends nothing, and "unmeasured" would read as "we did not check".
+      `    usd             ${TRANSPORT === "local" ? "0 — runs on this machine"
+        : c.usd === null ? "unmeasured (no rate supplied)" : c.usd}\n` +
       `    budget exceeded ${c.budget_exceeded}`,
     );
   }
@@ -550,9 +595,11 @@ async function main(): Promise<number> {
   // "no network" was hard-coded and stopped being true the moment --live existed. The line
   // now reports which transport actually answered, because that is the difference between a
   // run that is evidence about a model and one that is evidence about the accounting.
+  // Three-way since ADR-0015's local tier: the two-way version called a 69-second run
+  // against phi4-mini "pinned". `callsPhrase` is where all three are decided and asserted.
   console.log(
-    `  configuration ${run.configuration_id.slice(0, 12)} · ${run.cost.provider_calls} ` +
-    `${LIVE ? "live" : "pinned"} provider call(s)${LIVE ? "" : ", no network"}\n`,
+    `  configuration ${run.configuration_id.slice(0, 12)} · ` +
+    `${callsPhrase(TRANSPORT, run.cost.provider_calls)}\n`,
   );
 
   for (const c of perCase) {
