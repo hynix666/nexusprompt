@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/run-manifest/1.0.0",
+  "title": "RunManifest",
+  "description": "A whole semantic run as one immutable, atomically published unit: the run's revisions plus every content ref they cite. Metadata only — no content bodies. A run id must use exactly one storage mode (legacy bundle or semantic manifest); both under one run id is an error. Immutable after publication.",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "run_id",
+    "created_at",
+    "committed_at",
+    "revisions",
+    "content_refs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "manifest_version": {
+      "description": "Pinned: the manifest format is versioned independently of revision-entry so readers can refuse formats they do not understand without guessing from shape.",
+      "const": "1.0.0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "description": "When the run started (first revision began).",
+      "type": "string",
+      "format": "date-time"
+    },
+    "committed_at": {
+      "description": "When the manifest was atomically published. After this instant the manifest is immutable.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "revisions": {
+      "description": "Every revision of the run, in execution order. Non-empty: a manifest for a run with no revisions is not a state worth publishing.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "revision_id",
+          "run_id",
+          "stage_id",
+          "timestamp",
+          "input_hash",
+          "output_hash",
+          "gate_results",
+          "freshness",
+          "status",
+          "execution_provenance",
+          "retention_scope",
+          "input_ref",
+          "output_ref"
+        ],
+        "properties": {
+          "revision_id": { "type": "string", "minLength": 1 },
+          "run_id": { "type": "string", "minLength": 1 },
+          "stage_id": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "input_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "output_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "input_ref": {
+            "type": ["string", "null"],
+            "pattern": "^npx:stage-input:[0-9a-f]{64}:(local-bundle|db|export)$"
+          },
+          "output_ref": {
+            "type": ["string", "null"],
+            "pattern": "^npx:(stage-output|generation-response):[0-9a-f]{64}:(local-bundle|db|export)$"
+          },
+          "gate_results": { "type": "array" },
+          "freshness": { "enum": ["FRESH", "STALE"] },
+          "status": {
+            "enum": ["SUCCEEDED", "DEMO", "FAILED", "CANCELLED", "SKIPPED"]
+          },
+          "provider_used": { "type": ["string", "null"] },
+          "execution_provenance": { "type": "object" },
+          "retention_scope": { "enum": ["LOCAL_BUNDLE", "DB", "EXPORT"] },
+          "parent_revision_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "stage_attempt": { "type": "integer", "minimum": 1 },
+          "feedback_round": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "content_refs": {
+      "description": "Exactly the set of non-null input_ref/output_ref values across revisions — no duplicates, no extras. The deletion sweep's live set: a ref missing from here will be reclaimed, a ref present here but never cited is a leak.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^npx:(stage-input|stage-output|generation-response):[0-9a-f]{64}:(local-bundle|db|export)$"
+      },
+      "uniqueItems": true
+    }
+  }
+}

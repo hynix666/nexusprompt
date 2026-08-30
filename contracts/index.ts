@@ -275,6 +275,27 @@ export interface RunBundleSummary {
   last_timestamp: string;
 }
 
+/**
+ * A semantic run manifest: the whole run (revisions + the content refs it cites)
+ * as ONE immutable, atomically published unit.
+ *
+ * Storage modes are exclusive per run id. A run is either a legacy append-only
+ * `<run_id>.json` bundle or a `<run_id>.manifest.json` semantic manifest — never
+ * both, and readers must never merge the two. Manifests carry metadata only:
+ * content bodies stay in the ContentStore, addressed by `content_refs`.
+ *
+ * Published once, never mutated: there is no update path, by design. A corrected
+ * run is a new run.
+ */
+export interface RunManifest {
+  manifest_version: "1.0.0";
+  run_id: string;
+  created_at: string;
+  committed_at: string;
+  revisions: RevisionEntry[];
+  content_refs: string[];
+}
+
 export interface RevisionStore {
   append(entry: RevisionEntry): Promise<void>;
   getRun(run_id: string): Promise<RevisionEntry[]>;
@@ -295,6 +316,17 @@ export interface RevisionStore {
    * and its gate results — the record of what happened is not the claim that it still holds.
    */
   markStale(run_id: string, from_revision_id: string): Promise<void>;
+  /**
+   * Publish a semantic run manifest atomically (optional capability).
+   *
+   * Implementations must: refuse a run that already has EITHER mode (immutability
+   * and the one-mode-per-run rule), publish through a temporary file finalized with
+   * an exclusive `link` — never `rename`, which silently replaces — and share the
+   * per-root serialisation chain with `append` so publication, appends and eviction
+   * never interleave. `append` on a run that already has a manifest must refuse with
+   * `mixed-lineage`.
+   */
+  commitManifest?(manifest: RunManifest): Promise<void>;
 }
 
 /* ── Execution plane ──────────────────────────────────────────────────────── */
