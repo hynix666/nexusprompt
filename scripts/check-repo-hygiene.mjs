@@ -158,6 +158,12 @@ export const NEVER_IGNORED = [
   "project-knowledge/00-index.md",
   ".github/workflows/verify.yml",
   "package.json",
+  // The one file here that is ignored by a pattern and rescued by a negation. `.env.*`
+  // matches it, and `!.env.example` below that line is what makes it committable at all.
+  // Rule 7 catches the negation's removal only while the file is still TRACKED; this entry
+  // catches it immediately, because rule 6 asks "would a new file at this path be ignored?"
+  // — which is the question that stays meaningful after someone deletes it.
+  ".env.example",
 ];
 
 const readText = (path) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
