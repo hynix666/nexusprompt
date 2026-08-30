@@ -250,7 +250,7 @@ that event is a failing build, not a note in a backlog.
 
 ```json
 {
-  "artifact_files": 78,
+  "artifact_files": 79,
   "hash_is_lf_normalised": true,
   "hash_excludes_tests_and_tooling": true,
   "hash_excludes_itself": true,
