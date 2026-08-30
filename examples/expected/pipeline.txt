@@ -1,0 +1,34 @@
+# pipeline — eleven stages with no provider — DEGRADES, exit 3
+# regenerate: npm run docs:examples · check: npm run check:examples
+
+pipeline ./examples/briefs/support-bot.md   run <RUN_ID> · stakes MEDIUM · 7 stage(s)
+  demo deconstruct
+  demo calibrate
+  demo compile
+  skip harden
+  ok   lint
+  skip preview
+  ok   cost_estimate
+
+[DEGRADED] token_estimate=127
+  WARN GUARDRAIL_GAP: Missing guardrail clause(s): anti-override, scope, fact-grounding.
+
+compiled prompt
+⟦WORKFLOW DEMO — no model⟧
+
+Stage "compile" did not run against a model.
+Provider: local-proxy · category: AUTH · reason: no_api_key
+Detail: ANTHROPIC_API_KEY is not set in this process's environment.
+
+No output was produced. The text you are reading is a placeholder,
+not model output, and nothing below it was generated.
+
+Input received:
+```
+⟦WORKFLOW DEMO — no model⟧ Stage "deconstruct" did not run against a model. Provider: local-proxy · category: AUTH · reason: no_api_key Detail: ANTHROPIC_API_K…
+```
+
+bundle: 7 revision(s) under run <RUN_ID>
+
+This run degraded — at least one stage never reached a model.
+Output above is labelled placeholder text, not model output.

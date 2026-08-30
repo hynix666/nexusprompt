@@ -6,7 +6,9 @@ import { join, dirname } from "node:path";
 import { checkPlan } from "../scripts/check-plan.mjs";
 import { checkBoundaries } from "../scripts/check-boundaries.mjs";
 import { verifySources } from "../scripts/verify-sources.mjs";
-import { implausibleKeyReason } from "../scripts/run-eval.js";
+// Moved out of `scripts/run-eval.ts` when `--dry-run` gave the live preconditions a second
+// caller. One predicate, two callers, no way for them to drift.
+import { implausibleKeyReason } from "../core/src/eval/preflight.js";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 const __dirnameShim = dirname(fileURLToPath(import.meta.url));

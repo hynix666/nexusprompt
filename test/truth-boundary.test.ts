@@ -251,24 +251,53 @@ describe("providerReach — the boundary that matters most", () => {
     expect(r.fingerprints_pinned).toBe(1);
   });
 
-  it("reports the budget guard, and reports its ABSENCE as unverified", () => {
-    // The guard standing between this repository and its first unbounded spend. Derived from
-    // source rather than by running `--live`, because a behavioural probe would dispatch the
-    // very run it is checking for, precisely when the guard is missing.
+  /**
+   * The guard standing between this repository and its first unbounded spend.
+   *
+   * This probe used to grep `run-eval.ts` for `/LIVE && MAX_CALLS === undefined/`, and these
+   * tests planted a one-line file to move it. Both changed when the decision moved into
+   * `core/src/eval/preflight.ts`: the grep reported the guarantee BROKEN while it was intact,
+   * which is the failure mode of every source-shaped probe — it fails on a refactor, and a
+   * probe that fails on a refactor is one somebody edits until it passes.
+   *
+   * It is behavioural now, which `--dry-run` is what made safe: `if (DRY_RUN) return 0;` sits
+   * above the line constructing a provider, so the probe exercises the real decision path and
+   * still cannot dispatch — including when the guard is missing, which was the objection.
+   *
+   * ## What each direction below proves, and what it does not
+   *
+   * The positive case runs the REAL repository, so it is evidence about this tree rather than
+   * about a fixture. The negative cases are induced by breaking the probe's preconditions
+   * rather than by removing the budget branch itself, because inducing that honestly would
+   * mean mutating the working tree from inside a test. The behaviour they stand in for —
+   * "a live run with no --max-calls exits 2 saying so" — is covered directly by
+   * `test/dry-run.test.ts`, which spawns the real command for all four refusals.
+   */
+  it("reports the budget guard by running it, against this repository", () => {
+    expect(PROBES.providerReach(process.cwd()).live_requires_declared_budget).toBe(true);
+  }, 30_000);
+
+  it("reports NOT VERIFIED when it cannot safely run the check", () => {
     const root = plant(null);
     mkdirSync(join(root, "scripts"), { recursive: true });
 
-    writeFileSync(join(root, "scripts/run-eval.ts"), "if (LIVE && MAX_CALLS === undefined) { refuse(); }\n");
-    expect(PROBES.providerReach(root).live_requires_declared_budget).toBe(true);
+    // No `if (DRY_RUN) return 0;` — the probe refuses to spawn at all here, because a live
+    // invocation without that early return is exactly the state in which spawning could
+    // dispatch. Fail closed, and do it without touching the network to find out.
+    writeFileSync(join(root, "scripts/run-eval.ts"), "// no dry-run early return\n");
+    expect(PROBES.providerReach(root).live_requires_declared_budget).toBe(false);
 
-    writeFileSync(join(root, "scripts/run-eval.ts"), "// the guard was removed\n");
+    // Precondition satisfied but the command cannot produce the refusal — here because the
+    // planted root has no runtime. Anything other than "exit 2, no budget declared" reads as
+    // unverified rather than as fine.
+    writeFileSync(join(root, "scripts/run-eval.ts"), "if (DRY_RUN) return 0;\n");
     expect(PROBES.providerReach(root).live_requires_declared_budget).toBe(false);
 
     rmSync(join(root, "scripts/run-eval.ts"));
     // Unreadable reads as NOT verified. A removed guard and an unreadable one make the same
     // claim — nothing was proven — and neither may pass as fine.
     expect(PROBES.providerReach(root).live_requires_declared_budget).toBe(false);
-  });
+  }, 30_000);
 
   it("refuses a placeholder key and accepts a well-shaped one", () => {
     const r = PROBES.providerReach(plant(null));

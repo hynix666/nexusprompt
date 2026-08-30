@@ -97,4 +97,9 @@ LLM/
 shells/*/dist/
 .env
 .env.*
+# `.env.*` matches `.env.example`, so the committed template needs an explicit escape.
+# Without this line the file cannot be committed at all, and force-adding it fails
+# `check:hygiene` rule 7 — no tracked file may be ignored. Order matters: the last
+# matching pattern wins, so this must stay below `.env.*`.
+!.env.example
 *.log

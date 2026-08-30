@@ -1,0 +1,12 @@
+# refuse — a live run with no key — REFUSES, exit 2, nothing spent
+# regenerate: npm run docs:examples · check: npm run check:examples
+
+eval --live: ANTHROPIC_API_KEY is not set in this process's environment.
+
+  Set it yourself — nothing here will ask you for it, store it, or print it.
+  Replace the words YOUR_KEY_HERE; do not paste the line as written:
+    PowerShell   $env:ANTHROPIC_API_KEY = 'YOUR_KEY_HERE'    (this session only)
+    bash / zsh   export ANTHROPIC_API_KEY='YOUR_KEY_HERE'
+
+  A live run sends this suite's briefs to api.anthropic.com and spends money.
+  Without --live, `npm run eval` stays offline against pinned stubs.

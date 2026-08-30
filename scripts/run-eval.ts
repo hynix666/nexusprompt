@@ -5,10 +5,18 @@
  *   npm run eval                 run the smoke suite, print the verdict
  *   npm run eval -- --json       emit the EvalRun for a baseline or a comparison
  *   npm run eval -- --compare    run the baseline and the degraded variant, compare them
+ *   npm run eval -- --live --dry-run --max-calls N
+ *                                decide, print the plan, dispatch nothing
  *
  * Composition root for evaluation: the only place a concrete suite path is named.
  *
- * Exit 0 every case passed · 1 a case failed · 2 the suite cannot be read
+ * Exit 0 every case passed, or a dry run's plan is valid and within budget
+ *      · 1 a case failed
+ *      · 2 the suite cannot be read, OR any live-run precondition refused: no key, a key
+ *        whose shape says placeholder, no declared budget, or a budget the plan does not
+ *        fit. One code for every refusal on purpose — a refusal predicted by `--dry-run`
+ *        and the same refusal enforced by the live run are one decision, and `3` already
+ *        means something else. `TRUTH_BOUNDARY.md` pins this.
  *      · 3 the instrument itself is broken — a detector has no probe, or probes ran
  *        against it and caught nothing, which makes it dead code behind a clean suite.
  *      · 4 `--compare` did not reach the verdict it exists to demonstrate.
@@ -27,6 +35,7 @@ import { isPipelineCase } from "../application/src/pipeline-eval.js";
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
 import { compare } from "../core/src/eval/compare.js";
 import { detectorsWithoutProbes, probesWithoutDetectors, deadDetectors } from "../core/src/eval/probes.js";
+import { preflight, type PreflightVerdict } from "../core/src/eval/preflight.js";
 import type { Configuration, EvalSuite } from "../contracts/index.js";
 
 /** The configuration a variant names, so two runs differ in exactly one recorded field. */
@@ -76,17 +85,96 @@ const intFlag = (name: string): number | undefined => {
 };
 
 /**
- * Why this value cannot be a key — or null if nothing rules it out.
+ * `--dry-run` decides, prints and stops. Nothing is dispatched.
  *
- * Exported and pure so the refusal is testable without spawning the script or setting a
- * process-wide variable. It asserts NO vendor format: `sk-ant-` plus a length would fail
- * closed the day either changes, and this script has no business knowing that. It reports
- * only shapes a key can never have, which is a claim that stays true.
+ * It exists because the only way to find out whether a live invocation was well-formed was to
+ * start one, and starting one spends money. The plan it prints is computed by
+ * `core/src/eval/preflight.ts` — the same function the live path uses — so an approved dry run
+ * is a real prediction rather than a second implementation that agrees by luck.
  */
-export function implausibleKeyReason(key: string): string | null {
-  if (/[<>"'\s]/.test(key)) return "contains a bracket, quote or whitespace";
-  if (key.length < 20) return `is ${key.length} characters long`;
-  return null;
+const DRY_RUN = process.argv.includes("--dry-run");
+
+/**
+ * Turn a refusal into the message the operator reads.
+ *
+ * The wording lives here rather than in Core because it is presentation: which of these
+ * sentences is printed is Core's decision, how it reads is the Shell's. Both the live path and
+ * the dry run route through this one function, so a refusal cannot be worded one way when
+ * predicted and another when enforced.
+ */
+function refusalMessage(v: Extract<PreflightVerdict, { ok: false }>, trials: number): string {
+  const { plan } = v;
+  switch (v.reason) {
+    case "key_missing":
+      return (
+        "eval --live: ANTHROPIC_API_KEY is not set in this process's environment.\n\n" +
+        "  Set it yourself — nothing here will ask you for it, store it, or print it.\n" +
+        "  Replace the words YOUR_KEY_HERE; do not paste the line as written:\n" +
+        "    PowerShell   $env:ANTHROPIC_API_KEY = 'YOUR_KEY_HERE'    (this session only)\n" +
+        "    bash / zsh   export ANTHROPIC_API_KEY='YOUR_KEY_HERE'\n\n" +
+        "  A live run sends this suite's briefs to api.anthropic.com and spends money.\n" +
+        "  Without --live, `npm run eval` stays offline against pinned stubs."
+      );
+    case "key_implausible":
+      return (
+        `eval --live: ANTHROPIC_API_KEY is set, but its value ${v.detail}.\n\n` +
+        "  That is a placeholder or a truncated paste, not a key. Refusing here rather than\n" +
+        "  letting api.anthropic.com reject it after the run has started spending.\n\n" +
+        "  The value is not shown, and was not read for any purpose other than this check."
+      );
+    case "budget_undeclared":
+      return (
+        "eval --live: no budget declared.\n\n" +
+        `  This run would make ${v.detail}.\n` +
+        "  Say what it may spend:\n\n" +
+        `    npm run eval -- --live --trials ${trials} --max-calls ${plan.plannedCalls}\n\n` +
+        "  There is no default on purpose. A generous one and a stingy one are both defensible,\n" +
+        "  so choosing either for you is the bug — the same reason Budget.on_exceed is mandatory."
+      );
+    case "budget_refused":
+      return (
+        `eval --live: ${v.detail}.\n\n` +
+        `  ${plan.plannedCalls} planned call(s) against a cap of ${plan.maxCalls}. Nothing was spent.\n` +
+        "  Raise --max-calls, lower --trials, or run a smaller suite."
+      );
+  }
+}
+
+/**
+ * The plan, printed before anything is spent rather than after.
+ *
+ * A cost report that appears once the money is gone is a receipt, not a control. Every number
+ * here comes from the preflight verdict, so this cannot show one plan and execute another.
+ */
+function printPlan(plan: PreflightVerdict["plan"], suiteId: string, dry: boolean): void {
+  const perCase = plan.deterministic
+    ? `1 distinct call per case — the configuration is deterministic, so trials 2..${plan.trials} would be cache hits`
+    : `${plan.distinctPerCase} call(s) per case — the configuration is stochastic, so every trial is a distinct request`;
+
+  console.log(
+    `\n  ${dry ? "DRY RUN — nothing will be dispatched" : "live run"}\n\n` +
+    `    suite       ${suiteId}\n` +
+    `    cases       ${plan.caseCount}\n` +
+    `    trials      ${plan.trials}   (${perCase})\n` +
+    `    planned     ${plan.plannedCalls} provider call(s), worst case, nothing cached\n` +
+    `    budget      ${plan.maxCalls === null ? "NONE DECLARED" : `${plan.maxCalls} call(s), refuse on exceed`}\n` +
+    `    admission   ${plan.admission.reason}\n` +
+    `    destination api.anthropic.com (hard-coded, frozen allowlist)\n`,
+  );
+
+  for (const u of plan.admission.unenforced) {
+    console.log(`  budget NOT enforced: ${u}`);
+  }
+
+  if (dry) {
+    console.log(
+      "\n  This is a prediction, not a reservation. `plannedCalls` is the worst case with\n" +
+      "  nothing cached; the real run re-checks it through the same `admitRun` before it\n" +
+      "  spends anything. No token or dollar estimate is printed: this repository has no\n" +
+      "  pinned rate, and a made-up one is a claim about the world that would decay silently.\n\n" +
+      "  Drop --dry-run to execute it.\n",
+    );
+  }
 }
 
 async function main(): Promise<number> {
@@ -191,99 +279,69 @@ async function main(): Promise<number> {
    * would only hide the accounting.
    */
   /**
-   * Pre-flight. Without this a keyless `--live` run degrades all fourteen cases and reports a
-   * score — honest, because demo mode labels every one of them, and unhelpful, because the
-   * user still has no idea why. Refuse first and say what to do.
+   * A dry run plans a LIVE run. Without --live there is nothing to plan.
    *
-   * Presence is all that is read. The value belongs to the adapter and to `process.env`;
-   * routing it through this script would put it one careless log line away from a terminal.
+   * Silently printing a free plan would be the worse behaviour: the operator would come away
+   * believing they had validated an invocation, when a stubbed run needs no key, applies no
+   * budget and spends nothing, so approving it says nothing about the run they meant.
    */
-  if (LIVE && !process.env.ANTHROPIC_API_KEY) {
+  if (DRY_RUN && !LIVE) {
     console.error(
-      "eval --live: ANTHROPIC_API_KEY is not set in this process's environment.\n\n" +
-      "  Set it yourself — nothing here will ask you for it, store it, or print it.\n" +
-      "  Replace the words YOUR_KEY_HERE; do not paste the line as written:\n" +
-      "    PowerShell   $env:ANTHROPIC_API_KEY = 'YOUR_KEY_HERE'    (this session only)\n" +
-      "    bash / zsh   export ANTHROPIC_API_KEY='YOUR_KEY_HERE'\n\n" +
-      "  A live run sends this suite's briefs to api.anthropic.com and spends money.\n" +
-      "  Without --live, `npm run eval` stays offline against pinned stubs.",
+      "eval --dry-run: --dry-run plans a live run, and this invocation has no --live.\n\n" +
+      "  Without --live the suite runs against pinned stubs: no key is read, no budget\n" +
+      "  applies, and nothing is spent. There is no plan to approve.\n\n" +
+      "  Add --live to plan a real run, or drop --dry-run and just run it.",
     );
     return 2;
   }
 
   /**
-   * A key that cannot possibly be one is refused HERE, not by the API.
+   * Every precondition for a live run, decided in one place.
    *
-   * Presence was the only test, and presence is the honest thing for this script to read —
-   * but it means a placeholder passes and the failure relocates to a 401 partway through a
-   * paid run, which is the worst place for it: the budget is already committed, the error is
-   * remote, and the message names an HTTP status rather than the mistake.
+   * Four checks — no key, a key whose shape says placeholder, no declared budget, and a budget
+   * the plan does not fit — used to sit inline here. `--dry-run` made a second caller, and a
+   * dry run that approves what the real run then refuses is worse than no dry run: it converts
+   * a safety check into a source of false confidence. `preflight` is the only thing that
+   * decides now, and it reaches its budget verdict by calling the same `plannedCalls` and
+   * `admitRun` that `runSuite` calls, so the prediction and the enforcement are one code path.
    *
-   * Observed, not hypothetical. `setx ANTHROPIC_API_KEY "<your key>"` was run verbatim from
-   * a copy-pasted instruction, and the guard above waved through a ten-character value whose
-   * first character is `<`. The message that produced it is fixed above; this is the check
-   * that catches it whatever the wording does next.
+   * `runSuite` still calls `admitRun` itself. A decision made at the top of `main()` is a
+   * prediction; the enforcement has to sit where the spending starts.
    *
-   * These are shapes NO key has, not a format assertion. Asserting `sk-ant-` and a length
-   * would fail closed the day the vendor changes either, and this script has no business
-   * knowing that. Angle brackets, quotes and whitespace mean "you pasted the wrong thing",
-   * and they mean it permanently. Validating the key for real needs a network call, which is
-   * the thing being guarded.
+   * Presence of the key is all that is read here. The value belongs to the adapter and to
+   * `process.env`; routing it through this script would put it one careless log line away from
+   * a terminal, and `implausibleKeyReason` is written never to quote it back.
    */
-  const rawKey = process.env.ANTHROPIC_API_KEY;
-  if (LIVE && rawKey) {
-    const looksPasted = implausibleKeyReason(rawKey);
-    if (looksPasted) {
-      console.error(
-        `eval --live: ANTHROPIC_API_KEY is set, but its value ${looksPasted}.\n\n` +
-        "  That is a placeholder or a truncated paste, not a key. Refusing here rather than\n" +
-        "  letting api.anthropic.com reject it after the run has started spending.\n\n" +
-        "  The value is not shown, and was not read for any purpose other than this check.",
-      );
-      return 2;
-    }
-  }
+  const verdict = preflight({
+    live: LIVE,
+    key: process.env.ANTHROPIC_API_KEY,
+    budget: configuration.budget,
+    trials: TRIALS,
+    caseCount: data.suite.case_ids.length,
+    decoding: configuration.decoding,
+  });
 
-  /**
-   * An unbounded live run is refused by construction.
-   *
-   * `admitRun` returns "no budget declared" and admits everything when `budget` is null, so
-   * without this the first real 100-trial run would have been the unbounded one — 1,400 calls
-   * with nothing able to stop them. Phase γ's entry criterion was "budget enforcement written
-   * before the first real call"; the enforcement existed and nothing declared a budget for it
-   * to enforce.
-   */
-  if (LIVE && MAX_CALLS === undefined) {
-    console.error(
-      "eval --live: no budget declared.\n\n" +
-      `  This run would make up to ${data.suite.case_ids.length * TRIALS} provider call(s) ` +
-      "with nothing able to stop it.\n" +
-      "  Say what it may spend:\n\n" +
-      `    npm run eval -- --live --trials ${TRIALS} --max-calls ${data.suite.case_ids.length * TRIALS}\n\n` +
-      "  There is no default on purpose. A generous one and a stingy one are both defensible,\n" +
-      "  so choosing either for you is the bug — the same reason Budget.on_exceed is mandatory.",
-    );
+  if (!verdict.ok) {
+    console.error(refusalMessage(verdict, TRIALS));
     return 2;
   }
+
+  if (LIVE) printPlan(verdict.plan, data.suite.suite_id, DRY_RUN);
+
+  /**
+   * A dry run stops here, having dispatched nothing.
+   *
+   * Exit 0 means the plan is valid and within budget — not that the run succeeded, which it was
+   * never asked to do. Every refusal above returns 2, the same code the other live-path
+   * refusals use and the one `TRUTH_BOUNDARY.md` pins. Giving the dry run its own exit codes
+   * would have made a prediction and an enforcement report different numbers for one decision,
+   * and `3` in particular already means "degraded or gates warned" on every command here.
+   */
+  if (DRY_RUN) return 0;
 
   const liveWiring = LIVE
     ? { provider: new LocalProxyProvider(), cache: new MemoryCacheStore() }
     : {};
-
-  /**
-   * The plan is printed before anything is spent, not after.
-   *
-   * A cost report that only appears once the money is gone is a receipt, not a control. This
-   * is the number `admitRun` is about to check, shown while it can still be cancelled.
-   */
-  if (LIVE) {
-    console.log(
-      `\n  live run — ${data.suite.case_ids.length} case(s) x ${TRIALS} trial(s) = ` +
-      `up to ${data.suite.case_ids.length * TRIALS} provider call(s)\n` +
-      `    budget      ${MAX_CALLS === undefined ? "NONE DECLARED" : MAX_CALLS + " call(s), refuse on exceed"}\n` +
-      `    destination api.anthropic.com (hard-coded, frozen allowlist)\n`,
-    );
-  }
 
   /**
    * A budget refusal is an expected outcome, not a crash.
