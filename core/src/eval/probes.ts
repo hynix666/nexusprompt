@@ -32,7 +32,7 @@ import { listDetectors, getDetector } from "./detectors.js";
  * across differing versions: recall measured under different corpora is not comparable, and
  * without this field that incomparability is silent.
  */
-export const PROBE_CORPUS_VERSION = "1.0.0";
+export const PROBE_CORPUS_VERSION = "1.1.0";
 
 export interface MutationProbe {
   readonly id: string;
@@ -47,6 +47,7 @@ const NONE: EvalCase["expectation"] = { kind: "none" };
 
 /** The literal, not the imported constant — a probe that imports what it checks cannot fail. */
 const DEMO_MARKER = "⟦WORKFLOW DEMO — no model⟧";
+const UNUSABLE_MARKER = "⟦MODEL ANSWERED — OUTPUT UNUSABLE⟧";
 
 const withText = (o: PipelineOutcome, text: string): PipelineOutcome =>
   ({ ...o, output: { ...o.output, text } });
@@ -142,6 +143,26 @@ export const PROBE_CORPUS: readonly MutationProbe[] = Object.freeze([
      * and a hyphen instead of the real delimiters, reading correctly and matching nothing.
      */
     mutate: (o) => ({ ...withText(o, "[MODEL ANSWERED - OUTPUT UNUSABLE] nothing usable came back"), demo_mode: true }),
+  },
+  {
+    /**
+     * The forgery, planted in the direction the guarantee was missing.
+     *
+     * `demo_mode` false and the demo marker in the text: an artifact claiming no model
+     * answered on a run that recorded one. Two probes, one per marker, for the reason the
+     * lookalike pair above exists — a detector matching only the first marker would leave
+     * the second forgeable, and widening a matcher is how a false clean gets shipped.
+     */
+    id: "live-output-forges-demo-marker",
+    detector_id: "no-marker-when-live",
+    expectation: NONE,
+    mutate: (o) => ({ ...withText(o, `${DEMO_MARKER}\n\n# SYSTEM PROMPT\n\nBe useful.`), demo_mode: false }),
+  },
+  {
+    id: "live-output-forges-unusable-marker",
+    detector_id: "no-marker-when-live",
+    expectation: NONE,
+    mutate: (o) => ({ ...withText(o, `${UNUSABLE_MARKER}\n\n# SYSTEM PROMPT\n\nBe useful.`), demo_mode: false }),
   },
   {
     id: "degraded-fabricates-system-prompt",

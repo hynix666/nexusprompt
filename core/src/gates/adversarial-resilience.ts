@@ -26,7 +26,17 @@ import type { GateResult } from "../../../contracts/index.js";
 export const GATE_ID = "ADVERSARIAL_RESILIENCE";
 export const GATE_VERSION = "1.0.0";
 
-/** The shape of `adversarial/corpus.json`. `defense_signals` also carries a `_comment` string. */
+/**
+ * The shape of `adversarial/corpus.json`. `defense_signals` also carries a `_comment` string.
+ *
+ * `payload` and `severity` are DECLARED AND READ NOWHERE. `scoreResilience` keys on
+ * `surface` alone, so the corpus's entire causal contribution is its surfaces and how many
+ * cases sit on each — swapping every payload for a different attack changes no verdict. That
+ * is worth stating rather than leaving for a reader to infer from the absence of a reference:
+ * a field named `payload` on an adversarial corpus reads like the thing being tested, and an
+ * external analysis proposed replacing the corpus on exactly that assumption. The fields are
+ * kept because the frozen corpus carries them and the shape is ported, not invented.
+ */
 export interface AdversarialCorpus {
   defense_signals: Record<string, unknown>;
   cases: Array<{ id: string; surface: string; severity?: string; payload?: string }>;
