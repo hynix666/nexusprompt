@@ -1,6 +1,6 @@
 # Testing and quality
 
-**1,374 tests across 35 files, 0 failing.** Runs offline in seconds.
+**1,380 tests across 35 files, 0 failing.** Runs offline in seconds.
 
 ```bash
 npm test                      # all projects
@@ -248,9 +248,22 @@ green while CI cannot install the project. Reproduce that failure the way it app
 
 ## The sweeps, and the instrument problem
 
-Twelve adversarial sweeps have run against this repository's own guarantees. **Nine of the
-twelve produced a first result that was about the INSTRUMENT rather than the code** — a probe
+Thirteen adversarial sweeps have run against this repository's own guarantees. **Ten of the
+thirteen produced a first result that was about the INSTRUMENT rather than the code** — a probe
 that could not have failed, a matcher too narrow, a comparison of a value against itself.
+
+Sweep thirteen changed what that costs. Every earlier instance produced a **false clean**: the
+check reported success it had not earned, and the price was a defect surviving. Thirteen's was a
+**false destruction** — the reclamation fix built its live set from `listRecent`, a test store
+answered `[]`, and the sweep deleted every content file on disk. Caught by a test, but the
+failure mode is silent, permanent data loss rather than an unnoticed bug.
+
+The generalisable part is not about sweeps at all: **`listRecent` is a listing API with a limit,
+not an authoritative enumeration**, and nothing in the port promised otherwise. Building a
+reclaim on it made correctness depend on an implementation detail of one adapter. The fix was to
+add an invariant the caller can check for itself — the run that just finished is certainly live,
+so its refs must appear in the computed set, and if they do not, reclaim nothing. Ask of any
+"list" API before deleting on its answer: **is this authoritative, or merely recent?**
 
 That ratio is the finding, not an embarrassment. It means the default state of a new check is
 *broken in the direction that reports success*, so a sweep's first job is proving its own

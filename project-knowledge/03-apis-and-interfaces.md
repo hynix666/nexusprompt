@@ -158,7 +158,7 @@ runs there already race.)
 Ids reaching either store are validated against `^[A-Za-z0-9_-]{1,64}$` before being used as
 a path component.
 
-### `ContentStore` — the content plane (`put` / `get` / `has`)
+### `ContentStore` — the content plane (`put` / `get` / `has` / `sweep`)
 
 Added with the artifact-reference lineage work. **No `update`, no `delete`** — a corrected
 artifact is a new artifact. Three distinctions carry it:
@@ -171,6 +171,18 @@ artifact is a new artifact. Three distinctions carry it:
   `npx:<kind>:<sha256>:<scope_hint>`, enforced at the boundary because refs become path
   components. The hash is **unkeyed**, unlike the keyed observability fingerprints — content
   addressing has to be verifiable by anyone holding the artifact.
+- **`sweep(live)` reclaims, it does not delete.** It removes every stored item no live ref
+  names, and takes the live SET rather than a ref to remove — which is the guarantee, not an
+  ergonomic choice. Content is addressed by hash, so one file backs many runs; a `delete(ref)`
+  primitive cannot know whether another run still cites those bytes, and would either corrupt
+  that run or leak. Recomputing the live set from surviving bundles is sharing-safe with no
+  refcount to keep correct across crashes. It exists because bundle eviction reclaimed
+  **nothing**: twelve runs left eight bundles and 20 of 60 content files orphaned.
+- **The caller must prove its live set is complete before sweeping.** `listRecent` is a *recent*
+  listing with a limit, not an authoritative enumeration, so a store that under-reports would
+  send the sweep after content a surviving revision still cites. `runPipeline` checks that the
+  run it just finished appears in the set it computed, and reclaims nothing when it does not.
+  A test store answering `[]` deleted every file on disk before that guard existed.
 - **`has` verifies, it does not stat.** It shipped as `existsSync` alone and therefore reported
   a tampered file as present — while `get` on the same file threw. `has` is the oracle behind
   the `dangling-ref` promotion gate, so the one caller it was written for was the one that could

@@ -158,6 +158,7 @@ that implies more coverage than it has.
 |---|---|
 | **Nothing has ever called a provider.** The path exists (`npm run eval -- --live`) and has never run. `cache_read_tokens` is populated by nothing; no judge has graded anything; the release gate has never fired. The four refusals standing in front of it are now verified and pinned — no key, placeholder shape, no declared budget, non-positive `--max-calls` — so what remains is a key, not a mechanism | A key exists, and one 100-trial run reports a non-zero cache read. `check:truth` will FAIL on `any_fingerprint_observed` at that moment, by design |
 | **The anchor certifies detection, not quality.** No suite here measures a model | A key, then an anchor built over model outputs rather than gate verdicts |
+| **There is no deletion.** `PRIVACY_AND_SECURITY.md` named `delete(run_id, confirmation)` with a signature and a "typed-DELETE confirmation"; `RevisionStore` has `append`, `getRun`, `listRecent`, `markStale` and nothing has a delete. [AUDIT B-4]'s other half — #49 closed retention and replay, which made this sharper by creating content there is now something to fail to delete. Reclamation exists and is a different thing: it removes what nothing points at | A port method exists, an authoritative enumeration of stored runs exists (`listRecent` is a *recent* listing with a limit), and someone decides what erasure MEANS for content deduplicated by hash — two users submitting identical text share one file, so erasure for one is not a file removal |
 | **Keyed fingerprints documented, bare `sha256` in code** | The event port holds a deployment-scoped key and `orchestrator.ts` uses it |
 | **Does per-stage validation actually mitigate the depth cliff?** The strongest untested hypothesis here; the cited measurement is of *unvalidated* chains | A live run makes it measurable. If false, eleven stages is the wrong shape |
 | **Is gate-message text sufficient reflective feedback?** The mechanism works and is capped; whether it *improves* anything is unmeasured | — |
@@ -278,6 +279,7 @@ reads as enforced and is not, which is strictly worse than an absent one:
 | the `dangling-ref` promotion gate | `decidePromotion` accepted `contentRefs`/`refExists`, both optional, and the only caller passed neither |
 | `input_ref` / `output_ref` | `buildRevision` took ref arguments no call site supplied, and no composition root built a `ContentStore` |
 | `admitRun` on the SINGLE-STAGE path | `Orchestrator.run` dispatched three times and admitted zero, with no `budget` option a caller could supply (sweep twelve) |
+| `delete(run_id, confirmation)` | named in `PRIVACY_AND_SECURITY.md` with a signature and a confirmation flow; exists in no port and no adapter (sweep thirteen) |
 
 ### The sibling: enforced, but in the wrong place
 

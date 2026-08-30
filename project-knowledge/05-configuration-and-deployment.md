@@ -128,11 +128,18 @@ Runtime state lives under the working directory:
 |---|---|---|
 | `.nexusprompt/runs/` | run bundles | 8 kept, evicted whole |
 | `.nexusprompt/evidence/` | eval-run, comparison, baseline, promotion | append-only, never evicted |
-| `.nexusprompt/content/` | stage input and output bodies, content-addressed | shared BY HASH across runs |
+| `.nexusprompt/content/` | stage input and output bodies, content-addressed | shared BY HASH across runs; reclaimed when no surviving bundle cites it |
 
 Different lifetimes on purpose — pointing them at one directory would put a retention policy
 in front of the records a promotion cites, and content is the sharpest case: it is shared by
 hash, so a run-bundle eviction policy over it would delete an artifact a surviving run cites.
+
+That independence had a cost nobody priced until sweep thirteen: **eviction reclaimed nothing.**
+Twelve runs left eight bundles and 20 of 60 content files orphaned — bounded in bundles,
+unbounded in bytes. `ContentStore.sweep(live)` closes it by reclaiming what no surviving bundle
+names, which is sharing-safe by construction. **Reclamation is not deletion**: it removes what
+nothing points at and cannot erase content a surviving run still cites. There is no deletion —
+see the open register.
 
 ### Vercel — connected, failing, and muted
 
