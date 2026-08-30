@@ -162,6 +162,9 @@ export async function runPipeline(
   const sink = redactingSink(opts.sink, () => [ctx.brief, ctx.prompt, ctx.spec, ctx.critique]
     .filter((b): b is string => typeof b === "string"));
 
+  /** Every ref this run wrote. Held in memory so a storage fault cannot empty it. */
+  const retainedRefs = new Set<string>();
+
   const stages: StageRecord[] = [];
   const revision_ids: string[] = [];
   let anyDemo = false;
@@ -474,6 +477,8 @@ export async function runPipeline(
       inputRef = await retain(opts.content, "stage-input",
         JSON.stringify({ system: request.system ?? null, messages: request.messages }));
       outputRef = await retain(opts.content, "stage-output", outputBody);
+      if (inputRef) retainedRefs.add(inputRef);
+      if (outputRef) retainedRefs.add(outputRef);
     } catch (err) {
       emit("DEGRADE", {
         component: `application/pipeline`,
@@ -556,16 +561,29 @@ export async function runPipeline(
        * exactly this way: a test store whose `listRecent` returned `[]` sent the sweep after
        * every file on disk.
        */
-      const ownRefs = (await opts.store.getRun(run_id))
-        .flatMap((e) => [e.input_ref, e.output_ref])
-        .filter((r): r is string => r !== null);
-      const enumerationTrustworthy = ownRefs.every((r) => live.has(r));
+      /**
+       * Positive evidence, not the absence of contradiction.
+       *
+       * This read the run back from the store and required its refs to appear in the live set.
+       * `[].every()` is TRUE, so a bundle that was empty, lost or unreadable reported the
+       * enumeration as trustworthy and the sweep reclaimed everything — measured by sweep
+       * fifteen: a bundle corrupted by concurrent appends left 0 surviving revisions, and all
+       * 12 retained bodies were then permanently deleted. A guard that passes when it learns
+       * nothing is not a guard.
+       *
+       * `retainedRefs` is what THIS run wrote, held in memory and never re-read, so it cannot
+       * be emptied by a storage fault. If the run retained anything, every one of those refs
+       * must come back from the enumeration before a single file is reclaimed.
+       */
+      const enumerationTrustworthy = retainedRefs.size === 0
+        ? true
+        : [...retainedRefs].every((r) => live.has(r));
 
       if (!enumerationTrustworthy) {
         emit("DEGRADE", {
           component: "application/pipeline",
           failure_code: "content_sweep_skipped",
-          verdict: `listRecent did not report this run, so the live set is incomplete; ${ownRefs.length} own ref(s) unaccounted for. Nothing reclaimed.`,
+          verdict: `the live set is missing refs this run retained, so the enumeration is incomplete; ${retainedRefs.size} retained ref(s). Nothing reclaimed.`,
         });
       } else {
         await opts.content.sweep(live);
