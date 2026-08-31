@@ -90,6 +90,18 @@ export function resolvers(root = process.cwd()) {
     "gates.ported": () => readJson(at("scripts/ported-gates.json")).ported.length,
 
     /**
+     * Local model fingerprints this repository has actually observed and pinned.
+     *
+     * Pinned because four documents now state it in prose, and it is exactly the kind of
+     * number that grows the next time somebody runs a model and does not grow in the docs.
+     * Derived from the watch file the checker reads, so the docs and the guard cannot
+     * disagree about how many models have answered.
+     */
+    "models.fingerprints_pinned": () =>
+      Object.values(readJson(at("scripts/model-fingerprints.json")).watch ?? {})
+        .reduce((n, w) => n + (w.fingerprints?.length ?? 0), 0),
+
+    /**
      * ADRs on disk, by filename. Pinned because project-knowledge/ restates the count in two
      * places and it was wrong in both within two days of being written — the knowledge base
      * is a snapshot, and a snapshot nobody re-derives is a snapshot that rots.

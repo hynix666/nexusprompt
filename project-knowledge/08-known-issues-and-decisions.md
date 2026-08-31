@@ -40,9 +40,13 @@ and that the repository has no CI.
 
 The entries most worth knowing before quoting anything:
 
-- **Nothing here has ever talked to a model.** One eleven-stage run is persisted and all
-  eleven entries recorded a null fingerprint. Every evaluation figure — the anchor's 4,906
-  cases included — came from the pinned stub, and is evidence about this system's accounting.
+- **Local models have answered; nothing this repository REPORTS came from one.** Since
+  31 August 2026, `nexusprompt pipeline --model <name>` reaches an Ollama daemon on loopback,
+  and runs against 5 local models are persisted with real fingerprints, which are pinned.
+  Every evaluation figure — the anchor's 4,906 cases included — still came from the pinned
+  stub, and is evidence about this system's accounting. Those model runs are six-stage
+  compilations of one brief with no expected output and no scoring, and they are not
+  reproducible: temperature is not pinned and the bundles are gitignored.
 - **The oracle proves agreement, not correctness.** Where the port and the frozen linter are
   both wrong it is silent, which is exactly the `CLAIM_DISCIPLINE` false positive's shape.
 - **A green smoke suite is not a measurement.** `pipeline-smoke` is below the exact

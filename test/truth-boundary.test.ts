@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { RUNS as FP_RUNS } from "../scripts/check-fingerprint.mjs";
+import { RUNS as FP_RUNS, observe } from "../scripts/check-fingerprint.mjs";
 
 import {
   checkTruthBoundary,
@@ -226,28 +226,55 @@ describe("providerReach — the boundary that matters most", () => {
       execution_provenance: { provider_model_fingerprint: null },
     }));
 
-  it("reports no observation on a clean checkout", () => {
-    const r = PROBES.providerReach(plant(null));
-    expect(r.any_fingerprint_observed).toBe(false);
+  /**
+   * These three used to assert `PROBES.providerReach(...).any_fingerprint_observed`, derived
+   * from run bundles. That field is gone, and the reason is the point: bundles are
+   * gitignored, so it reported the machine rather than the repository. Declared `false` it
+   * failed the moment anyone ran `pipeline --model`; declared `true` it failed in CI, which
+   * has no bundles. Both happened, in that order, on 31 August 2026.
+   *
+   * The behaviour is real and still worth testing, so it is tested where it now lives —
+   * `observe()`, which is machine-local on purpose and drives drift detection rather than a
+   * declared boundary. What the PROBE pins instead is read from the committed watch file.
+   */
+  it("observes nothing on a clean checkout, and the boundary reads unpinned", () => {
+    const root = plant(null);
+    expect(observe(root).observations).toEqual([]);
+    const r = PROBES.providerReach(root);
+    expect(r.any_fingerprint_pinned).toBe(false);
     expect(r.fingerprints_pinned).toBe(0);
     expect(r.run_bundles_are_gitignored).toBe(true);
   });
 
-  it("still reports no observation after a full degraded run", () => {
-    // Eleven stages executed and no model answered. This is the state of the real tree,
-    // and the distinction it turns on: a degraded run records UNAVAILABLE, which is not
-    // evidence about which model is live and must never be counted as agreement.
-    const r = PROBES.providerReach(plant(degraded(11)));
-    expect(r.any_fingerprint_observed).toBe(false);
+  it("still observes nothing after a full degraded run", () => {
+    // Eleven stages executed and no model answered. The distinction it turns on: a degraded
+    // run records UNAVAILABLE, which is not evidence about which model is live and must
+    // never be counted as agreement.
+    const o = observe(plant(degraded(11)));
+    expect(o.observations).toEqual([]);
+    expect(o.unavailable).toBe(11);
   });
 
-  it("notices the first time a provider actually answers", () => {
+  it("observes the first time a provider actually answers", () => {
     const bundle = [
       ...degraded(10),
       { provider_used: "local-proxy", execution_provenance: { provider_model_fingerprint: "abc123" } },
     ];
-    const r = PROBES.providerReach(plant(bundle));
-    expect(r.any_fingerprint_observed).toBe(true);
+    const o = observe(plant(bundle));
+    expect(o.observations.map((x: { fingerprint: string }) => x.fingerprint)).toEqual(["abc123"]);
+  });
+
+  it("a run that answered does NOT move the boundary on its own — pinning does", () => {
+    /**
+     * The rule that replaced the old field, stated as a test. Someone running a model on
+     * their laptop must not flip a boundary every other checkout would then disagree with.
+     * Accepting the fingerprint into the committed watch file is the act that moves it.
+     */
+    const answered = [{ provider_used: "local-proxy", execution_provenance: { provider_model_fingerprint: "abc123" } }];
+    expect(PROBES.providerReach(plant(answered)).any_fingerprint_pinned).toBe(false);
+    expect(
+      PROBES.providerReach(plant(answered, { "local-proxy": { fingerprints: ["abc123"] } })).any_fingerprint_pinned,
+    ).toBe(true);
   });
 
   it("notices a fingerprint being pinned", () => {

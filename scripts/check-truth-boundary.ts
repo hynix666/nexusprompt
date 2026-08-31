@@ -13,8 +13,8 @@
  * Fixing counts does not fix that. A true number attached to an overreaching claim is worse
  * than a wrong one, because it carries a checker's authority. `check:counts` will happily
  * confirm that the anchor holds 4,906 cases while a reader concludes the repository has
- * measured something about a language model. It has not. No run in this tree has ever
- * reached a provider.
+ * measured something about a language model. It has not. Local models have answered since
+ * 31 August 2026, but every figure this repository REPORTS still comes from the pinned stub.
  *
  * So each entry below states a scope in two halves — what the artifact establishes and what
  * it cannot — and pins the numbers that bound it. A probe re-derives those numbers from the
@@ -51,7 +51,7 @@ import { pathToFileURL } from "node:url";
 
 import { listGates, SOURCE_GATE_COUNT } from "../core/src/gates/registry.js";
 import { floorDiscordant } from "../core/src/eval/sizing.js";
-import { observe, RUNS as BUNDLE_DIR } from "./check-fingerprint.mjs";
+import { RUNS as BUNDLE_DIR } from "./check-fingerprint.mjs";
 import { isArtifactPath, computeBuildHash } from "./build-hash.mjs";
 // Moved out of `scripts/run-eval.ts` with the rest of the live-run preconditions when
 // `--dry-run` gave them a second caller. Same predicate, same probe.
@@ -98,23 +98,45 @@ export const PROBES: Record<string, Probe> = {
   /**
    * Has anything here ever talked to a model?
    *
-   * Deliberately reports no count that varies by machine. `.promptnexus/` is gitignored, so
-   * a local tree can hold run bundles a clean checkout does not — pinning how many would
-   * make this check pass or fail on where it ran, which is the one thing a boundary must
-   * never do. What is pinned instead is invariant on every machine and flips exactly once,
-   * at the event that matters: `any_fingerprint_observed` goes true the first time a
-   * provider answers, and cannot be turned true by a degraded run, because a degraded run
-   * records UNAVAILABLE rather than agreement.
+   * Yes, since 31 August 2026 — local models, over loopback, at no cost.
    *
-   * This tree does hold one persisted eleven-stage run. All eleven entries recorded a null
-   * fingerprint — a full pipeline executed and no model was reached, which is demo mode
-   * working exactly as designed.
+   * Deliberately reports no value that varies by machine. `.nexusprompt/` is gitignored, so a
+   * local tree holds run bundles a clean checkout does not; pinning anything read from them
+   * makes this check pass or fail on WHERE it ran, which is the one thing a boundary must
+   * never do. That was not hypothetical — it was done in both directions in a single evening
+   * before the rule was obeyed. What is pinned instead comes from the committed watch file,
+   * is identical on every checkout, and flips exactly once at the event that matters: a
+   * fingerprint being accepted. A degraded run cannot flip it, because it records UNAVAILABLE
+   * rather than agreement, and nothing pins an UNAVAILABLE.
    */
   providerReach(root) {
-    const { observations } = observe(root);
     const pins = readJson(root, "scripts/model-fingerprints.json");
     return {
-      any_fingerprint_observed: observations.length > 0,
+      /**
+       * `any_fingerprint_observed` USED TO BE DERIVED HERE, and is deliberately gone.
+       *
+       * It read run bundles, which are gitignored — so it reported the developer's machine,
+       * and no declared value could survive both machines. Declared `false` it failed the
+       * moment anyone ran `pipeline --model`; declared `true` it failed in CI, which has no
+       * bundles at all. Both were observed in that order on 31 August 2026.
+       *
+       * The checker's own rule settled it: a derived value the entry does not pin fails with
+       * "pin it or stop deriving it", because an unpinned derived number is decoration. It
+       * could not be pinned, so it is not derived. The bundle-reading logic still exists and
+       * still has tests — in `observe()`, where it is machine-local on purpose and drives
+       * drift detection rather than a declared boundary.
+       */
+      /**
+       * The crossing, from the tracked record instead of the machine.
+       *
+       * `scripts/model-fingerprints.json` is committed, so this is the same on every
+       * checkout — which is what a declared boundary needs. It is also the stronger claim:
+       * pinning is a deliberate act, so this says the repository has ACCEPTED that a model
+       * answered, not merely that one happened to run here this afternoon.
+       */
+      any_fingerprint_pinned: Object.values(pins.watch ?? {}).some(
+        (w) => ((w as { fingerprints?: unknown[] }).fingerprints ?? []).length > 0,
+      ),
       fingerprints_pinned: Object.keys(pins.watch ?? {}).length,
       /**
        * The directory bundles ACTUALLY go to, derived rather than restated.

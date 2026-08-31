@@ -7,9 +7,16 @@
 ## Context
 
 Every figure this repository reports was produced by the pinned stub. `TRUTH_BOUNDARY.md`'s
-opening entry says so plainly: *nothing here has ever talked to a model*. The hosted path
+opening entry said so plainly: *nothing here has ever talked to a model*. The hosted path
 exists and refuses correctly, but using it needs a credential and money, so the gap between
 "the accounting works" and "we know something about a model" stayed open.
+
+> **Closed on 31 August 2026, and only halfway.** The tier this ADR specifies now runs:
+> `nexusprompt pipeline --model <name>` reaches an Ollama daemon on loopback, and pipeline
+> runs against 5 local models are persisted with real fingerprints, which are pinned. The
+> first sentence above is still true, and that is the point — **every figure this repository
+> reports still comes from the pinned stub.** What closed is the ability to reach a model at
+> all without a credential; what did not close is any evaluation figure being about one.
 
 Two proposal documents specify a local-inference tier to close it. They agree on the shape —
 Ollama first, ONNX behind it, native bindings deferred — and both make one pairing
