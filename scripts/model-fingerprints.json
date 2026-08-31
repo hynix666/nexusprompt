@@ -28,7 +28,8 @@
         "ollama-local:lfm2.5-thinking:latest",
         "ollama-local:llama3.1:8b",
         "ollama-local:phi4-mini:latest",
-        "ollama-local:phi4-reasoning:plus"
+        "ollama-local:phi4-reasoning:plus",
+        "ollama-local:qwen3.8:27b"
       ],
       "first_seen": "2026-08-31",
       "baseline_suite": "compile-smoke",
