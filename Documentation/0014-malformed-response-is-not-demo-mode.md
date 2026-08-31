@@ -48,10 +48,16 @@ mechanism exists to prevent.
 
 **The marker's meaning is load-bearing elsewhere.** `⟦WORKFLOW DEMO — no model⟧` is pinned as
 a literal in `core/src/eval/detectors.ts` and `core/src/eval/probes.ts`, and
-`TRUTH_BOUNDARY.md`'s opening entry rests on it: *nothing here has ever talked to a model*. If
+`TRUTH_BOUNDARY.md`'s opening entry rested on it: *nothing here has ever talked to a model*. If
 the marker can also mean "a model talked and we could not read it", that entry stops being
 checkable by the marker, and the first local run would silently weaken a claim the build
 enforces.
+
+> **Since 31 August 2026 the first local run has happened**, and the separation this ADR
+> argued for is what let the boundary be re-declared rather than quietly abandoned. The entry
+> now reads *local models have answered; nothing this repository REPORTS came from one* —
+> a narrower claim that is still checkable, precisely because a degraded stage and a stage
+> whose answer could not be read carry different markers.
 
 **The two outcomes need different responses.** "No provider answered" is an environment
 problem: no key, no daemon, wrong port. "The model answered unusably" is a model or prompt

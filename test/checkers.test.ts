@@ -1003,11 +1003,21 @@ const WATCH = {
 };
 
 describe("check-fingerprint", () => {
-  it("passes on the real repository, and reports that it is not armed", () => {
+  it("passes on the real repository, and its armed flag matches what it observed", () => {
+    /**
+     * `armed` was asserted false here, which made this a test about the DEVELOPER'S MACHINE
+     * rather than about the checker. Run bundles are gitignored, so a clean checkout and CI
+     * have none and the assertion held; the moment someone ran `pipeline --model <name>` it
+     * failed locally while still passing in CI. A test that green on the machine with the
+     * least evidence is the wrong way round.
+     *
+     * The invariant that actually belongs to the checker is the equivalence: armed exactly
+     * when something was observed, and honest about coverage either way. That holds on both
+     * kinds of machine, which is what makes it a test rather than a snapshot of one.
+     */
     const r = checkFingerprint(process.cwd());
     expect(r.ok).toBe(true);
-    // Honest about coverage: zero observations is reported as unarmed, not as OK.
-    expect(r.armed).toBe(false);
+    expect(r.armed).toBe(r.observations.length > 0);
   });
 
   it("passes when the observed fingerprint is the pinned one", () => {
