@@ -264,3 +264,38 @@ describe("check:fingerprint reads what the CLI writes", () => {
     expect(seen.observations).toEqual([]);
   });
 });
+
+/**
+ * `--timeout`, driven the way a person drives it.
+ *
+ * `composition-transport.test.ts` proves the number reaches the adapter. This proves the
+ * flag reaches the composition root and that its refusals are wired to an exit code — the
+ * two halves fail differently, and the Shell is where the second one breaks.
+ */
+describe("pipeline --timeout", () => {
+  it("refuses without --model rather than silently doing nothing", () => {
+    // The hosted proxy has its own timeout and this flag does not reach it. Accepting it
+    // there is the shape of defect `--provider ollama-local` had in the eval runner:
+    // a flag taken, ignored, and reported as success.
+    const { code, out } = runCli(["pipeline", "BRIEF", "--stakes", "LOW", "--timeout", "300"]);
+    expect(code).toBe(2);
+    expect(out).toContain("--model was not given");
+  });
+
+  it.each([["0"], ["-5"], ["abc"], ["1.5"]])("refuses %s as a number of seconds", (bad) => {
+    const { code, out } = runCli(["pipeline", "BRIEF", "--model", "m", "--timeout", bad]);
+    expect(code).toBe(2);
+    expect(out).toContain("positive whole number of seconds");
+  });
+
+  it("does not eat the filename — the value is consumed as a value", () => {
+    // `--timeout` is in VALUE_FLAGS, so `fileArg` skips its argument. Without that the brief
+    // would resolve to "300" and the run would die on ENOENT, which is the confusing failure
+    // the flag-set test exists to prevent. Reaching a REFUSAL about the model proves the
+    // filename was found and parsing got past it.
+    const { code, out } = runCli(["pipeline", "--timeout", "300", "BRIEF"]);
+    expect(code).toBe(2);
+    expect(out).toContain("--model was not given");
+    expect(out).not.toContain("ENOENT");
+  });
+});
