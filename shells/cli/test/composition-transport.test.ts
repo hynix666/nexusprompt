@@ -48,3 +48,38 @@ describe("the CLI composition root picks a transport", () => {
       .not.toThrow();
   });
 });
+
+/**
+ * The per-generation timeout, and why the CLI needed to expose it at all.
+ *
+ * The adapter defaults to 120s and its own comment predicts the limit: "a 27B model on CPU
+ * will exceed it, which is a real configuration rather than a fault." What that costs is not
+ * a slow run but an EMPTY one. Measured on 31 August 2026: `phi4-reasoning:plus` at LOW
+ * stakes timed out on its first generating stage, `compile` went DEMO, `preview` skipped
+ * behind the placeholder guard, and the persisted bundle held four revisions and ZERO
+ * fingerprints. A model too slow for the default is invisible to `check:fingerprint`, which
+ * is the opposite of what a watch is for.
+ */
+describe("the local adapter's timeout is reachable from the CLI", () => {
+  const sink = { emit: () => {} };
+  const timeoutOf = (p: unknown) => (p as { timeoutMs?: number }).timeoutMs;
+
+  it("passes the operator's ceiling through to the adapter", () => {
+    const p = composePipeline({ sink, localModel: "qwen3.8:27b", localTimeoutMs: 900_000 }).provider;
+    expect(timeoutOf(p)).toBe(900_000);
+  });
+
+  it("leaves the adapter's own default in place when none is given", () => {
+    // Omitted rather than passed as undefined, so the number lives in exactly one place.
+    const p = composePipeline({ sink, localModel: "qwen3.8:27b" }).provider;
+    expect(timeoutOf(p)).toBe(120_000);
+  });
+
+  it("does not reach the hosted proxy, which is why the flag refuses without --model", () => {
+    // The proxy has its own timeout and this option does not touch it. Accepting the flag
+    // there would silently do nothing, which is the failure mode `--provider` had.
+    const p = composePipeline({ sink, localTimeoutMs: 900_000 }).provider;
+    expect(p.provider_id).toBe("local-proxy");
+    expect(timeoutOf(p)).not.toBe(900_000);
+  });
+});

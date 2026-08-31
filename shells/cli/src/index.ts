@@ -46,7 +46,7 @@ const paint = (v: string) => (v === "PASS" ? C.pass(v) : v === "WARN" ? C.warn(v
  * confusing `ENOENT` the file-argument fix exists to prevent.
  */
 export const VALUE_FLAGS: ReadonlySet<string> = new Set([
-  "--stage", "--stakes", "--depth", "--test", "--max-calls", "--model",
+  "--stage", "--stakes", "--depth", "--test", "--max-calls", "--model", "--timeout",
 ]);
 
 /**
@@ -249,6 +249,42 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
     );
     return 2;
   }
+
+  /**
+   * `--timeout SECONDS` raises the per-generation ceiling for a local model.
+   *
+   * The adapter defaults to 120s and predicts its own limit: "a 27B model on CPU will exceed
+   * it, which is a real configuration rather than a fault." What that costs is not a slow
+   * run but an EMPTY one — `phi4-reasoning:plus` at LOW stakes timed out on its first
+   * generating stage, so `compile` went DEMO, `preview` skipped behind the placeholder
+   * guard, and the persisted bundle carried four revisions and zero fingerprints. Nothing to
+   * pin, and `check:fingerprint` none the wiser.
+   *
+   * Refused without `--model`, for the reason `--model` is refused without a transport in the
+   * eval runner: the hosted proxy has its own timeout and this flag does not reach it, so
+   * accepting it there would silently do nothing.
+   */
+  const timeoutRaw = flag("timeout");
+  let localTimeoutMs: number | undefined;
+  if (timeoutRaw !== undefined) {
+    if (localModel === undefined) {
+      console.error(
+        "nexusprompt: --timeout applies to a local model, but --model was not given.\n" +
+        "  Add --model <name>, or drop --timeout. The hosted proxy has its own timeout and\n" +
+        "  this flag does not reach it.",
+      );
+      return 2;
+    }
+    const secs = Number(timeoutRaw);
+    if (!Number.isInteger(secs) || secs < 1) {
+      console.error(
+        `nexusprompt: --timeout must be a positive whole number of seconds; got ${JSON.stringify(timeoutRaw)}.`,
+      );
+      return 2;
+    }
+    localTimeoutMs = secs * 1000;
+  }
+
   const events: ObservabilityEvent[] = [];
 
   /**
@@ -328,6 +364,7 @@ async function cmdPipeline(file: string, argv: string[]): Promise<number> {
         // default, because one this machine has not pulled 404s in a way that reads like an
         // outage, and one it has bakes a local accident into shared wiring.
         ...(localModel === undefined ? {} : { localModel }),
+        ...(localTimeoutMs === undefined ? {} : { localTimeoutMs }),
       }),
       coreBuildHash: "cli",
       /**
@@ -436,6 +473,13 @@ pipeline options:
                                              stages, plus one per feedback round, times
                                              retries — so a run that fits is guaranteed to
                                              fit. Omit it and no budget is enforced.
+  --timeout SECONDS                          how long ONE generation may take before the
+                                             local adapter calls it a timeout (default 120).
+                                             A model too slow for the default does not
+                                             produce a slow run, it produces an empty one:
+                                             the first stage degrades, later stages skip
+                                             behind the placeholder guard, and the bundle
+                                             records no fingerprint at all. Needs --model.
   --model NAME                               run against a model on this machine through
                                              Ollama on loopback — no key, no cost, no
                                              network beyond localhost. \`ollama list\` shows

@@ -49,6 +49,21 @@ export interface CompositionOptions {
    * outage, and one it has pulled bakes a local accident into shared wiring.
    */
   localModel?: string;
+  /**
+   * How long one generation may take before the adapter calls it a TIMEOUT.
+   *
+   * The adapter defaults to 120s and its own comment predicts the problem: "a 27B model on
+   * CPU will exceed it, which is a real configuration rather than a fault." Measured on
+   * 31 August 2026 — `phi4-reasoning:plus` at LOW stakes produced a bundle with FOUR
+   * revisions and not one fingerprint: the first generating stage timed out, `compile` went
+   * DEMO, `preview` skipped behind the placeholder guard, and nothing was left to pin. A
+   * model too slow for the default is therefore not merely slow, it is invisible to
+   * `check:fingerprint`.
+   *
+   * Seconds at the flag, milliseconds here, converted once at the boundary — the adapter's
+   * unit is milliseconds and an operator's is not.
+   */
+  localTimeoutMs?: number;
 }
 
 const defaultRunsDir = (opts: CompositionOptions) =>
@@ -63,9 +78,13 @@ const defaultRunsDir = (opts: CompositionOptions) =>
  * one file to avoid.
  */
 function chooseProvider(opts: CompositionOptions): LocalProxyProvider | OllamaProvider {
-  return opts.localModel === undefined
-    ? new LocalProxyProvider()
-    : new OllamaProvider({ model: opts.localModel });
+  if (opts.localModel === undefined) return new LocalProxyProvider();
+  return new OllamaProvider({
+    model: opts.localModel,
+    // Omitted rather than passed as undefined, so the adapter's own default stays the one
+    // place the number lives when no operator has chosen one.
+    ...(opts.localTimeoutMs === undefined ? {} : { timeoutMs: opts.localTimeoutMs }),
+  });
 }
 
 export function composeOrchestrator(opts: CompositionOptions): Orchestrator {
