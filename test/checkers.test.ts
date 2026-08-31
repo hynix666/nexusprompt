@@ -18,7 +18,7 @@ import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
 import { checkStages } from "../scripts/check-stages.mjs";
 import { checkCorpus, buildManifest } from "../scripts/check-corpus.mjs";
 import { checkCounts } from "../scripts/check-counts.mjs";
-import { checkFingerprint } from "../scripts/check-fingerprint.mjs";
+import { checkFingerprint, RUNS as FP_RUNS } from "../scripts/check-fingerprint.mjs";
 import { checkRepoHygiene, NEVER_IGNORED } from "../scripts/check-repo-hygiene.mjs";
 import { collect, render } from "../scripts/generate-capability-matrix.mjs";
 
@@ -989,7 +989,7 @@ const revision = (provider: string | null, fingerprint: string | null) => ({
 
 function makeFingerprintRepo(bundle: unknown[], watch: unknown = {}): string {
   const root = mkroot("pnx-fp-");
-  write(root, ".promptnexus/runs/run.json", JSON.stringify(bundle));
+  write(root, `${FP_RUNS}/run.json`, JSON.stringify(bundle));
   write(root, "scripts/model-fingerprints.json", JSON.stringify({ watch }));
   return root;
 }
@@ -1047,7 +1047,7 @@ describe("check-fingerprint", () => {
 
   it("ignores a half-written bundle rather than crashing on it", () => {
     const root = makeFingerprintRepo([revision("local-proxy", "local-proxy:claude-opus-5")], WATCH);
-    write(root, ".promptnexus/runs/torn.json", '[{"revision_id":');
+    write(root, `${FP_RUNS}/torn.json`, '[{"revision_id":');
     expect(checkFingerprint(root).ok).toBe(true);
   });
 });

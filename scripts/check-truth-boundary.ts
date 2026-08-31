@@ -51,7 +51,7 @@ import { pathToFileURL } from "node:url";
 
 import { listGates, SOURCE_GATE_COUNT } from "../core/src/gates/registry.js";
 import { floorDiscordant } from "../core/src/eval/sizing.js";
-import { observe } from "./check-fingerprint.mjs";
+import { observe, RUNS as BUNDLE_DIR } from "./check-fingerprint.mjs";
 import { isArtifactPath, computeBuildHash } from "./build-hash.mjs";
 // Moved out of `scripts/run-eval.ts` with the rest of the live-run preconditions when
 // `--dry-run` gave them a second caller. Same predicate, same probe.
@@ -116,7 +116,16 @@ export const PROBES: Record<string, Probe> = {
     return {
       any_fingerprint_observed: observations.length > 0,
       fingerprints_pinned: Object.keys(pins.watch ?? {}).length,
-      run_bundles_are_gitignored: /^\.promptnexus\/?$/m.test(readText(root, ".gitignore")),
+      /**
+       * The directory bundles ACTUALLY go to, derived rather than restated.
+       *
+       * This tested `.promptnexus/` — the pre-ADR-0009 name — so it asserted that the
+       * abandoned directory was ignored while saying nothing about the live one. Both are in
+       * `.gitignore`, so it passed either way, which is what made it invisible.
+       */
+      run_bundles_are_gitignored: new RegExp(
+        "^" + BUNDLE_DIR.split("/")[0].replace(/\./g, "\\.") + "/?$", "m",
+      ).test(readText(root, ".gitignore")),
       // Not "does a key exist" — the guard's job is to refuse a shaped-wrong key up front
       // rather than spend a suite discovering it. Probed by asking it about the exact
       // placeholder that is still sitting in the user environment.

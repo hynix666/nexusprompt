@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { RUNS as FP_RUNS } from "../scripts/check-fingerprint.mjs";
 
 import {
   checkTruthBoundary,
@@ -208,10 +209,13 @@ describe("providerReach — the boundary that matters most", () => {
     const root = mkroot();
     mkdirSync(join(root, "scripts"), { recursive: true });
     writeFileSync(join(root, "scripts/model-fingerprints.json"), JSON.stringify({ watch }));
-    writeFileSync(join(root, ".gitignore"), "node_modules/\r\n.promptnexus/\r\nPDF/\r\n");
+    // Both derived from the checker, never restated. These fixtures named
+    // `.promptnexus/` — the pre-ADR-0009 directory — so they agreed with the bug they
+    // were meant to catch and passed while the probe read a directory nothing writes.
+    writeFileSync(join(root, ".gitignore"), `node_modules/\r\n${FP_RUNS.split("/")[0]}/\r\nPDF/\r\n`);
     if (bundle) {
-      mkdirSync(join(root, ".promptnexus/runs"), { recursive: true });
-      writeFileSync(join(root, ".promptnexus/runs/run.json"), JSON.stringify(bundle));
+      mkdirSync(join(root, FP_RUNS), { recursive: true });
+      writeFileSync(join(root, FP_RUNS, "run.json"), JSON.stringify(bundle));
     }
     return root;
   };
