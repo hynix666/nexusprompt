@@ -42,7 +42,7 @@ The entries most worth knowing before quoting anything:
 
 - **Local models have answered; nothing this repository REPORTS came from one.** Since
   31 August 2026, `nexusprompt pipeline --model <name>` reaches an Ollama daemon on loopback,
-  and runs against 5 local models are persisted with real fingerprints, which are pinned.
+  and runs against 6 local models are persisted with real fingerprints, which are pinned.
   Every evaluation figure — the anchor's 4,906 cases included — still came from the pinned
   stub, and is evidence about this system's accounting. Those model runs are six-stage
   compilations of one brief with no expected output and no scoring, and they are not

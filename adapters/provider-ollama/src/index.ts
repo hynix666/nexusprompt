@@ -6,7 +6,7 @@
  * needs neither, which makes it the cheapest way to turn `TRUTH_BOUNDARY.md`'s opening entry —
  * *nothing here has ever talked to a model* — into something that has to be rewritten.
  *
- * It was rewritten on 31 August 2026. Runs against 5 local models are persisted with real
+ * It was rewritten on 31 August 2026. Runs against 6 local models are persisted with real
  * fingerprints and pinned, so `check:fingerprint` is armed. The entry that replaced it is
  * narrower and still true: *local models have answered; nothing this repository REPORTS came
  * from one* — every evaluation figure still comes from the pinned stub.

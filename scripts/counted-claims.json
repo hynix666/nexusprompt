@@ -263,7 +263,7 @@
     },
     {
       "document": "Documentation/TRUTH_BOUNDARY.md",
-      "pattern": "persisted for ([\\d,]+) distinct local models",
+      "pattern": "([\\d,]+) distinct local models have answered",
       "resolver": "models.fingerprints_pinned",
       "reason": "The count of local model fingerprints observed and pinned. Four places now state it in prose, and it is exactly the number that grows the next time somebody runs a model and does not grow in the docs — the shape every wrong count in this file had. Derived from scripts/model-fingerprints.json, the file the fingerprint watch itself reads, so the documentation and the guard cannot disagree about how many models have answered."
     },

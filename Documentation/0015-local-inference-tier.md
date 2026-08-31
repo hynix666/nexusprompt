@@ -13,7 +13,7 @@ exists and refuses correctly, but using it needs a credential and money, so the 
 
 > **Closed on 31 August 2026, and only halfway.** The tier this ADR specifies now runs:
 > `nexusprompt pipeline --model <name>` reaches an Ollama daemon on loopback, and pipeline
-> runs against 5 local models are persisted with real fingerprints, which are pinned. The
+> runs against 6 local models are persisted with real fingerprints, which are pinned. The
 > first sentence above is still true, and that is the point — **every figure this repository
 > reports still comes from the pinned stub.** What closed is the ability to reach a model at
 > all without a credential; what did not close is any evaluation figure being about one.
