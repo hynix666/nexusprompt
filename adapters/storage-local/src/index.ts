@@ -100,6 +100,15 @@ interface ModeBundleSummary extends RunBundleSummary {
 export class LocalRevisionStore implements RevisionStore {
   constructor(private readonly root: string) {}
 
+  /**
+   * Run ids this store INSTANCE has successfully written a bundle for.
+   *
+   * The only thing separating "this run is new" from "this run's bundle was
+   * deleted underneath me". Per-instance and never persisted: a claim about what
+   * this object did, which is the only claim it can prove.
+   */
+  private readonly written = new Set<string>();
+
   private bundlePath(run_id: string): string {
     // run_id reaches here from a command. Refuse anything that isn't a plain
     // identifier rather than trusting it as a path component.
@@ -133,11 +142,58 @@ export class LocalRevisionStore implements RevisionStore {
           `mixed-lineage: run "${entry.run_id}" already has a semantic manifest; append is refused.`,
         );
       }
-      const bundle = existsSync(path)
+      const present = existsSync(path);
+      /**
+       * A bundle this store wrote and can no longer find is LOST, not new.
+       *
+       * The read was `existsSync(path) ? JSON.parse(read) : []`, and that `: []`
+       * answered two different questions with one value: "this run has never been
+       * written" and "this run was written and its bundle is gone". The second is
+       * data loss and it returned normally — no throw, no event, no exit code. A
+       * twelve-minute local-model run held `deconstruct SUCCEEDED` at 01:08:30 and
+       * finished with five revisions beginning at `calibrate`, reporting success
+       * and exit 3 for a gate WARN. Two more bundles in the same directory carry
+       * the same signature; every run that completed in ~50 ms is intact.
+       *
+       * The guard sits on the READ because that is where every deleter converges:
+       *
+       *   - `evict` is directory-wide and sorts by `last_timestamp`. A stalled run's
+       *     does not advance between stages, so the longest-running bundle becomes
+       *     the OLDEST and is evicted first — inverted from what retention wants.
+       *     Any unrelated run finishing is enough, in this process or another;
+       *     `check:examples` runs the CLI with `cwd: root`, so `npm run verify`
+       *     appends to this repository's own `.nexusprompt/runs/`.
+       *   - Anything else: the runs directory moved aside mid-run, an antivirus
+       *     quarantine, a manual `rm`. These are indistinguishable from here, which
+       *     is the argument for guarding the read rather than any one deleter.
+       *
+       * Refusing is the whole point. `runPipeline` does not catch store errors, so
+       * the run aborts — loudly, with revisions already on disk still on disk,
+       * instead of quietly continuing on a bundle that no longer has a beginning.
+       *
+       * An in-process live set excluded from eviction would not have covered the
+       * measured case: the eviction that kills a long run runs in a DIFFERENT
+       * process, which cannot know the bundle is live. Sorting eviction by creation
+       * instead of last write is worse — the long run was created first, so it is
+       * still first to go. Cross-process safety needs a lock file or a real
+       * database, and this file's header already says that is `storage-db`'s job.
+       */
+      if (!present && this.written.has(entry.run_id)) {
+        throw new Error(
+          `vanished bundle: run "${entry.run_id}" was written to ${path} and the file is now gone. ` +
+          `Appending would silently restart the bundle and lose every revision already stored, so it ` +
+          `is refused. Most likely eviction — the store keeps ${MAX_BUNDLES} bundles and evicts the ` +
+          `oldest last_timestamp first, which for a stalled run is the run itself — or the runs ` +
+          `directory being moved while the run was open.`,
+        );
+      }
+      const bundle = present
         ? (JSON.parse(await readFile(path, "utf8")) as RevisionEntry[])
         : [];
       bundle.push(entry);
       await this.writeAtomic(path, JSON.stringify(bundle, null, 2));
+      // Only after the write succeeded: a failed append has nothing to lose later.
+      this.written.add(entry.run_id);
       await this.evict();
     });
   }
