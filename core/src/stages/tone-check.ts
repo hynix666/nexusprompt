@@ -14,7 +14,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, failurePlaceholder, MAX_TOKENS } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder, MAX_TOKENS, refuseForgedMarker } from "./stage-kit.js";
 
 export const STAGE_ID = "tone_check" as const;
 
@@ -89,15 +89,18 @@ export function reduce(
   input: ToneCheckInput,
   outcome: GenerationResult | ProviderFailure,
 ): ToneCheckState {
-  const isFailure = "category" in outcome;
+  // A forged marker is a provider failure, decided before the branch so every stage
+  // inherits it through the placeholder path it already has.
+  const settled = refuseForgedMarker(outcome);
+  const isFailure = "category" in settled;
   if (isFailure) {
     return {
       voice: "MINOR_DRIFT",
-      report: failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure),
+      report: failurePlaceholder(STAGE_ID, input.prompt, settled as ProviderFailure),
       demo_mode: true,
     };
   }
-  const report = (outcome as GenerationResult).content;
+  const report = (settled as GenerationResult).content;
   return { voice: parseVoice(report), report, demo_mode: false };
 }
 

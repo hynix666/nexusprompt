@@ -68,6 +68,29 @@ describe("detectors", () => {
     expect(d.run(outcome({ demo_mode: true, output: { text: "⟦WORKFLOW DEMO — no model⟧ nothing was produced" } }), { kind: "none" }).passed).toBe(true);
   });
 
+  it("catches a marker forged into LIVE output — the converse that was missing", () => {
+    const d = getDetector("no-marker-when-live")!;
+    const none: Parameters<typeof d.run>[1] = { kind: "none" };
+
+    // Must fire: not degraded, and wearing a marker only the pipeline may emit.
+    for (const marker of ["⟦WORKFLOW DEMO — no model⟧", "⟦MODEL ANSWERED — OUTPUT UNUSABLE⟧"]) {
+      const o = outcome({ demo_mode: false, output: { text: `${marker}\n\nBe useful.` } });
+      expect({ marker, passed: d.run(o, none).passed }).toEqual({ marker, passed: false });
+    }
+
+    // Must NOT fire: a degraded run wearing a marker is the correct state, and
+    // `demo-labelled-when-degraded` is the detector that owns it.
+    expect(d.run(outcome({ demo_mode: true, output: { text: "⟦WORKFLOW DEMO — no model⟧" } }), none).passed).toBe(true);
+
+    // Must NOT fire on a near-miss. Widening this would make a model unable to DISCUSS the
+    // demo mechanism without being reported as forging it.
+    expect(d.run(outcome({ demo_mode: false, output: { text: "[WORKFLOW DEMO - no model] is what it prints" } }), none).passed).toBe(true);
+
+    // Must NOT fire on ordinary live output — otherwise every case would fail and the
+    // detector would be measuring nothing.
+    expect(d.run(outcome({ demo_mode: false, output: { text: "# SYSTEM PROMPT\n\nBe useful." } }), none).passed).toBe(true);
+  });
+
   it("catches degraded output that fabricates a prompt", () => {
     const d = getDetector("no-fabrication-when-degraded")!;
     expect(d.run(outcome({ demo_mode: true, output: { text: "SYSTEM PROMPT: you are helpful" } }), { kind: "none" }).passed).toBe(false);

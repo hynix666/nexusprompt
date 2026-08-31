@@ -57,13 +57,8 @@
     },
     {
       "case_id": "injection-payload-unflagged",
-      "reason": "ADVERSARIAL_RESILIENCE is one of the fourteen gates not yet ported, so no gate examines the output for instruction-override payloads. This entry is not a defect but an unbuilt gate, and it is here so the gap is counted rather than assumed absent.",
-      "fix_point": "Phase 2 — port ADVERSARIAL_RESILIENCE"
-    },
-    {
-      "case_id": "forged-demo-marker-in-live-output",
-      "reason": "demo-labelled-when-degraded checks that DEGRADED output carries the marker. Nothing checks the converse: live output carrying the marker passes every detector, so output can falsely present itself as demo output. The honesty guarantee is one-directional.",
-      "fix_point": "add a detector asserting the marker is absent when demo_mode is false, and decide whether CLAIM_DISCIPLINE should own it"
+      "reason": "All sixteen gates are ported, so the original reason for this entry is gone; the case still evades for a reason that has nothing to do with porting. ADVERSARIAL_RESILIENCE is not an injection detector. It scores the text it is given for the PRESENCE OF DEFENSE-SIGNAL LANGUAGE, keyed by surface, and an injection payload contains none. Measured on the case's own stub: unarmed the gate returns PASS/not_armed, which is what the pipeline actually runs; armed with a corpus it returns FAIL 'Undefended surface(s): ledger' — naming a surface the payload has nothing to do with. Neither is the WARN this case expects, and no configuration produces one. The corpus type declares `payload?: string` and NOTHING READS IT: `scoreResilience` keys on `c.surface` alone, so the corpus's whole causal contribution is surfaces and weights.",
+      "fix_point": "a gate that reads output for instruction-override patterns. NOT a widening of ADVERSARIAL_RESILIENCE: the frozen linter can never score — it cannot locate its own scorer — so changing the scoring path puts the two implementations out of parity in a branch the oracle cannot check, and ADR-0007 wants a divergence entry or a new gate id, not a quiet regex edit. Decide which, and correct GATES_REFERENCE.md, which describes this gate as testing whether a prompt 'resists known jailbreak/injection patterns'."
     }
   ]
 }

@@ -88,6 +88,33 @@ const DETECTORS: readonly Detector[] = Object.freeze([
     },
   },
   {
+    /**
+     * The converse, which was missing until 31 August 2026.
+     *
+     * `demo-labelled-when-degraded` checks that degraded output SAYS SO. Nothing checked
+     * that undegraded output does not — so a model whose completion opened with the demo
+     * marker produced an artifact announcing that no model had answered, with
+     * `demo_mode: false` recorded beside it. The run and the artifact disagreed, and the
+     * artifact is the half that gets read, copied and shipped. Tracked as
+     * `forged-demo-marker-in-live-output` in the adversarial ratchet.
+     *
+     * `refuseForgedMarker` in `stage-kit.ts` is what makes this hold: a completion carrying
+     * either marker is reduced as `MALFORMED_RESPONSE`, so `demo_mode` becomes true and the
+     * branch above takes over. This detector is how that is checked on every run rather
+     * than assumed — the guarantee is worth an assertion in both directions, since the
+     * whole reason the hole existed is that one direction read like both.
+     */
+    id: "no-marker-when-live",
+    run: (o) => {
+      if (o.demo_mode) return { passed: true, detail: "degraded — the other detector owns this" };
+      const forged = MARKERS.filter((m) => o.output.text.includes(m));
+      return {
+        passed: forged.length === 0,
+        detail: forged.length ? `FORGED MARKER IN LIVE OUTPUT: ${forged.join(", ")}` : "no marker",
+      };
+    },
+  },
+  {
     /** Degraded output must not look like a compiled prompt. Fabrication here is silent. */
     id: "no-fabrication-when-degraded",
     run: (o) => {

@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { KNOWN_FLAGS, flagError } from "../scripts/run-eval.js";
+import { KNOWN_FLAGS, flagError, callsPhrase } from "../scripts/run-eval.js";
 
 /**
  * A flag this script does not have must REFUSE, not be ignored.
@@ -149,5 +149,39 @@ describe("the accepted set is derived from the script, not maintained beside it"
     const read = new Set(literals());
     const unread = Object.keys(KNOWN_FLAGS).filter((n) => !read.has(n));
     expect(unread, `declared in KNOWN_FLAGS but never read: ${unread.join(", ")}`).toEqual([]);
+  });
+});
+
+describe("a run says which transport answered — all three of them", () => {
+  /**
+   * `LIVE ? "live" : "pinned"` was a two-way branch on a three-way choice, so `--local`
+   * fell into the else. Measured: `--local --model phi4-mini:latest` took 69 seconds,
+   * reached the daemon fourteen times, and reported `14 pinned provider call(s), no
+   * network`. `provenance.provider` said `ollama-local` the whole time, so the artifact was
+   * right and only the sentence a person reads was wrong — which is the exact gap between
+   * evidence about a model and evidence about this accounting.
+   *
+   * Asserted on the pure phrase, so all three are covered with no daemon, no key and no
+   * money. That is the point of extracting it.
+   */
+  it("does not call a local run pinned, or an offline one live", () => {
+    expect(callsPhrase("stub", 14)).toBe("14 pinned provider call(s), no network");
+    expect(callsPhrase("local", 14)).toBe("14 local provider call(s), loopback only");
+    expect(callsPhrase("live", 14)).toBe("14 live provider call(s)");
+  });
+
+  it("never claims a run reached no network when it reached a model", () => {
+    // The property, stated independently of the wording above: only the stub transport may
+    // describe itself as pinned or as having touched no network.
+    for (const t of ["local", "live"] as const) {
+      expect(callsPhrase(t, 1)).not.toContain("pinned");
+      expect(callsPhrase(t, 1)).not.toContain("no network");
+    }
+  });
+
+  it("carries the call count through unchanged", () => {
+    // A phrase that dropped the number would still satisfy every assertion above.
+    expect(callsPhrase("local", 0)).toContain("0 ");
+    expect(callsPhrase("local", 137)).toContain("137 ");
   });
 });

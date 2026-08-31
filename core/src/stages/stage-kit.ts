@@ -12,7 +12,7 @@
 
 import { createHash } from "node:crypto";
 import { providerAnswered } from "../../../contracts/index.js";
-import type { GenerationRequest, ProviderFailure } from "../../../contracts/index.js";
+import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
 
 /** No model answered. One definition; the detectors deliberately re-declare the literal. */
 export const DEMO_MARKER = "⟦WORKFLOW DEMO — no model⟧";
@@ -57,6 +57,60 @@ export const PLACEHOLDER_MARKERS = [DEMO_MARKER, UNUSABLE_MARKER] as const;
  */
 export const isPlaceholderArtifact = (text: string | undefined): boolean =>
   typeof text === "string" && PLACEHOLDER_MARKERS.some((m) => text.includes(m));
+
+/**
+ * A model answer that forges one of this system's markers is UNUSABLE, not output.
+ *
+ * The honesty guarantee ran in one direction only. `demo-labelled-when-degraded` checks that
+ * degraded output carries a marker; nothing checked that undegraded output does NOT. So a
+ * model whose completion began with `⟦WORKFLOW DEMO — no model⟧` produced an artifact that
+ * announced no model had answered, with `demo_mode: false` recorded beside it — the run and
+ * the artifact disagreeing, and the artifact being the half that gets read, copied and
+ * shipped. Recorded as `forged-demo-marker-in-live-output` in the adversarial ratchet since
+ * 18 August 2026.
+ *
+ * Not a matter of stripping the marker. Editing a model's words to make them presentable is
+ * the fabrication this whole mechanism exists to refuse, and a stripped artifact would be
+ * indistinguishable from one that never forged anything. The answer that already exists is
+ * ADR-0014's: the provider answered, and the answer cannot be used. `MALFORMED_RESPONSE`
+ * carries exactly that claim, `providerAnswered` routes it to `UNUSABLE_MARKER`, and the
+ * placeholder for that branch deliberately does not reproduce the model's text — so the
+ * forgery does not survive into the artifact by being quoted in its own refusal.
+ *
+ * ## Why here and not in CLAIM_DISCIPLINE
+ *
+ * The ratchet's `fix_point` left that open. It cannot be a gate: `GateOptions` carries no
+ * `demo_mode`, so a gate reading the compiled text alone cannot tell a forged marker from a
+ * legitimate one — the same text is correct output for a degraded run and a forgery for a
+ * live one. The distinguishing fact exists only where the outcome is reduced, which is here.
+ *
+ * ## Why not in the adapters
+ *
+ * Three transports and counting, and only the Ollama adapter classifies `MALFORMED_RESPONSE`
+ * today. A check placed there would hold for one provider and silently not for the others,
+ * which is the shape of a guard that exists and is not wired.
+ */
+export function refuseForgedMarker(
+  outcome: GenerationResult | ProviderFailure,
+): GenerationResult | ProviderFailure {
+  if ("category" in outcome) return outcome;
+  if (!isPlaceholderArtifact(outcome.content)) return outcome;
+  return {
+    request_id: outcome.request_id,
+    category: "MALFORMED_RESPONSE",
+    // A retry would re-run the same prompt against the same model. Nothing about the
+    // response was transient, so promising a retry would be promising a different answer.
+    retriable: false,
+    reason_code: "forged_placeholder_marker",
+    // Says what happened without quoting what was said. `safe_message` reaches logs.
+    safe_message:
+      "The response contained one of this pipeline's placeholder markers, which only the " +
+      "pipeline may emit. Treated as unusable rather than shown.",
+    retry_after_ms: null,
+    attempt: 1,
+    provider_id: outcome.provider_id,
+  };
+}
 
 /**
  * The shared compiler identity, sent as the system prompt on every non-preview stage call.

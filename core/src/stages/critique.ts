@@ -13,7 +13,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, failurePlaceholder } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder, refuseForgedMarker } from "./stage-kit.js";
 
 export const STAGE_ID = "critique" as const;
 
@@ -61,15 +61,18 @@ export function reduce(
   input: CritiqueInput,
   outcome: GenerationResult | ProviderFailure,
 ): CritiqueState {
-  const isFailure = "category" in outcome;
+  // A forged marker is a provider failure, decided before the branch so every stage
+  // inherits it through the placeholder path it already has.
+  const settled = refuseForgedMarker(outcome);
+  const isFailure = "category" in settled;
   return {
     // A degraded critique must never read as PASS_SENTINEL. If it did, refine would take
     // the "nothing failed, return unchanged" branch and the pipeline would report a prompt
     // as reviewed-and-clean that no reviewer ever saw. The placeholder cannot collide with
     // it — it opens with the demo marker — and a test asserts exactly that.
     critique: isFailure
-      ? failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure)
-      : (outcome as GenerationResult).content,
+      ? failurePlaceholder(STAGE_ID, input.prompt, settled as ProviderFailure)
+      : (settled as GenerationResult).content,
     demo_mode: isFailure,
   };
 }

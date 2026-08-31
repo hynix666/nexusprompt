@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { ProviderFailure, GenerationResult, FailureCategory } from "../../contracts/index.js";
 import { STAGE_IDS, FAILURE_CATEGORIES } from "../../contracts/index.js";
 import { PIPELINE } from "../src/stages/pipeline.js";
-import { DEMO_MARKER, UNUSABLE_MARKER, isPlaceholderArtifact } from "../src/stages/stage-kit.js";
+import { DEMO_MARKER, UNUSABLE_MARKER, isPlaceholderArtifact, refuseForgedMarker } from "../src/stages/stage-kit.js";
 
 /**
  * Demo mode, exhaustively: every generating stage against every failure category.
@@ -240,5 +240,80 @@ describe("demo mode — the checks reject a planted defect", () => {
   it("every declared stage id appears in the pipeline", () => {
     // A stage added to the contract but never registered would silently escape this file.
     expect(PIPELINE.map((s) => s.id).sort()).toEqual([...STAGE_IDS].sort());
+  });
+});
+
+/**
+ * The guarantee in the other direction: LIVE output may not wear the marker.
+ *
+ * `demo-labelled-when-degraded` asserted that degraded output says so. Nothing asserted the
+ * converse, so a model whose completion opened with `⟦WORKFLOW DEMO — no model⟧` produced an
+ * artifact announcing that no model had answered, with `demo_mode: false` recorded beside it.
+ * The run and the artifact disagreed, and the artifact is the half that gets read. Recorded
+ * as `forged-demo-marker-in-live-output` in the adversarial ratchet on 18 August 2026 and
+ * closed here.
+ *
+ * The sweep is per-stage for the reason the sweeps above are: `refuseForgedMarker` is called
+ * from nine `reduce` implementations, and a stage that forgot the call would be invisible in
+ * a single-stage test.
+ */
+describe("demo mode — a forged marker in live output is unusable, not output", () => {
+  const forged = (marker: string) =>
+    ({ content: `${marker}\n\n${FABRICATED}` } as unknown as GenerationResult);
+
+  it.each(
+    generating.flatMap((s) =>
+      [["demo", DEMO_MARKER], ["unusable", UNUSABLE_MARKER]].map(
+        ([label, marker]) => [s.id, label, marker, s] as const,
+      ),
+    ),
+  )("%s treats a completion forging the %s marker as unusable", (id, _label, marker, stage) => {
+    const state = stage.reduce(ctx, forged(marker!));
+    const artifact = textsOf(state);
+
+    /**
+     * Guarded, because `PIPELINE`'s wrapper returns a context PATCH and several stages'
+     * patches carry only their artifact field. That is also why the assertion below is the
+     * load-bearing one here, and why `application/src/pipeline.ts` has to settle the outcome
+     * itself rather than trusting a flag it never sees.
+     */
+    if ("demo_mode" in (state as Record<string, unknown>)) {
+      expect({ id, flag: (state as { demo_mode: unknown }).demo_mode }).toEqual({ id, flag: true });
+    }
+
+    // It is the UNUSABLE branch, never the demo one: a model DID answer (ADR-0014).
+    expect({ id, marked: artifact.includes(UNUSABLE_MARKER) }).toEqual({ id, marked: true });
+
+    // The forgery must not survive by being quoted inside its own refusal, and neither may
+    // the text it was carrying — that is the fabrication the placeholder exists to refuse.
+    expect({ id, forgedThrough: artifact.includes(FABRICATED) }).toEqual({ id, forgedThrough: false });
+  });
+
+  it("leaves an honest completion exactly as it was", () => {
+    // The discriminating half. A `refuseForgedMarker` that failed everything would satisfy
+    // every assertion above, and the sweep would be measuring nothing.
+    expect(refuseForgedMarker(success)).toBe(success);
+  });
+
+  it("does not re-classify an outcome that is already a failure", () => {
+    const f = failure("TIMEOUT") as ProviderFailure;
+    expect(refuseForgedMarker(f)).toBe(f);
+  });
+
+  it("does not fire on a lookalike marker", () => {
+    // Square brackets and a hyphen: reads right, is not the marker. Widening this matcher
+    // would make a model unable to DISCUSS the demo mechanism without being refused.
+    const near = { content: "[WORKFLOW DEMO - no model] is what the pipeline prints" } as unknown as GenerationResult;
+    expect(refuseForgedMarker(near)).toBe(near);
+  });
+
+  it("classifies as MALFORMED_RESPONSE, which is what routes it to the right marker", () => {
+    const out = refuseForgedMarker(forged(DEMO_MARKER)) as ProviderFailure;
+    expect(out.category).toBe("MALFORMED_RESPONSE");
+    expect(out.reason_code).toBe("forged_placeholder_marker");
+    expect(out.retriable).toBe(false);
+    // `safe_message` reaches logs, so it says what happened without quoting what was said.
+    expect(out.safe_message).not.toContain(FABRICATED);
+    expect(out.safe_message).not.toContain(DEMO_MARKER);
   });
 });

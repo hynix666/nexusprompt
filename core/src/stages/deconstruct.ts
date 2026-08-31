@@ -10,7 +10,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, failurePlaceholder } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder, refuseForgedMarker } from "./stage-kit.js";
 
 export const STAGE_ID = "deconstruct" as const;
 
@@ -49,11 +49,14 @@ export function reduce(
   input: DeconstructInput,
   outcome: GenerationResult | ProviderFailure,
 ): DeconstructState {
-  const isFailure = "category" in outcome;
+  // A forged marker is a provider failure, decided before the branch so every stage
+  // inherits it through the placeholder path it already has.
+  const settled = refuseForgedMarker(outcome);
+  const isFailure = "category" in settled;
   return {
     spec: isFailure
-      ? failurePlaceholder(STAGE_ID, input.brief, outcome as ProviderFailure)
-      : (outcome as GenerationResult).content,
+      ? failurePlaceholder(STAGE_ID, input.brief, settled as ProviderFailure)
+      : (settled as GenerationResult).content,
     demo_mode: isFailure,
   };
 }

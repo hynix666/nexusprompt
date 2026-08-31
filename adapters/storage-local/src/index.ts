@@ -335,6 +335,55 @@ export class LocalRevisionStore implements RevisionStore {
     if (!existsSync(path)) return;
     const bundle = JSON.parse(await readFile(path, "utf8")) as RevisionEntry[];
 
+    /**
+     * Moved up from below the cascade, because the refusal after it must not fire on a
+     * bundle where there was nothing to stale anyway.
+     *
+     * A revision this bundle does not contain supersedes nothing in it. That matters for a
+     * DANGLING parent — an entry naming a parent the bundle lacks, which a partial write or
+     * a hand-edited file can produce. Without this line that entry's descendants would be
+     * staled on the strength of an id nothing here can account for. With it, the answer is
+     * "no such revision", which is the truth.
+     *
+     * It is deliberately not phrased as protecting against staling the whole bundle: it does
+     * not do that, and a probe showed the difference. An id matching no entry and no parent
+     * reference already cascades to nothing.
+     */
+    if (!bundle.some((e) => e.revision_id === from_revision_id)) return;
+
+    /**
+     * A bundle written before 1.3.1 cannot be cascaded, and must say so rather than answer.
+     *
+     * `parent_revision_ids` is not in the schema's `required` list, and its own description
+     * records why: "Populated since 1.3.1; it existed from 1.0.0 and nothing wrote it." So a
+     * bundle on disk from before then has entries with the field ABSENT — and
+     * `(e.parent_revision_ids ?? [])` turned that into "this revision descends from nothing".
+     * Every descendant stayed FRESH, the named revision alone went STALE, and the call
+     * returned successfully. A caller asking "what does this edit invalidate?" got the answer
+     * "nothing else", which is not the same as "the lineage was never recorded".
+     *
+     * That is the distinction this repository refuses to collapse everywhere else: a suite
+     * below the discordance floor is `refused`, not `inconclusive`, because "we could not
+     * have seen anything" and "we looked and saw nothing" are different claims. Under-
+     * cascading is the same error with a filesystem underneath it.
+     *
+     * Keyed on ABSENT, never on empty. A root revision legitimately has `[]` — the
+     * orchestrator writes exactly that — and refusing those would refuse every bundle. The
+     * type says `string[]` and cannot be undefined; that is a claim about what this codebase
+     * writes today, not about what is already on disk, which is why the check is a runtime
+     * `Array.isArray` rather than a type guard.
+     */
+    const unlineaged = bundle.filter((e) => !Array.isArray(e.parent_revision_ids));
+    if (unlineaged.length > 0) {
+      throw new Error(
+        `unlineaged bundle: run "${run_id}" has ${unlineaged.length} of ${bundle.length} revision(s) ` +
+        `with no parent_revision_ids (${unlineaged.slice(0, 3).map((e) => e.revision_id).join(", ")}` +
+        `${unlineaged.length > 3 ? ", …" : ""}). Written before contract 1.3.1 populated the field, so ` +
+        `the cascade cannot be computed. Staling only "${from_revision_id}" would report that it ` +
+        `invalidates nothing else, which is an answer this bundle does not support.`,
+      );
+    }
+
     const stale = new Set<string>([from_revision_id]);
     for (let grew = true; grew; ) {
       grew = false;
@@ -347,20 +396,6 @@ export class LocalRevisionStore implements RevisionStore {
       }
     }
 
-    /**
-     * A revision this bundle does not contain supersedes nothing in it.
-     *
-     * This matters only for a DANGLING parent — an entry naming a parent the bundle lacks,
-     * which a partial write or a hand-edited file can produce. Without this line that
-     * entry's descendants would be staled on the strength of an id nothing here can
-     * account for. With it, the answer is "no such revision", which is the truth.
-     *
-     * It is deliberately not phrased as protecting against staling the whole bundle: it
-     * does not do that, and a probe showed the difference. An id matching no entry and no
-     * parent reference already cascades to nothing; all that is saved there is a pointless
-     * rewrite of an unchanged file.
-     */
-    if (!bundle.some((e) => e.revision_id === from_revision_id)) return;
     for (const e of bundle) if (stale.has(e.revision_id)) e.freshness = "STALE";
     await writeFile(path, JSON.stringify(bundle, null, 2));
   }

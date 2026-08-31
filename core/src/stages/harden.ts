@@ -11,7 +11,7 @@
  */
 
 import type { GenerationRequest, GenerationResult, ProviderFailure } from "../../../contracts/index.js";
-import { fillTemplate, buildRequest, failurePlaceholder } from "./stage-kit.js";
+import { fillTemplate, buildRequest, failurePlaceholder, refuseForgedMarker } from "./stage-kit.js";
 
 export const STAGE_ID = "harden" as const;
 
@@ -50,14 +50,17 @@ export function reduce(
   input: HardenInput,
   outcome: GenerationResult | ProviderFailure,
 ): HardenState {
-  const isFailure = "category" in outcome;
+  // A forged marker is a provider failure, decided before the branch so every stage
+  // inherits it through the placeholder path it already has.
+  const settled = refuseForgedMarker(outcome);
+  const isFailure = "category" in settled;
   return {
     // Degraded, the prompt does NOT pass through unchanged. Returning the un-hardened
     // prompt would make a failed hardening indistinguishable from a successful one that
     // needed no changes — the pipeline would report a guardrailed prompt it never made.
     prompt: isFailure
-      ? failurePlaceholder(STAGE_ID, input.prompt, outcome as ProviderFailure)
-      : (outcome as GenerationResult).content,
+      ? failurePlaceholder(STAGE_ID, input.prompt, settled as ProviderFailure)
+      : (settled as GenerationResult).content,
     demo_mode: isFailure,
   };
 }
