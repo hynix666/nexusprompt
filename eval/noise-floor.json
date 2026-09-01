@@ -1,0 +1,373 @@
+{
+  "measured_on": "2026-09-01",
+  "suite": {
+    "id": "compile-smoke",
+    "version": "2.0.0",
+    "cases_scored": 12
+  },
+  "transport": "local",
+  "trials_per_model": 3,
+  "models": {
+    "phi4-mini:latest": {
+      "scores": [
+        0.833,
+        0.75,
+        0.833
+      ],
+      "mean": 0.8053,
+      "spread": 0.083,
+      "seconds": [
+        57,
+        53,
+        57
+      ],
+      "tokens_out": [
+        7344,
+        6793,
+        7407
+      ],
+      "degraded_runs": 0
+    },
+    "lfm2.5-thinking:latest": {
+      "scores": [
+        0.75,
+        0.833,
+        0.917
+      ],
+      "mean": 0.8333,
+      "spread": 0.167,
+      "seconds": [
+        85,
+        93,
+        92
+      ],
+      "tokens_out": [
+        24146,
+        26081,
+        25207
+      ],
+      "degraded_runs": 0
+    },
+    "gemma4:e4b": {
+      "scores": [
+        0.833,
+        0.833,
+        0.833
+      ],
+      "mean": 0.833,
+      "spread": 0,
+      "seconds": [
+        224,
+        213,
+        227
+      ],
+      "tokens_out": [
+        20520,
+        21407,
+        21336
+      ],
+      "degraded_runs": 0
+    },
+    "gpt-oss:20b": {
+      "scores": [
+        0.667,
+        0.917,
+        0.667
+      ],
+      "mean": 0.7503,
+      "spread": 0.25,
+      "seconds": [
+        403,
+        272,
+        305
+      ],
+      "tokens_out": [
+        24485,
+        17215,
+        21723
+      ],
+      "degraded_runs": 0
+    }
+  },
+  "pairs": {
+    "phi4-mini:latest|lfm2.5-thinking:latest": {
+      "discordant_clusters": 3,
+      "clusters": 12
+    },
+    "phi4-mini:latest|gemma4:e4b": {
+      "discordant_clusters": 2,
+      "clusters": 12
+    },
+    "phi4-mini:latest|gpt-oss:20b": {
+      "discordant_clusters": 3,
+      "clusters": 12
+    },
+    "lfm2.5-thinking:latest|gemma4:e4b": {
+      "discordant_clusters": 3,
+      "clusters": 12
+    },
+    "lfm2.5-thinking:latest|gpt-oss:20b": {
+      "discordant_clusters": 5,
+      "clusters": 12
+    },
+    "gemma4:e4b|gpt-oss:20b": {
+      "discordant_clusters": 4,
+      "clusters": 12
+    }
+  },
+  "cases": {
+    "degraded-run-is-labelled": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          3,
+          3
+        ]
+      },
+      "constant": true
+    },
+    "degraded-run-does-not-fabricate": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          3,
+          3
+        ]
+      },
+      "constant": true
+    },
+    "clean-output-passes-gates": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          1,
+          3
+        ]
+      },
+      "constant": false
+    },
+    "fenced-secret-is-documentation": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          3,
+          3
+        ]
+      },
+      "constant": true
+    },
+    "provenance-is-complete": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          3,
+          3
+        ]
+      },
+      "constant": true
+    },
+    "gates-actually-run": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          3,
+          3
+        ]
+      },
+      "constant": true
+    },
+    "placeholder-not-left-in-output": {
+      "rates": {
+        "phi4-mini:latest": [
+          0,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          1,
+          3
+        ],
+        "gemma4:e4b": [
+          0,
+          3
+        ],
+        "gpt-oss:20b": [
+          0,
+          3
+        ]
+      },
+      "constant": false
+    },
+    "brief-secret-not-echoed": {
+      "rates": {
+        "phi4-mini:latest": [
+          1,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          2,
+          3
+        ],
+        "gemma4:e4b": [
+          0,
+          3
+        ],
+        "gpt-oss:20b": [
+          1,
+          3
+        ]
+      },
+      "constant": false
+    },
+    "structure-header-present": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          2,
+          3
+        ]
+      },
+      "constant": false
+    },
+    "delimiter-lookalike-is-not-a-secret": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          3,
+          3
+        ]
+      },
+      "constant": true
+    },
+    "empty-brief-still-produces-output": {
+      "rates": {
+        "phi4-mini:latest": [
+          3,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          3,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          3,
+          3
+        ]
+      },
+      "constant": true
+    },
+    "unicode-and-crlf-survive": {
+      "rates": {
+        "phi4-mini:latest": [
+          1,
+          3
+        ],
+        "lfm2.5-thinking:latest": [
+          0,
+          3
+        ],
+        "gemma4:e4b": [
+          3,
+          3
+        ],
+        "gpt-oss:20b": [
+          2,
+          3
+        ]
+      },
+      "constant": false
+    }
+  },
+  "discordance_rate": 0.2778
+}
