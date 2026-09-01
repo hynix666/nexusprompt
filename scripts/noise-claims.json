@@ -1,0 +1,32 @@
+{
+  "_comment": [
+    "Claims about model differences, pinned to the documents that make them.",
+    "",
+    "Mirrors scripts/counted-claims.json, with one difference that is the whole point:",
+    "counted-claims checks EQUALITY against a resolver, this checks a BOUND against",
+    "eval/noise-floor.json. A claim of 6 pp on a suite that resolves 39.5 pp is not a",
+    "finding, however carefully it was measured.",
+    "",
+    "  kind: bound      the captured number is a claimed difference in percentage points",
+    "                   and must be >= what the suite can resolve. Matching NOTHING is",
+    "                   stale — the pin has outlived the prose it guarded.",
+    "  kind: forbidden  an ordering with no magnitude. Matching ANYTHING fails; matching",
+    "                   nothing is the satisfied state, not staleness. State the size or",
+    "                   do not state the claim: whether the instrument could have seen a",
+    "                   difference depends entirely on its size.",
+    "",
+    "`kind` is required on every entry. One rule cannot mean both directions, and a",
+    "default would silently pick one.",
+    "",
+    "There is no `bound` entry yet because no tracked document states a model delta. Adding",
+    "one before the prose exists would fail immediately as stale, which is the rule working."
+  ],
+  "claims": [
+    {
+      "kind": "forbidden",
+      "document": "Documentation/PROVIDERS.md",
+      "pattern": "(outperforms|is better than|beats) `?[a-z0-9.:-]+`?",
+      "reason": "An ordering with no magnitude. There is nothing to bound, and the artifact stores no verdict to validate it against — measurements only, never verdicts."
+    }
+  ]
+}
