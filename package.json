@@ -44,6 +44,7 @@
     "check:anchor": "tsx scripts/build-anchor.ts --check",
     "eval:anchor": "tsx scripts/run-anchor.ts",
     "eval:pipeline": "tsx scripts/run-pipeline-eval.ts",
+    "compare:models": "tsx scripts/compare-models.mjs",
     "docs:manifest-spec": "node scripts/generate-manifest-spec.mjs",
     "check:manifest-spec": "node scripts/generate-manifest-spec.mjs --check",
     "docs:truth": "tsx scripts/check-truth-boundary.ts",
