@@ -45,20 +45,41 @@ import {
   floorDiscordant, attainable, minAttainableP, resolvableDelta, STATED_ASSUMPTIONS,
 } from "../core/src/eval/sizing.js";
 
-const lines = (text, prefix) =>
+export interface RunRecord {
+  model: string; trial: number; secs: number; exit: number;
+  passed: number | null; cases: number | null; score: number | null;
+  tokens_in: number | null; tokens_out: number | null;
+}
+
+/** One trial of one case. `cluster_id` is what the sign test aggregates on. */
+export interface CaseOutcomeRow { case_id: string; cluster_id: string; passed: boolean; }
+
+export interface MatrixRow {
+  case_id: string;
+  rates: Array<{ passed: number; n: number } | null>;
+  constant: boolean;
+}
+
+const lines = (text: string, prefix: string): string[][] =>
   text.split(/\r?\n/).filter((l) => l.startsWith(prefix)).map((l) => l.split("|"));
 
 /** One record per run: model, trial, wall time, score. */
-export function parseRuns(text) {
-  return lines(text, "RUN|").map(([, model, trial, secs, , score]) => {
+export function parseRuns(text: string): RunRecord[] {
+  return lines(text, "RUN|").map(([, model, trial, secs, exit, score, tokens]) => {
     const m = (score ?? "").match(/([0-9]+)\/([0-9]+) cases · score ([0-9.]+)/);
+    const t = (tokens ?? "").match(/([0-9]+) in \/ ([0-9]+) out/);
     return {
       model,
       trial: Number(trial),
       secs: Number((secs ?? "").replace("secs=", "")),
+      // Exit 3 is a DEGRADED run, not a broken one — the noise floor counts those separately,
+      // because dropping them would flatter a model that times out.
+      exit: Number((exit ?? "").replace("exit=", "")),
       passed: m ? Number(m[1]) : null,
       cases: m ? Number(m[2]) : null,
       score: m ? Number(m[3]) : null,
+      tokens_in: t ? Number(t[1]) : null,
+      tokens_out: t ? Number(t[2]) : null,
     };
   });
 }
@@ -69,13 +90,13 @@ export function parseRuns(text) {
  * `case_id` carries the trial so two trials of one case are distinct rows; `cluster_id` is the
  * bare case, which is what the sign test aggregates on.
  */
-export function parseCases(text) {
-  const byModel = new Map();
-  for (const [, model, trial, caseId, verdict] of lines(text, "CASE|")) {
-    if (!byModel.has(model)) byModel.set(model, []);
-    byModel.get(model).push({
-      case_id: `${caseId}#${trial}`, cluster_id: caseId, passed: verdict === "pass",
-    });
+export function parseCases(text: string): Map<string, CaseOutcomeRow[]> {
+  const byModel = new Map<string, CaseOutcomeRow[]>();
+  for (const parts of lines(text, "CASE|")) {
+    const [, model, trial, caseId, verdict] = parts as [string, string, string, string, string];
+    const rows = byModel.get(model) ?? [];
+    rows.push({ case_id: `${caseId}#${trial}`, cluster_id: caseId, passed: verdict === "pass" });
+    byModel.set(model, rows);
   }
   return byModel;
 }
@@ -88,27 +109,29 @@ export function parseCases(text) {
  * failed — so the suite's effective width for telling models apart was four cases, not
  * fourteen. Scaling such a suite would mostly buy noise.
  */
-export function caseMatrix(byModel) {
+export function caseMatrix(byModel: Map<string, CaseOutcomeRow[]>): MatrixRow[] {
   const models = [...byModel.keys()];
-  const ids = [];
+  const ids: string[] = [];
   for (const rows of byModel.values()) {
     for (const r of rows) if (!ids.includes(r.cluster_id)) ids.push(r.cluster_id);
   }
   return ids.map((id) => {
     const rates = models.map((m) => {
-      const rows = byModel.get(m).filter((r) => r.cluster_id === id);
+      const rows = (byModel.get(m) ?? []).filter((r) => r.cluster_id === id);
       return rows.length ? { passed: rows.filter((r) => r.passed).length, n: rows.length } : null;
     });
-    const seen = rates.filter(Boolean).map((r) => r.passed / r.n);
+    const seen = rates
+      .filter((r): r is { passed: number; n: number } => r !== null)
+      .map((r) => r.passed / r.n);
     return { case_id: id, rates, constant: new Set(seen).size <= 1 };
   });
 }
 
 /** Every unordered pair, which is also the multiplicity family the correction divides by. */
-export function pairsOf(models) {
-  const out = [];
+export function pairsOf(models: readonly string[]): Array<[string, string]> {
+  const out: Array<[string, string]> = [];
   for (let i = 0; i < models.length; i++) {
-    for (let j = i + 1; j < models.length; j++) out.push([models[i], models[j]]);
+    for (let j = i + 1; j < models.length; j++) out.push([models[i]!, models[j]!]);
   }
   return out;
 }
@@ -121,7 +144,7 @@ export function pairsOf(models) {
  * comparator refuses to make. A pair is refused when its discordant count could not reach the
  * corrected alpha under ANY arrangement of the signs.
  */
-export function verdictFor(candidate, baseline, alpha) {
+export function verdictFor(candidate: CaseOutcomeRow[], baseline: CaseOutcomeRow[], alpha: number) {
   const r = clusteredPaired(candidate, baseline);
   if (!attainable(r.discordant, alpha)) {
     return { ...r, verdict: "refused", best: minAttainableP(r.discordant) };
@@ -129,11 +152,11 @@ export function verdictFor(candidate, baseline, alpha) {
   return { ...r, verdict: r.p <= alpha ? "significant" : "inconclusive", best: null };
 }
 
-export function report(runsText, casesText, { alpha = 0.05 } = {}) {
+export function report(runsText: string, casesText: string, { alpha = 0.05 }: { alpha?: number } = {}): string {
   const runs = parseRuns(runsText);
   const byModel = parseCases(casesText);
   const models = [...byModel.keys()];
-  const out = [];
+  const out: string[] = [];
 
   out.push("## Runs\n");
   for (const r of runs) {
@@ -143,7 +166,9 @@ export function report(runsText, casesText, { alpha = 0.05 } = {}) {
 
   out.push("\n## Score stability across trials\n");
   for (const m of models) {
-    const v = runs.filter((r) => r.model === m && r.score !== null).map((r) => r.score);
+    const v: number[] = runs
+      .filter((r) => r.model === m && r.score !== null)
+      .map((r) => r.score as number);
     if (v.length === 0) continue;
     const mean = v.reduce((a, b) => a + b, 0) / v.length;
     out.push(`${m.padEnd(24)} ${v.map((x) => x.toFixed(3)).join(" ").padEnd(20)} ` +
@@ -168,8 +193,8 @@ export function report(runsText, casesText, { alpha = 0.05 } = {}) {
   out.push(`discordant clusters needed: ${floorDiscordant(alpha)} nominal, ` +
     `${floorDiscordant(corrected)} corrected\n`);
   for (const [a, b] of pairs) {
-    const v = verdictFor(byModel.get(a), byModel.get(b), corrected);
-    const tail = v.verdict === "refused" ? ` (best possible p=${v.best.toFixed(4)})` : "";
+    const v = verdictFor(byModel.get(a) ?? [], byModel.get(b) ?? [], corrected);
+    const tail = v.best !== null ? ` (best possible p=${v.best.toFixed(4)})` : "";
     out.push(`${a.padEnd(24)} ${b.padEnd(24)} disc ${String(v.discordant).padStart(2)}/` +
       `${v.clusters}  p ${v.p.toFixed(4)}  ${v.verdict}${tail}`);
   }
