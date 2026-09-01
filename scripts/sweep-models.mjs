@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Run N trials of the eval suite per model, appending as it goes.
  *

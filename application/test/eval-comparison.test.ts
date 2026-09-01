@@ -133,3 +133,40 @@ describe("the exit gate: a deliberately worse configuration is measured as worse
     }
   });
 });
+
+/**
+ * Excluding a case means narrowing the SUITE, not just the array handed to `runSuite`.
+ *
+ * `runSuite` iterates `suite.case_ids` and fails anything absent from `cases`, under the
+ * correct rule that "a suite naming a case nobody wrote must fail, not silently shrink". So
+ * filtering only the array does not skip a case — it scores it ZERO, which is worse than the
+ * defect the filtering was fixing.
+ *
+ * Measured on 1 September 2026 before this was understood: `eval --local` printed "2 of 14
+ * case(s) excluded / Scoring 12 case(s)" and then listed all fourteen, with the two excluded
+ * FAILED as `failure_mode: "unknown"`. The run reported 11/14 where an honest exclusion
+ * reports 11/12 — a real model's score dragged down by cases that were never run.
+ */
+describe("excluding a case narrows the suite, not only the array", () => {
+  const twoCases = data.cases.slice(0, 2);
+
+  it("fails a case the suite names but the array omits — the guard that made this subtle", () => {
+    // Not a defect: this is what protects a suite from silently shrinking. It is only a trap
+    // when a caller filters `cases` and forgets `case_ids`.
+    return runSuite({ suite: data.suite, cases: twoCases, configuration: configFor("core/src/stages/compile.ts") })
+      .then((r) => {
+        expect(r.run.aggregate.cases).toBe(data.suite.case_ids.length);
+        const unknown = r.perCase.filter((c) => c.failure_mode === "unknown");
+        expect(unknown.length).toBe(data.suite.case_ids.length - twoCases.length);
+      });
+  });
+
+  it("scores exactly the narrowed set when case_ids is narrowed too", async () => {
+    const narrowed = { ...data.suite, case_ids: twoCases.map((c) => c.case_id) };
+    const r = await runSuite({
+      suite: narrowed, cases: twoCases, configuration: configFor("core/src/stages/compile.ts"),
+    });
+    expect(r.run.aggregate.cases).toBe(2);
+    expect(r.perCase.filter((c) => c.failure_mode === "unknown")).toEqual([]);
+  });
+});
