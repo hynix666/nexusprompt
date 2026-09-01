@@ -43,6 +43,7 @@ import { OllamaProvider } from "../adapters/provider-ollama/src/index.js";
 import { compare } from "../core/src/eval/compare.js";
 import { detectorsWithoutProbes, probesWithoutDetectors, deadDetectors } from "../core/src/eval/probes.js";
 import { preflight, type PreflightVerdict, type Transport } from "../core/src/eval/preflight.js";
+import { partitionByTransport } from "../core/src/eval/transport-validity.js";
 import type { Configuration, EvalSuite } from "../contracts/index.js";
 
 /** The configuration a variant names, so two runs differ in exactly one recorded field. */
@@ -395,6 +396,42 @@ async function main(): Promise<number> {
     return 2;
   }
 
+  /**
+   * Cases that only mean what they say under the pinned stub are excluded, and SAID.
+   *
+   * `secret-in-output-is-flagged` asserts `SECRET_LEAK_SCAN → WARN`, reachable only because
+   * the stub content carries a planted key. A real transport replaces that stub, the gate
+   * correctly passes, and the case fails — so failing means the model did NOT leak a secret.
+   * Measured: it failed 0/9 across three local models, and its overclaim twin PASSED once,
+   * for a model that wrote guarantee language. The suite was scoring the defect.
+   *
+   * Printed rather than filtered in silence. The denominator changes, and a denominator that
+   * changes without saying so is the same kind of quiet rescale as the inversion itself.
+   *
+   * ABOVE the preflight deliberately. The plan reports the cases and the provider calls this
+   * run will make; a plan promising fourteen while the run scores twelve would describe a
+   * different run, which is the disagreement between printed plan and executed run that
+   * `--dry-run` exists to make impossible.
+   */
+  const { runnable, excluded } = partitionByTransport(data.cases, TRANSPORT);
+
+  /**
+   * Computed here, REPORTED after the preflight. A run that is about to refuse for want of a
+   * key should not first announce which cases it selected — `example:refuse` exists to show
+   * that a keyless live run produces nothing, and the refusal has to be the first thing read.
+   */
+  const reportExclusions = (): void => {
+    if (excluded.length === 0) return;
+    console.log(
+      `eval: ${excluded.length} of ${data.cases.length} case(s) excluded — they assert a gate FIRES,\n` +
+      `  which needs the content the pinned stub plants. On the ${TRANSPORT} transport the model\n` +
+      "  writes the output, the gate correctly stays quiet, and the case would score a model\n" +
+      "  that behaved WELL as a failure:\n" +
+      excluded.map((c) => `    ${c.case_id}`).join("\n") +
+      `\n  Scoring ${runnable.length} case(s).\n`,
+    );
+  };
+
   const base = {
     prompt_template_ref: "core/src/stages/compile.ts",
     model_id: "pinned",
@@ -494,7 +531,9 @@ async function main(): Promise<number> {
     key: process.env.ANTHROPIC_API_KEY,
     budget: configuration.budget,
     trials: TRIALS,
-    caseCount: data.suite.case_ids.length,
+    // What will RUN, not what the suite file lists — see the partition above. A plan that
+    // counted excluded cases would over-state the budget a live run needs.
+    caseCount: runnable.length,
     decoding: configuration.decoding,
     localModel,
   });
@@ -504,6 +543,7 @@ async function main(): Promise<number> {
     return 2;
   }
 
+  reportExclusions();
   if (LIVE || LOCAL) printPlan(verdict.plan, data.suite.suite_id, DRY_RUN);
 
   /**
@@ -539,10 +579,13 @@ async function main(): Promise<number> {
    * unhandled stack trace is not: "refused before dispatch, nothing was spent" is the guard
    * working exactly as designed, and it should read that way.
    */
+  /**
+   * The suite runs what the partition above left runnable.
+   */
   let result: Awaited<ReturnType<typeof runSuite>>;
   try {
     result = await runSuite({
-      suite: data.suite, cases: data.cases, configuration, trials: TRIALS, ...liveWiring,
+      suite: data.suite, cases: runnable, configuration, trials: TRIALS, ...liveWiring,
     });
   } catch (err) {
     const message = (err as Error).message;
