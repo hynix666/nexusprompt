@@ -269,20 +269,20 @@ that event is a failing build, not a note in a backlog.
 
 `model-comparisons-are-unresolvable-here` · probe `noiseFloor`
 
-**Establishes.** That the question has been asked precisely. `check:noise` refuses a written claim of a difference smaller than the instrument can resolve, and `compare:models` reports refusals using the comparator's own exact clustered sign test rather than a second implementation. Both read committed files only, so they run in CI without a GPU.
+**Establishes.** That the question has been asked precisely, and answered with a measurement. `check:noise` refuses a written claim of a difference smaller than the instrument can resolve, and `compare:models` reports refusals using the comparator's own exact clustered sign test rather than a second implementation. Both read committed files only, so they run in CI without a GPU. Armed on 1 September 2026 from a sweep of four local models, three trials each, on the twelve cases compile-smoke can honestly score under a real transport.
 
-**Does not establish.** That any two models here have been shown to differ, or to be the same. Measured on 1 September 2026 across four local models and three trials each, every pairwise comparison on compile-smoke came back REFUSED: the largest discordance was 5 clusters against a Bonferroni-corrected floor of 8, so no arrangement of the signs could have reached significance. Within-model spread was 0.071 to 0.143, at least as large as the largest gap between any two models. A refusal is not a null result — it says the instrument could not have seen a difference, not that there is none. Nine of fourteen cases were constant across every model, so the suite's effective width for telling models apart was five cases, not fourteen.
+**Does not establish.** That any two of those models have been shown to differ, or to be the same. All six pairwise comparisons came back REFUSED: the largest discordance was 5 clusters of 12 against a Bonferroni-corrected floor of 8, so no arrangement of the signs could have reached significance. At the measured discordance rate of 0.2778, twelve cases resolve 42.6 percentage points; the largest gap between any two model means was 8.3. A refusal is not a null result — it says the instrument could not have seen a difference, not that there is none. Within-model spread reached 25.0 points on gpt-oss:20b, three times the gap between the best and worst model, so a single run cannot even establish what one model does. Seven of the twelve cases were constant across every model and cannot separate any pair. The measurement is also not reproducible: temperature is unpinned, the models are stochastic, and CI has no GPU.
 
 **Pinned:**
 
 ```json
 {
-  "floor_measured": false,
-  "models_measured": 0,
-  "cases_scored": 0
+  "floor_measured": true,
+  "models_measured": 4,
+  "cases_scored": 12
 }
 ```
 
-**Crossed when.** A measurement is committed: `floor_measured` goes true and the other two become non-zero. At that moment every claim pinned in scripts/noise-claims.json starts being checked against a real number rather than parsed and passed over, and the sentences those pins guard need re-reading. Producing the measurement needs a machine with models on it and about ninety minutes, which is why arming this is a separate act from building the mechanism.
+**Crossed when.** Any of the three pinned values moves. `models_measured` changing means the floor now speaks for a different set of models and every claim checked against it needs re-reading; `cases_scored` changing means the suite itself changed and the floor is no longer comparable to the one it replaced. `floor_measured` going false would mean the artifact was deleted while claims pinned in scripts/noise-claims.json still stand — the gate silently disarming, which is the state it exists to make impossible.
 
 **Evidence:** `scripts/check-noise.ts` · `scripts/noise-claims.json` · `scripts/compare-models.ts` · `scripts/noise-floor.ts` · `docs/superpowers/specs/2026-09-01-noise-floor-design.md`
