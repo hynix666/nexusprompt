@@ -80,7 +80,18 @@ describe("eval --dry-run", () => {
     );
     expect(code).toBe(0);
     expect(out).toContain("DRY RUN — nothing will be dispatched");
-    expect(out).toContain("42 provider call(s)");
+    /**
+     * 36, not 42 — twelve runnable cases times three trials.
+     *
+     * `compile-smoke` lists fourteen, but two of them assert a gate FIRES on content only the
+     * pinned stub plants, so a real transport excludes them (see `transport-validity.ts`).
+     * The plan counts what the run will DO. Pinning 42 here would be pinning the suite's
+     * length against a plan that no longer describes the same run, which is precisely the
+     * disagreement between printed plan and executed run that `--dry-run` exists to prevent.
+     * The budget of 42 still admits it, so this stays an approval rather than a refusal.
+     */
+    expect(out).toContain("36 provider call(s)");
+    expect(out).toContain("2 of 14 case(s) excluded");
   });
 
   it("reports no cost block, because nothing ran", () => {

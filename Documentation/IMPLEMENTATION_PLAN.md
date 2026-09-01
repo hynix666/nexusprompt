@@ -77,6 +77,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "example:refuse",
     "docs:fence-explanation",
     "docs:manifest-spec",
+    "compare:models",
     "docs:matrix",
     "docs:truth",
     "eval",
