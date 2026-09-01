@@ -79,6 +79,29 @@ export function requiresPinnedStub(c: unknown): boolean {
  * rescaling in silence, and a denominator that changes without saying so is the same class of
  * defect as the inversion this prevents.
  */
+/**
+ * `runnable` IS NOT ENOUGH ON ITS OWN. Narrow the suite's `case_ids` with it.
+ *
+ * `runSuite` iterates `suite.case_ids` and looks each one up in the `cases` array it was
+ * given, recording `failure_mode: "unknown"` for anything absent — under the correct rule
+ * that "a suite naming a case nobody wrote must fail, not silently shrink". So handing it a
+ * filtered array without a filtered suite does not skip the excluded cases, it makes them
+ * FAIL.
+ *
+ * That is worse than the inversion this module exists to prevent, and it shipped: on
+ * 1 September 2026 a real run printed "2 of 14 case(s) excluded / Scoring 12 case(s)" and
+ * then scored 11/14, with both excluded cases failed as "unknown". A model that behaved well
+ * was penalised for cases that never ran. The honest number was 11/12.
+ *
+ * The caller must do both:
+ *
+ *   const { runnable } = partitionByTransport(data.cases, transport);
+ *   const suite = { ...data.suite, case_ids: runnable.map((c) => c.case_id) };
+ *
+ * Pinned by two tests in `application/test/eval-comparison.test.ts`: one asserts the
+ * missing-case guard still fires (that behaviour is correct and must stay), the other asserts
+ * a narrowed suite scores exactly the narrowed set.
+ */
 export function partitionByTransport<T>(
   cases: readonly T[],
   transport: "stub" | "local" | "live",
