@@ -6,7 +6,7 @@
 
 **Architecture:** A sweep writes line-oriented run data; a pure builder turns that into a committed measurement artifact; a claim checker validates prose in tracked documents against the artifact. The checker reads only committed files, so it runs in CI without a GPU and reports "not armed" until a measurement exists.
 
-**Tech Stack:** Node 24 ESM (`.mjs` scripts, `.ts` for typed Core), vitest (project `contracts` for `test/*.test.ts`), npm workspaces. No new dependencies.
+**Tech Stack:** Node 24 ESM (`.ts` for anything importing Core, `.mjs` otherwise), vitest (project `contracts` for `test/*.test.ts`), npm workspaces. No new dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-09-01-noise-floor-design.md`
 
@@ -18,35 +18,43 @@
 - **`cases_scored` is 12, not 14** for `compile-smoke` on a real transport — two cases are excluded by `partitionByTransport` in `core/src/eval/transport-validity.ts`.
 - **Absent and broken are different states.** A missing artifact is "not armed" (exit 0); a malformed one is fatal (exit 2). They must never collapse.
 - **Stage explicit paths.** Never `git add -A` or `git add .` in this repository.
-- **Every `.mjs` script that imports Core TypeScript runs under `tsx`, not bare `node`.** `scripts/compare-models.mjs` already does; the npm script is `tsx scripts/compare-models.mjs`.
+- **A script that imports Core is `.ts`; a script that does not is `.mjs`.** Corrected on
+  1 September 2026 after Task 1 hit it. A `.mjs` importing Core TypeScript works only when a
+  test imports it DIRECTLY — vitest inlines that one and externalises anything reached
+  transitively, and Node then reads `core/src/eval/compare.js` (really `.ts`) as JavaScript
+  and fails with `SyntaxError: Invalid or unexpected token`. The repository already followed
+  this rule everywhere else: `run-eval.ts`, `doctor.ts`, `check-truth-boundary.ts` and
+  `examples.ts` import Core and are `.ts`; `check-counts.mjs`, `check-fingerprint.mjs` and
+  `build-hash.mjs` import none and are `.mjs`. `compare-models.mjs` was the lone violation and
+  was converted in Task 1, which surfaced twelve strict-mode errors it had been hiding.
 - **Exit codes match `check:counts`:** 0 pass or not-armed, 1 a failed claim, 2 a broken input.
 
 ## File Structure
 
 | File | Responsibility |
 |---|---|
-| `scripts/noise-floor.mjs` | **Create.** Pure builder: sweep text → artifact object. Plus `resolvableFor(artifact)`, the one place the artifact is turned into a resolvable delta. |
-| `scripts/compare-models.mjs` | **Modify.** Add `--write` (produces the artifact) and the runtime refusal. Stays a reporter; the building lives next door. |
-| `scripts/check-noise.mjs` | **Create.** The gate. Reads artifact + claims, validates, never runs a model. |
+| `scripts/noise-floor.ts` | **Create.** Pure builder: sweep text → artifact object. Plus `resolvableFor(artifact)`, the one place the artifact is turned into a resolvable delta. |
+| `scripts/compare-models.ts` | **Modify.** Converted from `.mjs` in Task 1. Add `--write` (produces the artifact) and the runtime refusal. Stays a reporter; the building lives next door. |
+| `scripts/check-noise.ts` | **Create.** The gate — `.ts` because it imports `resolvableFor`. Reads artifact + claims, validates, never runs a model. |
 | `scripts/noise-claims.json` | **Create.** Claims pinned to documents, `bound` and `forbidden` kinds. |
-| `scripts/sweep-models.mjs` | **Create.** Runs N trials per model, appends as it goes. |
+| `scripts/sweep-models.mjs` | **Create.** Stays `.mjs`: it spawns the eval runner and imports nothing from Core. |
 | `eval/noise-floor.json` | **Create (Task 6).** The committed measurement. |
 | `test/noise-floor.test.ts` | **Create.** Builder and `resolvableFor`. |
 | `test/check-noise.test.ts` | **Create.** Gate, both kinds, both directions. |
 | `test/sweep-models.test.ts` | **Create.** Runner's argument handling and append behaviour. |
 
-`noise-floor.mjs` is separate from `compare-models.mjs` because they have different jobs: one derives a durable artifact, the other renders a transient report. Splitting them keeps each testable without the other, and keeps `compare-models.mjs` from growing a second responsibility.
+`noise-floor.ts` is separate from `compare-models.ts` because they have different jobs: one derives a durable artifact, the other renders a transient report. Splitting them keeps each testable without the other, and keeps `compare-models.ts` from growing a second responsibility.
 
 ---
 
 ### Task 1: The artifact builder
 
 **Files:**
-- Create: `scripts/noise-floor.mjs`
+- Create: `scripts/noise-floor.ts`
 - Test: `test/noise-floor.test.ts`
 
 **Interfaces:**
-- Consumes: `parseRuns`, `parseCases`, `caseMatrix`, `pairsOf` from `scripts/compare-models.mjs`; `clusteredPaired` from `core/src/eval/compare.js`; `resolvableDelta`, `STATED_ASSUMPTIONS` from `core/src/eval/sizing.js`.
+- Consumes: `parseRuns`, `parseCases`, `caseMatrix`, `pairsOf` from `scripts/compare-models.ts`; `clusteredPaired` from `core/src/eval/compare.js`; `resolvableDelta`, `STATED_ASSUMPTIONS` from `core/src/eval/sizing.js`.
 - Produces: `buildNoiseFloor(runsText, casesText, meta) => object` and `resolvableFor(artifact) => number` (a fraction, not percentage points).
 
 - [ ] **Step 1: Write the failing test**
@@ -54,7 +62,7 @@
 ```typescript
 // test/noise-floor.test.ts
 import { describe, it, expect } from "vitest";
-import { buildNoiseFloor, resolvableFor } from "../scripts/noise-floor.mjs";
+import { buildNoiseFloor, resolvableFor } from "../scripts/noise-floor.js";
 
 const RUNS = [
   "RUN|a:1b|1|secs=10|exit=1|2/3 cases · score 0.667|tokens 5 in / 7 out",
@@ -149,7 +157,7 @@ describe("resolvableFor", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run test/noise-floor.test.ts --project contracts`
-Expected: FAIL — `Cannot find module '../scripts/noise-floor.mjs'`
+Expected: FAIL — `Cannot find module '../scripts/noise-floor.js'`
 
 - [ ] **Step 3: Write the implementation**
 
@@ -166,7 +174,7 @@ Expected: FAIL — `Cannot find module '../scripts/noise-floor.mjs'`
  * A stored verdict becomes the thing people cite instead of re-deriving, and the sub-project
  * that follows this one needs a discordance rate, not a frozen conclusion.
  */
-import { parseRuns, parseCases, caseMatrix, pairsOf } from "./compare-models.mjs";
+import { parseRuns, parseCases, caseMatrix, pairsOf } from "./compare-models.js";
 import { clusteredPaired } from "../core/src/eval/compare.js";
 import { resolvableDelta, STATED_ASSUMPTIONS } from "../core/src/eval/sizing.js";
 
@@ -260,7 +268,7 @@ export function resolvableFor(artifact) {
 `parseRuns` must supply `exit` and `tokens_out`, which it does not yet. Extend it in the same task:
 
 ```javascript
-// scripts/compare-models.mjs — inside parseRuns' map callback
+// scripts/compare-models.ts — inside parseRuns' map callback
 export function parseRuns(text) {
   return lines(text, "RUN|").map(([, model, trial, secs, exit, score, tokens]) => {
     const m = (score ?? "").match(/([0-9]+)\/([0-9]+) cases · score ([0-9.]+)/);
@@ -289,7 +297,7 @@ Expected: PASS, both files. The existing `compare-models` tests must still pass 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/noise-floor.mjs scripts/compare-models.mjs test/noise-floor.test.ts
+git add scripts/noise-floor.ts scripts/compare-models.ts test/noise-floor.test.ts
 git commit -m "scripts: build a noise floor artifact from a sweep"
 ```
 
@@ -298,7 +306,7 @@ git commit -m "scripts: build a noise floor artifact from a sweep"
 ### Task 2: Write the artifact from the CLI
 
 **Files:**
-- Modify: `scripts/compare-models.mjs` (CLI entry block at end of file)
+- Modify: `scripts/compare-models.ts` (CLI entry block at end of file)
 - Test: `test/noise-floor.test.ts` (append)
 
 **Interfaces:**
@@ -316,7 +324,7 @@ import { join } from "node:path";
 
 describe("compare:models --write", () => {
   const TSX = join(process.cwd(), "node_modules/tsx/dist/cli.mjs");
-  const SCRIPT = join(process.cwd(), "scripts/compare-models.mjs");
+  const SCRIPT = join(process.cwd(), "scripts/compare-models.ts");
   const temps: string[] = [];
   afterEach(() => { while (temps.length) rmSync(temps.pop()!, { recursive: true, force: true }); });
 
@@ -377,9 +385,9 @@ Expected: FAIL — the artifact file is never written; `--write` is not a flag y
 - [ ] **Step 3: Write the implementation**
 
 ```javascript
-// scripts/compare-models.mjs — replace the CLI entry block at the end of the file
+// scripts/compare-models.ts — replace the CLI entry block at the end of the file
 import { writeFileSync } from "node:fs";
-import { buildNoiseFloor } from "./noise-floor.mjs";
+import { buildNoiseFloor } from "./noise-floor.js";
 
 const flag = (name) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -389,7 +397,7 @@ const flag = (name) => {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const dir = process.argv[2];
   if (!dir || dir.startsWith("--")) {
-    console.error("usage: node scripts/compare-models.mjs <sweep-dir> [--write --suite ID --suite-version V --cases-scored N --transport T --trials N]");
+    console.error("usage: tsx scripts/compare-models.ts <sweep-dir> [--write --suite ID --suite-version V --cases-scored N --transport T --trials N]");
     process.exit(2);
   }
   const runsText = readFileSync(join(dir, "runs.txt"), "utf8");
@@ -441,7 +449,7 @@ Expected: PASS, all cases in both describe blocks.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/compare-models.mjs test/noise-floor.test.ts
+git add scripts/compare-models.ts test/noise-floor.test.ts
 git commit -m "scripts: write the noise floor artifact from compare:models --write"
 ```
 
@@ -450,7 +458,7 @@ git commit -m "scripts: write the noise floor artifact from compare:models --wri
 ### Task 3: The claim-checking gate
 
 **Files:**
-- Create: `scripts/check-noise.mjs`, `scripts/noise-claims.json`
+- Create: `scripts/check-noise.ts`, `scripts/noise-claims.json`
 - Test: `test/check-noise.test.ts`
 
 **Interfaces:**
@@ -465,7 +473,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkNoise } from "../scripts/check-noise.mjs";
+import { checkNoise } from "../scripts/check-noise.js";
 
 const temps: string[] = [];
 afterEach(() => { while (temps.length) rmSync(temps.pop()!, { recursive: true, force: true }); });
@@ -569,7 +577,7 @@ describe("check-noise — input validation", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run test/check-noise.test.ts --project contracts`
-Expected: FAIL — `Cannot find module '../scripts/check-noise.mjs'`
+Expected: FAIL — `Cannot find module '../scripts/check-noise.js'`
 
 - [ ] **Step 3: Write the implementation**
 
@@ -594,7 +602,7 @@ Expected: FAIL — `Cannot find module '../scripts/check-noise.mjs'`
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { resolvableFor } from "./noise-floor.mjs";
+import { resolvableFor } from "./noise-floor.js";
 
 const FLOOR = "eval/noise-floor.json";
 const CLAIMS = "scripts/noise-claims.json";
@@ -744,7 +752,7 @@ Expected: PASS, all 10 cases.
 
 - [ ] **Step 5: Mutation-prove the bound comparison**
 
-Change `claimed < resolvablePp` to `false` in `scripts/check-noise.mjs`, then:
+Change `claimed < resolvablePp` to `false` in `scripts/check-noise.ts`, then:
 
 Run: `npx vitest run test/check-noise.test.ts --project contracts`
 Expected: FAIL on "fails a claim inside the noise" and "requires EVERY match", and **PASS** on every not-armed and forbidden case. Restore the line and re-run to confirm green.
@@ -752,7 +760,7 @@ Expected: FAIL on "fails a claim inside the noise" and "requires EVERY match", a
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts/check-noise.mjs scripts/noise-claims.json test/check-noise.test.ts
+git add scripts/check-noise.ts scripts/noise-claims.json test/check-noise.test.ts
 git commit -m "scripts: refuse a written model difference the instrument cannot resolve"
 ```
 
@@ -761,7 +769,7 @@ git commit -m "scripts: refuse a written model difference the instrument cannot 
 ### Task 4: Runtime refusal in the comparison report
 
 **Files:**
-- Modify: `scripts/compare-models.mjs` (`report`)
+- Modify: `scripts/compare-models.ts` (`report`)
 - Test: `test/compare-models.test.ts` (append)
 
 **Interfaces:**
@@ -799,7 +807,7 @@ Expected: FAIL — "inside the recorded noise floor" appears nowhere.
 - [ ] **Step 3: Write the implementation**
 
 ```javascript
-// scripts/compare-models.mjs — in report(), replace the signature and the pairwise loop's push
+// scripts/compare-models.ts — in report(), replace the signature and the pairwise loop's push
 export function report(runsText, casesText, { alpha = 0.05, floor = null } = {}) {
   // ... unchanged up to the pairwise section ...
 
@@ -825,10 +833,10 @@ export function report(runsText, casesText, { alpha = 0.05, floor = null } = {})
   }
 ```
 
-Add the import at the top of `scripts/compare-models.mjs`:
+Add the import at the top of `scripts/compare-models.ts`:
 
 ```javascript
-import { resolvableFor } from "./noise-floor.mjs";
+import { resolvableFor } from "./noise-floor.js";
 ```
 
 The CLI entry loads the floor when one exists, so the printed report matches what the gate would say:
@@ -850,7 +858,7 @@ Expected: PASS, including the 12 pre-existing cases.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/compare-models.mjs test/compare-models.test.ts
+git add scripts/compare-models.ts test/compare-models.test.ts
 git commit -m "scripts: flag a comparison sitting inside the recorded noise floor"
 ```
 
@@ -936,7 +944,7 @@ Expected: FAIL — `Cannot find module '../scripts/sweep-models.mjs'`
  * mid-sweep and its partial data was still usable, which is the property worth keeping: a
  * twenty-minute model failing must not discard the three that already succeeded.
  *
- * Writes the two files `compare-models.mjs` reads. The format is documented there.
+ * Writes the two files `compare-models.ts` reads. The format is documented there.
  */
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -1042,11 +1050,11 @@ git commit -m "scripts: sweep N trials per model, appending as it goes"
 - [ ] **Step 1: Add the npm scripts and declare them**
 
 ```json
-"check:noise": "tsx scripts/check-noise.mjs",
+"check:noise": "tsx scripts/check-noise.ts",
 "sweep:models": "node scripts/sweep-models.mjs",
 ```
 
-`check:noise` runs under `tsx` because it imports Core TypeScript through `noise-floor.mjs`. `sweep:models` does not import Core, so plain `node` is correct and cheaper.
+`check:noise` is `.ts` because it imports Core TypeScript through `noise-floor.ts`. `sweep:models` does not import Core, so plain `node` is correct and cheaper.
 
 Add both to the `commands` array in `Documentation/IMPLEMENTATION_PLAN.md` — `check:plan` fails on any npm script the plan does not declare. Add `check:noise` to the `verify` chain, immediately after `check:sizing`, since it consumes the same sizing rules.
 
@@ -1093,7 +1101,7 @@ Add `existsSync` to the `node:fs` import in that file. The matching entry:
   "does_not_establish": "That any two models here have been shown to differ, or to be the same. Measured on 1 September 2026 across four local models and three trials each, every pairwise comparison on compile-smoke came back refused: the largest discordance was 5 clusters against a Bonferroni-corrected floor of 8, so no arrangement of the signs could have reached significance. Within-model spread was 0.071 to 0.143, at least as large as the largest gap between models. A refusal is not a null result — it says the instrument could not have seen a difference, not that there is none.",
   "expect": { "floor_measured": false, "models_measured": 0, "cases_scored": 0 },
   "crossed_when": "A measurement is committed: `floor_measured` goes true and the other two become non-zero. At that moment every claim pinned in scripts/noise-claims.json starts being checked against a real number rather than parsed and passed over, and the sentences those pins guard need re-reading.",
-  "evidence": ["scripts/check-noise.mjs", "scripts/noise-claims.json", "scripts/compare-models.mjs", "docs/superpowers/specs/2026-09-01-noise-floor-design.md"]
+  "evidence": ["scripts/check-noise.ts", "scripts/noise-claims.json", "scripts/compare-models.ts", "docs/superpowers/specs/2026-09-01-noise-floor-design.md"]
 }
 ```
 

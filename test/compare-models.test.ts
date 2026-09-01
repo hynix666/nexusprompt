@@ -128,3 +128,22 @@ describe("report", () => {
     expect(text).toMatch(/What 3 cases resolve at 80% power: \d+\.\d pp/);
   });
 });
+
+describe("report — runtime refusal against a recorded floor", () => {
+  /** 12 cases at discordance 0.238 resolve about 39.5 pp. */
+  const FLOOR = { suite: { cases_scored: 12 }, discordance_rate: 0.238 };
+
+  it("annotates a verdict that sits inside the recorded floor", () => {
+    const text = report(RUNS, CASES, { floor: FLOOR });
+    expect(text).toContain("inside the recorded noise floor");
+  });
+
+  it("says nothing about a floor when none is supplied", () => {
+    // The tool must stay usable before any measurement exists.
+    expect(report(RUNS, CASES)).not.toContain("inside the recorded noise floor");
+  });
+
+  it("names the floor it is comparing against, so the number is auditable", () => {
+    expect(report(RUNS, CASES, { floor: FLOOR })).toMatch(/39\.5 pp/);
+  });
+});

@@ -1,8 +1,11 @@
-#!/usr/bin/env node
 /**
  * Compare several models on one suite, using the comparator's own statistics.
  *
- *   node scripts/compare-models.mjs <sweep-dir>
+ *   tsx scripts/compare-models.ts <sweep-dir>                      report only
+ *   tsx scripts/compare-models.ts <sweep-dir> --write ...         write eval/noise-floor.json
+ *
+ * `--write` requires --suite, --suite-version, --cases-scored, --transport and --trials.
+ * None are defaulted: a floor is only valid for the configuration it was measured under.
  *
  * ## Why this is not `eval --compare`
  *
@@ -37,9 +40,10 @@
  * equalization — check that every run reported full detector recall before trusting a verdict.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { buildNoiseFloor, resolvableFor } from "./noise-floor.js";
 import { clusteredPaired } from "../core/src/eval/compare.js";
 import {
   floorDiscordant, attainable, minAttainableP, resolvableDelta, STATED_ASSUMPTIONS,
@@ -59,6 +63,9 @@ export interface MatrixRow {
   rates: Array<{ passed: number; n: number } | null>;
   constant: boolean;
 }
+
+/** Only the two fields the runtime refusal needs, so a partial floor still works. */
+export interface FloorForReport { suite: { cases_scored: number }; discordance_rate: number; }
 
 const lines = (text: string, prefix: string): string[][] =>
   text.split(/\r?\n/).filter((l) => l.startsWith(prefix)).map((l) => l.split("|"));
@@ -152,7 +159,11 @@ export function verdictFor(candidate: CaseOutcomeRow[], baseline: CaseOutcomeRow
   return { ...r, verdict: r.p <= alpha ? "significant" : "inconclusive", best: null };
 }
 
-export function report(runsText: string, casesText: string, { alpha = 0.05 }: { alpha?: number } = {}): string {
+export function report(
+  runsText: string,
+  casesText: string,
+  { alpha = 0.05, floor = null }: { alpha?: number; floor?: FloorForReport | null } = {},
+): string {
   const runs = parseRuns(runsText);
   const byModel = parseCases(casesText);
   const models = [...byModel.keys()];
@@ -192,11 +203,30 @@ export function report(runsText: string, casesText: string, { alpha = 0.05 }: { 
   out.push(`family of ${pairs.length} · alpha ${alpha} nominal, ${corrected.toFixed(5)} corrected`);
   out.push(`discordant clusters needed: ${floorDiscordant(alpha)} nominal, ` +
     `${floorDiscordant(corrected)} corrected\n`);
+
+  /**
+   * The floor catches the error one step earlier than `check:noise` does — at the moment
+   * someone reads a number, before they write it into a document. It does not replace the
+   * gate: the damage happens when the number reaches prose, and only the gate sees prose.
+   */
+  const floorPp = floor ? resolvableFor(floor) * 100 : null;
+  if (floorPp !== null) {
+    out.push(`  recorded floor: a difference below ${floorPp.toFixed(1)} pp is inside the noise\n`);
+  }
+
+  /** A model's pass rate over every (case, trial) row it produced. */
+  const passRate = (rows: CaseOutcomeRow[]): number =>
+    (rows.length ? rows.filter((r) => r.passed).length / rows.length : 0);
+
   for (const [a, b] of pairs) {
-    const v = verdictFor(byModel.get(a) ?? [], byModel.get(b) ?? [], corrected);
+    const rowsA = byModel.get(a) ?? [];
+    const rowsB = byModel.get(b) ?? [];
+    const v = verdictFor(rowsA, rowsB, corrected);
     const tail = v.best !== null ? ` (best possible p=${v.best.toFixed(4)})` : "";
+    const deltaPp = Math.abs(passRate(rowsA) - passRate(rowsB)) * 100;
+    const note = floorPp !== null && deltaPp < floorPp ? "  — inside the recorded noise floor" : "";
     out.push(`${a.padEnd(24)} ${b.padEnd(24)} disc ${String(v.discordant).padStart(2)}/` +
-      `${v.clusters}  p ${v.p.toFixed(4)}  ${v.verdict}${tail}`);
+      `${v.clusters}  p ${v.p.toFixed(4)}  ${v.verdict}${tail}${note}`);
   }
 
   out.push(`\n## What ${matrix.length} cases resolve at 80% power: ` +
@@ -204,14 +234,71 @@ export function report(runsText: string, casesText: string, { alpha = 0.05 }: { 
   return out.join("\n");
 }
 
+const flag = (name: string): string | undefined => {
+  const i = process.argv.indexOf(`--${name}`);
+  return i === -1 ? undefined : process.argv[i + 1];
+};
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const dir = process.argv[2];
-  if (!dir) {
-    console.error("usage: node scripts/compare-models.mjs <sweep-dir>");
+  if (!dir || dir.startsWith("--")) {
+    console.error(
+      "usage: tsx scripts/compare-models.ts <sweep-dir>\n" +
+      "       tsx scripts/compare-models.ts <sweep-dir> --write --suite ID --suite-version V \\\n" +
+      "                                     --cases-scored N --transport T --trials N",
+    );
     process.exit(2);
   }
-  console.log(report(
-    readFileSync(join(dir, "runs.txt"), "utf8"),
-    readFileSync(join(dir, "cases.txt"), "utf8"),
-  ));
+  const runsText = readFileSync(join(dir, "runs.txt"), "utf8");
+  const casesText = readFileSync(join(dir, "cases.txt"), "utf8");
+
+  if (!process.argv.includes("--write")) {
+    // Loaded when it exists so the printed report and  cannot disagree about
+    // which differences are inside the noise.
+    const floorPath = join(process.cwd(), "eval/noise-floor.json");
+    const floor = existsSync(floorPath)
+      ? (JSON.parse(readFileSync(floorPath, "utf8")) as FloorForReport)
+      : null;
+    console.log(report(runsText, casesText, { floor }));
+    process.exit(0);
+  }
+
+  /**
+   * Every field required, none defaulted.
+   *
+   * A floor is only valid for the suite, transport and trial count it was measured under, and
+   * a default would silently produce one that reads as general. `--cases-scored` especially:
+   * `compile-smoke` lists fourteen cases but scores twelve on a real transport, and a floor
+   * against the wrong denominator is not comparable to one against the right denominator.
+   */
+  const casesScored = Number(flag("cases-scored"));
+  const trials = Number(flag("trials"));
+  const meta = {
+    measured_on: new Date().toISOString().slice(0, 10),
+    suite: { id: flag("suite") ?? "", version: flag("suite-version") ?? "", cases_scored: casesScored },
+    transport: flag("transport") ?? "",
+    trials_per_model: trials,
+  };
+  const missing = [
+    ["--suite", meta.suite.id !== ""],
+    ["--suite-version", meta.suite.version !== ""],
+    ["--cases-scored", Number.isInteger(casesScored) && casesScored > 0],
+    ["--transport", meta.transport !== ""],
+    ["--trials", Number.isInteger(trials) && trials > 0],
+  ].filter(([, ok]) => !ok).map(([name]) => name as string);
+
+  if (missing.length > 0) {
+    console.error(
+      `compare:models --write needs ${missing.join(", ")}.\n` +
+      "  A floor is only valid for the suite, transport and trial count it was measured under.",
+    );
+    process.exit(2);
+  }
+
+  const artifact = buildNoiseFloor(runsText, casesText, meta);
+  writeFileSync(join(process.cwd(), "eval/noise-floor.json"), `${JSON.stringify(artifact, null, 2)}\n`);
+  console.log(
+    `compare:models — wrote eval/noise-floor.json ` +
+    `(${Object.keys(artifact.models).length} model(s), discordance ${artifact.discordance_rate}).`,
+  );
 }
