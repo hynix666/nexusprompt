@@ -40,10 +40,10 @@
  * equalization — check that every run reported full detector recall before trusting a verdict.
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { buildNoiseFloor } from "./noise-floor.js";
+import { buildNoiseFloor, resolvableFor } from "./noise-floor.js";
 import { clusteredPaired } from "../core/src/eval/compare.js";
 import {
   floorDiscordant, attainable, minAttainableP, resolvableDelta, STATED_ASSUMPTIONS,
@@ -63,6 +63,9 @@ export interface MatrixRow {
   rates: Array<{ passed: number; n: number } | null>;
   constant: boolean;
 }
+
+/** Only the two fields the runtime refusal needs, so a partial floor still works. */
+export interface FloorForReport { suite: { cases_scored: number }; discordance_rate: number; }
 
 const lines = (text: string, prefix: string): string[][] =>
   text.split(/\r?\n/).filter((l) => l.startsWith(prefix)).map((l) => l.split("|"));
@@ -156,7 +159,11 @@ export function verdictFor(candidate: CaseOutcomeRow[], baseline: CaseOutcomeRow
   return { ...r, verdict: r.p <= alpha ? "significant" : "inconclusive", best: null };
 }
 
-export function report(runsText: string, casesText: string, { alpha = 0.05 }: { alpha?: number } = {}): string {
+export function report(
+  runsText: string,
+  casesText: string,
+  { alpha = 0.05, floor = null }: { alpha?: number; floor?: FloorForReport | null } = {},
+): string {
   const runs = parseRuns(runsText);
   const byModel = parseCases(casesText);
   const models = [...byModel.keys()];
@@ -196,11 +203,30 @@ export function report(runsText: string, casesText: string, { alpha = 0.05 }: { 
   out.push(`family of ${pairs.length} · alpha ${alpha} nominal, ${corrected.toFixed(5)} corrected`);
   out.push(`discordant clusters needed: ${floorDiscordant(alpha)} nominal, ` +
     `${floorDiscordant(corrected)} corrected\n`);
+
+  /**
+   * The floor catches the error one step earlier than `check:noise` does — at the moment
+   * someone reads a number, before they write it into a document. It does not replace the
+   * gate: the damage happens when the number reaches prose, and only the gate sees prose.
+   */
+  const floorPp = floor ? resolvableFor(floor) * 100 : null;
+  if (floorPp !== null) {
+    out.push(`  recorded floor: a difference below ${floorPp.toFixed(1)} pp is inside the noise\n`);
+  }
+
+  /** A model's pass rate over every (case, trial) row it produced. */
+  const passRate = (rows: CaseOutcomeRow[]): number =>
+    (rows.length ? rows.filter((r) => r.passed).length / rows.length : 0);
+
   for (const [a, b] of pairs) {
-    const v = verdictFor(byModel.get(a) ?? [], byModel.get(b) ?? [], corrected);
+    const rowsA = byModel.get(a) ?? [];
+    const rowsB = byModel.get(b) ?? [];
+    const v = verdictFor(rowsA, rowsB, corrected);
     const tail = v.best !== null ? ` (best possible p=${v.best.toFixed(4)})` : "";
+    const deltaPp = Math.abs(passRate(rowsA) - passRate(rowsB)) * 100;
+    const note = floorPp !== null && deltaPp < floorPp ? "  — inside the recorded noise floor" : "";
     out.push(`${a.padEnd(24)} ${b.padEnd(24)} disc ${String(v.discordant).padStart(2)}/` +
-      `${v.clusters}  p ${v.p.toFixed(4)}  ${v.verdict}${tail}`);
+      `${v.clusters}  p ${v.p.toFixed(4)}  ${v.verdict}${tail}${note}`);
   }
 
   out.push(`\n## What ${matrix.length} cases resolve at 80% power: ` +
@@ -227,7 +253,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const casesText = readFileSync(join(dir, "cases.txt"), "utf8");
 
   if (!process.argv.includes("--write")) {
-    console.log(report(runsText, casesText));
+    // Loaded when it exists so the printed report and  cannot disagree about
+    // which differences are inside the noise.
+    const floorPath = join(process.cwd(), "eval/noise-floor.json");
+    const floor = existsSync(floorPath)
+      ? (JSON.parse(readFileSync(floorPath, "utf8")) as FloorForReport)
+      : null;
+    console.log(report(runsText, casesText, { floor }));
     process.exit(0);
   }
 
