@@ -1,4 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { buildNoiseFloor, resolvableFor } from "../scripts/noise-floor.js";
 
 /**
@@ -100,5 +104,59 @@ describe("resolvableFor", () => {
     const small = resolvableFor({ suite: { cases_scored: 6 }, discordance_rate: 0.238 });
     const big = resolvableFor({ suite: { cases_scored: 60 }, discordance_rate: 0.238 });
     expect(small).toBeGreaterThan(big);
+  });
+});
+
+describe("compare:models --write", () => {
+  const TSX = join(process.cwd(), "node_modules/tsx/dist/cli.mjs");
+  const SCRIPT = join(process.cwd(), "scripts/compare-models.ts");
+  const temps: string[] = [];
+  afterEach(() => { while (temps.length) rmSync(temps.pop()!, { recursive: true, force: true }); });
+
+  const sweepDir = () => {
+    const d = mkdtempSync(join(tmpdir(), "nf-"));
+    temps.push(d);
+    writeFileSync(join(d, "runs.txt"), RUNS);
+    writeFileSync(join(d, "cases.txt"), CASES);
+    mkdirSync(join(d, "eval"), { recursive: true });
+    return d;
+  };
+
+  const run = (args: string[], cwd: string) => {
+    try {
+      return { code: 0, out: execFileSync(process.execPath, [TSX, SCRIPT, ...args], { cwd, encoding: "utf8" }) };
+    } catch (e) {
+      const err = e as { status: number; stdout?: string; stderr?: string };
+      return { code: err.status, out: `${err.stdout ?? ""}${err.stderr ?? ""}` };
+    }
+  };
+
+  it("writes a parseable artifact carrying the suite it was measured on", () => {
+    const d = sweepDir();
+    const { code } = run([d, "--write", "--suite", "s", "--suite-version", "1.0.0",
+                          "--cases-scored", "12", "--transport", "local", "--trials", "3"], d);
+    expect(code).toBe(0);
+    const art = JSON.parse(readFileSync(join(d, "eval/noise-floor.json"), "utf8"));
+    expect(art.suite).toEqual({ id: "s", version: "1.0.0", cases_scored: 12 });
+    expect(art.transport).toBe("local");
+    expect(Object.keys(art.models)).toContain("a:1b");
+  });
+
+  it("refuses to write without the meta the floor is only valid under", () => {
+    // A floor with no suite or transport recorded is not comparable to anything, including a
+    // later measurement of the same models.
+    const d = sweepDir();
+    const { code, out } = run([d, "--write"], d);
+    expect(code).toBe(2);
+    expect(out).toContain("--suite");
+    expect(existsSync(join(d, "eval/noise-floor.json"))).toBe(false);
+  });
+
+  it("still reports without --write, and writes nothing", () => {
+    const d = sweepDir();
+    const { code, out } = run([d], d);
+    expect(code).toBe(0);
+    expect(out).toContain("Per-case pass rate");
+    expect(existsSync(join(d, "eval/noise-floor.json"))).toBe(false);
   });
 });
