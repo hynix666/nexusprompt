@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   parseRuns, parseCases, caseMatrix, pairsOf, verdictFor, report,
-} from "../scripts/compare-models.mjs";
+} from "../scripts/compare-models.js";
 
 /**
  * The model-comparison harness, on a fixture rather than on models.
