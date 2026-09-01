@@ -582,10 +582,26 @@ async function main(): Promise<number> {
   /**
    * The suite runs what the partition above left runnable.
    */
+  /**
+   * BOTH halves narrowed, because `runSuite` iterates the SUITE's `case_ids`, not the array.
+   *
+   * Filtering only `cases` does not skip the excluded ones — it makes them fail as missing:
+   * `runSuite` looks each `case_id` up in the array and records `failure_mode: "unknown"` for
+   * anything absent, under the correct rule that "a suite naming a case nobody wrote must
+   * fail, not silently shrink". So the first attempt at this exclusion made the two inverting
+   * cases score 0 instead of not scoring at all, which is worse than the defect it was fixing:
+   * the run reported 11/14 where an honest exclusion reports 11/12.
+   *
+   * Measured before this line existed: `--local --model phi4-mini:latest` printed
+   * "2 of 14 case(s) excluded / Scoring 12 case(s)" and then listed all fourteen, with
+   * `secret-in-output-is-flagged` and `overclaim-in-output-is-flagged` FAILED as "unknown".
+   */
+  const runnableSuite = { ...data.suite, case_ids: runnable.map((c) => c.case_id) };
+
   let result: Awaited<ReturnType<typeof runSuite>>;
   try {
     result = await runSuite({
-      suite: data.suite, cases: runnable, configuration, trials: TRIALS, ...liveWiring,
+      suite: runnableSuite, cases: runnable, configuration, trials: TRIALS, ...liveWiring,
     });
   } catch (err) {
     const message = (err as Error).message;
