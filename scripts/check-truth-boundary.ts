@@ -44,7 +44,7 @@
  * Exit 0 boundary holds · 1 a boundary moved, or the document is stale · 2 the spec is
  *      unreadable.
  */
-import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -354,6 +354,27 @@ export const PROBES: Record<string, Probe> = {
    * compiled. What it can support is narrower and is pinned field by field, so the weakest of
    * the three cannot borrow the strongest's credibility by sitting in the same sentence.
    */
+  /**
+   * What a model comparison here can resolve, and whether one has been measured at all.
+   *
+   * Every value is read from committed files, so this derives identically on every checkout —
+   * the property `any_fingerprint_observed` lacked, which is why that field had to stop being
+   * derived. Pinned at zero and false until a measurement is committed, so arming it is a
+   * deliberate act rather than something that happens on whichever laptop ran a sweep.
+   */
+  noiseFloor(root) {
+    const path = join(root, "eval/noise-floor.json");
+    if (!existsSync(path)) {
+      return { floor_measured: false, models_measured: 0, cases_scored: 0 };
+    }
+    const floor = readJson(root, "eval/noise-floor.json");
+    return {
+      floor_measured: true,
+      models_measured: Object.keys(floor.models ?? {}).length,
+      cases_scored: floor.suite?.cases_scored ?? 0,
+    };
+  },
+
   reproducibility(root) {
     const hashSource = readText(root, "scripts/build-hash.mjs");
     const anchor = readJson(root, "eval/gate-recall-anchor.json");

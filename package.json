@@ -11,7 +11,7 @@
     "shells/*"
   ],
   "scripts": {
-    "verify": "npm run check:hygiene && npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:counts && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run check:sizing && npm run check:anchor && npm run check:matrix && npm run check:manifest-spec && npm run check:truth && npm run check:fence-explanation && npm run check:hash && npm run check:fingerprint && npm run check:examples && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run eval:pipeline && npm run eval:anchor && npm run test && npm run differential",
+    "verify": "npm run check:hygiene && npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:counts && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run check:sizing && npm run check:noise && npm run check:anchor && npm run check:matrix && npm run check:manifest-spec && npm run check:truth && npm run check:fence-explanation && npm run check:hash && npm run check:fingerprint && npm run check:examples && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run eval:pipeline && npm run eval:anchor && npm run test && npm run differential",
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "check:plan": "node scripts/check-plan.mjs",
     "check:citations": "node scripts/check-citations.mjs",
@@ -38,6 +38,7 @@
     "check:counts": "node scripts/check-counts.mjs",
     "check:fingerprint": "node scripts/check-fingerprint.mjs",
     "check:sizing": "tsx scripts/check-sizing.ts",
+    "check:noise": "tsx scripts/check-noise.ts",
     "docs:matrix": "node scripts/generate-capability-matrix.mjs",
     "check:matrix": "node scripts/generate-capability-matrix.mjs --check",
     "build:anchor": "tsx scripts/build-anchor.ts",
@@ -45,6 +46,7 @@
     "eval:anchor": "tsx scripts/run-anchor.ts",
     "eval:pipeline": "tsx scripts/run-pipeline-eval.ts",
     "compare:models": "tsx scripts/compare-models.ts",
+    "sweep:models": "node scripts/sweep-models.mjs",
     "docs:manifest-spec": "node scripts/generate-manifest-spec.mjs",
     "check:manifest-spec": "node scripts/generate-manifest-spec.mjs --check",
     "docs:truth": "tsx scripts/check-truth-boundary.ts",

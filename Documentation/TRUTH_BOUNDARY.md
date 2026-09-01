@@ -8,7 +8,7 @@ Every other check in this repository asks whether a number is right. This one as
 it is right *about*. A correct figure attached to an overreaching claim is the more
 dangerous of the two, because a checker has already blessed it.
 
-9 entries · spec version 1.0.0.
+10 entries · spec version 1.0.0.
 
 Each entry states a scope in two halves and pins the numbers that bound it. The
 **Crossed when** line names the event that should make someone rewrite the claim —
@@ -264,3 +264,25 @@ that event is a failing build, not a note in a backlog.
 **Crossed when.** A build step appears — a bundler, a compile, a published package. At that moment the third claim can become a real reproducible-build claim and should be restated as one, rather than continuing to mean 'the source files digest the same'. `build_is_compiled` going true is the signal, and it is the only one of the three whose meaning changes rather than whose number does.
 
 **Evidence:** `scripts/build-hash.mjs` · `build-hash.json` · `scripts/check-boundaries.mjs` · `scripts/build-anchor.ts` · `scripts/differential.ts`
+
+## No suite here can separate two models
+
+`model-comparisons-are-unresolvable-here` · probe `noiseFloor`
+
+**Establishes.** That the question has been asked precisely. `check:noise` refuses a written claim of a difference smaller than the instrument can resolve, and `compare:models` reports refusals using the comparator's own exact clustered sign test rather than a second implementation. Both read committed files only, so they run in CI without a GPU.
+
+**Does not establish.** That any two models here have been shown to differ, or to be the same. Measured on 1 September 2026 across four local models and three trials each, every pairwise comparison on compile-smoke came back REFUSED: the largest discordance was 5 clusters against a Bonferroni-corrected floor of 8, so no arrangement of the signs could have reached significance. Within-model spread was 0.071 to 0.143, at least as large as the largest gap between any two models. A refusal is not a null result — it says the instrument could not have seen a difference, not that there is none. Nine of fourteen cases were constant across every model, so the suite's effective width for telling models apart was five cases, not fourteen.
+
+**Pinned:**
+
+```json
+{
+  "floor_measured": false,
+  "models_measured": 0,
+  "cases_scored": 0
+}
+```
+
+**Crossed when.** A measurement is committed: `floor_measured` goes true and the other two become non-zero. At that moment every claim pinned in scripts/noise-claims.json starts being checked against a real number rather than parsed and passed over, and the sentences those pins guard need re-reading. Producing the measurement needs a machine with models on it and about ninety minutes, which is why arming this is a separate act from building the mechanism.
+
+**Evidence:** `scripts/check-noise.ts` · `scripts/noise-claims.json` · `scripts/compare-models.ts` · `scripts/noise-floor.ts` · `docs/superpowers/specs/2026-09-01-noise-floor-design.md`
