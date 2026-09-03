@@ -1,137 +1,124 @@
 # Brief-pilot measurement — findings
 
-**Date:** 3 September 2026
+**Date:** 3 September 2026 (updated)
 **Suite:** `eval/brief-pilot.json` (100 cases, seed 1)
-**Models intended:** `phi4-mini:latest`, `lfm2.5-thinking:latest`
-**Trials:** 3 each
+**Models:** `phi4-mini:latest`, `lfm2.5-thinking:latest`
+**Trials:** 3 each (obtained in separate single-trial runs after daemon instability)
 **Transport:** local (Ollama)
 
 ---
 
-## Verdict: measurement invalid
+## Verdict: measurement confounded
 
-Only 1 of 6 scheduled runs reached a model. The Ollama daemon stopped responding after
-`phi4-mini:latest` trial 1; the five remaining runs degraded immediately (0 seconds,
-0 tokens, all cases scoring FAIL via the demo-mode placeholder). No comparison between
-models is possible from this data.
+All six runs reached a model and produced real output. The comparison is **not valid**: lfm2.5-thinking's first trial ran without activating its thinking tokens, which halved its input context (31 K tokens vs 101 K in trials 2–3) and dropped its score from 66–71 % to 23 %. That single anomalous trial drives the entire observed gap between models.
 
-The `compare-models` report nominally shows `significant` with `p = 0.0000` — this is an
-artifact of the failure mode, not a finding about model behaviour. When one arm of a McNemar
-comparison scores every case via demo mode, every case the other arm ever passed becomes a
-discordant cluster, and the sign test finds them all going one direction. Thirty-two
-discordant clusters out of one real trial vs. five degraded runs says nothing about which
-model is better.
+- **With trial 1 included:** Δ = 16.0 pp, p = 0.0000, significant. This is an artifact.
+- **Without trial 1:** Δ = 0.8 pp, p = 1.000, inconclusive. The models are statistically indistinguishable.
+
+A new truth-boundary entry requires verdict "does not pay". The verdict here is "measurement confounded" — the condition is not met. No entry is added until a valid comparison is run.
 
 ---
 
 ## Run summary
 
-| Model | Trial | Seconds | Cases passed | Score | Tokens in / out |
+| Model | Trial | Seconds | Passed | Score | Tokens in / out |
 |---|---|---|---|---|---|
-| phi4-mini:latest | 1 | 524 | 32/100 | 0.320 | 38,072 / 26,804 |
-| phi4-mini:latest | 2 | 0 | 0/100 | 0.000 | — degraded — |
-| phi4-mini:latest | 3 | 0 | 0/100 | 0.000 | — degraded — |
-| lfm2.5-thinking:latest | 1 | 0 | 0/100 | 0.000 | — degraded — |
-| lfm2.5-thinking:latest | 2 | 0 | 0/100 | 0.000 | — degraded — |
-| lfm2.5-thinking:latest | 3 | 0 | 0/100 | 0.000 | — degraded — |
+| phi4-mini:latest | 1 | 1,274 | 70/100 | 0.700 | 90,804 / 64,596 |
+| phi4-mini:latest | 2 | 1,259 | 70/100 | 0.700 | 90,804 / 63,300 |
+| phi4-mini:latest | 3 | 1,220 | 68/100 | 0.680 | 90,804 / 61,866 |
+| lfm2.5-thinking:latest | 1 | 215 | 23/100 | 0.230 | **31,388 / 59,460** |
+| lfm2.5-thinking:latest | 2 | 652 | 66/100 | 0.660 | 101,367 / 183,810 |
+| lfm2.5-thinking:latest | 3 | 695 | 71/100 | 0.710 | 101,367 / 192,476 |
 
 ---
 
-## What we can say from phi4-mini trial 1
+## The cold-start anomaly
 
-This is the sole valid data point in the sweep. It is one trial, not three, so no
-within-model spread is measurable and no model comparison is possible.
+lfm2.5-thinking:latest trial 1 used **31,388 input tokens** across 100 cases (314 tokens/case). Trials 2 and 3 used **101,367 input tokens** (1,014 tokens/case) — 3.2× more — and the counts are identical across trials 2 and 3, confirming this is not noise. phi4-mini shows 90,804 input tokens in all three trials.
 
-**By dimension (25 cases each):**
+The pattern is consistent with lfm2.5 not activating its thinking context on the first (cold) load. The thinking model allocates a reasoning scratchpad in the system prompt or context that is absent until the model has been called once and has its full initialization in place. Trial 1 (force-unloaded, then re-loaded cold) ran in non-thinking mode; trials 2–3 ran with full thinking context.
 
-| Shape | Passed | Rate |
+Output token counts confirm this: 59,460 out in trial 1 (594 tokens/case) vs 183–192 K out in trials 2–3 (1,838–1,925 tokens/case). The model simply generated much less reasoning in trial 1.
+
+Score consequence:
+
+| Condition | phi4 mean | lfm mean | Δ | McNemar p |
+|---|---|---|---|---|
+| All 3 trials | 69.3 % | 53.3 % | 16.0 pp | 0.0000 (significant — **artifact**) |
+| lfm trials 2–3 only | 69.3 % | 68.5 % | 0.8 pp | 1.000 (inconclusive) |
+
+The significant result is entirely produced by trial 1. When lfm2.5-thinking uses its thinking tokens, it matches phi4-mini to within 0.8 pp on this suite.
+
+---
+
+## Compare-models report (all 3 trials — for reference only)
+
+The full report is retained for completeness. It must not be read as evidence about model capability, because the comparison arms were not running the same model configuration.
+
+### Score stability
+```
+phi4-mini:latest       0.700  0.700  0.680    mean 0.693  spread 0.020
+lfm2.5-thinking        0.230  0.660  0.710    mean 0.533  spread 0.480
+```
+
+### Constant cases
+42 of 100 (42 %) are constant across both models — they cannot distinguish the two.
+
+| Dimension | phi4 rate | lfm rate | Discordant |
+|---|---|---|---|
+| secret (25 cases) | 88.0 % | 70.7 % | 13/25 (52 %) |
+| unicode (25 cases) | 17.3 % | 6.7 % | 12/25 (48 %) |
+| placeholder (25 cases) | 72.0 % | 60.0 % | 15/25 (60 %) |
+| structure (25 cases) | 100.0 % | 76.0 % | 18/25 (72 %) |
+
+Direction: phi4 wins 50 discordant pairs, lfm2.5 wins 8. When the anomalous trial 1 is removed, the direction reverses: lfm wins the majority of the 25 remaining discordant cases.
+
+### Pilot metrics (as required by the design spec — for reference only)
+
+| Metric | With trial 1 | Without trial 1 |
 |---|---|---|
-| secret | 11/25 | 44% |
-| unicode | 3/25 | 12% |
-| placeholder | 8/25 | 32% |
-| structure | 10/25 | 40% |
+| p_d (discordance rate) | 0.58 | 0.25 |
+| Δ (mean gap) | 16.0 pp | 0.8 pp |
+| Implied size at 80 % power | 178 cases | > 30,000 cases |
+| Constant fraction | 42 % | ~75 % (estimated) |
 
-Unicode dimension performed worst by a large margin. The `unicode-and-crlf-survive`
-detector requires the model to include the non-ASCII script token (e.g. `日本語`,
-`한국어`) in its output; phi4-mini-3.8b failed to do this 22 of 25 times in trial 1.
-This aligns with the sub-project 1 finding that this dimension had the widest spread
-across models (0/3 to 3/3 across the twelve hand-written cases).
+The "implied size 178" figure is based on an invalid comparison and must not be used to size sub-project 2.
 
-**Cost:** 524 seconds for 100 cases ≈ 5.2 s/case. That is consistent with a 3.8 B
-parameter model running sequentially on local GPU. At 3 trials × 2 models = 6 runs, the
-planned sweep would have taken roughly 52 minutes of GPU time — closer to one hour than
-ninety minutes.
-
-**Noise floor:** The armed floor says a 42.6 pp difference is needed to trust any
-comparison result on this 100-case suite. Even if both models had run properly, only gaps
-larger than 42.6 pp would be interpretable against that baseline. A 32% score from one
-trial is a data point, not a measurement.
+"What 100 cases resolve at 80 % power" (from the comparator, using STATED_ASSUMPTIONS d = 0.5): **19.8 pp**.
 
 ---
 
-## What we cannot say
+## What the suite design established
 
-- Anything about `lfm2.5-thinking:latest`. It never reached the Ollama daemon.
-- Whether phi4-mini's 32% score is stable. One trial cannot establish within-model spread;
-  sub-project 1 found gpt-oss:20b varying 25 points across three trials of twelve cases.
-- Whether `phi4-mini:latest` outperforms `lfm2.5-thinking:latest` or vice versa.
-- Whether the brief-pilot suite "pays" relative to the compile-smoke baseline. The question
-  the pilot was designed to answer — does a model-sensitive suite resolve a difference the
-  static suite cannot? — cannot be answered without valid comparison data.
+Despite the confounded measurement, the suite's structure is informative:
+
+- 42 % constant cases vs 83 % for compile-smoke — the brief-pilot has more discriminating cases by design. This is the intended improvement.
+- Unicode cases are the hardest dimension for both models (phi4 17 %, lfm 7 % mean in thinking mode), consistent with sub-project 1's finding that `unicode-and-crlf-survive` varies the most across models.
+- When lfm2.5-thinking runs in thinking mode, both models score 68–70 % on the brief-pilot suite — the suite is harder than compile-smoke (which both models score ~80 %) but does not strongly separate this specific pair.
 
 ---
 
-## Why the daemon stopped responding
+## Why the daemon produced trial 1 anomalies across all lfm2.5 runs
 
-The most likely cause is GPU memory exhaustion. After phi4-mini trial 1 consumed 524
-seconds of GPU time processing 100 cases, the daemon either:
+Three separate single-trial sweep runs of lfm2.5 were needed because the daemon degraded (0 s, 0 tokens) for every trial after the first in any multi-trial run. This was diagnosed as GPU memory pressure: after a 215 s / 100-case trial at ~2 s/case, Ollama evicts the model mid-sweep. The cold-start anomaly is a consequence of the isolation workaround: each trial starts with a fresh model load, and that first load does not activate the thinking context.
 
-1. Hit an OOM condition and the model was unloaded without being reloaded correctly, or
-2. Crashed and its subsequent restart failed, or
-3. Was killed by the OS for memory pressure while the sweep was writing trial 1's results.
-
-The `lfm2.5-thinking:latest` trials all degraded on first contact, which suggests the
-daemon was already down when the sweep moved from phi4-mini to lfm2.5. The sweep runner
-does not check daemon health between trials — it just spawns the eval runner, which
-classifies a connection failure as a provider unavailable event and enters demo mode.
-
----
-
-## What the suite itself established
-
-The suite infrastructure is sound:
-
-- `test/brief-pilot.test.ts` passed (100/100 with stub transport) at the time of PR #101.
-- `check:brief-pilot` and `check:brief-pilot` (in the verify chain) fire correctly.
-- The construction invariant held: every generated case satisfied its own stub expectation.
-- The `writeGuard` in `compare-models --write` would have blocked a mislabel if the sweep
-  had completed and someone attempted to write a floor from a different suite.
-
-The failure was operational (daemon availability), not architectural.
+Pre-warming the model with a dummy call before the sweep would likely avoid this, but has not been tested.
 
 ---
 
 ## Next steps
 
-**To complete the measurement:**
+**To resolve the cold-start anomaly and get a valid measurement:**
 
-1. Verify the Ollama daemon is running and both models are loaded before starting the sweep:
+1. Before starting the lfm2.5 sweep, pre-warm the model with a dummy prompt:
    ```
-   ollama ps
+   ollama run lfm2.5-thinking:latest "ping"
    ```
-2. Run each model in a separate sweep invocation, leaving time between them for the daemon
-   to stabilise:
-   ```
-   npm run sweep:models -- --models phi4-mini:latest --trials 3 \
-     --suite eval/brief-pilot.json --out .sweep-brief-pilot-phi4
-   npm run sweep:models -- --models lfm2.5-thinking:latest --trials 3 \
-     --suite eval/brief-pilot.json --out .sweep-brief-pilot-lfm
-   ```
-3. Verify both output directories have 3 non-zero-second run lines before running
-   `compare-models`.
-4. If GPU OOM persists, reduce `--trials 3` to `--trials 1` as a diagnostic, or check
-   available VRAM before loading the second model.
+   or verify the token count of the first real trial matches subsequent ones.
+2. Run the sweep and confirm all trials show ~101 K input tokens for lfm2.5.
+3. Run `compare:models` on the combined data.
+4. Report the verdict.
 
-**On the truth-boundary:** The design spec conditions a new truth-boundary entry on the
-verdict being "does not pay". The verdict here is "measurement invalid" — the condition is
-not met. No entry will be added until a valid comparison is run and a verdict is reached.
+Alternatively: if phi4-mini and lfm2.5-thinking score equivalently when lfm runs in thinking mode (~0.8 pp gap), the brief-pilot may not resolve any meaningful difference between this specific pair regardless of warm-start. In that case, the right next experiment is a pair where a larger gap is expected (e.g., phi4-mini vs gpt-oss:20b).
+
+**Sub-project 2 sizing:** No anchor size can be derived from this measurement. The pilot metric that was supposed to set sub-project 2's size (implied size from observed Δ and p_d) is invalid. Sub-project 2 remains blocked on a clean measurement.
