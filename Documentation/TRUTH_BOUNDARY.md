@@ -243,7 +243,7 @@ that event is a failing build, not a note in a backlog.
 
 `three-reproducibility-claims` · probe `reproducibility`
 
-**Establishes.** Three things reproduce here, and they are reported separately because they are not equally strong. (1) SAME INPUT, SAME VERDICTS: the gates are pure, denied every effectful builtin by a static check that reads every file under core/src, and 2,784 oracle verdicts agree with a SHA-256-pinned second implementation. (2) SAME SEED, SAME SUITE: the 4,906-case anchor regenerates from seed 1 and check:anchor fails if the committed file is not what the generator produces. (3) SAME SOURCE, SAME HASH: 78 artifact files digest to one hash, and content is normalised to LF first because core.autocrlf is true here — so the hash a Windows checkout computes is the hash a Linux checkout computes, which is the only version of the claim worth making.
+**Establishes.** Three things reproduce here, and they are reported separately because they are not equally strong. (1) SAME INPUT, SAME VERDICTS: the gates are pure, denied every effectful builtin by a static check that reads every file under core/src, and 2,784 oracle verdicts agree with a SHA-256-pinned second implementation. (2) SAME SEED, SAME SUITE: the 4,906-case anchor regenerates from seed 1 and check:anchor fails if the committed file is not what the generator produces. (3) SAME SOURCE, SAME HASH: 83 artifact files digest to one hash, and content is normalised to LF first because core.autocrlf is true here — so the hash a Windows checkout computes is the hash a Linux checkout computes, which is the only version of the claim worth making.
 
 **Does not establish.** That this project has reproducible builds in the sense that phrase usually carries. NOTHING IS COMPILED. There is no bundle, no lockstep toolchain pin, no hermetic sandbox; tsx transpiles at run time, and the hash covers source text plus dependency pins rather than a produced binary. The three claims also have genuinely different strengths and must never be merged into one sentence: the first is enforced by a second implementation and a purity guard, the second by a regeneration check, the third only by a digest of files somebody could edit together. Collapsing them lets the weakest borrow the strongest's credibility, which is the specific move this document exists to prevent.
 
@@ -251,7 +251,7 @@ that event is a failing build, not a note in a backlog.
 
 ```json
 {
-  "artifact_files": 82,
+  "artifact_files": 83,
   "hash_is_lf_normalised": true,
   "hash_excludes_tests_and_tooling": true,
   "hash_excludes_itself": true,
