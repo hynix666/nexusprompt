@@ -14,7 +14,7 @@ import { COMPILER_SYSTEM } from "../../core/src/stages/stage-kit.js";
 import { STAGE_IDS } from "../../contracts/index.js";
 import type {
   GenerationRequest, GenerationResult, ProviderFailure, ProviderTransport,
-  RevisionEntry, RevisionStore, PipelineCommand, ObservabilityEvent,
+  RevisionEntry, RevisionStore, PipelineCommand, ObservabilityEvent, ContentStore,
 } from "../../contracts/index.js";
 
 /**
@@ -1078,6 +1078,85 @@ describe("content retention — refs name bytes that are actually there", () => 
       .filter((d) => d.isDirectory());
     const files = shards.flatMap((d) => readdirSync(join(contentRoots[contentRoots.length - 1]!, d.name)));
     expect(files.length, "content was reclaimed despite an unaccountable store").toBeGreaterThan(0);
+  });
+
+  it("a healthy run DOES reclaim an orphan — the guard must not be a permanent refusal", async () => {
+    /**
+     * The counterpart assertion, and it was missing entirely. Every sweep test above asserts
+     * that live content SURVIVES; none asserts that anything is ever reclaimed, so deleting
+     * the `sweep` call outright would have passed the whole suite. That makes every tightening
+     * of the trust guard unfalsifiable in the direction that matters second: a guard that
+     * refuses always is indistinguishable, under these tests, from one that judges correctly.
+     *
+     * Written when `retainedRefs.size === 0` stopped being an automatic pass — a change that
+     * can only make the guard refuse MORE.
+     */
+    const content = new LocalContentStore(mkContentRoot());
+    const store = new BundleStore();
+
+    // A body no surviving bundle cites — what an evicted run leaves behind. The ref is built
+    // from the bytes because `put` verifies that bytes hash to their address.
+    const orphanBytes = new TextEncoder().encode("left behind by an evicted bundle");
+    const orphanRef = `npx:stage-output:${createHash("sha256").update(orphanBytes).digest("hex")}:local-bundle`;
+    await content.put(orphanRef, orphanBytes);
+    expect(await content.get(orphanRef), "orphan was not seeded").not.toBeNull();
+
+    await runPipeline(
+      { ...command({ run_id: "reclaim-1" }), context: { depth: "TINY", stakes: "LOW" } },
+      { ...opts(new ScriptedProvider(), store), content },
+    );
+
+    // The orphan is gone...
+    expect(await content.get(orphanRef), "the sweep did not reclaim an orphan").toBeNull();
+    // ...and everything the run itself retained is still resolvable.
+    const entries = await store.getRun("reclaim-1");
+    const refs = entries.flatMap((e) => [e.input_ref, e.output_ref]).filter(Boolean) as string[];
+    expect(refs.length).toBeGreaterThan(0);
+    for (const ref of refs) expect(await content.get(ref), `lost ${ref}`).not.toBeNull();
+  });
+
+  it("does not reclaim when this run retained nothing to prove the enumeration with", async () => {
+    /**
+     * The last exemption in the same guard. `retainedRefs.size === 0` returned TRUE — a guard
+     * passing because it had nothing to check, which is precisely the `[].every()` shape sweep
+     * fifteen was written to abolish.
+     *
+     * Reachable, and this is the shape: a ContentStore whose writes fail but whose reads and
+     * deletes work. Every `retain` throws, is caught and evented as `content_retention_failed`,
+     * so `retainedRefs` stays empty — and then the sweep runs against a live set from a store
+     * that cannot account for anything, and reclaims the lot. A store failing its writes is the
+     * worst possible moment to trust it about its reads.
+     */
+    let swept: Set<string> | null = null;
+    const content: ContentStore = {
+      retention_scope: "LOCAL_BUNDLE",
+      async put() { throw new Error("EROFS"); },
+      async get() { return null; },
+      async has() { return true; },
+      async sweep(live: Set<string>) { swept = live; return 0; },
+    };
+
+    class ForgetfulStore extends BundleStore {
+      override async getRun() { return []; }
+      override async listRecent() { return []; }
+    }
+
+    const events: ObservabilityEvent[] = [];
+    await runPipeline(
+      { ...command({ run_id: "no-evidence-1" }), context: { depth: "TINY", stakes: "LOW" } },
+      { ...opts(new ScriptedProvider(), new ForgetfulStore()), sink: { emit: (e) => { events.push(e); } }, content },
+    );
+
+    // The sweep must not have been attempted at all — the live set here is empty, so it would
+    // have taken every body written by every previous run with it.
+    expect(swept, "swept despite having no evidence the enumeration was complete").toBeNull();
+
+    const skipped = events.filter((e) => e.failure_code === "content_sweep_skipped");
+    expect(skipped).toHaveLength(1);
+    // The refusal says WHICH of the two it is: no evidence, not contradicted evidence.
+    expect(skipped[0].verdict).toContain("retained nothing");
+    // And the retention failures are still reported rather than swallowed.
+    expect(events.filter((e) => e.failure_code === "content_retention_failed").length).toBeGreaterThan(0);
   });
 
   it("records null rather than a fabricated ref when no store is wired", async () => {

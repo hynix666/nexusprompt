@@ -587,16 +587,31 @@ export async function runPipeline(
        * `retainedRefs` is what THIS run wrote, held in memory and never re-read, so it cannot
        * be emptied by a storage fault. If the run retained anything, every one of those refs
        * must come back from the enumeration before a single file is reclaimed.
+       *
+       * **And "retained nothing" was still exempt, which is the same defect once more.**
+       * `size === 0` returned TRUE — a guard passing because it had nothing to check, exactly
+       * the shape of the `[].every()` it was written to replace. The escape was reachable:
+       * with a `ContentStore` whose `put` throws, every `retain` fails, is caught and evented,
+       * and `retainedRefs` stays empty; put that beside a store whose `listRecent`
+       * under-reports and `sweep(new Set())` is called, reclaiming every body of every prior
+       * run. The run that wrote nothing is precisely the run that can prove nothing — and a
+       * store failing its writes is the worst moment to trust it about its reads.
+       *
+       * Refusing costs a leak, and the paragraph above already ranks the two: over-reclaiming
+       * is silent, permanent, and worse. The next run that retains anything sweeps.
        */
-      const enumerationTrustworthy = retainedRefs.size === 0
-        ? true
-        : [...retainedRefs].every((r) => live.has(r));
+      const enumerationTrustworthy =
+        retainedRefs.size > 0 && [...retainedRefs].every((r) => live.has(r));
 
       if (!enumerationTrustworthy) {
         emit("DEGRADE", {
           component: "application/pipeline",
           failure_code: "content_sweep_skipped",
-          verdict: `the live set is missing refs this run retained, so the enumeration is incomplete; ${retainedRefs.size} retained ref(s). Nothing reclaimed.`,
+          // The two refusals are different facts — "no evidence" and "contradicted evidence"
+          // — and an operator deciding whether a store is broken needs to know which.
+          verdict: retainedRefs.size === 0
+            ? "this run retained nothing, so it has no evidence the enumeration is complete. Nothing reclaimed."
+            : `the live set is missing refs this run retained, so the enumeration is incomplete; ${retainedRefs.size} retained ref(s). Nothing reclaimed.`,
         });
       } else {
         await opts.content.sweep(live);
