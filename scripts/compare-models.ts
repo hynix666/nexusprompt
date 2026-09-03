@@ -234,6 +234,51 @@ export function report(
   return out.join("\n");
 }
 
+/**
+ * Whether this `--write` may proceed.
+ *
+ * Pure, and taking the three facts rather than reading them, for the reason `flagError` in
+ * `run-eval.ts` is pure: a test can ask it about a combination that does not exist on disk,
+ * and the refusal is decided in one place instead of three `if (existsSync(...))` blocks.
+ *
+ * Two different failures, in severity order:
+ *
+ *   1. MISLABEL — the sweep ran suite X and `--suite` says Y. The measurement is real and the
+ *      label is wrong, which is undetectable afterwards: `cases_scored` would be consistent
+ *      with the data and inconsistent with the name. `--replace` does not excuse it, because
+ *      `--replace` is permission to overwrite a file, not permission to misname one.
+ *   2. CLOBBER — an artifact for another suite is already committed. Overwriting it silently
+ *      re-points every claim `check:noise` enforces: on 1 September 2026 the committed floor
+ *      resolved 42.6 pp over 12 cases, and a 100-case floor resolves 14.8 pp, so the accident
+ *      LOOSENS the gate while leaving it green. Recoverable with an explicit flag.
+ */
+export function writeGuard(opts: {
+  suiteFlag: string;
+  sweptSuiteId: string | null;
+  existingSuiteId: string | null;
+  replace: boolean;
+}): string | null {
+  if (opts.sweptSuiteId !== null && opts.sweptSuiteId !== opts.suiteFlag) {
+    return (
+      `compare:models --write: the sweep ran "${opts.sweptSuiteId}" but --suite says ` +
+      `"${opts.suiteFlag}".\n` +
+      "  A floor is only valid for the suite it was measured on. Filing this data under the\n" +
+      "  wrong name cannot be detected later — every field would be internally consistent.\n" +
+      "  Re-run with the suite the sweep actually used, or sweep the suite you meant."
+    );
+  }
+  if (opts.existingSuiteId !== null && opts.existingSuiteId !== opts.suiteFlag && !opts.replace) {
+    return (
+      `compare:models --write: eval/noise-floor.json holds a floor for "${opts.existingSuiteId}" ` +
+      `and this write is for "${opts.suiteFlag}".\n` +
+      "  Overwriting re-points every claim scripts/noise-claims.json pins, without failing:\n" +
+      "  a larger suite resolves a SMALLER delta, so the gate would silently admit claims it\n" +
+      "  used to refuse. Pass --replace if that is what you mean."
+    );
+  }
+  return null;
+}
+
 const flag = (name: string): string | undefined => {
   const i = process.argv.indexOf(`--${name}`);
   return i === -1 ? undefined : process.argv[i + 1];
@@ -245,7 +290,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.error(
       "usage: tsx scripts/compare-models.ts <sweep-dir>\n" +
       "       tsx scripts/compare-models.ts <sweep-dir> --write --suite ID --suite-version V \\\n" +
-      "                                     --cases-scored N --transport T --trials N",
+      "                                     --cases-scored N --transport T --trials N [--replace]",
     );
     process.exit(2);
   }
@@ -292,6 +337,31 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       `compare:models --write needs ${missing.join(", ")}.\n` +
       "  A floor is only valid for the suite, transport and trial count it was measured under.",
     );
+    process.exit(2);
+  }
+
+  /** The suite id the sweep actually ran, via the path it recorded. Null when it recorded none. */
+  const sweptSuiteId = ((): string | null => {
+    const marker = join(dir, "suite.txt");
+    if (!existsSync(marker)) return null;
+    const sweptSuitePath = readFileSync(marker, "utf8").trim();
+    const swept = JSON.parse(readFileSync(join(process.cwd(), sweptSuitePath), "utf8"));
+    return (swept.suite?.suite_id as string | undefined) ?? null;
+  })();
+
+  const floorTarget = join(process.cwd(), "eval/noise-floor.json");
+  const existingSuiteId = existsSync(floorTarget)
+    ? ((JSON.parse(readFileSync(floorTarget, "utf8")).suite?.id as string | undefined) ?? null)
+    : null;
+
+  const refusal = writeGuard({
+    suiteFlag: meta.suite.id,
+    sweptSuiteId,
+    existingSuiteId,
+    replace: process.argv.includes("--replace"),
+  });
+  if (refusal !== null) {
+    console.error(refusal);
     process.exit(2);
   }
 
