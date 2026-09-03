@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  parseRuns, parseCases, caseMatrix, pairsOf, verdictFor, report,
+  parseRuns, parseCases, caseMatrix, pairsOf, verdictFor, report, writeGuard,
 } from "../scripts/compare-models.js";
 
 /**
@@ -126,6 +126,41 @@ describe("report", () => {
 
   it("reports what the suite can resolve, so a null result is readable", () => {
     expect(text).toMatch(/What 3 cases resolve at 80% power: \d+\.\d pp/);
+  });
+});
+
+describe("writeGuard", () => {
+  const base = { suiteFlag: "brief-pilot", sweptSuiteId: null, existingSuiteId: null, replace: false };
+
+  it("allows a write when nothing contradicts it", () => {
+    expect(writeGuard(base)).toBeNull();
+  });
+
+  it("refuses when the sweep ran a different suite than --suite names", () => {
+    // The worst outcome available here: a real measurement, filed under the wrong suite. The
+    // denominator would be right and the label wrong, and nothing downstream could tell.
+    const msg = writeGuard({ ...base, sweptSuiteId: "compile-smoke" });
+    expect(msg).toMatch(/compile-smoke/);
+    expect(msg).toMatch(/brief-pilot/);
+  });
+
+  it("refuses the mislabel even with --replace, which is about clobbering, not lying", () => {
+    expect(writeGuard({ ...base, sweptSuiteId: "compile-smoke", replace: true })).not.toBeNull();
+  });
+
+  it("refuses to overwrite a floor measured on another suite", () => {
+    const msg = writeGuard({ ...base, existingSuiteId: "compile-smoke" });
+    expect(msg).toMatch(/eval\/noise-floor\.json/);
+    expect(msg).toMatch(/--replace/);
+  });
+
+  it("allows overwriting another suite's floor when --replace is explicit", () => {
+    expect(writeGuard({ ...base, existingSuiteId: "compile-smoke", replace: true })).toBeNull();
+  });
+
+  it("allows re-measuring the same suite without --replace", () => {
+    // Re-running a sweep for the same suite is the normal case and must not need a flag.
+    expect(writeGuard({ ...base, existingSuiteId: "brief-pilot", sweptSuiteId: "brief-pilot" })).toBeNull();
   });
 });
 

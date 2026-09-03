@@ -36,7 +36,7 @@ export function parseSweepArgs(argv) {
     throw new Error(`sweep: --trials must be a positive integer, got ${JSON.stringify(raw)}.`);
   }
 
-  return { models, trials, outDir: value("out") ?? ".sweep" };
+  return { models, trials, outDir: value("out") ?? ".sweep", suite: value("suite") };
 }
 
 /**
@@ -73,13 +73,19 @@ function main(argv) {
   const casesPath = join(args.outDir, "cases.txt");
   writeFileSync(runsPath, "");
   writeFileSync(casesPath, "");
+  // What was swept, beside what the sweep produced. `compare-models --write` reads it and
+  // refuses to label a floor with a suite the sweep did not actually run — the sweep and the
+  // artifact are written by different commands, and nothing else makes them agree.
+  writeFileSync(join(args.outDir, "suite.txt"), `${args.suite ?? "eval/compile-smoke.json"}\n`);
 
   for (const model of args.models) {
     for (let trial = 1; trial <= args.trials; trial++) {
       const started = Date.now();
-      const r = spawnSync(process.execPath, [
+      const runnerArgs = [
         "node_modules/tsx/dist/cli.mjs", "scripts/run-eval.ts", "--local", "--model", model,
-      ], { encoding: "utf8" });
+      ];
+      if (args.suite) runnerArgs.push("--suite", args.suite);
+      const r = spawnSync(process.execPath, runnerArgs, { encoding: "utf8" });
       const secs = Math.round((Date.now() - started) / 1000);
       const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
       const lines = out.split(/\r?\n/);

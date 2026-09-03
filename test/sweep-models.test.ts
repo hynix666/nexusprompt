@@ -35,6 +35,17 @@ describe("parseSweepArgs", () => {
     expect(() => parseSweepArgs(["--models", "", "--trials", "3", "--out", "d"])).toThrow(/--models/);
     expect(() => parseSweepArgs(["--trials", "3", "--out", "d"])).toThrow(/--models/);
   });
+
+  it("carries a --suite through to the runner", () => {
+    const a = parseSweepArgs(["--models", "a:1b", "--suite", "eval/brief-pilot.json", "--out", "d"]);
+    expect(a.suite).toBe("eval/brief-pilot.json");
+  });
+
+  it("leaves suite undefined when not given, so the default stays compile-smoke", () => {
+    // The armed floor in eval/noise-floor.json was measured on the default. Changing what a
+    // bare sweep runs would silently change what that artifact is comparable to.
+    expect(parseSweepArgs(["--models", "a:1b", "--out", "d"]).suite).toBeUndefined();
+  });
 });
 
 describe("formatRunLine", () => {
