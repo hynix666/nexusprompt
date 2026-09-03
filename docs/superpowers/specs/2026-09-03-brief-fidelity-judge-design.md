@@ -1,15 +1,18 @@
 # Brief-fidelity judge — design
 
-**Status:** proposed, 3 September 2026
+**Status:** proposed, 3 September 2026; amended 3 September 2026 — storage target corrected from
+"the run bundle" to the evidence plane after reading the actual storage adapters (see the
+Storage section).
 **Sub-project:** 3 of 3 (noise floor → provider-facing anchor → **judge**)
 **Depends on:** `contracts/judge-verdict.schema.json` (1.1.0), `core/src/eval/judge-policy.ts`,
-`application/src/judge.ts` — all pre-existing and unchanged by this design.
+`application/src/judge.ts`, `adapters/evidence-local` — all pre-existing and unchanged by this
+design.
 
 ## Goal
 
-Give each pipeline run a per-run quality signal — brief fidelity — stored in its run bundle,
-using the judge guardrails that already exist in this repository but have never been given a
-real transport, a rubric, or a calibration.
+Give each pipeline run a per-run quality signal — brief fidelity — recorded as evidence
+referencing that run, using the judge guardrails that already exist in this repository but have
+never been given a real transport, a rubric, or a calibration.
 
 This is explicitly **not** a model-comparison instrument. Sub-project 2 (the provider-facing
 anchor) established that model comparison on this pipeline does not pay at any suite size worth
@@ -47,19 +50,53 @@ judge validation" line in the noise-floor spec suggested:
 2. No rubric. `rubric_id`/`rubric_template` are caller-supplied strings with no authored content.
 3. No real `Calibration`. `admitJudge` hard-refuses without one, and the architecture's own
    comments call for human-labeled calibration, re-measured on a cadence.
-4. No wiring — no command, nothing connects a run bundle to `grade()`, nothing writes a verdict
-   back into a bundle.
+4. No wiring — no command, nothing connects a run bundle to `grade()`, nothing records a verdict
+   anywhere.
 5. A shape mismatch — `JudgeVerdict.verdict` is a single scalar; a multi-dimension rubric
    breakdown does not fit it without an additive schema change.
 
-This spec builds exactly those five things. Core purity and the Application guard are untouched.
+This spec builds exactly those five things, plus one more surfaced while checking how a verdict
+could actually be stored (see Storage below): a new evidence kind. Core purity and the
+Application guard are untouched.
+
+## Storage: the evidence plane, not the run bundle
+
+The original draft of this spec said the judge "writes into the existing bundle." Reading
+`adapters/storage-local/src/index.ts` and `adapters/evidence-local/src/index.ts` before planning
+showed that is not possible under either storage mode a run can be in:
+
+- **Legacy bundles** (`<run_id>.json`) grow only through `append()`, which takes a
+  `RevisionEntry` — a *stage execution*, with `stage_id`, `gate_results`, `execution_provenance`.
+  A judgement is not a stage; forcing it into that shape would corrupt what a `RevisionEntry`
+  means.
+- **Semantic manifests** (`<run_id>.manifest.json`) are hard-immutable once published — committed
+  via an exclusive `link()`, and `markStale` explicitly refuses to touch one ("immutable
+  manifest ... would mutate committed history"). There is no write path into a published
+  manifest at all.
+
+The actual fit is `adapters/evidence-local` — the same evidence plane CLAUDE.md already
+documents as having "no `update`, and that is load-bearing." It holds one immutable file per
+record (`EvidenceStore.put`, exclusive `wx` write, refuses to overwrite), currently for
+`EvidenceKind = "eval-run" | "comparison" | "baseline" | "promotion"`, each record referencing a
+run rather than being embedded in it (`Baseline.run_id`, `Comparison.candidate_run_id`). A
+judgement is exactly this shape: evidence *about* a run, not part of the run's own record.
+
+This adds `"judgement"` as a fifth `EvidenceKind` and means **a run can carry zero, one, or many
+judgement records** — judging the same bundle twice produces a second, independently-dated
+record rather than requiring an overwrite. That fits the evidence plane's existing philosophy
+("a re-run is a new run: give it a new id") and is arguably more honest given the judge itself is
+stochastic: repeated judgements of one run are visible disagreement, not a state to prevent.
+
+This drops the "already judged, use `--force`" refusal from the original draft entirely — there
+is nothing to overwrite, so nothing to force.
 
 ## Scope
 
 **In:** a brief-fidelity rubric (four dimensions), a candidate-construction helper, a hosted
 `JudgeTransport` adapter, a mutation-derived calibration (with its own ADR for the divergence
-from human-labeled calibration), an additive schema bump for the rubric breakdown, and a
-post-processing `npm run judge` command that reads a bundle and writes a verdict into it.
+from human-labeled calibration), an additive schema bump for the rubric breakdown, a new
+`judgement` evidence kind and its wrapper schema, and a post-processing `npm run judge` command
+that reads a bundle and records a judgement evidence record referencing it.
 
 **Out:** any change to `core/src/eval/judge-policy.ts` or `application/src/judge.ts` — both are
 correct and tested as they stand. Any use of the judge for model comparison (that is
@@ -69,7 +106,7 @@ calibration (explicitly deferred — see the Calibration section).
 ## Architecture
 
 ```
-npm run judge -- --bundle <path> [--force]
+npm run judge -- --bundle <path>
        │
        v
 scripts/judge.ts                 reads bundle: brief, final compiled prompt, provenance
@@ -86,7 +123,8 @@ adapters/provider-hosted-judge/  (new) — implements JudgeTransport, wraps the
                                    existing hosted provider client (the one --live already uses)
        │
        v
-storage adapter                  writes JudgeVerdict into the existing bundle
+adapters/evidence-local          (existing store, new EvidenceKind) — put() writes a
+                                   judgement record: { judgement_id, run_id, created_at, verdict }
 ```
 
 `candidate_family` for the admission check comes from the bundle's own provenance
@@ -208,20 +246,53 @@ future rubric. `verdict` carries the overall score (sum, 0–12) for anything re
 alone. This lands as its own reviewed PR with the version bump, before any judge code, matching
 the rule that shipped `judge-verdict` 1.0.0 before the adapter existed.
 
+## Contract schema: a new `judgement` wrapper, 1.0.0
+
+`judge-verdict` stays a general grading contract — it grades any candidate against any rubric,
+independent of the pipeline concept of a "run," and that generality is deliberate (it also
+covers catalog-technique grading, unrelated to this sub-project). Tying a `run_id` into it would
+couple a general contract to one caller. Instead, `contracts/judgement.schema.json` (1.0.0) is a
+thin wrapper, the evidence body for the new `"judgement"` kind:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/judgement/1.0.0",
+  "title": "Judgement",
+  "description": "One judge grading of one run, recorded as evidence. A run may have zero, one, or many judgements.",
+  "type": "object",
+  "required": ["judgement_id", "run_id", "created_at", "verdict"],
+  "additionalProperties": false,
+  "properties": {
+    "judgement_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "verdict": { "$ref": "https://promptnexus.dev/contracts/judge-verdict/1.2.0" }
+  }
+}
+```
+
+`EvidenceKind` (`contracts/index.ts`) gains `"judgement"` as a fifth variant, and
+`adapters/evidence-local/src/index.ts`'s `KINDS` array gains the matching entry. `judgement_id`
+is freshly generated per judging call (not derived from `run_id`), which is what makes repeated
+judgements of one run coexist as separate records rather than colliding on `EvidenceStore.put`'s
+duplicate-id refusal.
+
 ## Data flow
 
 1. `npm run judge -- --bundle <path>` reads the bundle: brief, final compiled prompt,
-   `provider_model_fingerprint`.
+   `provider_model_fingerprint`, `run_id`.
 2. Refuses (exit 2) if the final stage is degraded or demo-mode — judging placeholder text
    against a brief would produce a meaningless score dressed as a real one.
-3. Refuses (exit 2) if the bundle already carries a `judgement` — use `--force` to re-judge.
-4. Builds the rubric template and the fenced candidate (`core/src/eval/brief-fidelity.ts`, pure).
-5. Constructs a `GradeRequest`: `rubric_id: "brief-fidelity-v1"`, `candidate_family` from
+3. Builds the rubric template and the fenced candidate (`core/src/eval/brief-fidelity.ts`, pure).
+4. Constructs a `GradeRequest`: `rubric_id: "brief-fidelity-v1"`, `candidate_family` from
    provenance, `verification_status: "judge-checkable"`, `calibration` read from
    `eval/judge-calibration.json`.
-6. `GuardedJudge.grade()` — `admitJudge` runs first (existing refusals below), then the hosted
+5. `GuardedJudge.grade()` — `admitJudge` runs first (existing refusals below), then the hosted
    transport is called once.
-7. The `JudgeVerdict` (with `rubric_breakdown`) is written into the bundle.
+6. The resulting `JudgeVerdict` (with `rubric_breakdown`) is wrapped as a `Judgement`
+   (`judgement_id` freshly generated, `run_id` from the bundle, `created_at` now) and written via
+   `LocalEvidenceStore.put()` under `EvidenceKind: "judgement"`.
 
 ## Error handling
 
@@ -231,13 +302,15 @@ fire exactly as already tested.
 
 **New to this command:**
 - Bundle's final stage is degraded/demo-mode → refuse, exit 2, names the stage.
-- Bundle already has a `judgement` → refuse, exit 2, unless `--force`.
 - No API key / placeholder key / no declared budget / malformed budget flag → refuse, exit 2,
   reusing the same `admitRun`-style checks the `--live` pipeline path already has.
 
+There is no "already judged" refusal — judging the same bundle again simply produces a second
+`Judgement` record with a new `judgement_id`. See Storage above.
+
 **Provider failure** (network error, response fails schema validation): classified as a
-`ProviderFailure`; the command exits non-zero and **writes nothing** to the bundle. A failed
-judge call leaves the bundle exactly as it was — never a partial or guessed verdict.
+`ProviderFailure`; the command exits non-zero and **writes no evidence record**. A failed judge
+call leaves no trace behind — never a partial or guessed verdict.
 
 ## Testing
 
@@ -255,10 +328,13 @@ judge call leaves the bundle exactly as it was — never a partial or guessed ve
 - Mutation proof for `check:judge`: forcing the isolation comparison to always pass must fail the
   must-fire tests and no others — same discipline as `check:noise`.
 - Contract conformance: a real `JudgeVerdict` with `rubric_breakdown` populated validates against
-  schema 1.2.0 in `test/contract-conformance.test.ts`.
-- `scripts/judge.ts`: refusal-path tests (degraded bundle, already-judged bundle, no key/budget)
-  offline; the actual hosted call is exercised only in the one-time calibration measurement, not
-  in CI.
+  schema 1.2.0, and a real `Judgement` wrapping it validates against schema 1.0.0, both in
+  `test/contract-conformance.test.ts`.
+- `adapters/evidence-local`: a test confirming `EvidenceKind: "judgement"` round-trips through
+  `put`/`get`/`list` like the four existing kinds, and that two judgements of the same `run_id`
+  coexist as distinct records.
+- `scripts/judge.ts`: refusal-path tests (degraded bundle, no key/budget) offline; the actual
+  hosted call is exercised only in the one-time calibration measurement, not in CI.
 
 ## What this does NOT establish
 
