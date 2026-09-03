@@ -97,6 +97,49 @@ describe("depth resolution", () => {
     }
   });
 
+  it("a skipped stage's stated reason matches the cause that actually fired", () => {
+    /**
+     * `critic` and `tone_check` each have TWO skip causes — their own stakes/depth rule, and
+     * the pipeline-wide placeholder guard — and one `reduceSkipped` that reported the first
+     * for both. At `stakes: "SAFETY-CRITICAL"` with a degraded `compile`, the bundle recorded
+     * "Critic runs only at HIGH / SAFETY-CRITICAL stakes" and "Tone Check runs at STANDARD
+     * depth and above" about a run that was at SAFETY-CRITICAL and COMPREHENSIVE.
+     *
+     * The critic's second line was the sharper error: "the Lint verdict stands", pointing at
+     * a verdict `lint` correctly declines to produce for a placeholder. A skip message is the
+     * only account a skipped stage leaves of itself; a false one is worse than none, because
+     * it reads as an explanation.
+     *
+     * Asserted structurally — the reason must not name the rule that did NOT fire — so a
+     * third skip cause on any stage cannot quietly inherit the wrong sentence.
+     */
+    const DEGRADED = `${DEMO_MARKER}\n\nStage "compile" did not run against a model.`;
+    const base = { brief: "b", stakes: "SAFETY-CRITICAL", depth: "COMPREHENSIVE" } as PipelineContext;
+
+    for (const id of ["critic", "tone_check"] as const) {
+      const stage = PIPELINE.find((s) => s.id === id)!;
+      const ctx = { ...base, prompt: DEGRADED };
+
+      // It skips, and the cause is the placeholder — the stakes/depth rule is satisfied here.
+      expect(stage.shouldSkip!(ctx), `${id} should skip a placeholder`).toBe(true);
+      expect(stage.shouldSkip!({ ...base, prompt: "# SYSTEM PROMPT\n\nReal." }), id).toBe(false);
+
+      const report = String(Object.values(stage.reduceSkipped!(ctx))[0]);
+      expect(report, `${id} says the build degraded`).toContain("the build degraded");
+      // The rule that did not fire must not be quoted as the reason.
+      expect(report, `${id} must not blame stakes/depth`).not.toContain("runs only at");
+      expect(report, `${id} must not blame stakes/depth`).not.toContain("runs at STANDARD depth");
+      // And it must not send a reader to a lint verdict that lint declines to give.
+      expect(report).not.toContain("the Lint verdict stands");
+    }
+
+    // The stakes/depth reason is still reported when THAT is what fired.
+    const lowStakes = { brief: "b", stakes: "LOW", depth: "COMPREHENSIVE", prompt: "# SYSTEM PROMPT\n\nReal." } as PipelineContext;
+    const criticStage = PIPELINE.find((s) => s.id === "critic")!;
+    expect(criticStage.shouldSkip!(lowStakes)).toBe(true);
+    expect(String(criticStage.reduceSkipped!(lowStakes).critic)).toContain("runs only at");
+  });
+
   it("planDepth reports the depth the plan is actually built from", () => {
     expect(planDepth({ stakes: "SAFETY-CRITICAL" })).toBe("COMPREHENSIVE");
     expect(planDepth({ depth: "TINY", stakes: "HIGH" })).toBe("TINY");

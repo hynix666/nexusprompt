@@ -47,6 +47,14 @@ export type VoiceLevel = "CONSISTENT" | "MINOR_DRIFT" | "INCONSISTENT";
 /** Depths at which s11 runs at all, per the frozen DEPTH_PLAN. */
 export const TONE_DEPTHS = ["STANDARD", "COMPREHENSIVE"] as const;
 
+/** Why the stage did not run, when the cause is the depth plan. */
+export const SKIPPED_MESSAGE =
+  "[SKIPPED] Tone Check runs at STANDARD depth and above. [ASSUMPTION:voice_unaudited]";
+
+/** Why the stage did not run, when the cause is a degraded artifact. See `reduceSkippedDegraded`. */
+export const DEGRADED_MESSAGE =
+  "[SKIPPED] No compiled prompt to audit — the build degraded. [ASSUMPTION:no_artifact_to_audit]";
+
 export interface ToneCheckInput {
   prompt: string;
   /** The profile from `calibrate`. Absent substitutes the shared default. */
@@ -108,7 +116,27 @@ export function reduce(
 export function reduceSkipped(): ToneCheckState {
   return {
     voice: "MINOR_DRIFT",
-    report: "[SKIPPED] Tone Check runs at STANDARD depth and above. [ASSUMPTION:voice_unaudited]",
+    report: SKIPPED_MESSAGE,
+    demo_mode: false,
+  };
+}
+
+/**
+ * The OTHER reason this stage does not run: there is no artifact to audit.
+ *
+ * The registry skips this stage on a degraded prompt as well as on depth, and reused the
+ * depth sentence for both — so a COMPREHENSIVE run whose `compile` never reached a model
+ * recorded "Tone Check runs at STANDARD depth and above", which is false about that run in
+ * the one place a reader looks to find out why the stage did not run.
+ *
+ * `MINOR_DRIFT` rather than a worse level, unchanged from the depth skip: this stage is
+ * advisory and has no failing value, and inventing a finding from an absent audit would put
+ * noise into a report people are meant to act on.
+ */
+export function reduceSkippedDegraded(): ToneCheckState {
+  return {
+    voice: "MINOR_DRIFT",
+    report: DEGRADED_MESSAGE,
     demo_mode: false,
   };
 }

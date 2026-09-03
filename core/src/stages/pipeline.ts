@@ -225,8 +225,11 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
       const s = critic.reduce({ prompt: c.prompt ?? "", lint: c.lint, stakes: c.stakes }, o);
       return { critic: s.report, criticVerdict: s.verdict };
     },
-    reduceSkipped: () => {
-      const s = critic.reduceSkipped();
+    // Two skip causes, so two reasons. Reusing the stakes sentence for a degraded artifact
+    // wrote a false one into the bundle — see `critic.DEGRADED_MESSAGE`. The predicate is the
+    // same one `shouldSkip` used, so the reason cannot describe a different cause than fired.
+    reduceSkipped: (c) => {
+      const s = isPlaceholderArtifact(c.prompt) ? critic.reduceSkippedDegraded() : critic.reduceSkipped();
       return { critic: s.report, criticVerdict: s.verdict };
     },
   },
@@ -254,8 +257,9 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
       const s = tone.reduce({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, o);
       return { tone: s.report, voice: s.voice };
     },
-    reduceSkipped: () => {
-      const s = tone.reduceSkipped();
+    // Same two causes, same rule — see the note on `critic` above.
+    reduceSkipped: (c) => {
+      const s = isPlaceholderArtifact(c.prompt) ? tone.reduceSkippedDegraded() : tone.reduceSkipped();
       return { tone: s.report, voice: s.voice };
     },
   },
