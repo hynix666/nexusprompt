@@ -260,8 +260,9 @@ export const PROBES: Record<string, Probe> = {
   },
 
   /**
-   * What each suite can resolve. The three smoke suites are below the exact floor by an
-   * order of magnitude — they are wiring checks, and a green one is not a measurement.
+   * What each suite can resolve. The original three smoke suites are all small — wiring
+   * checks, not measurements. `brief-pilot` at 100 cases is above the exact floor and can
+   * attain significance when used in a model comparison; its stub run verifies wiring only.
    */
   suiteResolution(root) {
     const anchor = readJson(root, "eval/gate-recall-anchor.json");

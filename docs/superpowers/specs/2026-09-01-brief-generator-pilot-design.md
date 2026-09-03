@@ -1,6 +1,6 @@
 # Provider-facing pilot: a brief generator, and whether it pays — design
 
-**Status:** approved for planning, 1 September 2026
+**Status:** Tasks 1–3 complete, 3 September 2026 — Task 4 (sweep) pending
 **Sub-project:** 2 of 3, pilot phase (noise floor → **provider-facing anchor** → judge)
 **Depends on:** `eval/noise-floor.json`, armed 1 September 2026
 

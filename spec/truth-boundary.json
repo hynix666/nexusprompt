@@ -89,12 +89,13 @@
       "title": "A green smoke suite is not a measurement",
       "probe": "suiteResolution",
       "establishes": "What each suite can resolve, derived rather than declared. Under McNemar the statistic is binomial(d, 0.5), so the smallest two-sided p any arrangement of d discordant units can produce is 2·0.5^d — which clears α = 0.05 only from six upward. The anchor is sized against that floor and resolves 0.000204. The comparator enforces the floor itself, and refuses rather than returning `inconclusive` below it, because 'we could not have seen anything' and 'we looked and saw nothing' are different findings.",
-      "does_not_establish": "Anything, in the case of the three smoke suites. `pipeline-smoke` holds five cases and is below the exact floor outright: no arrangement of its results could reach significance. The other two clear six only in the sense that their SIZE does — the floor is on discordant units, of which a suite's size is merely an upper bound, so eleven or fourteen cases still resolve nothing in practice. These suites exist to prove the wiring runs and the accounting adds up. A green run is not evidence that a configuration is better.",
+      "does_not_establish": "Anything, in the case of the three original smoke suites. `pipeline-smoke` holds five cases and is below the exact floor outright: no arrangement of its results could reach significance. `compile-adversarial` and `compile-smoke` clear six only in the sense that their SIZE does — the floor is on discordant units, of which a suite's size is merely an upper bound, so eleven or fourteen cases still resolve nothing in practice. `brief-pilot` has one hundred cases, which is above the floor, but a 100/100 stub run is not a model comparison: it verifies internal consistency (each stub satisfies the case's own expectation and trips no gate FAIL) and that the wiring runs. A model comparison on brief-pilot requires two models and is what the sweep measurement produces. A green smoke run is not evidence that one configuration outperforms another.",
       "expect": {
         "exact_floor_discordant_units": 6,
         "anchor_cases": 4906,
         "anchor_detectable_delta": 0.000204,
         "smoke_suite_sizes": {
+          "brief-pilot": 100,
           "compile-adversarial": 11,
           "compile-smoke": 14,
           "pipeline-smoke": 5

@@ -47,8 +47,10 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   },
   "commands": [
     "build:anchor",
+    "build:brief-pilot",
     "build:hash",
     "check:anchor",
+    "check:brief-pilot",
     "check:catalog",
     "check:citations",
     "check:citations:online",
@@ -84,6 +86,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "eval",
     "eval:adversarial",
     "eval:anchor",
+    "eval:brief-pilot",
     "eval:compare",
     "eval:pipeline",
     "import:catalog",
