@@ -45,6 +45,29 @@ export const SKIPPED_MESSAGE =
   `[SKIPPED] Critic runs only at HIGH / SAFETY-CRITICAL stakes.\n` +
   `Degraded mode: the Lint verdict stands. [ASSUMPTION:self_verified_no_critic]`;
 
+/**
+ * The OTHER reason this stage does not run: there is no artifact to verify.
+ *
+ * `SKIPPED_MESSAGE` is ported verbatim and is true of the stakes rule it describes. The
+ * pipeline registry adds a second skip cause — a degraded prompt — and reused that sentence
+ * for it, which wrote a falsehood into the bundle: "Critic runs only at HIGH /
+ * SAFETY-CRITICAL stakes" appeared on runs that WERE at SAFETY-CRITICAL, where the real
+ * cause was that `compile` never reached a model.
+ *
+ * The second line was worse, and got worse still. It asserts "the Lint verdict stands" —
+ * but `lint`, handed the same placeholder, now correctly reports no verdict at all, so the
+ * sentence directed a reader to a verdict that does not exist. A skip message is the only
+ * account of itself a skipped stage leaves; a false one is worse than none, because it
+ * reads as an explanation.
+ *
+ * The frozen component has no equivalent, and could not: it has no notion of a placeholder
+ * artifact. This is new text for a new cause, not a change to a ported one.
+ */
+export const DEGRADED_MESSAGE =
+  `[SKIPPED] No compiled prompt to verify — the build degraded.\n` +
+  `Nothing was verified, and the Lint verdict is absent for the same reason. ` +
+  `[ASSUMPTION:no_artifact_to_verify]`;
+
 export interface CriticInput {
   prompt: string;
   /** The deterministic lint report. Absent is stated, not hidden. */
@@ -116,4 +139,15 @@ export function reduce(
 /** The skip path: no request was made, so nothing degraded and nothing was verified. */
 export function reduceSkipped(): CriticState {
   return { verdict: "SKIPPED", report: SKIPPED_MESSAGE, demo_mode: false };
+}
+
+/**
+ * The skip path when the artifact is a placeholder rather than when stakes are low.
+ *
+ * `demo_mode` stays false for the same reason it is false above: this stage made no
+ * request, so this stage degraded nothing. The run's degradation is upstream and already
+ * recorded there.
+ */
+export function reduceSkippedDegraded(): CriticState {
+  return { verdict: "SKIPPED", report: DEGRADED_MESSAGE, demo_mode: false };
 }
