@@ -1,6 +1,6 @@
 # Provider-facing pilot: a brief generator, and whether it pays — design
 
-**Status:** Tasks 1–5 complete, 3 September 2026 — all 6 runs real; verdict "measurement confounded" (lfm2.5-thinking cold-start anomaly in trial 1; see findings).
+**Status:** Tasks 1–5 complete, 3 September 2026 — all 6 warm runs real; verdict "does not pay" (Δ = 0.4 pp, p = 0.5716, 72 % constant, implied size 137,356 cases; see findings).
 **Sub-project:** 2 of 3, pilot phase (noise floor → **provider-facing anchor** → judge)
 **Depends on:** `eval/noise-floor.json`, armed 1 September 2026
 
