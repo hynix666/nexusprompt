@@ -52,6 +52,7 @@ Ports have swappable implementations; this is what is present in the tree.
 
 - `adapters/content-local`
 - `adapters/evidence-local`
+- `adapters/provider-hosted-judge`
 - `adapters/provider-local-proxy`
 - `adapters/provider-ollama`
 - `adapters/storage-local`

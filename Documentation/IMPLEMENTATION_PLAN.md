@@ -26,6 +26,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   "adapters": [
     "content-local",
     "evidence-local",
+    "provider-hosted-judge",
     "provider-local-proxy",
     "provider-ollama",
     "storage-local"
@@ -122,7 +123,7 @@ contracts   ████████████████████       1
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
-adapters    ████████████████████▒▒▒▒   5 built; hosted-server and storage-db still absent
+adapters    ████████████████████▒▒▒▒   6 built; hosted-server and storage-db still absent
 shells      █████████████▒▒▒▒▒▒▒▒       2 of 3 — cli runs the full pipeline; api exposes the first REST slice
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
 release     █████████████▒▒▒▒▒▒▒       gate + matrix generator + CI workflow; never executed, no build hash
