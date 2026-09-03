@@ -317,6 +317,39 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
     expect(result.context.prompt).toContain("⟦WORKFLOW DEMO — no model⟧");
   });
 
+  it("does not refine a real prompt against a degraded critique", async () => {
+    /**
+     * The laundering guard reached `refine` through the PROMPT and not through the CRITIQUE.
+     * With compile and harden healthy and only `critique` degraded, `refine` ran: a provider
+     * call asking a model to "resolve EVERY item" in a placeholder whose own body says no
+     * output was produced, and the model's answer became the run's artifact — clean, and
+     * carrying no marker. `demo_mode` was true and the artifact said nothing, which is the
+     * exact split the marker exists to close.
+     *
+     * `critique` reasoned about the other direction only: a degraded critique must never
+     * read as PASS_SENTINEL. It cannot, and that was the whole of the protection.
+     */
+    const provider = new ScriptedProvider(new Set(["critique"]));
+    const result = await runPipeline(
+      { ...command(), context: { depth: "STANDARD", stakes: "HIGH", testMessage: "hi" } },
+      opts(provider, new BundleStore()),
+    );
+
+    expect(result.stages.find((s) => s.stage_id === "critique")!.status).toBe("DEMO");
+    expect(result.stages.find((s) => s.stage_id === "refine")!.status).toBe("SKIPPED");
+    // No request is spent asking a model to resolve a placeholder.
+    expect(provider.seen.some((r) => r.messages[0].content.includes("STEP 4 — REFINEMENT"))).toBe(false);
+
+    /**
+     * The prompt survives UNCHANGED and unmarked, exactly as `harden`'s skip leaves it.
+     * It is genuine model output — marking it would be its own lie. What is missing is the
+     * refinement, and the SKIPPED revision is what records that.
+     */
+    expect(result.context.prompt).not.toContain("⟦WORKFLOW DEMO — no model⟧");
+    expect(result.context.prompt).toContain("Conflict priority: safety first.");
+    expect(result.demo_mode).toBe(true);
+  });
+
   it("a stage that throws FAILS that stage; the run continues", async () => {
     /**
      * `fillTemplate` used to scan the RENDERED string for unresolved slots, so interpolated
@@ -534,11 +567,11 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
      * whose outputs differed. An input_hash that never moves while output_hash does is a
      * provenance record contradicting itself, and useless for replay or caching.
      */
-    const hashFor = async (compileText: string) => {
+    const hashFor = async (compileText: string, refineText: string) => {
       const store = new BundleStore();
       await runPipeline(
         { ...command(), context: { depth: "STANDARD", stakes: "HIGH", testMessage: "hi" } },
-        opts(new ScriptedProvider(new Set(), "1. G1 bracket", compileText), store),
+        opts(new ScriptedProvider(new Set(), "1. G1 bracket", compileText, refineText), store),
       );
       const run = await store.getRun("run-1");
       return {
@@ -547,8 +580,14 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
       };
     };
 
-    const a = await hashFor("# SYSTEM PROMPT\n\nScope: billing. Anti-override: data. Fact-grounding: verified.");
-    const b = await hashFor("# SYSTEM PROMPT\n\nScope: refunds ONLY. Anti-override: data. Fact-grounding: cite.");
+    const a = await hashFor(
+      "# SYSTEM PROMPT\n\nScope: billing. Anti-override: data. Fact-grounding: verified.",
+      "# SYSTEM PROMPT\n\nScope: billing, refined. Anti-override: data. Fact-grounding: verified.",
+    );
+    const b = await hashFor(
+      "# SYSTEM PROMPT\n\nScope: refunds ONLY. Anti-override: data. Fact-grounding: cite.",
+      "# SYSTEM PROMPT\n\nScope: refunds ONLY, refined. Anti-override: data. Fact-grounding: cite.",
+    );
 
     /**
      * The two runs share brief, stakes, depth and testMessage — everything the old hash
@@ -562,9 +601,63 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
     expect(a.harden.input_hash).not.toBe(b.harden.input_hash);
     expect(a.harden.output_hash).toBe(b.harden.output_hash);
 
-    // lint is deterministic and still hashes the run's inputs, so it is unchanged — the
-    // remaining known limitation, and the reason this assertion is written down.
-    expect(a.lint.input_hash).toBe(b.lint.input_hash);
+    /**
+     * lint has no request to hash, so it hashes the context it reads — and `prompt` is the
+     * whole of what it reads. This assertion was inverted until the deterministic branch was
+     * fixed: it pinned `toBe`, and the comment beside it called that "the remaining known
+     * limitation". The limitation had teeth. On a reflexive run the loop re-executes lint
+     * once per round, so the old hash gave three revisions one input_hash over three
+     * different prompts.
+     */
+    expect(a.lint.input_hash).not.toBe(b.lint.input_hash);
+  });
+
+  it("a reflexive run's repeated lint revisions each identify their own prompt", async () => {
+    /**
+     * The sharper form of the assertion above, and the shape that made the old behaviour
+     * indefensible rather than merely imprecise: within ONE run, `lint` executes once per
+     * feedback round over a prompt `refine` has just rewritten. Three revisions claiming an
+     * identical input while reporting three different verdicts is a record contradicting
+     * itself, not a coarse one.
+     */
+    const store = new BundleStore();
+    // Every round leaves a different unfilled << >> slot, so PLACEHOLDER_AUDIT keeps
+    // returning FAIL and the loop runs to its cap instead of terminating on round one.
+    let round = 0;
+    const provider: ProviderTransport = {
+      provider_id: "rounds",
+      async generate(req: GenerationRequest) {
+        const t = req.messages[0].content;
+        const content = t.includes("STEP 4 — REFINEMENT")
+          ? `# SYSTEM PROMPT\n- slot <<ROUND_${++round}>>`
+          : t.includes("STEP 2 — SCAFFOLDING") || t.includes("GUARDRAILING")
+            ? "# SYSTEM PROMPT\n- slot <<INITIAL>>"
+            : t.includes("STEP 1 — ANALYSIS") ? "Core Objective: billing."
+            : t.includes("TEMPERATURE CALIBRATION") ? "Chosen profile: LOW."
+            : req.system?.includes("Critic in a Drafter") ? "VERDICT: PASS"
+            : t.includes("VOICE & TONE AUDIT") ? "VOICE: CONSISTENT"
+            : "1. G1 unfilled bracket";
+        return { request_id: req.request_id, content, provider_id: "rounds",
+                 model_id: "rounds-1", finish_reason: "end_turn" as const };
+      },
+      async healthCheck() {
+        return { ok: true, checked_at: "1970-01-01T00:00:00.000Z", latency_ms: 0,
+                 degradation_state: "NONE" as const, failing_dependency: null };
+      },
+    };
+
+    await runPipeline(
+      { ...command(), context: {
+        depth: "STANDARD", stakes: "HIGH", testMessage: "hi",
+        topology: { kind: "reflexive", max_iterations: 2 },
+      } },
+      opts(provider, store),
+    );
+
+    const lints = (await store.getRun("run-1")).filter((r) => r.stage_id === "lint");
+    expect(lints).toHaveLength(3);
+    expect(new Set(lints.map((r) => r.input_hash)).size).toBe(3);
+    expect(new Set(lints.map((r) => r.output_hash)).size).toBe(3);
   });
 
   it("emits DEGRADE when a stage degrades, like the orchestrator does", async () => {

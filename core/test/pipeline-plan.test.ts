@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  PIPELINE, DEPTH_PLAN, DEPTH_OF, planFor, planForContext, resolveDepth,
+  PIPELINE, DEPTH_PLAN, DEPTH_OF, planFor, planForContext, resolveDepth, planDepth,
   decideGateFeedback, MAX_FEEDBACK_ROUNDS, type PipelineContext,
 } from "../src/stages/pipeline.js";
 import { DEMO_MARKER } from "../src/stages/stage-kit.js";
@@ -73,6 +73,39 @@ describe("depth resolution", () => {
   it("an explicit depth wins over the stakes mapping", () => {
     expect(resolveDepth({ depth: "STANDARD", stakes: "LOW" })).toBe("STANDARD");
     expect(planForContext({ depth: "STANDARD", stakes: "LOW" })).toHaveLength(11);
+  });
+
+  it("no stage's skip rule disagrees with the depth the plan was built from", () => {
+    /**
+     * The general form of a specific defect: `tone_check` read `ctx.depth` while the plan
+     * was built from the depth RESOLVED from stakes, so `{ stakes: "SAFETY-CRITICAL" }`
+     * planned eleven stages and skipped the eleventh on every run — recording "[SKIPPED]
+     * Tone Check runs at STANDARD depth and above" about a COMPREHENSIVE run.
+     *
+     * Asserted over every stakes level rather than the one that broke, because the next
+     * depth-sensitive stage would reintroduce it silently.
+     */
+    const REAL_PROMPT = "# SYSTEM PROMPT\n\n## 1. IDENTITY\n- Core Identity: a compiled prompt.";
+    for (const stakes of Object.keys(DEPTH_OF)) {
+      const ctx = { brief: "b", prompt: REAL_PROMPT, stakes } as PipelineContext;
+      for (const stage of planForContext(ctx)) {
+        expect(
+          stage.shouldSkip?.(ctx) ?? false,
+          `${stage.id} is in the plan at stakes ${stakes} (depth ${planDepth(ctx)}) but skips itself`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("planDepth reports the depth the plan is actually built from", () => {
+    expect(planDepth({ stakes: "SAFETY-CRITICAL" })).toBe("COMPREHENSIVE");
+    expect(planDepth({ depth: "TINY", stakes: "HIGH" })).toBe("TINY");
+    // A typo resolves to the same STANDARD `planFor` falls back to, so the two agree.
+    expect(planDepth({ depth: "NONSENSE" })).toBe("STANDARD");
+    expect(planDepth({})).toBe("STANDARD");
+    // Reached from an operator flag, so a Record's inherited keys must not index it.
+    expect(planDepth({ depth: "constructor" })).toBe("STANDARD");
+    expect(planFor(planDepth({ depth: "constructor" })).map((s) => s.id)).toEqual([...STAGE_IDS]);
   });
 
   it("falls back to the full plan rather than an empty one", () => {

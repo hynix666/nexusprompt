@@ -639,16 +639,31 @@ function summarize(id: StageId, ctx: PipelineContext): string {
 }
 
 /**
- * Hash the context WITHOUT the accumulated outputs.
+ * The run's inputs, plus the artifact the remaining consumers of this hash actually read.
  *
  * A stage's input hash should identify what it was given, and every stage is given the
  * whole context — so hashing it verbatim would make every input hash change whenever any
- * earlier stage's output changed, including stages that never read it. The brief, stakes,
- * depth and test message are the run's actual inputs.
+ * earlier stage's output changed, including stages that never read it. That argument is
+ * why `prompt` was excluded, and it stopped being true once the generating stages moved to
+ * `stageInputHash`: they hash the rendered request now and do not come here at all.
+ *
+ * What is left are the deterministic stages, the skip path and the failure path — and all
+ * three read `prompt`. `lint` and `cost_estimate` consume nothing else of substance, and
+ * every one of the five skip predicates tests it.
+ *
+ * Excluding it made `lint` claim an input it did not have. Measured on a reflexive run at
+ * a cap of 2: three lint revisions over three genuinely different prompts recorded ONE
+ * distinct `input_hash` and three distinct `output_hash` values, while `refine` in the same
+ * run recorded three distinct input hashes. An input hash that cannot move while the output
+ * does is the self-contradicting provenance the generating branch fixed for itself; this is
+ * the same fix on the branch that has no request to hash.
+ *
+ * `gateOptions` rides along because it arms four gates, so two lint runs over the same
+ * prompt with different options are different checks and must not share an input hash.
  */
 function redactForHash(ctx: PipelineContext) {
-  const { brief, stakes, depth, testMessage } = ctx;
-  return { brief, stakes, depth, testMessage };
+  const { brief, stakes, depth, testMessage, prompt, gateOptions } = ctx;
+  return { brief, stakes, depth, testMessage, prompt, gateOptions };
 }
 
 function buildRevision(a: {

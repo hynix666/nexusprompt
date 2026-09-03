@@ -179,12 +179,27 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
   },
   {
     id: "refine", kind: "generating",
-    // Two reasons to skip. A clean critique means there is nothing to rewrite. A degraded
+    // Three reasons to skip. A clean critique means there is nothing to rewrite. A degraded
     // prompt means there is nothing real to rewrite INTO — refining a placeholder produces
     // a clean-looking artifact from output no model made, which is the laundering the demo
     // marker exists to prevent.
+    //
+    // A degraded CRITIQUE is the same hole reached through the other input, and it was open
+    // until now. `critique` guards only the direction where a placeholder might read as
+    // PASS_SENTINEL; nothing stopped the opposite. With compile and harden healthy and only
+    // `critique` degraded, this stage spent a provider call asking a model to "resolve EVERY
+    // item" in a placeholder that says no output was produced — and its answer became the
+    // run's artifact, carrying no marker at all. `demo_mode` was true and the artifact said
+    // nothing, which is precisely the split `isPlaceholderArtifact` exists to close: the
+    // artifact is the half that gets read, copied and shipped.
+    //
+    // Skipping keeps the real, un-refined prompt, exactly as `harden`'s skip does. The
+    // prompt is genuine model output and must not be marked; what is missing is the
+    // refinement, and the SKIPPED revision is what says so.
     shouldSkip: (c) =>
-      isPlaceholderArtifact(c.prompt) || refine.shouldSkip({ prompt: c.prompt ?? "", critique: c.critique ?? "" }),
+      isPlaceholderArtifact(c.prompt) ||
+      isPlaceholderArtifact(c.critique) ||
+      refine.shouldSkip({ prompt: c.prompt ?? "", critique: c.critique ?? "" }),
     decide: (c, r) => refine.decide({ prompt: c.prompt ?? "", critique: c.critique ?? "" }, r),
     reduce: (c, o) => ({
       prompt: refine.reduce({ prompt: c.prompt ?? "", critique: c.critique ?? "" }, o).prompt,
@@ -230,7 +245,10 @@ export const PIPELINE: readonly PipelineStage[] = Object.freeze([
   },
   {
     id: "tone_check", kind: "generating",
-    shouldSkip: (c) => isPlaceholderArtifact(c.prompt) || tone.shouldSkip({ prompt: c.prompt ?? "", depth: c.depth }),
+    // `planDepth`, not `c.depth`. The plan is built from the depth the run RESOLVED to, so a
+    // predicate reading the raw request disagrees with the plan it is running inside — see
+    // the note on `planDepth`.
+    shouldSkip: (c) => isPlaceholderArtifact(c.prompt) || tone.shouldSkip({ prompt: c.prompt ?? "", depth: planDepth(c) }),
     decide: (c, r) => tone.decide({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, r),
     reduce: (c, o) => {
       const s = tone.reduce({ prompt: c.prompt ?? "", calibration: c.calibration, depth: c.depth }, o);
@@ -287,9 +305,35 @@ export function planFor(depth: string | undefined): readonly PipelineStage[] {
 export const resolveDepth = (ctx: Pick<PipelineContext, "depth" | "stakes">): string | undefined =>
   ctx.depth ?? DEPTH_OF[ctx.stakes ?? ""];
 
+/**
+ * The depth the run is ACTUALLY at — what `planFor` will build the plan from.
+ *
+ * `resolveDepth` answers a different question: what the caller asked for, which may be
+ * undefined or a typo. `planFor` then quietly falls back to STANDARD. Any stage predicate
+ * that reads `ctx.depth` instead of this is answering the depth question a third way, and
+ * the three answers do not agree.
+ *
+ * They disagreed in production. `tone_check`'s skip rule read `ctx.depth`, so a run given
+ * stakes and no depth — the CLI's default, since `shells/cli` passes `depth: flag("depth")`
+ * — planned eleven stages and skipped the eleventh on every one of them. At
+ * `stakes: "SAFETY-CRITICAL"` the plan resolved to COMPREHENSIVE and the bundle recorded
+ * "[SKIPPED] Tone Check runs at STANDARD depth and above" about a COMPREHENSIVE run: a
+ * false statement, in the record, on the highest-stakes path. The frozen component has no
+ * such split — `const depth = DEPTH_OF[effStakes]` is its only notion of depth — so this
+ * was port drift, and `check:stages` cannot see it because it compares templates and the
+ * stage list, not skip predicates.
+ *
+ * `Object.hasOwn`, not `DEPTH_PLAN[d] ?? …`: the depth string reaches here from an operator
+ * flag, and `"constructor"` indexes a Record straight into `Object`.
+ */
+export function planDepth(ctx: Pick<PipelineContext, "depth" | "stakes">): string {
+  const asked = resolveDepth(ctx);
+  return asked !== undefined && Object.hasOwn(DEPTH_PLAN, asked) ? asked : "STANDARD";
+}
+
 /** The stages to run for a whole context, resolving depth from stakes when it is unset. */
 export const planForContext = (ctx: Pick<PipelineContext, "depth" | "stakes">): readonly PipelineStage[] =>
-  planFor(resolveDepth(ctx));
+  planFor(planDepth(ctx));
 
 /* ── Gate feedback: verdicts as a control signal ──────────────────────────── */
 
