@@ -11,7 +11,7 @@
     "shells/*"
   ],
   "scripts": {
-    "verify": "npm run check:hygiene && npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:counts && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run check:sizing && npm run check:noise && npm run check:anchor && npm run check:matrix && npm run check:manifest-spec && npm run check:truth && npm run check:fence-explanation && npm run check:hash && npm run check:fingerprint && npm run check:examples && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run eval:pipeline && npm run eval:anchor && npm run test && npm run differential",
+    "verify": "npm run check:hygiene && npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:counts && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run check:sizing && npm run check:noise && npm run check:anchor && npm run check:brief-pilot && npm run check:matrix && npm run check:manifest-spec && npm run check:truth && npm run check:fence-explanation && npm run check:hash && npm run check:fingerprint && npm run check:examples && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run eval:pipeline && npm run eval:anchor && npm run test && npm run differential",
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "check:plan": "node scripts/check-plan.mjs",
     "check:citations": "node scripts/check-citations.mjs",
@@ -43,6 +43,9 @@
     "check:matrix": "node scripts/generate-capability-matrix.mjs --check",
     "build:anchor": "tsx scripts/build-anchor.ts",
     "check:anchor": "tsx scripts/build-anchor.ts --check",
+    "build:brief-pilot": "tsx scripts/build-brief-pilot.ts",
+    "check:brief-pilot": "tsx scripts/build-brief-pilot.ts --check",
+    "eval:brief-pilot": "tsx scripts/run-eval.ts --local --suite eval/brief-pilot.json",
     "eval:anchor": "tsx scripts/run-anchor.ts",
     "eval:pipeline": "tsx scripts/run-pipeline-eval.ts",
     "compare:models": "tsx scripts/compare-models.ts",
