@@ -8,6 +8,8 @@ import { runPipeline } from "../src/pipeline.js";
 import { planFor, PIPELINE, DEPTH_PLAN } from "../../core/src/stages/pipeline.js";
 import { plannedPipelineCalls } from "../../core/src/eval/budget.js";
 import { PASS_SENTINEL } from "../../core/src/stages/critique.js";
+import { PLACEHOLDER_PROMPT as LINT_PLACEHOLDER } from "../../core/src/stages/lint.js";
+import { PLACEHOLDER_PROMPT as COST_PLACEHOLDER } from "../../core/src/stages/cost-estimate.js";
 import { COMPILER_SYSTEM } from "../../core/src/stages/stage-kit.js";
 import { STAGE_IDS } from "../../contracts/index.js";
 import type {
@@ -315,6 +317,22 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
     expect(result.stages.filter((s) => s.status === "SKIPPED")).toHaveLength(6);
     expect(result.context.criticVerdict).not.toBe("PASS");
     expect(result.context.prompt).toContain("⟦WORKFLOW DEMO — no model⟧");
+
+    /**
+     * The two DETERMINISTIC stages were the hole in that guard. They carry no `shouldSkip`,
+     * so `lint` gated the placeholder and returned 16 verdicts — 15 PASS — as the run's
+     * authoritative `gate_results`, and `cost_estimate` reported the placeholder's token
+     * count as the prompt size under a per-provider dollar table.
+     *
+     * `lintStatus` is null, not a status: the stage ran and had nothing to check. That is a
+     * third state distinct from "never ran", which is why the field is both optional and
+     * nullable.
+     */
+    expect(result.gate_results).toEqual([]);
+    expect(result.context.lintStatus).toBeNull();
+    expect(result.context.lint).toBe(LINT_PLACEHOLDER);
+    expect(result.context.cost).toBe(COST_PLACEHOLDER);
+    expect(result.context.cost).not.toContain("PROMPT SIZE");
   });
 
   it("does not refine a real prompt against a degraded critique", async () => {
@@ -437,9 +455,26 @@ describe("the exit gate: an eleven-stage run persists and reloads as one bundle"
     // refine declined rather than producing — a placeholder is not a prompt.
     expect(result.stages.find((s) => s.stage_id === "refine")!.status).toBe("SKIPPED");
 
-    // And the deterministic verdict was taken against the labelled artifact, not a
-    // laundered one, so the run's gate results describe what actually exists.
-    expect(result.gate_results.length).toBe(16);
+    /**
+     * This asserted `gate_results.length === 16`, on the reasoning that "the deterministic
+     * verdict was taken against the labelled artifact, not a laundered one, so the run's
+     * gate results describe what actually exists."
+     *
+     * The verdicts existed; the reasoning did not survive looking at them. Fifteen of the
+     * sixteen were PASS — about our own placeholder text — and they are surfaced as
+     * `PipelineRunResult.gate_results`, documented as the run's verdict "against the final
+     * prompt". A near-clean gate sweep for a run that compiled nothing is the same failure
+     * `lint`'s own docblock refuses for the empty case: "a stage that had nothing to check
+     * has not checked anything — reporting PASS there would let an unbuilt pipeline read as
+     * a clean one." A degraded one reading as clean is that sentence with one word changed.
+     *
+     * It was not inert either. `statusOf` derives DEGRADED from the stray WARN, and the CLI
+     * exits on `lintStatus` before it looks at `demo_mode` — so the placeholder's own gate
+     * findings decided the exit code, and a placeholder tripping a FAIL exited 1 "gate
+     * failure" rather than 3 "demo".
+     */
+    expect(result.gate_results).toEqual([]);
+    expect(result.context.lintStatus).toBeNull();
   });
 
   it("harden declines a placeholder too, not just refine", async () => {
