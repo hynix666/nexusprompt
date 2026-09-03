@@ -1,6 +1,6 @@
 # Provider-facing pilot: a brief generator, and whether it pays — design
 
-**Status:** Tasks 1–3 complete, 3 September 2026 — Task 4 (sweep) pending
+**Status:** Tasks 1–4 attempted, 3 September 2026 — sweep produced 1 valid run of 6; measurement invalid (see findings). Task 4 must be re-run.
 **Sub-project:** 2 of 3, pilot phase (noise floor → **provider-facing anchor** → judge)
 **Depends on:** `eval/noise-floor.json`, armed 1 September 2026
 
