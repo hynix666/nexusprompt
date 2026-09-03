@@ -15,6 +15,7 @@
  */
 
 import { estimateTokens } from "../gates/lint-primitives.js";
+import { isPlaceholderArtifact } from "./stage-kit.js";
 
 export const STAGE_ID = "cost_estimate" as const;
 
@@ -44,6 +45,15 @@ export const PRICING: Record<string, { label: string; in: number; out: number; n
 export const ASSUMED_REPLY_TOKENS = 500;
 
 export const NO_PROMPT = "⚠ No compiled prompt to cost yet — run the build stages first.";
+
+/**
+ * The other way there is nothing to cost. See the note on `run`.
+ *
+ * Separate from `NO_PROMPT` for the same reason `lint` keeps the two apart: "never built"
+ * and "built and degraded" are different facts about the run.
+ */
+export const PLACEHOLDER_PROMPT =
+  "⚠ The prompt is a degraded placeholder, not model output — nothing was priced.";
 
 export interface CostRow {
   id: string;
@@ -106,9 +116,26 @@ export function formatCost(rows: readonly CostRow[], provider?: string): string 
   ].join("\n");
 }
 
+/**
+ * Price the compiled prompt.
+ *
+ * **A placeholder has no price, and it used to get one.** The falsiness guard below does
+ * not catch a `⟦WORKFLOW DEMO — no model⟧` body, so a degraded build reported
+ * `PROMPT SIZE — ~94 tok` — the size of our own placeholder text, presented as the size of
+ * a prompt that was never compiled, with a per-provider dollar table under it. This
+ * module's header argues that "an estimate that overstated its own authority would be
+ * worse than none"; costing a non-artifact is that overstatement in its purest form,
+ * because every figure in the table is precise and none of it is about anything.
+ *
+ * The same gap as `lint`'s: the laundering guard reached the generating stages and not the
+ * two deterministic ones.
+ */
 export function run(input: CostInput): CostState {
   if (!input.prompt) {
     return { rows: [], report: NO_PROMPT, selected_total: null };
+  }
+  if (isPlaceholderArtifact(input.prompt)) {
+    return { rows: [], report: PLACEHOLDER_PROMPT, selected_total: null };
   }
   const rows = estimateCost(input.prompt);
   const selected = rows.find((r) => r.id === input.provider);

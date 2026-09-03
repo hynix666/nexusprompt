@@ -23,6 +23,7 @@
 
 import { runGates, type GateOptions } from "../gates/registry.js";
 import { estimateTokens } from "../gates/lint-primitives.js";
+import { isPlaceholderArtifact } from "./stage-kit.js";
 import type { GateResult } from "../../../contracts/index.js";
 
 export const STAGE_ID = "lint" as const;
@@ -55,6 +56,16 @@ export interface LintState {
 
 /** The source's exact wording when there is nothing to lint. */
 export const NO_PROMPT = "⚠ No compiled prompt to lint yet — run the build stages first.";
+
+/**
+ * The other way there is nothing to lint: what arrived is a placeholder, not a prompt.
+ *
+ * Distinct from `NO_PROMPT` because the two facts differ — one build never ran, the other
+ * ran and degraded — and a run that cannot say which is not auditable. Same shape of
+ * distinction as `DEMO_MARKER` versus `UNUSABLE_MARKER`.
+ */
+export const PLACEHOLDER_PROMPT =
+  "⚠ The prompt is a degraded placeholder, not model output — nothing was gated.";
 
 /**
  * Derive the run status from the gate verdicts.
@@ -101,10 +112,32 @@ function flagsFor(options: GateOptions): string {
  * that had nothing to check has not checked anything — reporting PASS there would let an
  * unbuilt pipeline read as a clean one, which is the same failure demo mode exists to
  * prevent one layer up.
+ *
+ * **A placeholder is nothing to check, and it took the other branch.** The guard above
+ * tests falsiness, and a placeholder is a non-empty string, so a degraded build sailed
+ * straight into `runGates`. Measured against a `⟦WORKFLOW DEMO — no model⟧` compile
+ * failure: **16 verdicts, 15 of them PASS**, returned as `PipelineRunResult.gate_results`
+ * — the field documented as the RUN's verdict "against the final prompt". Fifteen passes
+ * about our own placeholder text read as a clean prompt, which is the precise sentence the
+ * paragraph above forbids, reached by the one input it did not test for.
+ *
+ * The laundering guard was added to the six GENERATING stages (`critic`, `preview` and
+ * `tone_check` all decline a placeholder) and the two deterministic ones were not touched
+ * — so `lint`, the stage whose verdicts are authoritative, was the one attestation stage
+ * still certifying a non-artifact.
+ *
+ * Fixed here rather than as a `shouldSkip` in the registry, for two reasons. The rule
+ * belongs to linting, not to one pipeline's wiring, so every caller inherits it. And
+ * `LintStatus | null` on an OPTIONAL field already models the three states this needs:
+ * absent means the stage never ran, null means it ran and had nothing to check, and a
+ * status means it checked. A skip would collapse the middle one into the first.
  */
 export function run(input: LintInput): LintState {
   if (!input.prompt) {
     return { status: null, report: NO_PROMPT, gate_results: [], token_estimate: 0 };
+  }
+  if (isPlaceholderArtifact(input.prompt)) {
+    return { status: null, report: PLACEHOLDER_PROMPT, gate_results: [], token_estimate: 0 };
   }
   const options = input.options ?? {};
   const gate_results = runGates(input.prompt, options);

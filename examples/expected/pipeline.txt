@@ -10,8 +10,7 @@ pipeline ./examples/briefs/support-bot.md   run <RUN_ID> · stakes MEDIUM · 7 s
   skip preview
   ok   cost_estimate
 
-[DEGRADED] token_estimate=127
-  WARN GUARDRAIL_GAP: Missing guardrail clause(s): anti-override, scope, fact-grounding.
+⚠ The prompt is a degraded placeholder, not model output — nothing was gated.
 
 compiled prompt
 ⟦WORKFLOW DEMO — no model⟧

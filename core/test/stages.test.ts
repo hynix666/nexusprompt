@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   fillTemplate, unknownSlots, buildRequest, BLUEPRINT, NO_CALIBRATION, DEMO_MARKER, COMPILER_SYSTEM,
+  failurePlaceholder, UNUSABLE_MARKER,
 } from "../src/stages/stage-kit.js";
 import * as deconstruct from "../src/stages/deconstruct.js";
 import * as calibrate from "../src/stages/calibrate.js";
@@ -353,6 +354,34 @@ describe("lint", () => {
     expect(state.gate_results).toEqual([]);
   });
 
+  it("a degraded placeholder is not a passing lint either", () => {
+    /**
+     * The falsiness guard above does not catch a placeholder — it is a non-empty string —
+     * so a degraded build reached `runGates` and came back with SIXTEEN verdicts, fifteen
+     * of them PASS, about our own `⟦WORKFLOW DEMO — no model⟧` text. Those verdicts are
+     * returned as `PipelineRunResult.gate_results`, the field documented as the run's
+     * verdict against the final prompt, so a run that never compiled anything reported a
+     * near-clean gate sweep.
+     *
+     * The laundering guard was added to the six generating stages and not to the two
+     * deterministic ones, which left `lint` — whose verdicts are the authoritative ones —
+     * as the last attestation stage still certifying a non-artifact.
+     */
+    const placeholder = failurePlaceholder("compile", "a support bot", {
+      request_id: "r", category: "UNAVAILABLE", retriable: false, reason_code: "unreachable",
+      safe_message: "The provider could not be reached.", retry_after_ms: null,
+      attempt: 1, provider_id: "local-proxy",
+    });
+    const state = lint.run({ prompt: placeholder });
+    expect(state.status).toBeNull();
+    expect(state.gate_results).toEqual([]);
+    expect(state.report).toBe(lint.PLACEHOLDER_PROMPT);
+    // Distinct from NO_PROMPT: "never built" and "built and degraded" are different facts.
+    expect(state.report).not.toBe(lint.NO_PROMPT);
+    // The UNUSABLE marker is the other half of the same guarantee and must behave the same.
+    expect(lint.run({ prompt: `${UNUSABLE_MARKER}\n\nunparseable` }).status).toBeNull();
+  });
+
   it("annotates which opt-in checks were armed", () => {
     const state = lint.run({ prompt: CLEAN, options: { safetyTier: true, recursiveTarget: true } });
     expect(state.report).toContain("[safety-tier: GUARDRAIL_GAP → FAIL]");
@@ -406,6 +435,25 @@ describe("cost_estimate", () => {
   it("no prompt is not a zero cost", () => {
     const state = cost.run({});
     expect(state.report).toBe(cost.NO_PROMPT);
+    expect(state.rows).toEqual([]);
+    expect(state.selected_total).toBeNull();
+  });
+
+  it("a degraded placeholder is not priced", () => {
+    /**
+     * It reported `PROMPT SIZE — ~94 tok` — the size of the placeholder text — under a
+     * per-provider dollar table, presented as the cost of a prompt that was never compiled.
+     * Every figure precise, none of it about anything. This module's header says an
+     * estimate that overstated its own authority would be worse than none.
+     */
+    const placeholder = failurePlaceholder("compile", "a support bot", {
+      request_id: "r", category: "UNAVAILABLE", retriable: false, reason_code: "unreachable",
+      safe_message: "The provider could not be reached.", retry_after_ms: null,
+      attempt: 1, provider_id: "local-proxy",
+    });
+    const state = cost.run({ prompt: placeholder, provider: "anthropic" });
+    expect(state.report).toBe(cost.PLACEHOLDER_PROMPT);
+    expect(state.report).not.toContain("PROMPT SIZE");
     expect(state.rows).toEqual([]);
     expect(state.selected_total).toBeNull();
   });
