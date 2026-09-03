@@ -10,6 +10,6 @@
     "reproducibility claims separate."
   ],
   "algorithm": "sha256 over sorted `path sha256(lf-normalised content)` lines",
-  "files": 85,
-  "hash": "c5e979f36505d8b8ea104c6da8d5983877562134d2d8aa0802713c84632f6979"
+  "files": 86,
+  "hash": "8d9b0d9949c7a56598e453f8cb409dea6682041eaceb171339da36dea2628285"
 }
