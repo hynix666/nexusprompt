@@ -219,7 +219,7 @@ export const CONTRACT_VERSIONS = {
   "eval-run": "2.0.0",
   comparison: "2.2.0",
   configuration: "1.3.0",
-  "judge-verdict": "1.1.0",
+  "judge-verdict": "1.2.0",
 } as const;
 
 export interface ExecutionProvenance {
@@ -425,6 +425,8 @@ export interface JudgeVerdict {
     reference?: string;
     benchmark?: string;
   } | null;
+  /** Added in 1.2.0. Per-dimension scores for a multi-axis rubric; null for a single-scalar verdict. */
+  rubric_breakdown?: Record<string, { score: number; reason: string }> | null;
 }
 
 /** The port. The judge is an effect, so it lives behind the Application like any provider. */
@@ -443,15 +445,27 @@ export interface JudgeTransport {
  * discarded. A plane that computes evidence and does not retain it cannot answer "is this
  * better than last month", which is the only question the system exists to answer.
  */
-export type EvidenceKind = "eval-run" | "comparison" | "baseline" | "promotion";
+export type EvidenceKind = "eval-run" | "comparison" | "baseline" | "promotion" | "judgement";
 
 export interface EvidenceRecord {
   kind: EvidenceKind;
   /** Unique within its kind. The store refuses a second write under the same pair. */
   id: string;
   created_at: string;
-  /** The contract-validated body — an EvalRun, Comparison, Baseline or Promotion. */
+  /** The contract-validated body — an EvalRun, Comparison, Baseline, Promotion or Judgement. */
   body: unknown;
+}
+
+/**
+ * One judge grading of one run, recorded as evidence. Unlike Baseline or Comparison, a run
+ * may have many of these — the judge is stochastic, so repeated judging produces separate,
+ * independently-dated records rather than one being overwritten.
+ */
+export interface Judgement {
+  judgement_id: string;
+  run_id: string;
+  created_at: string;
+  verdict: JudgeVerdict;
 }
 
 export interface EvidenceSummary {

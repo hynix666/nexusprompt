@@ -1,5 +1,13 @@
 # Contract changelog
 
+> **2026-09-03 (brief-fidelity judge — contracts).** `judge-verdict` bumped 1.1.0 → 1.2.0:
+> adds optional `rubric_breakdown`, a per-dimension score map, additive and non-breaking. New
+> schema `contracts/judgement.schema.json` (1.0.0) wraps a `JudgeVerdict` with `judgement_id`,
+> `run_id` and `created_at` — the evidence-plane record for "this run was judged", kept
+> separate from `judge-verdict` because that contract grades any candidate against any rubric
+> and should not couple to the pipeline's `run_id` concept. `EvidenceKind` gains `"judgement"`
+> as a fifth variant. See `docs/superpowers/specs/2026-09-03-brief-fidelity-judge-design.md`.
+
 > **2026-08-29 (artifact-reference lineage — implementation, corrected).** The
 > `revision-entry` schema bump is producer-backed: `contracts/index.ts` gained
 > `input_ref`/`output_ref` on `RevisionEntry` (nullable, `null` = "not retained here"), the

@@ -25,7 +25,8 @@ enforces, so this table and that test cannot disagree.
 | `eval-run` | 2.0.0 | validated |
 | `eval-suite` | 2.0.1 | validated |
 | `gate-result` | 1.3.0 | validated |
-| `judge-verdict` | 1.1.0 | validated |
+| `judge-verdict` | 1.2.0 | validated |
+| `judgement` | 1.0.0 | validated |
 | `observability-event` | 1.3.0 | validated |
 | `pipeline-outcome` | 1.0.0 | validated |
 | `promotion` | 1.0.0 | validated |
@@ -35,7 +36,7 @@ enforces, so this table and that test cannot disagree.
 | `run-manifest` | 1.0.0 | validated |
 | `technique-record` | 1.3.0 | validated |
 
-**16 of 17** schemas are validated against a value the system produced.
+**17 of 18** schemas are validated against a value the system produced.
 
 ### Columns this table does not have
 

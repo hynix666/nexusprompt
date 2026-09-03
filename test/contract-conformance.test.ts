@@ -85,6 +85,7 @@ const validators: Record<string, ValidateFunction> = {
   "eval-run": ajv.compile(load("eval-run")),
   "comparison": ajv.compile(load("comparison")),
   "judge-verdict": ajv.compile(load("judge-verdict")),
+  "judgement": ajv.compile(load("judgement")),
   "baseline": ajv.compile(load("baseline")),
   "promotion": ajv.compile(load("promotion")),
   "routing-policy": ajv.compile(load("routing-policy")),
@@ -771,6 +772,87 @@ describe("evaluation plane, against values the suite actually produced", () => {
 
     expect(report(validators["judge-verdict"], verdict)).toBe(true);
     expect(verdict.judge_family).not.toBe("family-under-test");
+  });
+
+  it("judge-verdict validates a verdict carrying a rubric_breakdown", async () => {
+    const inner = {
+      judge_id: "conformance-judge",
+      judge_family: "other-family",
+      async grade(req: any) {
+        return {
+          verdict: 9, rationale: null,
+          judge_id: "conformance-judge", judge_family: "other-family",
+          rubric_id: req.rubric_id, rubric_hash: req.rubric_hash,
+          runs: req.runs, disagreement_rate: 0.0, position_randomized: req.position_randomized,
+          rubric_breakdown: {
+            domain_captured: { score: 3, reason: "billing domain named explicitly" },
+            constraints_honored: { score: 3, reason: "no constraints dropped" },
+            completeness: { score: 2, reason: "one minor requirement omitted" },
+            no_overreach: { score: 3, reason: "no unrequested additions" },
+          },
+        };
+      },
+    };
+    const verdict = await new GuardedJudge(inner as any).grade({
+      candidate: "# SYSTEM PROMPT\n\nScope: billing only.",
+      rubric_id: "brief-fidelity-v1",
+      rubric_template: "Grade the candidate against the four-dimension rubric.",
+      candidate_family: "family-under-test",
+      verification_status: "judge-checkable",
+      calibration: {
+        metric: "cohens-kappa", value: 0.82, threshold: 0.6,
+        measured_at: "2026-08-20T00:00:00.000Z", reference: "mutation-derived-v1",
+        max_age_days: 30,
+      },
+    }, "2026-08-19T00:00:00.000Z", "2026-08-22T00:00:00.000Z");
+
+    expect(report(validators["judge-verdict"], verdict)).toBe(true);
+    expect(verdict.rubric_breakdown?.domain_captured.score).toBe(3);
+  });
+
+  it("judgement validates a record wrapping a real verdict", async () => {
+    const inner = {
+      judge_id: "conformance-judge",
+      judge_family: "other-family",
+      async grade(req: any) {
+        return {
+          verdict: 9, rationale: null,
+          judge_id: "conformance-judge", judge_family: "other-family",
+          rubric_id: req.rubric_id, rubric_hash: req.rubric_hash,
+          runs: req.runs, disagreement_rate: 0.0, position_randomized: req.position_randomized,
+        };
+      },
+    };
+    const verdict = await new GuardedJudge(inner as any).grade({
+      candidate: "# SYSTEM PROMPT\n\nScope: billing only.",
+      rubric_id: "brief-fidelity-v1",
+      rubric_template: "Grade the candidate.",
+      candidate_family: "family-under-test",
+      verification_status: "judge-checkable",
+      calibration: {
+        metric: "cohens-kappa", value: 0.82, threshold: 0.6,
+        measured_at: "2026-08-20T00:00:00.000Z", reference: "mutation-derived-v1",
+        max_age_days: 30,
+      },
+    }, "2026-08-19T00:00:00.000Z", "2026-08-22T00:00:00.000Z");
+
+    const judgement = {
+      judgement_id: "j-conformance-1",
+      run_id: "run-conformance-1",
+      created_at: "2026-09-03T00:00:00.000Z",
+      verdict,
+    };
+    expect(report(validators["judgement"], judgement)).toBe(true);
+  });
+
+  it("judgement rejects a record with no run_id", () => {
+    expect(validators["judgement"]({
+      judgement_id: "j-1", created_at: "2026-09-03T00:00:00.000Z",
+      verdict: {
+        verdict: "PASS", judge_id: "j", judge_family: "f", rubric_id: "r",
+        runs: 3, disagreement_rate: 0, position_randomized: true,
+      },
+    })).toBe(false);
   });
 
   it("judge-verdict rejects an agreement with no measurement date", () => {
