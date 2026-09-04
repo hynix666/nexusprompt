@@ -44,7 +44,7 @@ components were rejected by it.
 | Product name | **NexusPrompt** (contract `$id` hosts and `sources/` keep the older `promptnexus` — ADR-0009) |
 | Language / runtime | TypeScript 5.9, Node 24, ESM, `module: NodeNext` |
 | Package manager | **npm workspaces** — *not* pnpm (pnpm is not installed; older docs say otherwise) |
-| Repo | `github.com/hynix666/nexusprompt` (private), branch `master`, CI green |
+| Repo | `github.com/hynix666/nexusprompt` (public), branch `master`, CI green, `master` protected |
 | Headline command | `npm install && npm run verify` — ~30 s, offline. 25 checks before the suite |
 | Tests | 1,393 passing, 0 failing, across 36 files |
 | Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
