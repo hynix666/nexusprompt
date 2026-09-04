@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://promptnexus.dev/contracts/judgement/1.0.0",
+  "title": "Judgement",
+  "description": "One judge grading of one run, recorded as evidence. A run may have zero, one, or many judgements — repeated judging of one run produces separate records rather than overwriting, since the judge itself is stochastic.",
+  "type": "object",
+  "required": ["judgement_id", "run_id", "created_at", "verdict"],
+  "additionalProperties": false,
+  "properties": {
+    "judgement_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "verdict": { "$ref": "https://promptnexus.dev/contracts/judge-verdict/1.2.0" }
+  }
+}

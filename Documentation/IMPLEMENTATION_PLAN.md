@@ -21,11 +21,12 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "target": 11
   },
   "contracts": {
-    "schemas": 17
+    "schemas": 18
   },
   "adapters": [
     "content-local",
     "evidence-local",
+    "provider-hosted-judge",
     "provider-local-proxy",
     "provider-ollama",
     "storage-local"
@@ -49,6 +50,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "build:anchor",
     "build:brief-pilot",
     "build:hash",
+    "build:judge-calibration",
     "check:anchor",
     "check:brief-pilot",
     "check:catalog",
@@ -62,6 +64,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "check:hash",
     "check:fingerprint",
     "check:hygiene",
+    "check:judge",
     "check:manifest-spec",
     "check:matrix",
     "check:noise",
@@ -90,6 +93,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "eval:compare",
     "eval:pipeline",
     "import:catalog",
+    "judge",
     "lint:boundaries",
     "lint:sources",
     "sweep:models",
@@ -118,11 +122,11 @@ The completed work is a **vertical slice**, not a set of finished layers. It cut
 
 ```
                         built          target
-contracts   ████████████████████       17 schemas — all 17 validated against values a real run produced
+contracts   ████████████████████       18 schemas — all 18 validated against values a real run produced
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
-adapters    ████████████████████▒▒▒▒   5 built; hosted-server and storage-db still absent
+adapters    ████████████████████▒▒▒▒   6 built; hosted-server and storage-db still absent
 shells      █████████████▒▒▒▒▒▒▒▒       2 of 3 — cli runs the full pipeline; api exposes the first REST slice
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
 release     █████████████▒▒▒▒▒▒▒       gate + matrix generator + CI workflow; never executed, no build hash

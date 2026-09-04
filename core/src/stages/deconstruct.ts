@@ -45,6 +45,58 @@ export function decide(input: DeconstructInput, run_id: string): GenerationReque
   return buildRequest(run_id, STAGE_ID, fillTemplate(TEMPLATE, { brief: input.brief }));
 }
 
+/**
+ * The literal text surrounding `{brief}` in TEMPLATE, split from TEMPLATE itself.
+ *
+ * Derived, never transcribed. A hand-copied delimiter pair is a second copy of the template's
+ * wording that nothing compares against the first, and the two would drift the first time the
+ * template's prose changed — silently, because the failure is "the brief no longer extracts",
+ * which looks like a missing artifact rather than a stale constant.
+ */
+const BRIEF_PARTS = TEMPLATE.split("{brief}");
+const [BRIEF_PREFIX, BRIEF_SUFFIX] = BRIEF_PARTS;
+
+/**
+ * Exactly one `{brief}` slot, or the inversion below is not one.
+ *
+ * `fillTemplate`'s replace is GLOBAL, so a template naming the slot twice renders the brief
+ * twice, and there is no longer a single span to slice back out — the length arithmetic would
+ * return the first copy plus the template prose between the two, and call it the brief. Two
+ * parts is the condition under which `extractBrief` is an inverse at all; anything else and it
+ * must say it cannot invert rather than return the plausible-looking wrong answer.
+ */
+const BRIEF_SLOT_IS_INVERTIBLE = BRIEF_PARTS.length === 2;
+
+/**
+ * Recover the ORIGINAL BRIEF from a rendered `deconstruct` user turn.
+ *
+ * A run does not retain its brief as a bare artifact anywhere: `application/src/pipeline.ts`
+ * retains each stage's input as the rendered provider request, so the only place the brief
+ * survives in a completed bundle is interpolated into this stage's template. This is the
+ * inverse of `decide`'s `fillTemplate(TEMPLATE, { brief })` and the only honest way to read a
+ * finished run's brief back out.
+ *
+ * Null rather than a guess when the text is not a rendered deconstruct turn. Whatever a
+ * loose parse returned would be graded as though it were the run's real input, and a fidelity
+ * score against a brief the run never saw is worse than no score at all — the caller's job is
+ * to refuse, not to substitute.
+ *
+ * Safe against a brief that contains the delimiters itself: the slice is taken by LENGTH from
+ * each end, never by searching for the marker, so a brief quoting "Extract and output, as
+ * labeled sections:" round-trips unharmed.
+ */
+export function extractBrief(renderedUserTurn: string): string | null {
+  // The template stopped naming `{brief}` exactly once: there is no single slot to invert.
+  if (!BRIEF_SLOT_IS_INVERTIBLE) return null;
+  if (!renderedUserTurn.startsWith(BRIEF_PREFIX)) return null;
+  if (!renderedUserTurn.endsWith(BRIEF_SUFFIX)) return null;
+  const end = renderedUserTurn.length - BRIEF_SUFFIX.length;
+  // Prefix and suffix overlapping means the text is shorter than the template's own fixed
+  // parts, so it cannot be a rendering of it.
+  if (end < BRIEF_PREFIX.length) return null;
+  return renderedUserTurn.slice(BRIEF_PREFIX.length, end);
+}
+
 export function reduce(
   input: DeconstructInput,
   outcome: GenerationResult | ProviderFailure,

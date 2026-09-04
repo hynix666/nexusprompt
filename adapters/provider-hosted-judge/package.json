@@ -1,0 +1,6 @@
+{
+  "name": "@nexusprompt/adapters-provider-hosted-judge",
+  "license": "MIT",
+  "private": true,
+  "type": "module"
+}

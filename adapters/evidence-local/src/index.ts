@@ -32,7 +32,7 @@ import type {
   EvidenceFilter, EvidenceKind, EvidenceRecord, EvidenceStore, EvidenceSummary, RetentionScope,
 } from "../../../contracts/index.js";
 
-const KINDS: readonly EvidenceKind[] = ["eval-run", "comparison", "baseline", "promotion"];
+const KINDS: readonly EvidenceKind[] = ["eval-run", "comparison", "baseline", "promotion", "judgement"];
 
 /**
  * Ids reach here from commands and from run output. Refuse anything that is not a plain

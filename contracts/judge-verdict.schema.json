@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/judge-verdict/1.1.0",
+  "$id": "https://promptnexus.dev/contracts/judge-verdict/1.2.0",
   "title": "JudgeVerdict",
   "description": "A grader's output, carrying enough about the grader to be readable as evidence. The largest systematic evaluation to date — 21 judges, nine providers, ~541,000 judgments — found reliability and validity come apart: test-retest above 0.95 coexisted with severe position bias in two production-deployed judges. A verdict without its audit is a number of unknown meaning.",
   "type": "object",
@@ -69,6 +69,19 @@
         "benchmark": {
           "type": "string",
           "description": "Named, because judge rankings shift by up to 14 positions across benchmarks. Validation on one benchmark does not transfer to another."
+        }
+      }
+    },
+    "rubric_breakdown": {
+      "type": ["object", "null"],
+      "description": "Optional per-dimension scores for a rubric that grades more than one axis. Null when verdict is a single scalar. Added in 1.2.0 for the brief-fidelity rubric, which grades four independent dimensions rather than one PASS/FAIL.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["score", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "score": { "type": "number" },
+          "reason": { "type": "string" }
         }
       }
     }

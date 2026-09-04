@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mostly documentation, plus **one vertical slice that really runs**. It holds:
 
-- `Documentation/` — 53 Markdown files describing the *target* architecture of the platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists — nine of the files landed on 2 September 2026 as further planning documents, so the gap widened rather than closed.
+- `Documentation/` — 54 Markdown files describing the *target* architecture of the platform, plus three review documents assessing it. This is still the bulk of the repository, and it still describes a system far larger than what exists — nine of the files landed on 2 September 2026 as further planning documents, so the gap widened rather than closed.
 - `sources/` — 420 files extracted from five archives, frozen and SHA-256-verified against `sources/MANIFEST.json`. Read from these; never write into them.
 - A working slice: `contracts/`, `core/` (16 of 16 gates, 11 pipeline stages), `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `adapters/evidence-local`, `shells/cli`, `scripts/`, `test/`.
 - `LLM/` — an 811 MB int4 ONNX model and tokenizer, gitignored. **Not wired to anything, and not wire-able as dropped**: it is an ONNX Runtime GenAI export missing `genai_config.json`, so the architecture parameters needed to drive generation are absent. Do not guess them — a wrong value produces fluent garbage, which is the one failure demo mode exists to make impossible.

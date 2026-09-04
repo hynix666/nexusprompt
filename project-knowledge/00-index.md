@@ -50,7 +50,7 @@ components were rejected by it.
 | Differential oracle | 2,784 gate verdicts vs the frozen Python linter; 17 differ **deliberately**, each with a reason and an ADR |
 | Gates | 16 of 16 ported |
 | Pipeline stages | 11 |
-| Contracts | 17 JSON Schemas, all validated against produced values |
+| Contracts | 18 JSON Schemas, all validated against produced values |
 | Adapters | 4 built (provider-local-proxy, storage-local, evidence-local, content-local) |
 | Shells | 2 built — `cli` and `api` (adopted 29 Aug, ADR-0012; typechecked and tested). 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
 | Source size | ~28,600 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/ spec/` |
@@ -90,7 +90,7 @@ sentence in this knowledge base saying *stubbed* or *never executed* stops being
 | [05-configuration-and-deployment.md](./05-configuration-and-deployment.md) | Env vars, tsconfig, CI, `verify` composition, the corpus |
 | [06-testing-and-quality.md](./06-testing-and-quality.md) | Vitest projects, mutation probes, the differential oracle, fixture discipline |
 | [07-dependencies.md](./07-dependencies.md) | Eight dev dependencies and why each one is there |
-| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 15 ADRs, the truth boundary, the open register, and the recurring defect patterns |
+| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 16 ADRs, the truth boundary, the open register, and the recurring defect patterns |
 | [09-commands-and-workflows.md](./09-commands-and-workflows.md) | Every npm script, what it checks, and the common workflows |
 | [10-source-code-summary.md](./10-source-code-summary.md) | Key modules, reusable patterns, code idioms worth keeping |
 
@@ -103,7 +103,7 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 
 | Path | Purpose |
 |---|---|
-| `contracts/` | 17 versioned JSON Schemas + `index.ts` TypeScript bindings. The sole cross-boundary interface |
+| `contracts/` | 18 versioned JSON Schemas + `index.ts` TypeScript bindings. The sole cross-boundary interface |
 | `contracts/CHANGELOG.md` | Why every version moved. ADR-0002 requires an entry per bump |
 | `core/src/gates/` | 16 pure gate implementations + registry |
 | `core/src/stages/` | 11 pipeline stages + `pipeline.ts` (depth plan, gate feedback) |
@@ -123,7 +123,7 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `scripts/divergence-allowlist.json` | 4 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
-| `Documentation/` | 53 Markdown files: 15 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary, and nine 2026 planning documents added 2 September 2026 |
+| `Documentation/` | 54 Markdown files: 16 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary, and nine 2026 planning documents added 2 September 2026 |
 | `docs/superpowers/specs/` | The corpus-grounded spec that drove Phases α–ζ |
 | `test/` | Cross-cutting: contract conformance, evidence conformance, checker tests |
 | `.github/workflows/verify.yml` | CI. Runs `npm run verify` on every push and PR. Actions pinned to commit SHAs, not mutable tags |

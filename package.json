@@ -11,7 +11,7 @@
     "shells/*"
   ],
   "scripts": {
-    "verify": "npm run check:hygiene && npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:counts && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run check:sizing && npm run check:noise && npm run check:anchor && npm run check:brief-pilot && npm run check:matrix && npm run check:manifest-spec && npm run check:truth && npm run check:fence-explanation && npm run check:hash && npm run check:fingerprint && npm run check:examples && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run eval:pipeline && npm run eval:anchor && npm run test && npm run differential",
+    "verify": "npm run check:hygiene && npm run lint:boundaries && npm run typecheck && npm run verify:sources && npm run check:counts && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run check:sizing && npm run check:noise && npm run check:judge && npm run check:anchor && npm run check:brief-pilot && npm run check:matrix && npm run check:manifest-spec && npm run check:truth && npm run check:fence-explanation && npm run check:hash && npm run check:fingerprint && npm run check:examples && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run eval:pipeline && npm run eval:anchor && npm run test && npm run differential",
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "check:plan": "node scripts/check-plan.mjs",
     "check:citations": "node scripts/check-citations.mjs",
@@ -64,7 +64,10 @@
     "example:pipeline": "tsx scripts/examples.ts --pipeline",
     "example:refuse": "tsx scripts/examples.ts --refuse",
     "check:examples": "tsx scripts/examples.ts --check",
-    "docs:examples": "tsx scripts/examples.ts --write"
+    "docs:examples": "tsx scripts/examples.ts --write",
+    "build:judge-calibration": "tsx scripts/build-judge-calibration.ts",
+    "check:judge": "tsx scripts/check-judge.ts",
+    "judge": "tsx scripts/judge.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",
