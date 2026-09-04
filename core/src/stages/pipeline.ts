@@ -12,10 +12,25 @@
  * a switch would spread eleven ad-hoc argument mappings across a runner nobody wants to
  * read. The mapping lives beside each stage instead, in one table.
  *
- * **Three kinds, because the stages genuinely differ.** Six generate and need
+ * **Two kinds, because the stages genuinely differ.** Nine generate and need
  * `decide → invoke → reduce`. Two are deterministic and have no `decide` at all: forcing
- * them into the split would produce a request nothing should execute. Three carry a skip
- * rule, so "did not run" is a first-class outcome rather than an absent one.
+ * them into the split would produce a request nothing should execute. Six carry a skip
+ * rule, so "did not run" is a first-class outcome rather than an absent one — a property
+ * that cuts ACROSS the kinds rather than forming a third, and one every skip-carrying stage
+ * happens to share with the generating half today.
+ *
+ * Every count in that paragraph except the deterministic one was wrong from the commit that
+ * wrote it (`ed62f31`) until it was corrected — the registry already held more generating
+ * stages and more skip rules than it claimed. The old text also counted the skip rule as a
+ * third kind, which made the three figures sum to eleven and read as a partition; they never
+ * were one, and `PipelineStage` is a union of exactly two.
+ *
+ * The wrong figures are deliberately not restated here. `check:counts` re-derives every
+ * pinned number in the DOCS from the repository and would have caught this in a Markdown
+ * file, but it does not read source comments — so the drift landed in the one file whose
+ * whole job is to be the single description of the pipeline's shape, and a comment quoting
+ * stale numerals back is how that recurs. `core/test/pipeline-plan.test.ts` derives the
+ * three figures from `PIPELINE` and asserts this header states them.
  */
 
 
