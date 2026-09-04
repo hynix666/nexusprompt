@@ -11,5 +11,5 @@
   ],
   "algorithm": "sha256 over sorted `path sha256(lf-normalised content)` lines",
   "files": 87,
-  "hash": "26f49206b11db7d505db1f1ad7951fc28a7873a375f3c079efe881434740424f"
+  "hash": "e98b40988edc4b8e14b0c6a6a0857e30681ebd3a6f16a9d70a9ff29d8e74b968"
 }

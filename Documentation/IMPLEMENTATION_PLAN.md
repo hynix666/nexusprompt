@@ -64,6 +64,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "check:hash",
     "check:fingerprint",
     "check:hygiene",
+    "check:judge",
     "check:manifest-spec",
     "check:matrix",
     "check:noise",
