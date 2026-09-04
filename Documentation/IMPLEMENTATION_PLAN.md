@@ -93,6 +93,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "eval:compare",
     "eval:pipeline",
     "import:catalog",
+    "judge",
     "lint:boundaries",
     "lint:sources",
     "sweep:models",

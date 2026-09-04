@@ -66,7 +66,8 @@
     "check:examples": "tsx scripts/examples.ts --check",
     "docs:examples": "tsx scripts/examples.ts --write",
     "build:judge-calibration": "tsx scripts/build-judge-calibration.ts",
-    "check:judge": "tsx scripts/check-judge.ts"
+    "check:judge": "tsx scripts/check-judge.ts",
+    "judge": "tsx scripts/judge.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",
