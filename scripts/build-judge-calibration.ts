@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { HostedJudgeTransport } from "../adapters/provider-hosted-judge/src/index.js";
 import { buildFidelityCandidate, BRIEF_FIDELITY_RUBRIC_TEMPLATE, RUBRIC_DIMENSIONS } from "../core/src/eval/brief-fidelity.js";
-import { isolatesCleanly, cohensKappa, derivePairs, type RubricBreakdown } from "../core/src/eval/judge-calibration.js";
+import { aggregatePairs, cohensKappa, type RawScoreEntry, type RubricBreakdown } from "../core/src/eval/judge-calibration.js";
 
 interface Fixture {
   id: string;
@@ -51,15 +51,20 @@ async function main() {
 
   const fixtures: Fixture[] = JSON.parse(readFileSync("eval/judge-validation-fixtures.json", "utf8"));
   const transport = new HostedJudgeTransport();
-  const kept: Array<{ fixture: string; dimension: string }> = [];
-  const allPairs: Array<[boolean, boolean]> = [];
   /**
    * Raw per-fixture scores, recorded in the artifact so check:judge can re-derive isolation
    * and kappa from committed data alone, with no network — the whole point of a CI gate.
    * Without this, the artifact would carry only a claimed kappa, and check:judge could do no
    * better than trust it.
+   *
+   * Grading fills this and NOTHING ELSE. Isolation, the kept set and the pairs are all derived
+   * from it afterwards by `aggregatePairs` — the same call check:judge makes over the same
+   * committed field. An aggregation computed inline while grading is an aggregation the checker
+   * has to reproduce from a different piece of code, and that is exactly how the two drifted:
+   * the inline loop re-emitted each fixture's clean observations once per surviving mutation,
+   * inflating n and tying the kappa's weighting to isolation success.
    */
-  const rawScores: Array<{ fixture: string; clean: RubricBreakdown; mutations: Record<string, RubricBreakdown> }> = [];
+  const rawScores: RawScoreEntry[] = [];
 
   for (const fixture of fixtures) {
     console.error(`grading fixture: ${fixture.id}`);
@@ -68,37 +73,44 @@ async function main() {
 
     for (const dim of RUBRIC_DIMENSIONS) {
       const mutatedPrompt = fixture.mutations[dim];
-      const mutated = await gradeOne(transport, fixture.brief, mutatedPrompt);
-      mutationScores[dim] = mutated;
-
-      if (!isolatesCleanly(clean, mutated, dim)) {
-        console.error(`  DROPPED (does not isolate): ${fixture.id} / ${dim}`);
-        continue;
-      }
-
-      allPairs.push(...derivePairs(clean, mutated, dim));
-      kept.push({ fixture: fixture.id, dimension: dim });
+      mutationScores[dim] = await gradeOne(transport, fixture.brief, mutatedPrompt);
     }
 
     rawScores.push({ fixture: fixture.id, clean, mutations: mutationScores });
   }
 
-  const kappa = cohensKappa(allPairs);
+  const { kept, pairs } = aggregatePairs(rawScores);
+  const keptSet = new Set(kept);
+  for (const entry of rawScores) {
+    for (const dim of RUBRIC_DIMENSIONS) {
+      if (!keptSet.has(`${entry.fixture}/${dim}`)) {
+        console.error(`  DROPPED (does not isolate): ${entry.fixture} / ${dim}`);
+      }
+    }
+  }
+
+  if (kept.length === 0) {
+    console.error("no mutation isolated cleanly; there is nothing to calibrate against. Nothing written.");
+    process.exit(1);
+  }
+
+  const kappa = cohensKappa(pairs);
   const artifact = {
     measured_on: new Date().toISOString().slice(0, 10),
     reference: "mutation-derived-v1",
     fixtures_total: fixtures.length,
     mutations_kept: kept.length,
     mutations_total: fixtures.length * RUBRIC_DIMENSIONS.length,
-    labelled_dimension_instances: allPairs.length,
+    // F x D clean instances + K x D mutated ones. See aggregatePairs.
+    labelled_dimension_instances: pairs.length,
     cohens_kappa: kappa,
     threshold: 0.6,
     max_age_days: 30,
-    kept_mutations: kept.map((k) => `${k.fixture}/${k.dimension}`),
+    kept_mutations: kept,
     raw_scores: rawScores,
   };
   writeFileSync("eval/judge-calibration.json", JSON.stringify(artifact, null, 2) + "\n");
-  console.error(`wrote eval/judge-calibration.json — kappa=${kappa.toFixed(3)}, kept ${kept.length}/${fixtures.length * RUBRIC_DIMENSIONS.length}`);
+  console.error(`wrote eval/judge-calibration.json — kappa=${kappa.toFixed(3)}, kept ${kept.length}/${fixtures.length * RUBRIC_DIMENSIONS.length}, ${pairs.length} labelled dimension-instances`);
 }
 
 main();

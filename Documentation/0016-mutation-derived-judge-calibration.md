@@ -71,6 +71,16 @@ rubric, one prompt template, against one fixture set. `admitJudge`'s `stale-cali
 `expired-calibration` checks exist precisely because none of these findings transfer across a
 model, rubric, or template change — a new calibration is required, not assumed to still hold.
 
+**Freedom from position bias.** Every verdict this measurement produces carries
+`position_randomized: true`, but brief-fidelity grading presents a single candidate against a
+single brief — there are no alternatives whose order could be permuted, so the flag records a
+randomization that had nothing to randomize and is true only vacuously. The
+`judge-verdict` schema makes the field mandatory because a *comparative* judging surface must
+declare it, and `core/src/eval/judge-policy.ts` reads it as one of the bias controls a panel
+claims; neither is evidence that position bias was controlled for here. It was not measured,
+because on this surface it cannot arise. A future comparative judge on this rubric would have to
+randomize for real, and must not inherit this `true` as though the question were already settled.
+
 ## Consequences
 
 **Easier:** the brief-fidelity judge can be calibrated and used without building human-annotation

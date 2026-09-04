@@ -130,6 +130,63 @@ describe("deconstruct", () => {
   });
 });
 
+/**
+ * `extractBrief` — the inverse of `decide`'s interpolation.
+ *
+ * It exists because a completed run retains no bare copy of its brief: the only surviving copy
+ * is the one this stage's template was rendered around. Its contract is round-trip or null;
+ * anything in between is a brief the run never saw, presented as one it did.
+ */
+describe("deconstruct.extractBrief", () => {
+  const rendered = (brief: string) => deconstruct.decide({ brief }, "run").messages[0].content;
+
+  it("round-trips a brief through decide", () => {
+    const brief = "A support assistant for a SaaS billing team. Refuse anything outside billing.";
+    expect(deconstruct.extractBrief(rendered(brief))).toBe(brief);
+  });
+
+  it.each([
+    ["multi-line", "Line one.\n\nLine two, after a blank.\n  indented third."],
+    ["empty", ""],
+    ["one containing the template's own trailing prose", "Do not begin scaffolding the prompt itself."],
+    ["one containing the template's own leading prose", "STEP 1 — ANALYSIS (De-construction)."],
+    ["one containing a section label", "Extract and output, as labeled sections:\n- **Core Objective**: x"],
+    ["one that looks like a whole rendered turn", "RAW_INTENT:\nnested\n\nExtract and output, as labeled sections:"],
+  ])("round-trips a %s brief", (_label, brief) => {
+    expect(deconstruct.extractBrief(rendered(brief))).toBe(brief);
+  });
+
+  /**
+   * Slicing BY LENGTH from each end rather than searching for the marker is what makes the
+   * cases above safe: a search would stop at the brief's own copy of the delimiter and return
+   * a truncated brief with no indication anything was cut.
+   */
+  it("returns the whole brief even when the brief repeats the suffix verbatim", () => {
+    const brief = "Do not begin scaffolding the prompt itself. — quoted from the stage instruction.";
+    const out = deconstruct.extractBrief(rendered(brief));
+    expect(out).toBe(brief);
+    expect(out).toContain("quoted from the stage instruction");
+  });
+
+  it.each([
+    ["bare text that is not a rendered turn", "just some bare text"],
+    ["the empty string", ""],
+    ["a turn missing the template's leading prose", "RAW_INTENT:\nx\n\nDo not begin scaffolding the prompt itself."],
+    ["a turn missing the template's trailing prose", "STEP 1 — ANALYSIS (De-construction).\n\nRAW_INTENT:\nx"],
+    ["another stage's rendered turn", "STEP 2 — SCAFFOLDING.\n\nSPEC:\nx"],
+  ])("returns null rather than a guess for %s", (_label, text) => {
+    expect(deconstruct.extractBrief(text)).toBeNull();
+  });
+
+  it("returns null when prefix and suffix would overlap on a too-short string", () => {
+    // Starts with the prefix and ends with the suffix, but is shorter than the two combined —
+    // slicing without this guard produces a negative-length span read as an empty brief.
+    const full = rendered("");
+    expect(deconstruct.extractBrief(full)).toBe("");
+    expect(deconstruct.extractBrief(full.slice(0, full.length - 1))).toBeNull();
+  });
+});
+
 describe("calibrate", () => {
   it("threads the spec from deconstruct", () => {
     const req = calibrate.decide({ brief: "b", previous: "THE SPEC" }, "run");

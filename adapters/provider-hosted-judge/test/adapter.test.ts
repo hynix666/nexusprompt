@@ -116,6 +116,31 @@ describe("HostedJudgeTransport.grade", () => {
     await expect(t.grade(req)).rejects.toThrow(HostedJudgeFailure);
   });
 
+  /**
+   * The RANGE, not only the type. `verdict` is the four scores summed out of 12,
+   * `isolatesCleanly` compares differences against 2 and 1, and the calibration binarizes at
+   * <= 1 — a judge answering on a percentage scale satisfies `typeof === "number"` and then
+   * reaches every one of those as a confident classification.
+   */
+  it.each([95, 4, -1, 2.5])("throws HostedJudgeFailure on an out-of-scale score (%s)", async (bad) => {
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+    const t = new HostedJudgeTransport({
+      fetchImpl: responseWith(rubricJson({ completeness: { score: bad, reason: "ok" } })),
+    });
+    await expect(t.grade(req)).rejects.toThrow(HostedJudgeFailure);
+  });
+
+  it("accepts every score the rubric's 0-3 scale actually allows", async () => {
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+    for (const ok of [0, 1, 2, 3]) {
+      const t = new HostedJudgeTransport({
+        fetchImpl: responseWith(rubricJson({ completeness: { score: ok, reason: "ok" } })),
+      });
+      const verdict = await t.grade(req);
+      expect(verdict.rubric_breakdown?.completeness.score).toBe(ok);
+    }
+  });
+
   it("never logs or echoes the API key on failure", async () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-SECRETVALUE0123456789";
     const t = new HostedJudgeTransport({

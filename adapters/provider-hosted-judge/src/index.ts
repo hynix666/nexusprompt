@@ -222,7 +222,25 @@ export class HostedJudgeTransport implements JudgeTransport {
           `Judge response is missing a valid "${dim}" entry with numeric score and string reason.`,
         );
       }
-      out[dim] = { score: (entry as any).score, reason: (entry as any).reason };
+      /**
+       * The RANGE, not only the type.
+       *
+       * The rubric asks for 0-3 and everything downstream assumes it: `modalScore` aggregates
+       * these, `verdict` is their sum out of 12, `isolatesCleanly` compares differences against
+       * 2 and 1, and the calibration binarizes at <= 1. A model answering `{"score": 95}` — a
+       * percentage, the single likeliest way for a judge to misread a scale — would satisfy
+       * `typeof === "number"` and then be summed into a verdict of 380/12 with nothing
+       * objecting. A score outside the scale is not a low-confidence grade, it is a response
+       * that did not follow the rubric, which is the same fact `missing_dimension` reports.
+       */
+      const score = (entry as any).score as number;
+      if (!Number.isInteger(score) || score < 0 || score > 3) {
+        throw new HostedJudgeFailure(
+          "score_out_of_range",
+          `Judge response scored "${dim}" ${score}; the rubric's scale is the integers 0-3.`,
+        );
+      }
+      out[dim] = { score, reason: (entry as any).reason };
     }
     return out;
   }
