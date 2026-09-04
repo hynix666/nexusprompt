@@ -163,4 +163,48 @@ describe("judgeBundle", () => {
     expect(first.judgement_id).not.toBe(second.judgement_id);
     expect(evidence.written).toHaveLength(2);
   });
+
+  it("refuses when no revisions exist for the run", async () => {
+    const store = new FakeRevisionStore([]);
+    const content = new FakeContentStore(CONTENT);
+    const evidence = new FakeEvidenceStore();
+    await expect(
+      judgeBundle(
+        { revisions: store, content, evidence, transport: new ScriptedTransport(), calibration: CALIBRATION },
+        "run-1", "2026-09-03T00:02:00.000Z",
+      ),
+    ).rejects.toMatchObject({ code: "run-not-found" });
+    expect(evidence.written).toHaveLength(0);
+  });
+
+  it("refuses when the first revision's input_ref is null", async () => {
+    const revisions = baseRevisions();
+    revisions[0] = { ...revisions[0], input_ref: null };
+    const store = new FakeRevisionStore(revisions);
+    const content = new FakeContentStore(CONTENT);
+    const evidence = new FakeEvidenceStore();
+    await expect(
+      judgeBundle(
+        { revisions: store, content, evidence, transport: new ScriptedTransport(), calibration: CALIBRATION },
+        "run-1", "2026-09-03T00:02:00.000Z",
+      ),
+    ).rejects.toMatchObject({ code: "missing-content-ref" });
+    expect(evidence.written).toHaveLength(0);
+  });
+
+  it("refuses when a content ref does not resolve", async () => {
+    const revisions = baseRevisions({
+      output_ref: "npx:stage-output:" + "9".repeat(64) + ":local-bundle",
+    });
+    const store = new FakeRevisionStore(revisions);
+    const content = new FakeContentStore(CONTENT); // does not contain the "9..." ref
+    const evidence = new FakeEvidenceStore();
+    await expect(
+      judgeBundle(
+        { revisions: store, content, evidence, transport: new ScriptedTransport(), calibration: CALIBRATION },
+        "run-1", "2026-09-03T00:02:00.000Z",
+      ),
+    ).rejects.toMatchObject({ code: "content-not-found" });
+    expect(evidence.written).toHaveLength(0);
+  });
 });
