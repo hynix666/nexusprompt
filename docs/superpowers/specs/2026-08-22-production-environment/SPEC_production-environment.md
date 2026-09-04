@@ -424,7 +424,7 @@ A register with closing conditions, not a disclaimer.
 
 | Open | Closing condition |
 |---|---|
-| ~~**No git remote.** 19 commits on one disk.~~ **Closed 23 August 2026.** `origin` is `github.com:hynix666/nexusprompt` (private); `master` is pushed and tracking, and `.github/workflows/verify.yml` ran `npm run verify` green on a clean Ubuntu checkout on its first execution. The guards now run somewhere other than the machine that wrote them, which is what the condition was actually about. | — |
+| ~~**No git remote.** 19 commits on one disk.~~ **Closed 23 August 2026.** `origin` is `github.com:hynix666/nexusprompt`; `master` is pushed and tracking, and `.github/workflows/verify.yml` ran `npm run verify` green on a clean Ubuntu checkout on its first execution. The guards now run somewhere other than the machine that wrote them, which is what the condition was actually about. | — |
 | **Keyed fingerprints documented, bare `sha256` in code** `[AUDIT C-4]`. | The event port holds a deployment-scoped key and `orchestrator.ts` uses it. Out of scope here, in scope for the observability change that follows. |
 | **`markStale` has zero callers and zero tests**; cascades by array position where the design says lineage. | `parent_revision_ids` is populated and the cascade follows it. Designed 21 Aug; unbuilt. |
 | **Does per-stage validation actually mitigate the depth cliff?** The strongest untested hypothesis here. I-3 measured *unvalidated* chains. | Phase γ makes it measurable. If false, eleven stages is the wrong shape and this is the finding that would say so. |
