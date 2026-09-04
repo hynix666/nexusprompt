@@ -275,7 +275,8 @@ describe("promotion gate — the five conditions", () => {
   it("refuses when detector recall was not equalized", async () => {
     const store = mkstore();
     await seed(store, {
-      cmp: { equalization: { ...comparison().equalization, equalized: false, max_gap: 0.4 } },
+      // comparison()'s own fixture always sets a real equalization object (never null).
+      cmp: { equalization: { ...comparison().equalization!, equalized: false, max_gap: 0.4 } },
     });
     const { decision } = await promote(store, request);
     expect(decision.refusals.map((r) => r.code)).toEqual(["detectors-unequalized"]);

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/comparison/2.2.0",
+  "$id": "https://promptnexus.dev/contracts/comparison/2.3.0",
   "title": "Comparison",
   "description": "The verdict of one run against a baseline. `inconclusive` is a first-class outcome: with stochastic decoding a single run pair cannot distinguish improvement from noise, and rounding toward a decision manufactures exactly the false confidence this subsystem exists to prevent.",
   "type": "object",
@@ -137,8 +137,8 @@
       }
     },
     "equalization": {
-      "type": "object",
-      "description": "Evidence that both runs' detectors had comparable recall, DERIVED from the two runs' measured recall blocks rather than asserted by a caller. This replaced a boolean in 1.0.0. The boolean was never computed anywhere — a summary readable without consulting evidence is a summary that gets read instead of the evidence, which is how the guard came to check nothing. Keeping it beside this object would have preserved that.",
+      "type": ["object", "null"],
+      "description": "Evidence that both runs' detectors had comparable recall, DERIVED from the two runs' measured recall blocks rather than asserted by a caller. This replaced a boolean in 1.0.0. The boolean was never computed anywhere — a summary readable without consulting evidence is a summary that gets read instead of the evidence, which is how the guard came to check nothing. Keeping it beside this object would have preserved that. Null since 2.3.0: a comparison over a detector-less outcome (a judge score, not a detector pass/fail) has nothing to equalize, and forcing a placeholder value here would be exactly the vacuous claim ADR-0016 already had to name once for position_randomized on single-candidate gradings — null means not applicable, never a fudged zero.",
       "required": [
         "equalized",
         "max_gap",

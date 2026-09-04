@@ -92,9 +92,10 @@ describe("the exit gate: a deliberately worse configuration is measured as worse
     expect(result.verdict).toBe("regressed");
     expect(result.delta).toBeCloseTo(-10 / 14, 6);
     expect(result.protocol.p_value!).toBeLessThan(0.05);
-    expect(result.equalization.equalized).toBe(true);
-    expect(result.equalization.max_gap).toBe(0);
-    expect(result.equalization.gap_bound).toBe(data.suite.resolution.detectable_delta);
+    // compare() never returns a null equalization; only compareGraded() does.
+    expect(result.equalization!.equalized).toBe(true);
+    expect(result.equalization!.max_gap).toBe(0);
+    expect(result.equalization!.gap_bound).toBe(data.suite.resolution.detectable_delta);
   });
 
   it("would report inconclusive on five flips — the threshold is six, not one", async () => {
