@@ -172,6 +172,33 @@ export function requiredPairedSize(delta: number, assumptions: SizingAssumptions
 }
 
 /**
+ * The continuous analog of `requiredPairedSize`: items needed to resolve a true paired-mean
+ * difference of `delta`, given the observed standard deviation of the paired differences.
+ * `n ≳ (z_α + z_β)² · sd² / Δ²` — reduces exactly to `requiredPairedSize` when `sd = sqrt(p_d)`,
+ * since Var(a ±1/0 discordance indicator at rate p_d) is p_d. See `sizing.test.ts`'s
+ * Bernoulli-limit cross-check, the same discipline `LEGACY_ASSUMPTIONS` uses to keep the old
+ * and corrected binary rules from drifting apart.
+ *
+ * Unlike `discordanceRate`, `sd` is not bounded to (0, 1] — a 0-12 score's paired differences
+ * range over [-12, 12], so `sd` is validated only as strictly positive.
+ */
+export function requiredPairedSizeContinuous(
+  delta: number,
+  sd: number,
+  assumptions: Pick<SizingAssumptions, "alpha" | "power">,
+): number {
+  const { alpha, power } = assumptions;
+  if (!(delta > 0)) {
+    throw new Error(`requiredPairedSizeContinuous needs a positive delta, got ${delta}.`);
+  }
+  if (!(sd > 0)) {
+    throw new Error(`requiredPairedSizeContinuous needs a positive sd, got ${sd}.`);
+  }
+  const z = zAlpha(alpha) + zPower(power);
+  return Math.ceil((z * z * sd * sd) / (delta * delta));
+}
+
+/**
  * The inverse: the smallest delta a suite of `n` items can resolve under these assumptions.
  *
  * This is the number a suite may honestly claim. It is what `detectable_delta` was described
