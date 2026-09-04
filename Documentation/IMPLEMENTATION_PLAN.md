@@ -50,6 +50,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "build:anchor",
     "build:brief-pilot",
     "build:hash",
+    "build:judge-calibration",
     "check:anchor",
     "check:brief-pilot",
     "check:catalog",

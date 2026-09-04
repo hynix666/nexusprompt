@@ -64,7 +64,8 @@
     "example:pipeline": "tsx scripts/examples.ts --pipeline",
     "example:refuse": "tsx scripts/examples.ts --refuse",
     "check:examples": "tsx scripts/examples.ts --check",
-    "docs:examples": "tsx scripts/examples.ts --write"
+    "docs:examples": "tsx scripts/examples.ts --write",
+    "build:judge-calibration": "tsx scripts/build-judge-calibration.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",
