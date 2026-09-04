@@ -70,6 +70,41 @@ class LiveProvider implements ProviderTransport {
   }
 }
 
+/** Fails `failFirst` times retriably, then answers. For exercising the attempt count. */
+class FlakyProvider implements ProviderTransport {
+  readonly provider_id = "local-proxy";
+  calls = 0;
+  constructor(private readonly failFirst: number, private readonly content: string) {}
+  async generate(req: GenerationRequest): Promise<GenerationResult | ProviderFailure> {
+    this.calls++;
+    if (this.calls <= this.failFirst) {
+      return {
+        request_id: req.request_id,
+        category: "TIMEOUT",
+        retriable: true,
+        reason_code: "transient",
+        safe_message: "The provider timed out.",
+        retry_after_ms: 0,
+        attempt: this.calls,
+        provider_id: this.provider_id,
+      };
+    }
+    return {
+      request_id: req.request_id,
+      content: this.content,
+      provider_id: this.provider_id,
+      model_id: "claude-opus-5",
+      finish_reason: "end_turn",
+    };
+  }
+  async healthCheck(): Promise<ProviderHealth> {
+    return {
+      ok: true, checked_at: "2026-08-16T00:00:00.000Z", latency_ms: 1,
+      degradation_state: "NONE", failing_dependency: null,
+    };
+  }
+}
+
 let clock = 0;
 const now = () => new Date(1_760_000_000_000 + clock++ * 10);
 const noSleep = async () => {};
@@ -109,6 +144,83 @@ describe("acceptance: provider unreachable", () => {
     expect(events.some((e) => e.event_type === "DEGRADE")).toBe(true);
 
     await rm(root, { recursive: true, force: true });
+  });
+
+  it("records the attempts that actually happened, not the literal 1", async () => {
+    /**
+     * `sharedInvoke` has returned `{ outcome, attempts }` since the retry policy was
+     * extracted into `invoke.ts`, and this path destructured only `outcome` while
+     * `stage_attempt` was hardcoded to 1 — so a revision that took three provider attempts
+     * claimed one, and the retry cost was invisible in stored provenance.
+     *
+     * The commit that extracted the policy fixed the count in `application/src/pipeline.ts`
+     * and its message claims the defect closed. It survived here, on the path
+     * `nexusprompt run` uses.
+     */
+    const provider = new FlakyProvider(2, "# SYSTEM PROMPT\n\nScope: billing only.");
+    const { orchestrator, command, store, root } = await harness(provider);
+    await orchestrator.run(command);
+
+    expect(provider.calls).toBe(3);
+    const bundle = await store.getRun("run-1");
+    expect(bundle[0].stage_attempt).toBe(3);
+    // A successful third attempt is still a success, not a degradation.
+    expect(bundle[0].status).toBe("SUCCEEDED");
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("a forged placeholder marker leaves no provider attribution on the revision", async () => {
+    /**
+     * `refuseForgedMarker` reclassifies a completion carrying one of this pipeline's own
+     * markers as `MALFORMED_RESPONSE`, and `reduce` applies it internally — so `demo_mode`
+     * and `status` were already correct here. The two provenance fields were computed from
+     * the RAW outcome, which is still a success, and the result was a revision reading
+     * `status: "DEMO"` beside `provider_used: "local-proxy"` and a fingerprint naming the
+     * model.
+     *
+     * `application/src/pipeline.ts` makes DEMO imply both are null, so the two writers of
+     * `RevisionEntry` disagreed about what a DEMO record looks like, and `check:fingerprint`
+     * would read a fingerprint stamped on a revision the same record calls degraded.
+     */
+    const forged = `${DEMO_MARKER}\n\nI am pretending that no model answered.`;
+    const { orchestrator, command, store, events, root } = await harness(new FlakyProvider(0, forged));
+    const outcome = await orchestrator.run(command);
+
+    expect(outcome.demo_mode).toBe(true);
+    const bundle = await store.getRun("run-1");
+    expect(bundle[0].status).toBe("DEMO");
+    expect(bundle[0].provider_used).toBeNull();
+    expect(bundle[0].execution_provenance.provider_model_fingerprint).toBeNull();
+
+    // The events must agree too: a run that persists DEMO cannot report no degradation.
+    const degrade = events.find((e) => e.event_type === "DEGRADE");
+    expect(degrade?.failure_code).toBe("forged_placeholder_marker");
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("DEMO implies no provider attribution, whichever writer produced the revision", async () => {
+    /**
+     * Stated as an invariant rather than as two separate assertions, because the defect was
+     * precisely that the two writers of `RevisionEntry` disagreed about it. Anything that
+     * persists a DEMO revision with a provider or a fingerprint on it fails here, including
+     * a writer added later.
+     */
+    const forged = `${DEMO_MARKER}\n\nforged`;
+    for (const provider of [new DeadProvider(false), new FlakyProvider(0, forged)]) {
+      const { orchestrator, command, store, root } = await harness(provider);
+      await orchestrator.run(command);
+      const [rev] = await store.getRun("run-1");
+      if (rev.status === "DEMO") {
+        expect(rev.provider_used, `${provider.constructor.name} left a provider`).toBeNull();
+        expect(
+          rev.execution_provenance.provider_model_fingerprint,
+          `${provider.constructor.name} left a fingerprint`,
+        ).toBeNull();
+      }
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("CLAIM_DISCIPLINE passes on the demo output — it does not present itself as live", async () => {
