@@ -140,6 +140,55 @@ describe("depth resolution", () => {
     expect(String(criticStage.reduceSkipped!(lowStakes).critic)).toContain("runs only at");
   });
 
+  it("the module header states the counts the registry actually has", () => {
+    /**
+     * The header said "Three kinds… Six generate… Three carry a skip rule" from the commit
+     * that wrote it until it was corrected, and only the "Two" was ever true — that registry
+     * already held nine generating stages and four skip rules. `6 + 2 + 3` reads as a
+     * partition of eleven, which is what made it look self-consistent.
+     *
+     * `check:counts` exists for exactly this class of claim and would have caught it in a
+     * Markdown file; it does not read source comments. So the numbers are derived from
+     * `PIPELINE` here and the header is required to state them — a twelfth stage fails this
+     * rather than silently making the file's own summary wrong.
+     *
+     * Spelled out in words because that is how the prose reads. If the header is ever
+     * rewritten to omit the counts, this fails and the right fix is to delete it, not to
+     * re-add a number nobody re-derives.
+     */
+    /**
+     * Flattened first: the prose wraps, so "Six carry a skip rule" is split across lines by a
+     * `\n * ` comment prefix and a naive substring match misses it. Strip the prefix and
+     * collapse whitespace, then the assertions read the way the sentence does.
+     */
+    const header = readFileSync(join(process.cwd(), "core/src/stages/pipeline.ts"), "utf8")
+      .slice(0, 2500)
+      .replace(/^\s*\*\s?/gm, " ")
+      .replace(/\s+/g, " ")
+      // Lowercased so the assertions do not have to track which word starts a sentence.
+      .toLowerCase();
+
+    const WORD = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+                  "nine", "ten", "eleven", "twelve"];
+    const generating = PIPELINE.filter((s) => s.kind === "generating").length;
+    const deterministic = PIPELINE.filter((s) => s.kind === "deterministic").length;
+    const skipping = PIPELINE.filter((s) => s.shouldSkip).length;
+    const kinds = new Set(PIPELINE.map((s) => s.kind)).size;
+
+    expect(header, `header must say ${WORD[kinds]} kinds`).toContain(`${WORD[kinds]} kinds`);
+    expect(header, `header must say ${WORD[generating]} generate`)
+      .toContain(`${WORD[generating]} generate`);
+    expect(header, `header must say ${WORD[deterministic]} are deterministic`)
+      .toContain(`${WORD[deterministic]} are deterministic`);
+    expect(header, `header must say ${WORD[skipping]} carry a skip rule`)
+      .toContain(`${WORD[skipping]} carry a skip rule`);
+
+    // The arithmetic the old text implied and never had: the KINDS partition the registry.
+    expect(generating + deterministic).toBe(PIPELINE.length);
+    // A skip rule is orthogonal, not a third kind — it must not be added to that partition.
+    expect(skipping).toBeLessThanOrEqual(PIPELINE.length);
+  });
+
   it("planDepth reports the depth the plan is actually built from", () => {
     expect(planDepth({ stakes: "SAFETY-CRITICAL" })).toBe("COMPREHENSIVE");
     expect(planDepth({ depth: "TINY", stakes: "HIGH" })).toBe("TINY");
