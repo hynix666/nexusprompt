@@ -18,8 +18,13 @@
  * "Does this string contain a prompt body?" is not decidable in general, and a check claiming
  * to answer it would be the same overreach as the sentence it replaces. What IS decidable is
  * the question that matters here: does this event share a long verbatim run with a body THIS
- * RUN is holding? The Application knows the brief, the prompt and the stage output, so it can
- * compare against them exactly.
+ * RUN is holding? The Application holds every body the run has produced, so it can compare
+ * against them exactly.
+ *
+ * "Every body" is meant literally, and the caller is responsible for it. `pipeline.ts` named
+ * four of its eleven for a while, which made this a sparse matcher wearing a complete one's
+ * description — so that call site now derives the list from the run context rather than
+ * listing fields. A caller that hand-picks is choosing what this cannot see.
  *
  * That bounds the guarantee honestly:
  *   - it catches a body copied, sliced or embedded into any string field;

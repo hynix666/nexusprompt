@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { redactingSink, sharesBody, WINDOW, REDACTED } from "../src/redaction.js";
+import { redactionBodies } from "../src/pipeline.js";
 import type { ObservabilityEvent } from "../../contracts/index.js";
+import type { PipelineContext } from "../../core/src/stages/pipeline.js";
 
 /**
  * Sweep fourteen — "No prompt bodies in logs, ever."
@@ -113,5 +115,68 @@ describe("redactingSink", () => {
     sink.emit(event({ verdict: BODY, component: `core/${BODY}` }));
     expect(seen[0]!.verdict).toBe(REDACTED);
     expect(seen[0]!.component).toBe(REDACTED);
+  });
+});
+
+describe("the body set the pipeline hands the sink", () => {
+  /**
+   * A fully-populated context, one DISTINCT body per field.
+   *
+   * Distinct matters more than it looks: a first attempt at this gave every field the same
+   * filler sentence, so every body collided with every other and uncovered fields reported
+   * as covered. The probe said 2 of 11 leaked; with genuinely distinct bodies it was 7.
+   */
+  const ctx: PipelineContext = {
+    brief: "Draft an assistant for reconciling quarterly ledger discrepancies at Northwind.",
+    spec: "Objective: reconcile invoice mismatches across three disconnected billing systems.",
+    calibration: "Profile rationale: deterministic arithmetic over adversarial vendor statements.",
+    prompt: "Identity: a reconciliation analyst bound to the Northwind chart of accounts.",
+    critique: "G2 failure: the scope clause never names the Northwind boundary it claims.",
+    lint: "[DEGRADED] token_estimate=214 WARN GUARDRAIL_GAP: missing scope contraction clause.",
+    critic: "Finding one: the identity asserts audit authority the brief never delegated.",
+    preview: "Certainly, here is how I would reconcile the November vendor statement lines.",
+    cost: "PROMPT SIZE approx 214 tok; representative rates only, not fetched live, verify.",
+    tone: "Register drift: section four swings into casual voice mid-clause without cause.",
+    testMessage: "Why does vendor statement 4471 disagree with our ledger by eight hundred?",
+    // Short scalars: never bodies, and the sink's own WINDOW filter drops them.
+    stakes: "HIGH",
+    depth: "STANDARD",
+    lintStatus: "DEGRADED",
+    criticVerdict: "PASS",
+    voice: "CONSISTENT",
+  };
+
+  it("covers every body the context holds, enumerated from the context itself", () => {
+    /**
+     * Iterating `ctx`'s own keys rather than a list written here is the point. The call site
+     * named four fields — `brief`, `prompt`, `spec`, `critique` — while the context held
+     * eleven bodies, and a test that named the same four would have passed. Measured before
+     * the fix: seven of eleven would have reached an event verbatim, `preview` among them,
+     * which is a model's reply generated with the compiled prompt as its system message.
+     *
+     * A twelfth body field added later is covered by this assertion the day it is added.
+     */
+    const bodies = redactionBodies(ctx);
+    for (const [field, value] of Object.entries(ctx)) {
+      if (typeof value !== "string" || value.length < WINDOW) continue;
+      expect(bodies, `${field} is not in the redaction body set`).toContain(value);
+      // And the property that actually matters: a leak of it would be caught.
+      expect(
+        sharesBody(`provider adapter failed on payload: ${value}`, bodies),
+        `a leak of ${field} would not be caught`,
+      ).toBe(true);
+    }
+  });
+
+  it("does not sweep in the short scalars — they could never be bodies", () => {
+    // They are in the derived list, and the sink drops them by length. Asserting the second
+    // half explicitly, because "harmless" is the kind of claim that stops being true quietly.
+    const kept = redactionBodies(ctx).filter((b) => b.length >= WINDOW);
+    for (const scalar of ["HIGH", "STANDARD", "PASS", "CONSISTENT"]) {
+      expect(kept).not.toContain(scalar);
+    }
+    // A short scalar cannot cause a redaction on its own.
+    expect(sharesBody("stakes were HIGH and depth STANDARD for this run", ["HIGH", "STANDARD"]))
+      .toBe(false);
   });
 });
