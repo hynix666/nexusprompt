@@ -24,6 +24,7 @@ import type {
 } from "../../contracts/index.js";
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { invokeWithRetry as sharedInvoke } from "./invoke.js";
+import { refuseForgedMarker } from "../../core/src/stages/stage-kit.js";
 import { decide, reduce } from "../../core/src/stages/compile.js";
 import { admitRun, type Budget } from "../../core/src/eval/budget.js";
 
@@ -98,12 +99,27 @@ export class Orchestrator {
     });
 
     // ── invoke + classify (this layer, effectful) ──────────────────────────
-    const outcome = await this.invokeWithRetry(request, command.run_id, received);
+    // `outcome` is already settled through `refuseForgedMarker` — see `invokeWithRetry`.
+    const { outcome, attempts } = await this.invokeWithRetry(request, command.run_id, received);
 
     // ── reduce (Core, pure) ────────────────────────────────────────────────
     const reduced = reduce(command.input, outcome);
 
     // ── persist + report ───────────────────────────────────────────────────
+    /**
+     * Computed from the SETTLED outcome, so the revision cannot contradict its own status.
+     *
+     * These two fields read the RAW outcome, and `reduce` settles the forged-marker case
+     * inside itself — so a completion carrying one of this pipeline's placeholder markers
+     * produced `status: "DEMO"` beside `provider_used: "flaky-provider"` and a
+     * `provider_model_fingerprint` naming the model. Measured, exactly that.
+     *
+     * `application/src/pipeline.ts` makes DEMO imply both are null, so the two writers of
+     * `RevisionEntry` disagreed about what a DEMO record looks like — and `check:fingerprint`
+     * would read a fingerprint stamped on a revision the same record calls degraded. The
+     * commit that closed this on the pipeline path said the two must "agree by construction
+     * rather than by both being remembered"; this is the other half of that.
+     */
     const provenance: ExecutionProvenance = {
       core_build_hash: this.coreBuildHash,
       contract_versions: CONTRACT_VERSIONS,
@@ -123,7 +139,17 @@ export class Orchestrator {
       input_ref: null,
       output_ref: null,
       timestamp: this.now().toISOString(),
-      stage_attempt: 1,
+      /**
+       * What actually happened, not the literal 1.
+       *
+       * `sharedInvoke` has returned `{ outcome, attempts }` since the retry policy was
+       * extracted, and this path destructured only `outcome` — so a revision that took three
+       * provider attempts recorded one, and the retry cost was invisible in stored
+       * provenance. The commit that extracted the policy fixed the count in
+       * `application/src/pipeline.ts` and claimed the defect closed; it survived here, on the
+       * path `nexusprompt run` uses.
+       */
+      stage_attempt: attempts,
       input_hash: sha256(JSON.stringify(command.input)),
       output_hash: sha256(reduced.output.text),
       gate_results: reduced.gate_results,
@@ -169,13 +195,16 @@ export class Orchestrator {
    * What to EMIT stays here, because that is this class's business; WHEN to retry is not.
    * An adapter that retried internally would still be wrong — the attempt count would be
    * invisible to this layer and the event stream would under-report what happened.
+   *
+   * Returns the attempt count alongside the outcome, because the caller records it. It was
+   * dropped on the floor here while `stage_attempt` was hardcoded to 1.
    */
   private async invokeWithRetry(
     request: ReturnType<typeof decide>,
     run_id: string,
     parent: string,
-  ): Promise<GenerationResult | ProviderFailure> {
-    const { outcome } = await sharedInvoke(request, {
+  ): Promise<{ outcome: GenerationResult | ProviderFailure; attempts: number }> {
+    const { outcome: raw, attempts } = await sharedInvoke(request, {
       provider: this.provider,
       maxAttempts: this.maxAttempts,
       now: this.now,
@@ -209,16 +238,30 @@ export class Orchestrator {
       },
     });
 
+    /**
+     * Settled HERE, so the event stream and the revision see the same outcome.
+     *
+     * `refuseForgedMarker` reclassifies a completion carrying one of this pipeline's own
+     * placeholder markers as `MALFORMED_RESPONSE` — the provider answered, and the answer
+     * cannot be used. Settling at the point of classification means the DEGRADE below fires
+     * for that case too, rather than a run reporting `status: "DEMO"` with no degradation
+     * anywhere in its events.
+     */
+    const outcome = refuseForgedMarker(raw);
+
     if (isFailure(outcome)) {
-      // Retries exhausted or the failure was terminal. Degrade, loudly.
+      // Retries exhausted, the failure was terminal, or the answer was unusable. Degrade, loudly.
       this.emit(run_id, "DEGRADE", parent, {
         component: "orchestrator",
         provider_id: outcome.provider_id,
         failure_code: outcome.reason_code,
-        attempt: outcome.attempt,
+        // The real count. A forged marker synthesises a failure carrying `attempt: 1`
+        // regardless of how many attempts preceded it, so the failure's own field would
+        // under-report exactly where this path already did.
+        attempt: attempts,
       });
     }
-    return outcome;
+    return { outcome, attempts };
   }
 
   private emit(
