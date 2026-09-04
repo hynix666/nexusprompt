@@ -733,7 +733,9 @@ async function compareRuns(
     return comparison.verdict === "regressed" ? 0 : 4;
   }
 
-  const eq = comparison.equalization;
+  // compare() (the only comparator this CLI report reads) never returns a null equalization —
+  // only compareGraded()'s judge-scored comparisons do, and this script does not produce those.
+  const eq = comparison.equalization!;
   console.log(`compare — ${data.suite.suite_id}@${data.suite.version}`);
   console.log(`  baseline  ${baselineConfig.configuration_id.slice(0, 12)}  ${baseline.run.aggregate.passed}/${baseline.run.aggregate.cases}`);
   console.log(`  candidate ${candidateConfig.configuration_id.slice(0, 12)}  ${candidate.run.aggregate.passed}/${candidate.run.aggregate.cases}  (${DEGRADED})\n`);

@@ -19,7 +19,7 @@ enforces, so this table and that test cannot disagree.
 |---|---|---|
 | `audit-report` | 1.0.0 | pending — declared, no producer |
 | `baseline` | 2.0.0 | validated |
-| `comparison` | 2.2.0 | validated |
+| `comparison` | 2.3.0 | validated |
 | `configuration` | 1.3.0 | validated |
 | `eval-case` | 1.2.0 | validated |
 | `eval-run` | 2.0.0 | validated |

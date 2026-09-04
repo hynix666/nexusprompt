@@ -732,7 +732,8 @@ describe("evaluation plane, against values the suite actually produced", () => {
     });
     expect(report(validators["comparison"], cmp)).toBe(true);
     expect(cmp.verdict).toBe("refused");
-    expect(cmp.equalization.max_gap).toBeNull();
+    // compare() never returns a null equalization; only compareGraded() does.
+    expect(cmp.equalization!.max_gap).toBeNull();
   });
 
 
@@ -910,6 +911,20 @@ describe("evaluation plane, against values the suite actually produced", () => {
       verdict: "improved", delta: 0.1,
       protocol: { test: "mcnemar", trials: 1, alpha: 0.05, comparisons_in_family: 1 },
     })).toBe(false);
+  });
+
+  it("comparison accepts a null equalization for a comparison with no detectors", () => {
+    // A judge-graded comparison has no detector recall to equalize — null means "not
+    // applicable to this outcome type", not "unmeasured and treated as passing".
+    expect(validators["comparison"]({
+      comparison_id: "c", candidate_run_id: "a", baseline_id: "b",
+      verdict: "improved", delta: 0.5,
+      protocol: {
+        test: "paired-bootstrap", trials: 1, alpha: 0.05, comparisons_in_family: 1,
+        confidence_interval: [0.1, 0.9],
+      },
+      equalization: null,
+    })).toBe(true);
   });
 });
 

@@ -165,6 +165,9 @@ describe("mcnemar", () => {
   });
 });
 
+// `equalization!` throughout this block: compare() (unlike compareGraded(), added for the
+// judge-scored comparison pilot) never returns a null equalization, only Comparison's contract
+// type admits one now.
 describe("compare", () => {
   it("refuses when a run carries no measured recall", () => {
     // Until contract 2.0.0 this was a boolean the caller asserted and nothing computed.
@@ -172,8 +175,8 @@ describe("compare", () => {
     const r = compare({ ...base, candidate: outcomes("11"), baseline: outcomes("10"), candidateRecall: null });
     expect(r.verdict).toBe("refused");
     expect(r.refusal_reason).toContain("candidate run");
-    expect(r.equalization.equalized).toBe(false);
-    expect(r.equalization.max_gap).toBeNull();
+    expect(r.equalization!.equalized).toBe(false);
+    expect(r.equalization!.max_gap).toBeNull();
   });
 
   it("refuses across differing probe corpora", () => {
@@ -211,8 +214,8 @@ describe("compare", () => {
       ...base, candidate: outcomes("11"), baseline: outcomes("10"),
       suite: { resolution: { detectable_delta: 0.005, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const },
     });
-    expect(coarse.equalization.gap_bound).toBe(0.01);
-    expect(fine.equalization.gap_bound).toBe(0.005);
+    expect(coarse.equalization!.gap_bound).toBe(0.01);
+    expect(fine.equalization!.gap_bound).toBe(0.005);
   });
 
   it("takes effective recall as the minimum over BOTH runs", () => {
@@ -224,15 +227,15 @@ describe("compare", () => {
       suiteDetectorIds: ["d", "e"],
       suite: { resolution: { detectable_delta: 0.5, confidence: 0.95 }, significance_protocol: "exact-mcnemar" as const },
     });
-    expect(r.equalization.effective_recall).toBeCloseTo(0.75, 6);
+    expect(r.equalization!.effective_recall).toBeCloseTo(0.75, 6);
     // 0.5 / 0.75 — a blunter instrument must show a larger observed difference.
-    expect(r.equalization.adjusted_resolution).toBeCloseTo(0.6667, 3);
+    expect(r.equalization!.adjusted_resolution).toBeCloseTo(0.6667, 3);
   });
 
   it("leaves resolution untouched at recall 1, so a perfect instrument sees no change", () => {
     const r = compare({ ...base, candidate: outcomes("11"), baseline: outcomes("10") });
-    expect(r.equalization.effective_recall).toBe(1);
-    expect(r.equalization.adjusted_resolution).toBe(base.suite.resolution.detectable_delta);
+    expect(r.equalization!.effective_recall).toBe(1);
+    expect(r.equalization!.adjusted_resolution).toBe(base.suite.resolution.detectable_delta);
   });
 
   it("widens the resolution enough to change a verdict when recall is poor", () => {
@@ -287,7 +290,7 @@ describe("compare", () => {
     });
     expect(honest.verdict).toBe("refused");
     expect(honest.delta).toBeNull();
-    expect(honest.equalization.max_gap).toBeCloseTo(0.5, 6);
+    expect(honest.equalization!.max_gap).toBeCloseTo(0.5, 6);
     expect(honest.refusal_reason).toContain("measure the instrument");
   });
 

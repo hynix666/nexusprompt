@@ -94,6 +94,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "eval:pipeline",
     "import:catalog",
     "judge",
+    "judge:pilot",
     "lint:boundaries",
     "lint:sources",
     "sweep:models",

@@ -67,7 +67,8 @@
     "docs:examples": "tsx scripts/examples.ts --write",
     "build:judge-calibration": "tsx scripts/build-judge-calibration.ts",
     "check:judge": "tsx scripts/check-judge.ts",
-    "judge": "tsx scripts/judge.ts"
+    "judge": "tsx scripts/judge.ts",
+    "judge:pilot": "tsx scripts/judge-pilot.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",

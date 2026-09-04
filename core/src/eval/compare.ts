@@ -55,7 +55,10 @@ export interface CompareInput {
   correction?: "none" | "bonferroni";
 }
 
-type Equalization = Comparison["equalization"];
+// compare() (below) always derives a real equalization object — only compareGraded() (a
+// judge-graded comparison has no detectors to equalize) ever returns null. NonNullable here
+// keeps that true locally without exposing a narrower Comparison variant repo-wide.
+type Equalization = NonNullable<Comparison["equalization"]>;
 
 /**
  * Derive equalization from two measured recall blocks.

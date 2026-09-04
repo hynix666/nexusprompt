@@ -49,6 +49,24 @@ Versioning, as applied here:
 
 ---
 
+## 2026-09-04 (judge-scored comparison pilot — contracts)
+
+### `comparison` 2.2.0 → **2.3.0** (minor)
+
+`equalization` is now `object | null`. It carries evidence that both runs' *detectors* had
+comparable recall, and a judge-graded comparison (paired-bootstrap over continuous scores) has
+no detectors at all — nothing to equalize, and nothing was equalized. Setting `equalized: true`
+when nothing was checked, or any other placeholder value, would be the same vacuous claim
+ADR-0016 already had to name once for `position_randomized` on single-candidate gradings. Null
+means *not applicable to this comparison's outcome type*, joining this repository's existing
+convention that null means unmeasured/inapplicable, never a fudged value standing in for zero.
+
+Additive: `required` is unchanged, so the key must still be present, and every existing
+producer of `Comparison` (`compare()`) still returns a non-null object — only a new producer
+(`compareGraded()`) returns `null`.
+
+---
+
 ## 2026-08-30 (wave two — a local model can answer badly)
 
 ### `provider-failure` 1.0.0 → **1.1.0** (minor — widened enum)

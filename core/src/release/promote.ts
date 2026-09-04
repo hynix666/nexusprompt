@@ -346,7 +346,18 @@ export function decidePromotion(req: PromotionRequest): PromotionDecision {
   /* ── Condition 5 — detector equalization ─────────────────────────────────── */
 
   let detector_equalization: PromotionCondition;
-  if (!comparison.equalization.equalized) {
+  if (comparison.equalization === null) {
+    // A judge-graded comparison (compareGraded(), added for the judge-scored comparison
+    // pilot) has no detectors to equalize, so it carries no evidence this condition can read.
+    // Failing closed rather than skipping the condition: promotion is not yet wired to accept
+    // a graded comparison's outcome, and treating "nothing to check" as "check passed" would
+    // be exactly the vacuous claim this schema's own equalization field exists to prevent.
+    detector_equalization = failed(
+      "comparison carries no detector equalization (equalization: null) — a judge-graded " +
+      "comparison is not yet promotable through this condition.",
+    );
+    refuse("detectors-unequalized", detector_equalization.detail);
+  } else if (!comparison.equalization.equalized) {
     detector_equalization = failed(
       `detector recall differs by ${comparison.equalization.max_gap ?? "an unmeasured amount"} ` +
       `against a bound of ${comparison.equalization.gap_bound}. A gap this size can produce the ` +

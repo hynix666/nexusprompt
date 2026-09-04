@@ -217,7 +217,7 @@ export const CONTRACT_VERSIONS = {
   "revision-entry": "2.0.0",
   "observability-event": "1.3.0",
   "eval-run": "2.0.0",
-  comparison: "2.2.0",
+  comparison: "2.3.0",
   configuration: "1.3.0",
   "judge-verdict": "1.2.0",
 } as const;
@@ -839,6 +839,7 @@ export interface Comparison {
   /**
    * Derived from both runs' measured recall, never supplied. Replaced a boolean in 1.0.0
    * that nothing computed — the guard the comparator advertised was a field callers filled in.
+   * Null for a comparison with no detector-based outcome (a graded/judge score) to equalize.
    */
   equalization: {
     equalized: boolean;
@@ -856,5 +857,5 @@ export interface Comparison {
       baseline_recall: number | null;
       gap: number | null;
     }>;
-  };
+  } | null;
 }

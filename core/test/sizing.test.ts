@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   LEGACY_ASSUMPTIONS, STATED_ASSUMPTIONS, attainable, floorDiscordant, legacyAnchorSize,
-  minAttainableP, requiredPairedSize, resolvableDelta,
+  minAttainableP, requiredPairedSize, requiredPairedSizeContinuous, resolvableDelta,
 } from "../src/eval/sizing.js";
 
 /**
@@ -158,5 +158,41 @@ describe("what the suites in this repository actually resolve", () => {
   it("puts a five-case suite near ninety, and below the floor entirely", () => {
     expect(resolvableDelta(5, STATED_ASSUMPTIONS)).toBeGreaterThan(0.85);
     expect(5).toBeLessThan(floorDiscordant(0.05));
+  });
+});
+
+describe("requiredPairedSizeContinuous", () => {
+  it("rejects a non-positive delta", () => {
+    expect(() => requiredPairedSizeContinuous(0, 1, { alpha: 0.05, power: 0.8 }))
+      .toThrow(/positive delta/);
+    expect(() => requiredPairedSizeContinuous(-1, 1, { alpha: 0.05, power: 0.8 }))
+      .toThrow(/positive delta/);
+  });
+
+  it("rejects a non-positive sd", () => {
+    expect(() => requiredPairedSizeContinuous(1, 0, { alpha: 0.05, power: 0.8 }))
+      .toThrow(/positive sd/);
+    expect(() => requiredPairedSizeContinuous(1, -2, { alpha: 0.05, power: 0.8 }))
+      .toThrow(/positive sd/);
+  });
+
+  it("reduces to requiredPairedSize in the Bernoulli limit", () => {
+    // Var(±1/0 discordance indicator at rate p_d) = p_d, so sd = sqrt(p_d) is the
+    // continuous rule's input that specializes to the binary rule at the same delta.
+    const pd = 0.2778; // sub-project 1's measured discordance rate
+    const delta = 0.08;
+    const assumptions = { alpha: 0.05, power: 0.8 };
+    const continuous = requiredPairedSizeContinuous(delta, Math.sqrt(pd), assumptions);
+    const binary = requiredPairedSize(delta, { ...assumptions, discordanceRate: pd });
+    expect(continuous).toBe(binary);
+  });
+
+  it("grows with sd and shrinks with a larger delta", () => {
+    const assumptions = { alpha: 0.05, power: 0.8 };
+    const small = requiredPairedSizeContinuous(2, 1, assumptions);
+    const largerSd = requiredPairedSizeContinuous(2, 2, assumptions);
+    const largerDelta = requiredPairedSizeContinuous(4, 1, assumptions);
+    expect(largerSd).toBeGreaterThan(small);
+    expect(largerDelta).toBeLessThan(small);
   });
 });
