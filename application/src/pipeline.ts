@@ -48,6 +48,16 @@ const BUNDLE_SWEEP_LIMIT = 64;
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
+/**
+ * Every body this run is holding, for the redaction check to compare events against.
+ *
+ * Derived from the context rather than listed. Exported so a test can assert the coverage
+ * against the context's own keys — a hand-picked list passes any test that names the same
+ * fields it does, which is how four-of-eleven survived.
+ */
+export const redactionBodies = (ctx: PipelineContext): string[] =>
+  Object.values(ctx).filter((v): v is string => typeof v === "string");
+
 export interface PipelineRunOptions {
   provider: ProviderTransport;
   store: RevisionStore;
@@ -159,9 +169,22 @@ export async function runPipeline(
    *
    * The bodies are read through a callback because `ctx.prompt` is rewritten as stages run; a
    * snapshot would stop covering the artifact halfway through the run.
+   *
+   * **Derived from the context, not enumerated.** This listed four fields by name — `brief`,
+   * `prompt`, `spec`, `critique` — and the context holds eleven bodies. Measured with a
+   * distinct body per stage: SEVEN of the eleven would have gone into an event verbatim,
+   * including `preview`, which is a model's reply generated with the compiled prompt as its
+   * system message, and `testMessage`, which is user input this run sends to a provider.
+   *
+   * A hand-picked list is a sparse matcher that silently stops covering the twelfth field the
+   * moment someone adds one — the same failure mode as the per-call-site convention this wrap
+   * exists to abolish, moved one level up. Asking the context what it holds cannot go stale.
+   *
+   * The short scalars ride along harmlessly: `redactingSink` keeps only bodies of at least
+   * `WINDOW` characters, and `stakes`, `depth`, `lintStatus`, `criticVerdict` and `voice` are
+   * all short enum values that can never reach it.
    */
-  const sink = redactingSink(opts.sink, () => [ctx.brief, ctx.prompt, ctx.spec, ctx.critique]
-    .filter((b): b is string => typeof b === "string"));
+  const sink = redactingSink(opts.sink, () => redactionBodies(ctx));
 
   /** Every ref this run wrote. Held in memory so a storage fault cannot empty it. */
   const retainedRefs = new Set<string>();
