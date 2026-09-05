@@ -68,7 +68,8 @@
     "build:judge-calibration": "tsx scripts/build-judge-calibration.ts",
     "check:judge": "tsx scripts/check-judge.ts",
     "judge": "tsx scripts/judge.ts",
-    "judge:pilot": "tsx scripts/judge-pilot.ts"
+    "judge:pilot": "tsx scripts/judge-pilot.ts",
+    "check:merge-integrity": "node scripts/check-merge-integrity.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",

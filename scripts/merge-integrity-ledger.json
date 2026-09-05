@@ -1,0 +1,17 @@
+{
+  "_comment": [
+    "Merged PRs whose content is deliberately absent from master.",
+    "An entry is a claim that a human looked and decided. It carries the reason,",
+    "not just the number, because a revert and a stranded merge look identical to",
+    "the checker. Advisory: nothing here fails a build."
+  ],
+  "entries": [
+    {
+      "pr": 48,
+      "title": "Update from task 37766777-0ccd-4b42-b4c6-03f48fd31185",
+      "verdict": "deliberate",
+      "reason": "Tracked node_modules/ and emptied .gitignore — the sixth gitignore incident. Reverted on purpose; check:hygiene now pins the repository's shape so it cannot recur silently.",
+      "evidence": "merge_commit c5ad91d2; .gitignore and every node_modules/ path absent from master by design"
+    }
+  ]
+}
