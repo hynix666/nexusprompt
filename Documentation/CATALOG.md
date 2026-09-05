@@ -31,7 +31,7 @@ The catalog is validated and exportable in four formats, all generated from the 
 
 A new record requires a `primary_source` at creation time — there is no path to add a technique without a citation — and its `source_audit` fields start at `unverified` until a reviewer confirms them against that source.
 
-A `scripts/new-technique.py` generator to enforce this mechanically is **planned, not built**; it exists in no source archive. The existing `scripts/build_catalog.py` and the `promptnexus_hygiene` toolchain handle building and validating the catalog, not authoring new entries.
+~~A `scripts/new-technique.py` generator to enforce this mechanically is planned, not built.~~ **Closed 5 September 2026** — `scripts/new-technique.py` exists and is wired as `npm run scaffold:technique` (PR [#116](https://github.com/hynix666/nexusprompt/pull/116)). The existing `scripts/build_catalog.py` and the `promptnexus_hygiene` toolchain still handle building and validating the catalog, not authoring new entries — that is what the generator is for.
 
 ## Relationship to gates
 

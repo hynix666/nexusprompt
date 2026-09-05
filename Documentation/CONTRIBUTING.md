@@ -19,7 +19,7 @@ If you're unsure, default to Core and let review push it out a layer — it's mu
 
 ## Adding a gate, technique, or provider
 
-Write the files by hand, to the checklist in `GATES_REFERENCE.md` (gates) or `CATALOG.md` (techniques). The scaffolding generators referenced by earlier drafts of this document — `scripts/new-gate.ts`, `scripts/new-technique.py` — **do not exist**; they were never written in any source system. Building them is worthwhile, but nothing currently depends on them, and no review should assume their output.
+Scaffold with `npm run scaffold:gate` (gates) or `npm run scaffold:technique` (techniques) — `scripts/new-gate.ts` and `scripts/new-technique.py` exist and are wired to those commands (PR [#116](https://github.com/hynix666/nexusprompt/pull/116), closing an item earlier drafts of this document said was missing). Review still goes against the checklist in `GATES_REFERENCE.md` (gates) or `CATALOG.md` (techniques): what is non-negotiable below is not automated by scaffolding alone.
 
 What is non-negotiable regardless: a gate ships with at least one property test, and a technique record ships with a `primary_source`.
 
