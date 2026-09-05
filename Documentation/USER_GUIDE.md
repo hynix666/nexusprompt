@@ -1,6 +1,6 @@
 # User Guide
 
-Three ways to use the platform, all built on the same Core, so results are consistent regardless of which you choose.
+Three guided ways to use the platform, plus one operational surface, all built on the same Core, so results are consistent regardless of which you choose.
 
 ## `pipeline-ui` — the guided flow
 
@@ -30,9 +30,13 @@ Modules: **Learn**, **Templates**, **Lint**, **Build**, **Optimize**, **Pipeline
 
 ```
 promptnexus lint path/to/prompt.md
-promptnexus run --stage compile --input path/to/prompt.md
+promptnexus run --stage compile path/to/prompt.md
 ```
 Use this to wire gate checks into another repo's pre-commit hooks. Because `cli` and the web Shells both call the same Core functions through the same contracts, a prompt linted via `cli` produces identical `GateResult`s to the same prompt linted in `toolkit-ui`.
+
+## `api` — operational status, not a pipeline API yet
+
+Not one of the three guided ways above — a small Fastify HTTP server (`npm start -w @nexusprompt/shell-api`) exposing read-only status routes: `/api/v1/health`, `/api/v1/system`, `/api/v1/hardware`, `/api/v1/gates`, and `/api/v1/provider/health`. There is no route to run a pipeline or lint a prompt over HTTP; use `cli` or a web Shell for that.
 
 ## Choosing a provider
 
