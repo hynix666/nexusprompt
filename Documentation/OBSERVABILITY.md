@@ -52,11 +52,9 @@ Note that the Application layer, not Core, emits provider-call and persistence e
 
 ## Sink architecture
 
-`observability/sink.ts` defines a pluggable interface. Two implementations ship:
-- **stdout/JSON-lines** — default for local/dev and the local-proxy deployment shape.
-- **hosted exporter** (OpenTelemetry-compatible interface, implementation pluggable) — for the hosted-server deployment shape, so events can flow into whatever the deploying team already uses.
+**This section contradicted the correction above it until now — fixed 6 September 2026.** `EventSink` is real: a one-method interface (`emit(event)`) in `contracts/index.ts`. But `observability/sink.ts` does not exist, and neither does either implementation this section used to claim: no stdout/JSON-lines sink and no OpenTelemetry-compatible hosted exporter exist anywhere in the tree. Every sink supplied today is an inline lambda passed in by a composition root — `shells/cli/src/index.ts` wires either `{ emit() {} }` or `{ emit: (e) => events.push(e) }`, matching what the "Corrected 29 August 2026" note above already established. A pluggable stdout/hosted-exporter pair is target-state, not built.
 
-Swapping sinks changes nothing about event shape or call sites — only `sink.ts` differs (see `ARCHITECTURE.md` → dependency rule; the spine is called from every layer via a thin wrapper, never embedded).
+Swapping sinks changes nothing about event shape or call sites — only the object implementing `EventSink` differs (see `ARCHITECTURE.md` → dependency rule; the spine is called from every layer via a thin wrapper, never embedded).
 
 ## Health checks
 
