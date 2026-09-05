@@ -73,6 +73,7 @@
     "check:merge-integrity": "node scripts/check-merge-integrity.mjs",
     "scaffold:gate": "tsx scripts/new-gate.ts",
     "scaffold:technique": "python scripts/new-technique.py",
+    "catalog:validate": "tsx scripts/catalog-validate.ts",
     "parity": "tsx scripts/parity.ts"
   },
   "devDependencies": {

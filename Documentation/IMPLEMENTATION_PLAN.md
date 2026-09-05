@@ -112,12 +112,12 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "check:merge-integrity",
     "scaffold:gate",
     "scaffold:technique",
-    "parity"
+    "parity",
+    "catalog:validate"
   ],
   "planned_commands": [
     "verify:gates",
-    "trace:view",
-    "catalog:validate"
+    "trace:view"
   ]
 }
 ```
@@ -277,7 +277,7 @@ Probing that fix caught a second, quieter mistake. The first test looked like it
 
 **`compile`'s inline gating is reconciled.** `lint` owns the run's verdict, computed with the full sixteen-gate registry against the final prompt rather than an intermediate one. `compile` still gates inline for the single-stage path the eval suite uses, and that is now a stated split rather than an unexamined leftover.
 
-### Phase 4 — Catalog import — *mostly done*
+### Phase 4 — Catalog import ✅ complete
 
 **Entry condition:** none beyond Phase 1. **This phase is independent and can be pulled forward at any point** — nothing depends on it until Phase 6's toolkit surface, and it is the cheapest phase in the plan.
 
@@ -306,6 +306,9 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 - **A scope question the corpus raises.** 127 RAG papers and 25 on long-term memory sit outside what the catalog covers — `retrieval-augmentation` holds 11 records and there is no memory category at all. Whether the platform's technique catalog should extend into either is a decision, not an oversight to quietly correct.
 - ~~**The ensembling coverage gap.**~~ **Closed.** All eight missing techniques now have records, added at the import boundary through `scripts/catalog-additions.json` — 172 frozen records plus 23, giving 195. Every citation was resolved against arXiv's own metadata, and the additions are held to the same contract as the frozen records, with no id allowed to collide with one. Coverage against The Prompt Report's taxonomy went from 34 of 57 to 42 of 57; ensembling is 10 of 10. Fifteen scattered absences remain, but no category is now missing most of itself.
 - **Three records naming `arXiv preprint` with no identifier**, excused in `scripts/catalog-known-defects.json`. Unlike the titles these cannot be corrected from evidence — the identifier is simply absent and no index resolved it.
+- ~~**`catalog:validate`.**~~ **Done.** `npm run catalog:validate` validates a candidate TechniqueRecord (or a `{records:[...]}` batch) against the JSON schema, detects unfilled TODO stubs, checks template variable coherence (every `{{var}}` referenced in a template body has a `variables` entry), and checks that each `template_id` begins with the record's own id. Providing the fast-feedback loop that `import:catalog` does not: `import:catalog` validates the whole committed batch at import time; `catalog:validate` targets a record in progress before it joins the batch.
+
+**Exit gate — met.** `npm run catalog:validate` exits 0 on `scripts/catalog-additions.json` (all 23 addition records pass schema, no TODO stubs, all template variables declared). `npm run check:catalog` and `check:xsd` run in `verify` and fail if either the JSON output or the XML export drifts.
 
 ### Phase 5 — Second adapters ✅ complete
 
