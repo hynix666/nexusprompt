@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DbRevisionStore } from "../src/index.js";
-import type { RevisionEntry, RunManifest } from "../../../contracts/index.js";
+import { version } from "node:process";
 
 /**
  * Tests for DbRevisionStore.
@@ -19,7 +18,24 @@ import type { RevisionEntry, RunManifest } from "../../../contracts/index.js";
  *   8. commitManifest is idempotent-free — a second call is refused (immutable).
  *   9. markStale on a committed manifest is refused (immutable).
  *  10. Concurrent appends to one store keep every revision (SQLite serialises them).
+ * 
+ * Note: These tests require Node.js 22+ for the node:sqlite built-in module.
+ * They are skipped on older versions with a descriptive message.
  */
+
+const NODE_MAJOR = Number(version.split(".")[0].replace("v", ""));
+
+if (NODE_MAJOR < 22) {
+  describe.skip("DbRevisionStore (requires Node 22+)", () => {
+    it(`skipped - current Node ${version} does not have node:sqlite`, () => {
+      // Test suite skipped due to Node version
+    });
+  });
+} else {
+  // Import only when Node version supports node:sqlite
+  const { DbRevisionStore } = await import("../src/index.js");
+  type RevisionEntry = import("../../../contracts/index.js").RevisionEntry;
+  type RunManifest = import("../../../contracts/index.js").RunManifest;
 
 const T0 = 1_760_000_000_000;
 
@@ -275,3 +291,4 @@ describe("DbRevisionStore — concurrent appends", () => {
     }
   });
 });
+}

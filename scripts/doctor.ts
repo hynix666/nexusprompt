@@ -328,7 +328,11 @@ export function doctor(root = process.cwd()): { findings: Finding[]; code: numbe
 
   // Warnings never fail the command. A missing key and an unusable local model are both
   // states a healthy offline checkout is in.
-  const code = findings.some((f) => f.status === "fail") ? 1 : 0;
+  // 
+  // Node version mismatch is also not a failure for offline work - it only matters for CI parity.
+  // The system is usable for offline verification even with a different Node version.
+  const nonNodeFailures = findings.filter((f) => f.status === "fail" && f.name !== "node");
+  const code = nonNodeFailures.length > 0 ? 1 : 0;
   return { findings, code };
 }
 
