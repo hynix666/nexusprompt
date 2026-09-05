@@ -178,7 +178,9 @@ that event is a failing build, not a note in a backlog.
   "adapters_target": 5,
   "shells_present": [
     "api",
-    "cli"
+    "cli",
+    "pipeline-ui",
+    "toolkit-ui"
   ],
   "shells_target": 3,
   "shells_excluded_from_typecheck": false
