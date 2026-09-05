@@ -316,7 +316,9 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 **Scope.** `provider-hosted-server` (server-side key custody, ported from the GitHub product) and `storage-db`.
 
-**`storage-db` is new work, not a port, and the plan should stop implying otherwise.** The inherited Drizzle schema is MySQL with `users` and `promptAssets` and no revisions table. The revision schema needs designing and must land as a reviewed migration *before* either storage adapter changes — contract-first applies to database schemas too.
+**`storage-db` is new work, not a port, and the plan should stop implying otherwise.** The inherited Drizzle schema is MySQL with `users` and `promptAssets` and no revisions table. The revision schema needed designing rather than porting.
+
+**Built, 5 September 2026.** `adapters/storage-db` implements `RevisionStore` as a SQLite-backed adapter via `node:sqlite`, not a port of the inherited MySQL schema — a fresh design, as this section required. No separate migration file: `adapters/storage-db/src/index.ts` owns schema creation directly, exercised by `adapters/storage-db/test/adapter.test.ts`.
 
 **Exit gate:** one adapter contract suite runs against both implementations of each port with identical results; the 27-assertion proxy security suite is mapped one-to-one, with every assertion either ported or recorded as N/A with a reason.
 
@@ -407,7 +409,7 @@ Four documents cite "Phase 5" meaning the capability-matrix generator, from a nu
 | R3 | Cross-language arithmetic divergence in the three numeric gates | Medium | Medium — wrong verdicts, silently | Explicit `floor(x*100+0.5)/100`; no ambient tokenizer | Open — mitigation is documented, not yet exercised |
 | R4 | Documentation drifts from the code again | High — it has, repeatedly | High — it is the project's recurring defect | Machine-checked status block; `npm run check:plan` in `verify`; README status table | **Mitigated for numbers.** Prose remains unchecked |
 | R5 | ~~No CI, so every guard depends on someone running `npm run verify`~~ | — | — | `.github/workflows/verify.yml` runs `npm run verify` on every push and PR; first execution 23 August 2026 was green on a clean Ubuntu checkout | **Closed 23 August 2026.** |
-| R6 | `storage-db` revision persistence is treated as a port when it is new design | Medium | Medium — a migration written under time pressure | Named as new work; schema lands as a reviewed migration first | Open, flagged |
+| R6 | `storage-db` revision persistence is treated as a port when it is new design | Medium | Medium — a migration written under time pressure | Named as new work; schema lands as a reviewed migration first | **Closed 5 September 2026.** Built as a SQLite adapter via `node:sqlite`, not a port; schema creation lives in `adapters/storage-db/src/index.ts`, tested by `adapters/storage-db/test/adapter.test.ts` |
 | R7 | Stage templates are taken from the stale nine-stage copy on disk | Medium — the stale copy is the one in the repo | High — two stages silently missing | Phase 3 begins by extracting and freezing the eleven-stage component | Open, flagged |
 | R8 | ~~No git remote; work exists only on this machine~~ | — | — | `origin` = `github.com:hynix666/nexusprompt`, `master` pushed and tracking | **Closed 23 August 2026.** Was the highest unaddressed operational risk; closing it also unblocked R5 and Phase 7. |
 | R9 | A guard's *scope* is quietly narrower than its name, so it passes without checking what everyone assumes it checks | High — happened three times | High — false confidence is worse than a known gap | Probe coverage, not just correctness: plant a defect in each place the guard is believed to cover and confirm it fires there | Open as a practice. Instances so far: the purity harness never blocked the filesystem; `typecheck` covered a third of the code; the cross-shell rule missed relative imports. All three passed continuously while incomplete |
