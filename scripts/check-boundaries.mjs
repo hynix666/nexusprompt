@@ -93,6 +93,10 @@ const RULES = [
         "The composition root exists to name concrete adapters. That is its whole job; it contains wiring and no logic.",
       "shells/api/src/composition-root.ts":
         "The API composition root exists to name concrete adapters. It contains wiring only; routes call the Application protocol.",
+      "shells/pipeline-ui/src/composition-root.ts":
+        "The pipeline-ui composition root exists to name concrete adapters. It contains wiring and no logic.",
+      "shells/toolkit-ui/src/composition-root.ts":
+        "The toolkit-ui composition root exists to name concrete adapters. It contains wiring and no logic.",
     },
   },
   {

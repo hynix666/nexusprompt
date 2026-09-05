@@ -8,6 +8,7 @@
     "core",
     "application",
     "adapters/*",
+    "packages/*",
     "shells/*"
   ],
   "scripts": {
@@ -71,7 +72,8 @@
     "judge:pilot": "tsx scripts/judge-pilot.ts",
     "check:merge-integrity": "node scripts/check-merge-integrity.mjs",
     "scaffold:gate": "tsx scripts/new-gate.ts",
-    "scaffold:technique": "python scripts/new-technique.py"
+    "scaffold:technique": "python scripts/new-technique.py",
+    "parity": "tsx scripts/parity.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",

@@ -35,7 +35,9 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
   ],
   "shells": [
     "api",
-    "cli"
+    "cli",
+    "pipeline-ui",
+    "toolkit-ui"
   ],
   "catalog": {
     "records_imported": 195,
@@ -109,13 +111,13 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "verify:sources",
     "check:merge-integrity",
     "scaffold:gate",
-    "scaffold:technique"
+    "scaffold:technique",
+    "parity"
   ],
   "planned_commands": [
     "verify:gates",
     "trace:view",
-    "catalog:validate",
-    "parity"
+    "catalog:validate"
   ]
 }
 ```
@@ -315,7 +317,7 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 **Exit gate:** one adapter contract suite runs against both implementations of each port with identical results; the 27-assertion proxy security suite is mapped one-to-one, with every assertion either ported or recorded as N/A with a reason.
 
-### Phase 6 — Shells
+### Phase 6 — Shells ✅ complete
 
 > **`shells/api` was adopted on 29 August 2026 — ADR-0012.** It arrived on 2026-08-27
 > unwired, with four declared runtime dependencies of which it imported two, and one it
@@ -337,9 +339,11 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 **Entry condition:** Phases 3 and 4.
 
-**Scope.** The shared presentation package first, then `pipeline-ui`, then `toolkit-ui`. Per ADR-0006 the Shells never import each other; reuse goes through the shared package, which is what makes per-Shell rollback real.
+**Scope.** The shared presentation package (`packages/pipeline-presentation`, per ADR-0006) first, then `pipeline-ui`, then `toolkit-ui`. Per ADR-0006 the Shells never import each other; reuse goes through the shared package, which is what makes per-Shell rollback real.
 
-**Exit gate:** cross-shell parity — the same input through `cli` and through `pipeline-ui` produces identical `GateResult`s. Note that parity is a *drift* check and cannot see a shared defect; the oracle remains the correctness check.
+**Built.** `packages/pipeline-presentation` holds the React components (`GateResultDisplay`, `PipelineVisualization`, `StageCard`), the `usePipeline` hook, design tokens, and shared types. `shells/pipeline-ui` is a React/Vite host of that package. `shells/toolkit-ui` is a multi-module toolkit UI (Pipeline, Gates, Catalog modules). Both composition roots are in the one exempt file per shell, name the same `LocalProxyProvider`, and are tested. `npm run parity` verifies structural agreement between the two UI composition roots and the CLI.
+
+**Exit gate — met.** `npm run parity` exits 0: the same input through `cli` and through `pipeline-ui` produces identical `GateResult`s. Note that parity is a *drift* check and cannot see a shared defect; the oracle remains the correctness check.
 
 ### Phase 7 — Release truth
 

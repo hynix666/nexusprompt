@@ -1,0 +1,6 @@
+{
+  "name": "@nexusprompt/shells-pipeline-ui",
+  "license": "MIT",
+  "private": true,
+  "type": "module"
+}
