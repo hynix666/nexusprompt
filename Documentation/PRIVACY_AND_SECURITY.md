@@ -9,7 +9,7 @@
 
 ## Tenancy, identity, and retention
 
-The hosted deployment shape makes multi-tenancy claims, so the constraints below are contractual, not operational convention — an adapter that cannot express them cannot implement the port.
+**Target state — not built.** Multi-tenancy has no phase in `IMPLEMENTATION_PLAN.md` and is undecided target-state work. Nothing below is implemented: `tenant_context_ref` does not exist on `GenerationRequest`, and "tenant" appears in no file under `application/src`, `core/src`, or `adapters/storage-db`. The table states the design the hosted shape is meant to satisfy once built, so that an adapter which cannot express these constraints is known unable to implement the port — it does not describe current behavior.
 
 | Requirement | Mechanism |
 |---|---|
@@ -45,7 +45,7 @@ an enumeration — the reclaim above refuses to run rather than trust it when th
 run is absent from what it reports, because a sweep over an incomplete live set deletes content
 that is still cited.
 
-In the local-proxy shape there is a single implicit tenant, and `tenant_context_ref` is null. The isolation rules above are still enforced by `storage-db` when it is configured, so switching deployment shape never silently relaxes them.
+In the local-proxy shape there is a single implicit tenant. The isolation rules above are target-state, not enforced by `storage-db` today (see the note at the top of the Tenancy section) — this line describes what switching deployment shape must not silently relax once they are built, not current behavior.
 
 ## Threat model summary
 
