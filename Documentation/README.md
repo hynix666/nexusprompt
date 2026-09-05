@@ -18,7 +18,7 @@ Every count and file name above has been checked against the source artifacts �
 4. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — how a change gets from idea to merged
 
 **Operators / deployers**, in order:
-1. [`PROVIDERS.md`](./PROVIDERS.md) — choosing local-proxy vs. hosted-server
+1. [`PROVIDERS.md`](./PROVIDERS.md) — choosing local-proxy, hosted-server, or ollama
 2. [`PRIVACY_AND_SECURITY.md`](./PRIVACY_AND_SECURITY.md)
 3. [`RELEASE_OPERATIONS.md`](./RELEASE_OPERATIONS.md) — build, stamp, ship, rollback
 
