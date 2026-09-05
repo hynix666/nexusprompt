@@ -1,6 +1,6 @@
 # PromptNexus Unified Platform — Documentation
 
-This is the documentation set for the merged system: one pure Core (16-gate linter, 172-technique catalog, 11-stage pipeline decision logic) behind an Application/Orchestration layer that owns every live effect, served by two provider adapters, two storage adapters, and three Shells (pipeline UI, toolkit UI, CLI). Contracts are versioned JSON Schemas and are the sole cross-boundary interface.
+This is the documentation set for the merged system: one pure Core (16-gate linter, 172-technique catalog, 11-stage pipeline decision logic) behind an Application/Orchestration layer that owns every live effect, served by three provider adapters, two storage adapters, and four Shells (pipeline UI, toolkit UI, CLI, API). Contracts are versioned JSON Schemas and are the sole cross-boundary interface.
 
 Every count and file name above has been checked against the source artifacts — see [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md) for the evidence and for the ten claims that did not survive that check.
 
