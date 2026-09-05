@@ -12,7 +12,7 @@
 
 **Demo mode** (`demo_mode: true`) — a `PipelineStage` result produced without a live provider call, labeled `⟦WORKFLOW DEMO — no model⟧` rather than fabricated. A structural honesty mechanism, not a UI toggle.
 
-**Gate** — one of the 17 pure functions in `core/gates/` that evaluates a prompt against a specific rule and returns a `GateResult`.
+**Gate** — one of the 16 pure functions in `core/gates/` that evaluates a prompt against a specific rule and returns a `GateResult`.
 
 **Layer** — one of the architectural tiers: Shells, Application/Orchestration, Contracts, Core, Adapters, Composition Root, with Observability cutting across all of them.
 
@@ -22,12 +22,12 @@
 
 **Shared presentation package** — UI code reused by more than one Shell, depending only on the Application protocol and contract types. How `toolkit-ui` reuses the pipeline experience without importing `pipeline-ui` (ADR-0006).
 
-**Shell** — a replaceable, presentation-layer consumer of the Application protocol: `pipeline-ui`, `toolkit-ui`, or `cli`. There are exactly three.
+**Shell** — a replaceable, presentation-layer consumer of the Application protocol: `pipeline-ui`, `toolkit-ui`, `cli`, or `api`. There are exactly four.
 
 **Stale (revision)** — a `RevisionEntry` with `freshness: STALE`, meaning an upstream output it derives from has changed since it was produced. Independent of `status`: a revision can have succeeded and still be stale. Excluded from exports by default until rerun.
 
-**Technique record** — one entry in the 172-item catalog, carrying a provenance/source-verification flag.
+**Technique record** — one entry in the 195-record catalog (172 frozen, 23 added), carrying a provenance/source-verification flag.
 
-**Contract test suite** — a single test file run against every implementation of an interface (e.g., both provider adapters) to assert behavioral parity.
+**Contract test suite** — a single test file run against every implementation of an interface (e.g., all three `ProviderTransport` adapters) to assert behavioral parity.
 
-**ADR (Architecture Decision Record)** — a document in `docs/adr/` recording a decision that constrains future work at a layer boundary, with its rationale, so it doesn't need rediscovering later.
+**ADR (Architecture Decision Record)** — a document in `Documentation/` (numbered `0001`–`0016`, not a separate `docs/adr/` directory) recording a decision that constrains future work at a layer boundary, with its rationale, so it doesn't need rediscovering later.
