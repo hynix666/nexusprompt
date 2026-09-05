@@ -88,7 +88,7 @@ When a provider adapter is unreachable or exhausts retries:
 
 ## Capability registration and the matrix
 
-`CAPABILITY_MATRIX.md` is generated from a machine-readable `CapabilityRegistration` registry plus evidence that the corresponding contract tests passed. The matrix is not hand-maintained. Until the generator exists, any checked-in copy must be explicitly labeled illustrative and non-authoritative.
+`CAPABILITY_MATRIX.md` is generated from a machine-readable `CapabilityRegistration` registry plus evidence that the corresponding contract tests passed. The matrix is not hand-maintained. **Built, Phase 7** — `npm run docs:matrix` generates it and `npm run check:matrix` fails the build when the committed copy is not what the repository produces, so the committed file is no longer a checked-in copy needing an illustrative label.
 
 ## Where the target properties are enforced
 

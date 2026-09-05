@@ -1,10 +1,10 @@
 # Lint Gates Reference
 
-This table is the **target** inventory: the 16 gates emitted by `prompt_lint.py`, the linter in `files_4.zip`, each to be ported as a pure function returning a `GateResult` (see `CONTRACTS.md`).
+This table is the inventory of the 16 gates emitted by `prompt_lint.py`, the linter in `files_4.zip`, each ported as a pure function returning a `GateResult` (see `CONTRACTS.md`).
 
-> **Built so far: 2 of 16.** `SECRET_LEAK_SCAN` and `CLAIM_DISCIPLINE` are implemented in `core/src/gates/`, registered in `registry.ts`, and verified against the frozen linter by `npm run differential`. The other fourteen are named below and nowhere else — `npm run differential` prints them as "not yet ported" on every run, and `scripts/ported-gates.json` pins the set so it cannot shrink unnoticed.
+> **Built: 16 of 16, 18 August 2026.** All sixteen gates are implemented in `core/src/gates/`, registered in `registry.ts`, and compared against the frozen linter by `npm run differential` — 2,784 verdicts, zero disagreements outside a declared divergence allowlist ([ADR-0007](./0007-permanent-differential-oracle.md)). `scripts/ported-gates.json` lists all sixteen.
 >
-> An earlier version of this line said "`core/gates/` implements 16 gates" in the present tense, and that each gate ships with a fixture test and a property test. Both were written before any code existed, and neither was corrected when it did. The two that exist do have fixture and property tests; that is a description of two files, not a policy anything enforces.
+> An earlier version of this line said "`core/gates/` implements 16 gates" in the present tense before the port existed, and a later correction understated it as 2 of 16 partway through. Both are now accurate: the property-test requirement below is still a review convention, not something CI enforces.
 
 > **Counted, not inherited.** This table previously claimed 17 gates, listed one (`GUARDRAIL_COMPLETENESS`) that exists in no source, and omitted two that do. The inventory below is the verified set — see [`SOURCE_VERIFICATION.md`](./SOURCE_VERIFICATION.md). The source implements these as inline checks inside a single `lint()` function; porting them as 16 separately testable pure functions is a decomposition, and gate-by-gate behavioral parity against `fixtures.json` is the exit criterion for that work.
 
@@ -61,7 +61,7 @@ A new gate needs: the pure function in `core/gates/`, a fixture test, at least o
 
 **Nothing enforces the property-test requirement.** This line previously said CI did. CI now exists (23 August 2026) and runs `npm run verify` on every push — boundary check, typecheck, source-freeze check, tests, then the oracle — but *that* is still what runs, and it will not notice a missing property test. The requirement remains a review convention.
 
-A `scripts/new-gate.ts` generator to scaffold all four is **planned, not built** — it exists in no source archive, despite earlier drafts of this document and `CONTRIBUTING.md` instructing contributors to use it. Write the files by hand until it does, and keep the checklist above as the review standard.
+~~A `scripts/new-gate.ts` generator to scaffold all four is planned, not built.~~ **Closed 5 September 2026** — `scripts/new-gate.ts` exists and is wired as `npm run scaffold:gate` (PR [#116](https://github.com/hynix666/nexusprompt/pull/116)). Use it; keep the checklist above as the review standard for what it produces.
 
 ## Running gates standalone
 
