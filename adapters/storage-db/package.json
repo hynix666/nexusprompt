@@ -1,0 +1,6 @@
+{
+  "name": "@nexusprompt/adapters-storage-db",
+  "license": "MIT",
+  "private": true,
+  "type": "module"
+}
