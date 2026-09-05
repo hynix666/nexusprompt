@@ -115,7 +115,7 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 | `npm run docs:fence-explanation` / `check:fence-explanation` | Regenerates the fence-closer explainer's data from the live gate, and fails when the committed copy is not what the gate produces. |
 | `npm run check:fingerprint` | Watches for the provider swapping the model under you. Reports "not armed" until a run reaches a provider. |
 | `npm run differential` | The oracle — ported gates vs. the frozen Python linter. Needs Python. |
-| `npm run cli` | `promptnexus lint\|run\|gates`. |
+| `npm run cli` | `promptnexus lint\|run\|pipeline\|gates`. |
 
 **Only `npm run verify:gates` is target state and does not exist** (matches `IMPLEMENTATION_PLAN.md`'s `planned_commands`). The rest of this line used to list five more as unbuilt; all five exist now, three under the names given and two under different ones: `trace:view`, `scaffold:gate`, and `scaffold:technique` exist as named; `adversarial` exists as `eval:adversarial` (`tsx scripts/run-adversarial.ts`); `verify:hash` exists as `check:hash` (`node scripts/build-hash.mjs --check`).
 
