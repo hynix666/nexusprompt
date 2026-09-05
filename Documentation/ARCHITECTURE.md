@@ -83,7 +83,7 @@ When a provider adapter is unreachable or exhausts retries:
 ## Storage and revision integrity
 
 - `storage-local` retains complete **run bundles** (all stage revisions belonging to one `run_id`), not individual entries. The bound is eight most recent completed run bundles, ensuring a full eleven-stage run can be persisted intact regardless of how many stages the pipeline grows to.
-- `storage-db` provides unbounded, multi-tenant storage with query by `run_id`, user, or date.
+- `storage-db` provides unbounded storage, queryable by `run_id`. Multi-tenant isolation is target-state, not built — see the note in `PRIVACY_AND_SECURITY.md`'s Tenancy section; no tenant scoping exists in `adapters/storage-db` today.
 - Upstream edits mark downstream revisions stale via explicit lineage fields on `RevisionEntry`. Stale material is excluded from exports by default.
 
 ## Capability registration and the matrix
