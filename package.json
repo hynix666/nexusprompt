@@ -69,7 +69,9 @@
     "check:judge": "tsx scripts/check-judge.ts",
     "judge": "tsx scripts/judge.ts",
     "judge:pilot": "tsx scripts/judge-pilot.ts",
-    "check:merge-integrity": "node scripts/check-merge-integrity.mjs"
+    "check:merge-integrity": "node scripts/check-merge-integrity.mjs",
+    "scaffold:gate": "tsx scripts/new-gate.ts",
+    "scaffold:technique": "python scripts/new-technique.py"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",

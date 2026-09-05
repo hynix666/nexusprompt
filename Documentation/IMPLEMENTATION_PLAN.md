@@ -106,13 +106,13 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "typecheck",
     "verify",
     "verify:sources",
-    "check:merge-integrity"
+    "check:merge-integrity",
+    "scaffold:gate",
+    "scaffold:technique"
   ],
   "planned_commands": [
     "verify:gates",
     "trace:view",
-    "scaffold:gate",
-    "scaffold:technique",
     "catalog:validate",
     "parity"
   ]
