@@ -1,7 +1,7 @@
 # ADR-0006: Shell Composition and Shared Presentation Packages (amends ADR-0004)
 
 ## Status
-Accepted — amends ADR-0004, which remains in force except where this ADR supersedes it.
+Accepted — amends ADR-0004, which remains in force except where this ADR supersedes it. **Amended by [ADR-0012](./0012-api-shell-and-the-dependency-boundary.md)**, which adds a fourth Shell (`api`) to the inventory this ADR named as exactly three. Where the two disagree on Shell count, ADR-0012 governs.
 
 ## Context
 

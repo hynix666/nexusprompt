@@ -9,7 +9,7 @@ The PromptNexus Unified Platform is organized as a strict layered system with an
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  SHELLS / shared presentation packages / CLI / CI integration │
-│  pipeline-ui · toolkit-ui · cli                               │
+│  pipeline-ui · toolkit-ui · cli · api                         │
 │  Depend only on the Application protocol + shared UI packages │
 ├─────────────────────────────────────────────────────────────┤
 │  APPLICATION / ORCHESTRATION                                  │
