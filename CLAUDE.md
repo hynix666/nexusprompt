@@ -117,7 +117,7 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 | `npm run differential` | The oracle — ported gates vs. the frozen Python linter. Needs Python. |
 | `npm run cli` | `promptnexus lint\|run\|gates`. |
 
-**These are target state and do not exist:** `npm run verify:gates`, `npm run adversarial`, `npm run trace:view`, `verify:hash`, `scaffold:gate`, `scaffold:technique`. Treat them as unbuilt, not as scripts to restore.
+**Only `npm run verify:gates` is target state and does not exist** (matches `IMPLEMENTATION_PLAN.md`'s `planned_commands`). The rest of this line used to list five more as unbuilt; all five exist now, three under the names given and two under different ones: `trace:view`, `scaffold:gate`, and `scaffold:technique` exist as named; `adversarial` exists as `eval:adversarial` (`tsx scripts/run-adversarial.ts`); `verify:hash` exists as `check:hash` (`node scripts/build-hash.mjs --check`).
 
 **`check:corpus` is green and deliberately outside `verify`.** All 661 files are at `PDF/`, re-hashed against `scripts/corpus-manifest.json` in about two seconds. It sits outside `verify` because `PDF/` is gitignored — 2 GB of third-party papers whose canonical home is arXiv — so a clean checkout has never had it, and folding the check into `verify` would make the headline command fail for every adopter. If it ever reports missing files, do **not** regenerate the manifest with `--write`: that silently accepts the disappearance of the evidence base. Find the corpus instead.
 
