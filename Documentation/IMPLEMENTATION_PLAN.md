@@ -113,11 +113,11 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "scaffold:gate",
     "scaffold:technique",
     "parity",
-    "catalog:validate"
+    "catalog:validate",
+    "trace:view"
   ],
   "planned_commands": [
-    "verify:gates",
-    "trace:view"
+    "verify:gates"
   ]
 }
 ```
@@ -135,7 +135,7 @@ application ██████████████████▒▒       e
 adapters    █████████████████████████▒▒   7 built; hosted-server still absent
 shells      █████████████▒▒▒▒▒▒▒▒       2 of 3 — cli runs the full pipeline; api exposes the first REST slice
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
-release     █████████████▒▒▒▒▒▒▒       gate + matrix generator + CI workflow; never executed, no build hash
+release     ████████████████████       matrix generator, build hash, truth boundary, trace viewer — CI green since #17
 ```
 
 The slice is deliberately the *riskiest* path through the system rather than the easiest: a provider failure reaching a Core reduction and coming back out as labelled demo output. That is the mechanism the whole design exists to protect, and it works.
@@ -348,7 +348,7 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 **Exit gate — met.** `npm run parity` exits 0: the same input through `cli` and through `pipeline-ui` produces identical `GateResult`s. Note that parity is a *drift* check and cannot see a shared defect; the oracle remains the correctness check.
 
-### Phase 7 — Release truth
+### Phase 7 — Release truth ✅ complete
 
 **Entry condition:** a git remote exists. **Met 23 August 2026** — `origin` is `github.com:hynix666/nexusprompt` (public, verified 4 September 2026). `ci.configured` reads `true` because `check:plan` derives it from the presence of a `.github` directory.
 
@@ -356,15 +356,15 @@ That derivation is narrower than it sounds, and the distinction is worth keeping
 
 **Scope.** CI pipeline in the documented stage order; the `CAPABILITY_MATRIX.md` generator; the trace viewer; build-hash stamping and the reproducibility check.
 
-**Status — 29 August 2026: three of four exit-gate clauses met; the phase is NOT complete.**
+**Status — 5 September 2026: all five exit-gate clauses met.**
 
 | Exit-gate clause | |
 |---|---|
 | the matrix is generated rather than hand-written | ✅ `docs:matrix` / `check:matrix`, deriving coverage from the validators the conformance suite exercises |
-| an orphaned contract or unproven claim fails the build | ✅ `check:matrix`, `check:counts` (44 occurrences of 39 pins), `check:truth` (9 boundaries) |
-| an independent build produces an identical artifact hash | ✅ `build:hash` / `check:hash` — 75 artifact files, one hash |
+| an orphaned contract or unproven claim fails the build | ✅ `check:matrix`, `check:counts` (44 occurrences of 39 pins), `check:truth` (10 boundaries) |
+| an independent build produces an identical artifact hash | ✅ `build:hash` / `check:hash` — 98 artifact files, one hash |
 | the three reproducibility claims are reported separately and never merged | ✅ the `three-reproducibility-claims` entry in the truth boundary |
-| **the trace viewer** | ❌ **not built.** `trace:view` remains in `planned_commands` |
+| **the trace viewer** | ✅ `npm run trace:view` — lists recent run bundles, or renders one run's full `RevisionEntry[]` as a stage-by-stage trace (status, gate verdicts, provenance) from `LocalRevisionStore`. `--json` for machine-readable output. |
 
 The artifact hash needs its scope stated rather than assumed. It normalises content to LF
 before hashing, because `core.autocrlf` is `true` here and only `sources/**` is pinned to LF —
@@ -379,7 +379,14 @@ same hash" is true and is not "reproducible builds". The truth boundary keeps th
 apart for exactly that reason — collapsing them lets the weakest borrow the strongest's
 credibility.
 
-**Exit gate:** the matrix is generated from registrations and test evidence rather than hand-written; an orphaned contract or unproven claim fails the build; an independent build produces an identical artifact hash; the three reproducibility claims are reported separately and never merged.
+The trace viewer reads only what `LocalRevisionStore` already persists — `getRun` and
+`listRecent`, both part of the `RevisionStore` contract since Phase 1 — so it adds no new fact
+about a run, only a rendering of ones already retained. It resolves no content ref by design:
+`input_ref`/`output_ref` name retained stage bodies, and a trace is a developer tool for
+inspecting structure (status, gates, provenance, lineage), not a second path to a prompt body
+alongside the sink's own no-bodies rule.
+
+**Exit gate:** the matrix is generated from registrations and test evidence rather than hand-written; an orphaned contract or unproven claim fails the build; an independent build produces an identical artifact hash; the three reproducibility claims are reported separately and never merged; a stored run bundle can be rendered as a stage-by-stage trace.
 
 ---
 

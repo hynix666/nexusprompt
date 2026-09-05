@@ -74,7 +74,8 @@
     "scaffold:gate": "tsx scripts/new-gate.ts",
     "scaffold:technique": "python scripts/new-technique.py",
     "catalog:validate": "tsx scripts/catalog-validate.ts",
-    "parity": "tsx scripts/parity.ts"
+    "parity": "tsx scripts/parity.ts",
+    "trace:view": "tsx scripts/trace-view.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.0",
