@@ -405,6 +405,8 @@ Once built: authorization denials would return as a `ProviderFailure` with `cate
 
 ## Capability registration
 
+**Target state — not built, and not the mechanism `check:matrix` actually uses.** `CapabilityRegistration` appears nowhere in real code except a comment in `scripts/generate-capability-matrix.mjs` itself, which says a registration record "that nothing writes" would be needed to derive coverage this way — and explains why the generator doesn't: it instead reads which validators `test/contract-conformance.test.ts` actually exercises (see `ARCHITECTURE.md`'s documentation conventions). No `capability-registration.schema.json` exists among the 18 real contracts.
+
 ### CapabilityRegistration
 
 Machine-readable declaration used by the capability-matrix generator.
