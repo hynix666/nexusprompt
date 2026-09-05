@@ -8,7 +8,7 @@ npm install
 npm run verify         # boundaries → typecheck → source freeze → tests → differential oracle
 ```
 
-`npm`, not `pnpm`: pnpm is not installed here and the workspace is defined with npm workspaces. The documented layout still names packages that do not exist yet — built today are `contracts/`, `core/`, `application/`, `adapters/provider-local-proxy`, `adapters/storage-local`, `shells/cli`, `scripts/`, and `test/`. `packages/` (shared presentation) and `observability/` are target state.
+`npm`, not `pnpm`: pnpm is not installed here and the workspace is defined with npm workspaces. Built today: `contracts/`, `core/`, `application/`, eight adapters (`provider-local-proxy`, `provider-hosted-server`, `provider-hosted-judge`, `provider-ollama`, `storage-local`, `storage-db`, `content-local`, `evidence-local`), four Shells (`cli`, `api`, `pipeline-ui`, `toolkit-ui`), `packages/pipeline-presentation` (shared presentation, since Phase 6), `scripts/`, and `test/`. `observability/` as a standalone package is still target state — observability is implemented inline in `application/` today, not as a separate package.
 
 `npm run verify` is the whole check and runs in about ten seconds. **CI runs the same command** — `.github/workflows/verify.yml`, on every push to `master` and every pull request, first green 23 August 2026. It installs with `npm ci` on Linux and sets up Python, because the differential oracle shells out to the frozen linter and an oracle that silently skips is worse than none.
 
@@ -39,7 +39,7 @@ If you find yourself needing an Adapter capability inside Core, **passing it in 
 | `core/gates/` | Fixture + property tests | Every gate needs ≥1 property test asserting an invariant, not just an example input/output pair |
 | `core/catalog/` | Schema validation + provenance completeness (reported) | Runs on every PR touching catalog data |
 | `core/stages/` | Unit tests, no network | Stage functions are pure: decision functions take validated input and return a `GenerationRequest` or action plan; reduction functions take an *already-classified* provider outcome and return the next state. Tests pass values, never a provider or a fake `generate()` |
-| `core/scorer/` | Adversarial corpus run | `npm run adversarial`, also run weekly against `main` and archived |
+| `core/scorer/` | Adversarial corpus run | `npm run eval:adversarial` (not `adversarial` — that script doesn't exist), also run weekly against `main` and archived |
 | `application/*` | Orchestration tests with fake adapters | Retry, backoff, timeout, cancellation, failure classification, and the demo-mode fallback ladder are asserted here — this is the layer that owns them |
 | `adapters/*` | Contract tests | One test file run against **every** implementation of an interface (e.g., both provider adapters), asserting behavioral parity where the contract requires it. Covers success, timeout, cancellation, auth failure, rate limit, transient failure, unavailable provider, and health transitions |
 | `shells/*` | Integration + a cross-shell parity test | The same prompt run through `pipeline-ui` and through `cli` must produce identical `GateResult`s for the same input |
@@ -128,4 +128,4 @@ Each stage must pass before the next runs; failures are attributed to the layer 
 
 ## Debugging a run
 
-Use `npm run trace:view -- --run-id <id>` (see `OBSERVABILITY.md`) to replay the event stream for any run without needing to reproduce it live.
+Use `npm run trace:view -- <run-id>` (the run id is positional, not `--run-id`; `--runs-dir` and `--json` are the actual flags — see `scripts/trace-view.ts`) to replay the event stream for any run without needing to reproduce it live.
