@@ -60,13 +60,14 @@ Swapping sinks changes nothing about event shape or call sites — only `sink.ts
 
 ## Health checks
 
-Both `ProviderTransport` adapters implement `healthCheck()`, returning a `ProviderHealth` with a `degradation_state` of `NONE`, `DEGRADED`, or `UNAVAILABLE`. The Application layer polls this on a configurable interval and emits `HEALTH_CHECK`, `DEGRADE`, and `RECOVER` events. The polling and the resulting fallback decision belong to the Application, not to the spine and not to Core — the spine records the transition, it does not drive it (see `PROVIDERS.md` for the ladder itself).
+All three `ProviderTransport` adapters implement `healthCheck()`, returning a `ProviderHealth` with a `degradation_state` of `NONE`, `DEGRADED`, or `UNAVAILABLE`. The Application layer polls this on a configurable interval and emits `HEALTH_CHECK`, `DEGRADE`, and `RECOVER` events. The polling and the resulting fallback decision belong to the Application, not to the spine and not to Core — the spine records the transition, it does not drive it (see `PROVIDERS.md` for the ladder itself).
 
 ## Local trace inspection
 
 ```
-npm run trace:view -- --run-id <id>
+npm run trace:view -- <run-id>
 ```
+The run id is positional, not `--run-id`; `--runs-dir` and `--json` are the actual flags (see `scripts/trace-view.ts`).
 Replays a run's full event stream from whichever sink is configured, in causal order — following `parent_event_id` links rather than sorting by timestamp — for local debugging without needing a hosted observability backend. Because events carry `event_type`, `attempt`, and `failure_code`, a replay shows *why* a run degraded, not just that it did.
 
 ## What this spine does *not* do
