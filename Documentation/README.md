@@ -75,22 +75,23 @@ This documentation set describes the target state of a system merged from four p
 
 ## Status
 
-This documentation describes the **target architecture**. Nothing in this set should be read as "already shipped."
+This documentation describes the **target architecture** for the platform as a whole — most of the 54-file set (multi-tenancy, hosted deployment, the technique-authoring workflow, most of `PROMPT_ENGINEERING_ENVIRONMENT.md`) is still design, not code. The core implementation slice below is a different matter.
 
 ### What is actually built
 
-A vertical slice — one stage end to end — plus the machinery that checks it. This section exists because the doc set is written in the present tense and code now exists to contradict it; an audit found `GATES_REFERENCE.md` asserting sixteen implemented gates against a repository holding two.
+As of 5 September 2026, [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md)'s seven phases are all complete, and every row below is built to its stated target. This section stays because the doc set is written in the present tense and the gap has been wrong before: an audit once found `GATES_REFERENCE.md` asserting sixteen implemented gates against a repository holding two. `npm run check:plan` re-derives each number from the repository on every `verify` run, so it cannot go stale silently again.
 
 | Area | Built | Target |
 |---|---|---|
-| Lint gates | 2 (`SECRET_LEAK_SCAN`, `CLAIM_DISCIPLINE`) | 16 |
-| Pipeline stages | 1 (`compile`) | 11 |
-| Contracts | 6 schemas, each validated against a real produced value | full inventory in `CONTRACTS.md` |
-| Provider adapters | `local-proxy` | + `hosted-server` |
-| Storage adapters | `storage-local` (run bundles) | + `storage-db` |
-| Shells | `cli` | + `pipeline-ui`, `toolkit-ui` |
-| Technique catalog | 195 records behind a pure registry — 172 frozen, 23 added to close the ensembling gap, 8 citation titles corrected at the import boundary; validated against both the JSON contract and the frozen XSD | 15 scattered coverage gaps |
-| CI | `.github/workflows/verify.yml` runs `npm run verify` on every push and pull request | full pipeline |
+| Lint gates | 16 of 16 ported (`SECRET_LEAK_SCAN` … `ADVERSARIAL_RESILIENCE`); the oracle agrees on every verdict outside a declared divergence allowlist (ADR-0007) | 16 — met |
+| Pipeline stages | 11 of 11, assembled per run under a single `run_id` | 11 — met |
+| Contracts | 18 schemas, each validated against a value a real run produced | 18 — met, full inventory in `CONTRACTS.md` |
+| Provider adapters | `local-proxy`, `hosted-server`, `hosted-judge`, `ollama` | 4 of 4 — met |
+| Storage adapters | `storage-local` (run bundles), `storage-db` | 2 of 2 — met |
+| Content / evidence adapters | `content-local`, `evidence-local` | 2 of 2 — met |
+| Shells | `cli`, `api`, `pipeline-ui`, `toolkit-ui` | 4 of 4 — met |
+| Technique catalog | 195 records behind a pure registry — 172 frozen, 23 added to close coverage gaps, 8 citation titles corrected at the import boundary; validated against both the JSON contract and the frozen XSD | 0 gaps — met |
+| CI | `.github/workflows/verify.yml` runs `npm run verify`, in the documented stage order, on every push and pull request | full pipeline — met |
 
 Verified by: `npm run verify` (boundaries → typecheck → source freeze → the generated-document checks → the truth boundary → tests → differential oracle against the frozen linter).
 
