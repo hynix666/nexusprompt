@@ -1,12 +1,14 @@
 # Contracts
 
-Contracts are the sole cross-boundary interface. Every value that crosses a layer boundary is defined by a versioned JSON Schema living under `contracts/`. Each schema carries a stable `$id`, a semantic version, and a changelog. Language-specific interfaces (TypeScript, Python, Rust, etc.) are generated or hand-written bindings around these schemas; they are never the source of truth.
+Contracts are the sole cross-boundary interface. Most values that cross a layer boundary are defined by a versioned JSON Schema living under `contracts/` as a standalone `<name>.schema.json` file (18 exist today). Each schema carries a stable `$id`, a semantic version, and a changelog. Language-specific interfaces (TypeScript, Python, Rust, etc.) are generated or hand-written bindings around these schemas; they are never the source of truth.
+
+**Four documented below are the exception: `GenerationRequest`, `GenerationResult`, `PipelineCommand`, and `ProviderHealth` exist only as TypeScript interfaces in `contracts/index.ts` — no standalone `.schema.json` file backs them, so a non-TypeScript client has nothing to validate these payloads against.** The `$id` and JSON shown for each documents the interface; it is illustrative, not a file that exists or is checked. Each is noted individually below.
 
 A contract change without a corresponding version bump and changelog entry fails CI. Shells and adapters pin major versions; an unsupported major version also fails CI.
 
 ## Design principles
 
-- **Schema-first and language-neutral.** A non-JavaScript client must be able to validate the same payloads without importing any TypeScript.
+- **Schema-first and language-neutral, for the 18 that have a standalone schema file.** A non-JavaScript client must be able to validate those payloads without importing any TypeScript. Four contracts (noted where they appear below) are TypeScript-only and don't yet meet this principle.
 - **Explicit effect ownership.** Live effects (network, persistence, clock, randomness, event emission) never appear inside Core schemas. Core schemas describe pure values and deterministic decisions only.
 - **Complete operational coverage.** Request, result, failure, health, revision lineage, freshness, and observability metadata required by the rest of the documentation are first-class contracts, not prose.
 
@@ -101,6 +103,8 @@ The XSD at `schema/prompt_technique_catalog_1.3.0.xsd` ships with the catalog an
 
 ### GenerationRequest
 
+**TypeScript-only — no `generation-request.schema.json` exists.** The `$id` and JSON below document the `contracts/index.ts` interface; nothing validates a payload against them at runtime.
+
 Issued by the Application layer to a provider adapter. Core may produce a `GenerationRequest` as part of a pure decision; it never executes it.
 
 ```json
@@ -127,6 +131,8 @@ Issued by the Application layer to a provider adapter. Core may produce a `Gener
 ```
 
 ### GenerationResult
+
+**TypeScript-only — no `generation-result.schema.json` exists.** Same caveat as `GenerationRequest` above.
 
 Successful provider response.
 
@@ -188,6 +194,8 @@ Typed failure returned by a provider adapter. Used by the Application to decide 
 
 ### ProviderHealth
 
+**TypeScript-only — no `provider-health.schema.json` exists.** Same caveat as `GenerationRequest` above.
+
 Result of a health check.
 
 ```json
@@ -220,6 +228,8 @@ Both reference adapters are tested against the identical contract-test suite, in
 ## Pipeline protocol
 
 ### PipelineCommand
+
+**TypeScript-only — no `pipeline-command.schema.json` exists.** Same caveat as `GenerationRequest` above.
 
 Command issued by a Shell to the Application.
 
