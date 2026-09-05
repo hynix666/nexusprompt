@@ -372,6 +372,8 @@ Fingerprint algorithms, retention, and access policy for hashes are defined in `
 
 ## Tenancy protocol
 
+**Target state — not built.** Multi-tenancy has no phase in `IMPLEMENTATION_PLAN.md` and is undecided target-state work (see also `PRIVACY_AND_SECURITY.md`). Not one of the 18 schemas under `contracts/` is `tenant-context.schema.json`; `tenant_context_ref` is not a field on `GenerationRequest`; and "tenant" appears in no file under `application/src`, `core/src`, or `adapters/storage-db`. What follows is the design a hosted deployment would need to satisfy, not a contract that exists today.
+
 ### TenantContext
 
 Resolved by the Application layer from the `tenant_context_ref` on a `GenerationRequest` or `PipelineCommand`. Required in the hosted deployment shape; null in the local-proxy shape, which has a single implicit tenant.
@@ -399,7 +401,7 @@ The reference, not the context, crosses the provider boundary — a provider ada
 }
 ```
 
-Authorization denials are returned as a `ProviderFailure` with `category: "AUTH"` and a safe reason code, or as a validation failure on `PipelineCommand` — never as a raw provider or database error, which can echo request content. Every `RevisionStore` operation is scoped by `tenant_id`; supplying another tenant's `run_id` directly yields a not-found result, not a denial that would confirm the run exists.
+Once built: authorization denials would return as a `ProviderFailure` with `category: "AUTH"` and a safe reason code, or as a validation failure on `PipelineCommand`, never as a raw provider or database error which can echo request content. Every `RevisionStore` operation would be scoped by `tenant_id`, so that supplying another tenant's `run_id` directly yields a not-found result rather than a denial that would confirm the run exists. None of this is implemented today (see the note at the top of this section).
 
 ## Capability registration
 
