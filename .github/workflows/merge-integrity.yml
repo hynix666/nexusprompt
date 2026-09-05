@@ -1,0 +1,104 @@
+# Nightly check for merged pull requests whose content never reached master.
+#
+# A merged PR can silently strand its content when it was stacked on a branch
+# that had already merged. GitHub reports the PR as MERGED; the content is absent.
+# This workflow detects that and maintains a single tracking issue so the state
+# stays visible. See the design spec for the full rationale:
+# docs/superpowers/specs/2026-09-04-merge-integrity-check-design.md
+#
+# Exit 0 whenever the check ran (findings or not).
+# Exit 2 when it could not run. The job goes red only for "I could not look."
+#
+# Third-party actions are pinned to a commit SHA — a tag is mutable, a SHA is not.
+# Re-resolve the tag when bumping the pin.
+name: merge-integrity
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # A shallow clone causes every ancestor test to fail, producing 112+ false
+          # findings. This must be 0. See error handling in the spec.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run check
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/check-merge-integrity.mjs > report.txt 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          cat report.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Manage tracking issue
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXIT_CODE: ${{ steps.check.outputs.exit_code }}
+        run: |
+          MARKER="<!-- merge-integrity -->"
+          REPORT=$(cat report.txt)
+
+          # Find the tracking issue by its body marker.
+          ISSUE_NUMBER=$(gh issue list --state open --limit 100 --json number,body \
+            --jq ".[] | select(.body | contains(\"$MARKER\")) | .number" | head -1)
+
+          if [ "$EXIT_CODE" = "2" ]; then
+            # Check could not run. Open or update the issue with the error.
+            BODY="$MARKER
+          ## check:merge-integrity could not run
+
+          \`\`\`
+          $REPORT
+          \`\`\`
+
+          Run \`npm run check:merge-integrity\` locally to investigate."
+            if [ -n "$ISSUE_NUMBER" ]; then
+              gh issue edit "$ISSUE_NUMBER" --body "$BODY"
+            else
+              gh issue create --title "check:merge-integrity: could not run" --body "$BODY"
+            fi
+            exit 2
+          fi
+
+          # Check ran. Look for findings in the report.
+          if echo "$REPORT" | grep -q "Findings"; then
+            BODY="$MARKER
+          ## Stranded merge detected
+
+          \`\`\`
+          $REPORT
+          \`\`\`
+
+          A merged pull request's content has not reached \`master\`. See \`scripts/merge-integrity-ledger.json\` to record a deliberate exception."
+            if [ -n "$ISSUE_NUMBER" ]; then
+              gh issue edit "$ISSUE_NUMBER" --body "$BODY"
+            else
+              gh issue create --title "Stranded merge: content absent from master" --body "$BODY"
+            fi
+          else
+            # No findings — close any open issue.
+            if [ -n "$ISSUE_NUMBER" ]; then
+              gh issue close "$ISSUE_NUMBER" --comment "check:merge-integrity is now clean."
+            fi
+          fi

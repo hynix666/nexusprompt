@@ -104,7 +104,8 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "test:core",
     "typecheck",
     "verify",
-    "verify:sources"
+    "verify:sources",
+    "check:merge-integrity"
   ],
   "planned_commands": [
     "verify:gates",
