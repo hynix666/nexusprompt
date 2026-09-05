@@ -30,9 +30,9 @@ The PromptNexus Unified Platform is organized as a strict layered system with an
 │  Produces action plans, GateResults, and deterministic outcomes│
 ├─────────────────────────────────────────────────────────────┤
 │  ADAPTERS (impure, swappable per deployment)                  │
-│  provider: {local-proxy | hosted-server}                      │
+│  provider: {local-proxy | hosted-server | ollama}             │
 │  storage:  {local | db}                                       │
-│  observability sinks: {stdout/json-lines | OpenTelemetry}     │
+│  observability sinks: inline lambda (pluggable: target)       │
 ├─────────────────────────────────────────────────────────────┤
 │  COMPOSITION ROOT (deployment wiring only)                    │
 │  The single place where concrete adapters, sinks, and config  │
