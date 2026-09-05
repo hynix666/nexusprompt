@@ -147,6 +147,7 @@
           "provider-hosted-judge",
           "provider-local-proxy",
           "provider-ollama",
+          "storage-db",
           "storage-local"
         ],
         "adapters_target": 5,

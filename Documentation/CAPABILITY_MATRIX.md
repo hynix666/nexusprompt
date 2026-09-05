@@ -55,6 +55,7 @@ Ports have swappable implementations; this is what is present in the tree.
 - `adapters/provider-hosted-judge`
 - `adapters/provider-local-proxy`
 - `adapters/provider-ollama`
+- `adapters/storage-db`
 - `adapters/storage-local`
 
 ## Evidence plane

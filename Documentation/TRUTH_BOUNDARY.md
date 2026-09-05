@@ -171,6 +171,7 @@ that event is a failing build, not a note in a backlog.
     "provider-hosted-judge",
     "provider-local-proxy",
     "provider-ollama",
+    "storage-db",
     "storage-local"
   ],
   "adapters_target": 5,
