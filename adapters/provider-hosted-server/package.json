@@ -1,0 +1,6 @@
+{
+  "name": "@nexusprompt/adapters-provider-hosted-server",
+  "license": "MIT",
+  "private": true,
+  "type": "module"
+}

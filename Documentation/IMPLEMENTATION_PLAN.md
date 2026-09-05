@@ -27,6 +27,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "content-local",
     "evidence-local",
     "provider-hosted-judge",
+    "provider-hosted-server",
     "provider-local-proxy",
     "provider-ollama",
     "storage-local",
@@ -304,7 +305,7 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 - ~~**The ensembling coverage gap.**~~ **Closed.** All eight missing techniques now have records, added at the import boundary through `scripts/catalog-additions.json` — 172 frozen records plus 23, giving 195. Every citation was resolved against arXiv's own metadata, and the additions are held to the same contract as the frozen records, with no id allowed to collide with one. Coverage against The Prompt Report's taxonomy went from 34 of 57 to 42 of 57; ensembling is 10 of 10. Fifteen scattered absences remain, but no category is now missing most of itself.
 - **Three records naming `arXiv preprint` with no identifier**, excused in `scripts/catalog-known-defects.json`. Unlike the titles these cannot be corrected from evidence — the identifier is simply absent and no index resolved it.
 
-### Phase 5 — Second adapters
+### Phase 5 — Second adapters ✅ complete
 
 **Entry condition:** Phase 3, so there is a full pipeline to persist.
 

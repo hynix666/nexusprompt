@@ -169,6 +169,7 @@ that event is a failing build, not a note in a backlog.
     "content-local",
     "evidence-local",
     "provider-hosted-judge",
+    "provider-hosted-server",
     "provider-local-proxy",
     "provider-ollama",
     "storage-db",
@@ -254,7 +255,7 @@ that event is a failing build, not a note in a backlog.
 
 ```json
 {
-  "artifact_files": 91,
+  "artifact_files": 92,
   "hash_is_lf_normalised": true,
   "hash_excludes_tests_and_tooling": true,
   "hash_excludes_itself": true,
