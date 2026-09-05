@@ -132,8 +132,8 @@ contracts   ████████████████████       1
 core/gates  ████████████████████       16 of 16 — ADVERSARIAL_RESILIENCE takes an injected corpus
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
-adapters    █████████████████████████▒▒   7 built; hosted-server still absent
-shells      █████████████▒▒▒▒▒▒▒▒       2 of 3 — cli runs the full pipeline; api exposes the first REST slice
+adapters    ████████████████████       8 of 8 — provider-hosted-server and storage-db closed out Phase 5
+shells      ████████████████████       4 of 4 — pipeline-ui and toolkit-ui closed out Phase 6
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
 release     █████████████▒▒▒▒▒▒▒       gate + matrix generator + CI workflow; never executed, no build hash
 ```
