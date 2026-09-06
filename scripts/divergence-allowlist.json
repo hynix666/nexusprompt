@@ -65,7 +65,21 @@
     "Entries 0 and 1 come from ONE code change and are listed separately on purpose. It",
     "moves verdicts in both directions — a false positive removed and a false clean",
     "closed — and each direction is separately reversible and separately consequential.",
-    "Folding them into one entry would pin only one of the two shapes."
+    "Folding them into one entry would pin only one of the two shapes.",
+    "",
+    "── the SECRET_LEAK_SCAN group (ADR-0017) ──",
+    "",
+    "Four entries from one change, listed separately for the same reason as the manifest",
+    "pair: each is a distinct credential shape, separately reversible, and each carries the",
+    "input that demonstrates it. They are also the first entries recording an EXTENSION",
+    "rather than a defect fix — the source is not wrong about the shapes it carries, it",
+    "simply does not carry these four, and a leak scanner that returns clean on a private",
+    "key is wrong in the one direction this gate exists to prevent.",
+    "",
+    "No corpus case exercises any of the four, so the oracle could not have raised them and",
+    "these entries are what record the decision — the same situation as the `#Runtime",
+    "Variables` entry below. Their demonstrations are the only place the divergence is",
+    "proven, which is exactly what the inline-demonstration rule was built for."
   ],
   "entries": [
     {
@@ -109,6 +123,50 @@
       },
       "reason": "The cost ratio divides the compiled prompt's token estimate by the brief's, and a compiled system prompt is necessarily many times longer than the one-line brief it came from. The source applies the tier ceiling at any baseline, so a correct 900-token prompt scores 900x against a one-line brief and 7.5x against a 120-token one — over the ceiling at every tier below safety-critical. The gate was measuring the brief's brevity rather than the prompt's bloat, and no compliant artifact could clear it. The port declines to arm below a named 120-token floor. `also_matches` is `.*` because the divergence is keyed on the option and not on the input; `only_when_options` is what keeps that from excusing anything else, in particular the qutm-ceiling-crossing boundary case at baseline 400, where half-up rounding is the only thing separating the two implementations and must stay live.",
       "adr": "ADR-0011"
+    },
+    {
+      "gate": "SECRET_LEAK_SCAN",
+      "demonstration": {
+        "text": "Forward the caller's session token verbatim:\nAuthorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk\n",
+        "options": {}
+      },
+      "source_verdict": "PASS",
+      "port_verdict": "WARN",
+      "reason": "The source's pattern set predates nothing — it simply does not carry a JWT shape, so a compiled prompt that embeds a bearer token scans clean. A JWT is a credential in exactly the sense this gate exists to flag: it is presented verbatim to an API and it is routinely pasted into prompts as 'context'. The port matches the three-segment base64url shape behind the `eyJ` prefix, which is the base64 of `{\"` and therefore present on essentially every real token and essentially no prose. Anchoring on that prefix also keeps the scan linear: retries only happen at positions where `eyJ` occurs, so this pattern cannot reproduce the quadratic case that `pii_email` demonstrates.",
+      "adr": "ADR-0017"
+    },
+    {
+      "gate": "SECRET_LEAK_SCAN",
+      "demonstration": {
+        "text": "Sign the payload with this key:\n-----BEGIN RSA PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQ\n-----END RSA PRIVATE KEY-----\n",
+        "options": {}
+      },
+      "source_verdict": "PASS",
+      "port_verdict": "WARN",
+      "reason": "A PEM private-key block is the least ambiguous credential there is — the header states what it is in English — and the source scans clean on it. The port matches the header rather than the body, because the body is base64 that nothing distinguishes from any other base64, while `-----BEGIN … PRIVATE KEY-----` is a shape no accident produces. `[A-Z ]{0,32}` before PRIVATE covers the RSA, EC, OPENSSH, ENCRYPTED and bare spellings in one pattern instead of a list that goes stale when a sixth appears. A CERTIFICATE block is deliberately NOT matched: it is public by construction.",
+      "adr": "ADR-0017"
+    },
+    {
+      "gate": "SECRET_LEAK_SCAN",
+      "demonstration": {
+        "text": "Connect using DATABASE_URL=postgres://svc_user:hunter2@localhost:5432/app\n",
+        "options": {}
+      },
+      "source_verdict": "PASS",
+      "port_verdict": "WARN",
+      "reason": "A URL carrying `user:password@` is a credential in transit, and the source has no pattern for it. The port requires the credential pair specifically rather than the scheme, so a bare `postgres://localhost/db` — configuration, not a secret — stays clean; that distinction is the whole difference between a useful finding and noise. It matches on URL shape instead of a list of known schemes because a hand-picked scheme list is the sparse matcher this repository has now found in the manifest span, the source ledger, the demo-mode sweep and the redaction body set. The demonstration uses `@localhost` rather than a dotted host on purpose: a dotted host would also match the source's own `pii_email` pattern, the source would WARN too, and the entry would be demonstrating agreement.",
+      "adr": "ADR-0017"
+    },
+    {
+      "gate": "SECRET_LEAK_SCAN",
+      "demonstration": {
+        "text": "Charge the card with STRIPE_SECRET=sk_live_EXAMPLEONLYNOTREAL\n",
+        "options": {}
+      },
+      "source_verdict": "PASS",
+      "port_verdict": "WARN",
+      "reason": "The source's `generic_sk_key` is `sk-[A-Za-z0-9]{20,128}`, and Stripe's live and test keys are `sk_live_…`/`sk_test_…` — an underscore separator and underscores inside the body, so neither the separator nor the character class matches and a live payment credential scans clean. The obvious repair is to widen the generic pattern to `sk[-_][A-Za-z0-9_]{20,128}`, and it is wrong: measured, that fires on `task_manager_configuration_key`, `disk_usage_threshold_value_setting` and `risk_assessment_completion_status`, because `sk_` is a suffix of ask, task, risk, desk, disk and mask and snake_case supplies the rest. The port adds a specific pattern with a leading `\\b` instead, which cannot start mid-identifier. `generic_sk_key` is left exactly as the source wrote it.",
+      "adr": "ADR-0017"
     },
     {
       "gate": "RUNTIME_KEY_UNDECLARED",

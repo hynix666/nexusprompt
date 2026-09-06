@@ -45,7 +45,7 @@ that event is a failing build, not a note in a backlog.
 
 `oracle-proves-agreement-not-correctness` · probe `oracleScope`
 
-**Establishes.** All sixteen ported gates are compared verdict-for-verdict against the frozen Python linter they were ported from, and the linter is SHA-256 pinned in the source freeze so it cannot be edited into agreement. Where the port deliberately differs, the difference is declared with a reason and an ADR rather than reconciled or hidden — four such divergences, from two ADRs.
+**Establishes.** All sixteen ported gates are compared verdict-for-verdict against the frozen Python linter they were ported from, and the linter is SHA-256 pinned in the source freeze so it cannot be edited into agreement. Where the port deliberately differs, the difference is declared with a reason and an ADR rather than reconciled or hidden — eight such divergences, from three ADRs. Two of those ADRs fix a source defect; the third (ADR-0017) does not, and the distinction matters to what this entry claims. Its four divergences EXTEND SECRET_LEAK_SCAN past the shapes the source scans for, so on those four the oracle is not being told the source is wrong — it is being told the port looks for more. Agreement with the source is therefore no longer available as evidence about them in either direction.
 
 **Does not establish.** That either implementation is right. They are two expressions of one author's opinion about what makes a prompt bad, and an oracle can only tell you they still agree. Where they agree and are both wrong, this check is silent — the `CLAIM_DISCIPLINE` false positive is exactly that shape, which is why it is not in the allowlist: there is no divergence to declare. The gates also have no external validity here; no experiment in this repository connects a gate firing to any outcome a user would care about.
 
@@ -56,10 +56,11 @@ that event is a failing build, not a note in a backlog.
   "gates_in_registry": 16,
   "gates_in_source_linter": 16,
   "gates_compared": 16,
-  "declared_divergences": 4,
+  "declared_divergences": 8,
   "divergence_adrs": [
     "ADR-0010",
-    "ADR-0011"
+    "ADR-0011",
+    "ADR-0017"
   ],
   "oracle_is_frozen": true
 }
@@ -162,7 +163,7 @@ that event is a failing build, not a note in a backlog.
 
 ```json
 {
-  "documentation_markdown_files": 54,
+  "documentation_markdown_files": 55,
   "gates_built": 16,
   "stages_built": 11,
   "adapters_built": [
