@@ -10,6 +10,7 @@ const mid = { model_id: "medium-1", family: "vendor-a", usd_per_mtok_in: 3, usd_
 const big = { model_id: "large-1", family: "vendor-b", usd_per_mtok_in: 15, usd_per_mtok_out: 75 };
 
 const cascade = (over: Partial<RoutingPolicy> = {}): RoutingPolicy => ({
+  policy_id: "cascade-v1",
   method: "cascade",
   tiers: [cheap, mid, big],
   escalate_on: ["gate-fail"],
@@ -55,11 +56,11 @@ describe("a routing policy is validated before it can route", () => {
   });
 
   it("accepts a fixed policy with a single tier", () => {
-    expect(() => validateRoutingPolicy({ method: "fixed", tiers: [cheap] })).not.toThrow();
+    expect(() => validateRoutingPolicy({ policy_id: "fixed-v1", method: "fixed", tiers: [cheap] })).not.toThrow();
   });
 
   it("throws a named error type, not a bare Error", () => {
-    expect(() => validateRoutingPolicy({ method: "fixed", tiers: [] })).toThrow(RoutingPolicyInvalid);
+    expect(() => validateRoutingPolicy({ policy_id: "fixed-v1", method: "fixed", tiers: [] })).toThrow(RoutingPolicyInvalid);
   });
 });
 
@@ -113,7 +114,7 @@ describe("decide → invoke → reduce, over models", () => {
   });
 
   it("never escalates a fixed policy", () => {
-    const p: RoutingPolicy = { method: "fixed", tiers: [cheap, big] };
+    const p: RoutingPolicy = { policy_id: "fixed-v1", method: "fixed", tiers: [cheap, big] };
     const first = decideRoute(p);
     expect(first.model_id).toBe("small-1");
     expect(reduceRouteOutcome(p, first, { kind: "gate-fail" })).toBeNull();
@@ -130,7 +131,7 @@ describe("decide → invoke → reduce, over models", () => {
      * escalation settings describes behaviour it does not have.
      */
     expect(() => validateRoutingPolicy({
-      method: "fixed", tiers: [cheap, big], escalate_on: ["gate-fail"], max_escalations: 1,
+      policy_id: "fixed-v1", method: "fixed", tiers: [cheap, big], escalate_on: ["gate-fail"], max_escalations: 1,
     })).toThrow(/can never use/);
   });
 });
