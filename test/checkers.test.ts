@@ -105,7 +105,13 @@ function makePlanRepo(overrides: Partial<Truth> = {}): { root: string; truth: Tr
   const root = mkroot("pnx-plan-");
 
   write(root, "package.json", JSON.stringify({
-    scripts: Object.fromEntries(t.commands.map((c) => [c, "true"])),
+    // One shell is startable and the rest are directories, which is the distinction the
+    // `shells_runnable` claim exists to make. Without a real script here both sides of that
+    // claim would be empty and it would pass while checking nothing.
+    scripts: {
+      ...Object.fromEntries(t.commands.map((c) => [c, "true"])),
+      ...(t.shells.length > 0 ? { [t.shells[0]]: `tsx shells/${t.shells[0]}/src/index.ts` } : {}),
+    },
   }));
 
   write(root, "scripts/ported-gates.json", JSON.stringify({ ported: t.gates }));
@@ -137,10 +143,11 @@ function makePlanRepo(overrides: Partial<Truth> = {}): { root: string; truth: Tr
     contracts: { schemas: t.schemas.length },
     adapters: [...t.adapters],
     shells: [...t.shells],
+    shells_runnable: t.shells.slice(0, 1),
     catalog: { records_imported: 0, records_available: t.catalog, records_added: t.catalogAdded },
     sources: { frozen_files: t.frozen },
     ci: { configured: t.ci },
-    commands: [...t.commands],
+    commands: [...new Set([...t.commands, ...t.shells.slice(0, 1)])],
     planned_commands: [...t.planned],
   };
 
@@ -208,6 +215,10 @@ describe("check-plan", () => {
     ["wrong schema count", (s) => { s.contracts.schemas = 1; }],
     ["an adapter that does not exist", (s) => { s.adapters.push("storage-db"); }],
     ["a shell that does not exist", (s) => { s.shells.push("pipeline-ui"); }],
+    // The claim a directory could satisfy on its own. Two of this repository's four shells
+    // cannot be built or run, and `shells` above passed because the directories are there.
+    ["a shell claimed runnable that nothing starts", (s) => { s.shells_runnable.push("pipeline-ui"); }],
+    ["a runnable shell left out of the claim", (s) => { s.shells_runnable = []; }],
     ["wrong catalog size", (s) => { s.catalog.records_available = 999; }],
     ["catalog claimed as imported", (s) => { s.catalog.records_imported = 5; }],
     ["wrong count of records added at import", (s) => { s.catalog.records_added = 99; }],
@@ -261,6 +272,10 @@ function makeLayerRepo(files: Record<string, string>): string {
   write(root, "application/src/app.ts", 'import type { X } from "../../contracts/index.js";\nexport type Y = X;\n');
   write(root, "adapters/store/src/index.ts", 'import { readFile } from "node:fs/promises";\nexport const r = readFile;\n');
   write(root, "shells/cli/src/index.ts", 'import type { Y } from "../../../application/src/app.js";\nexport type Z = Y;\n');
+  // A .tsx Shell file and a shared package: both were outside the walk until 6 Sept 2026,
+  // so the fixture has to contain them or the cases below prove nothing.
+  write(root, "shells/ui/src/App.tsx", 'import { View } from "@nexusprompt/presentation";\nexport const A = View;\n');
+  write(root, "packages/presentation/src/index.ts", 'import type { X } from "../../../contracts/index.js";\nexport type View = X;\n');
   for (const [rel, body] of Object.entries(files)) write(root, rel, body);
   return root;
 }
@@ -289,6 +304,14 @@ describe("check-boundaries", () => {
     ["a Shell importing another Shell", "shells/cli/src/index.ts", 'import type { Q } from "../../toolkit/src/index.js";\n'],
     ["an adapter importing Core", "adapters/store/src/index.ts", 'import { h } from "../../../core/src/pure.js";\n'],
     ["Contracts importing Core", "contracts/index.ts", 'import { h } from "../core/src/pure.js";\n'],
+    // The .tsx half. The same Shell rules; they simply never ran on these files.
+    ["a .tsx Shell importing an adapter", "shells/ui/src/App.tsx", 'import { r } from "../../../adapters/store/src/index.js";\n'],
+    ["a .tsx Shell importing Core", "shells/ui/src/App.tsx", 'import { h } from "../../../core/src/pure.js";\n'],
+    ["a .tsx Shell importing another Shell", "shells/ui/src/App.tsx", 'import type { Z } from "../../cli/src/index.js";\n'],
+    // The packages half, which fixing the extension filter alone would still have missed.
+    ["a shared package importing an adapter", "packages/presentation/src/index.ts", 'import { r } from "../../../adapters/store/src/index.js";\n'],
+    ["a shared package importing Core", "packages/presentation/src/index.ts", 'import { h } from "../../../core/src/pure.js";\n'],
+    ["a shared package importing a Shell", "packages/presentation/src/index.ts", 'import type { Z } from "../../../shells/cli/src/index.js";\n'],
   ];
 
   it.each(violations)("rejects %s", (_label, file, line) => {

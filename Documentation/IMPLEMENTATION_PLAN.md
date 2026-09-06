@@ -39,6 +39,10 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "pipeline-ui",
     "toolkit-ui"
   ],
+  "shells_runnable": [
+    "api",
+    "cli"
+  ],
   "catalog": {
     "records_imported": 195,
     "records_available": 172,
@@ -135,7 +139,7 @@ core/gates  ████████████████████       1
 core/stages ████████████████████       11 of 11, assembled — one bundle per run
 application ██████████████████▒▒       eleven-stage pipeline runner; no cancellation, no catalog ops
 adapters    ████████████████████       8 of 8 — provider-hosted-server and storage-db closed out Phase 5
-shells      ████████████████████       4 of 4 — pipeline-ui and toolkit-ui closed out Phase 6
+shells      ██████████▒▒▒▒▒▒▒▒▒▒       4 directories, 2 runnable — api and cli. The two UI shells are scaffolding: nothing builds them
 catalog     ████████████████████       195 records + registry, JSON contract and XSD both enforced; 0 gaps
 release     ████████████████████       matrix generator, build hash, truth boundary, trace viewer — CI green since #17
 ```
@@ -348,9 +352,11 @@ Worth doing early for a reason unrelated to its cost: `CONTRACTS.md` had the `Te
 
 **Scope.** The shared presentation package (`packages/pipeline-presentation`, per ADR-0006) first, then `pipeline-ui`, then `toolkit-ui`. Per ADR-0006 the Shells never import each other; reuse goes through the shared package, which is what makes per-Shell rollback real.
 
-**Built.** `packages/pipeline-presentation` holds the React components (`GateResultDisplay`, `PipelineVisualization`, `StageCard`), the `usePipeline` hook, design tokens, and shared types. `shells/pipeline-ui` is a React/Vite host of that package. `shells/toolkit-ui` is a multi-module toolkit UI (Pipeline, Gates, Catalog modules). Both composition roots are in the one exempt file per shell, name the same `LocalProxyProvider`, and are tested. `npm run parity` verifies structural agreement between the two UI composition roots and the CLI.
+**Built.** `packages/pipeline-presentation` holds the React components (`GateResultDisplay`, `PipelineVisualization`, `StageCard`), the `usePipeline` hook, design tokens, and shared types. `shells/pipeline-ui` and `shells/toolkit-ui` hold React sources for that package — and **nothing builds or runs either of them.** There is no `vite.config.*` anywhere in the repository, neither shell declares a script, no root script names them, and React is in no manifest and not in the lockfile, so their `index.html` has nothing to serve it. `shells_runnable` in the block above pins that at 2 of 4; it read 4 of 4 by counting directories until 6 September 2026.
 
-**Exit gate — met.** `npm run parity` exits 0: the same input through `cli` and through `pipeline-ui` produces identical `GateResult`s. Note that parity is a *drift* check and cannot see a shared defect; the oracle remains the correctness check.
+What IS built and verified is the part below the entrypoint: both composition roots sit in the one exempt file per shell, name the same `LocalProxyProvider`, are typechecked, are boundary-checked, and have tests. What they do not have is a production call site — no `main.tsx` imports them. `npm run parity` verifies structural agreement between the two UI composition roots and the CLI, which is a real check of real code that no user can currently reach.
+
+**Exit gate — met for what it measures, and it measures less than the phase claimed.** `npm run parity` exits 0: the same input through `cli` and through the `pipeline-ui` composition root produces identical `GateResult`s. That is agreement between two wirings, not evidence that a UI exists — the gate never asked whether the shell could start, which is why the phase read as complete. Note that parity is a *drift* check and cannot see a shared defect; the oracle remains the correctness check.
 
 ### Phase 7 — Release truth ✅ complete
 

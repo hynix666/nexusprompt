@@ -39,6 +39,22 @@
   //
   // `sources/**` is excluded deliberately: it is frozen prior art, not this project's
   // code, and it must never be edited to satisfy a compiler here.
+  //
+  // WHAT IS STILL NOT TYPECHECKED, and why it is a decision rather than an oversight:
+  // every `.tsx` file, and all of `packages/`. That is 13 files — both UI shells'
+  // `App.tsx` and `main.tsx`, and `packages/pipeline-presentation/src/**`.
+  //
+  // Adding them here cannot pass. There is no `jsx` key below and no `"dom"` lib; `react`,
+  // `react-dom`, `@types/react` and `@types/react-dom` are in no manifest and not in
+  // `package-lock.json`; and `packages/pipeline-presentation/package.json` declares no
+  // `main`, `exports` or `types`, so the bare specifier both `App.tsx` import would not
+  // resolve either. Turning this on means buying four dependencies to typecheck a subtree
+  // that nothing builds — no `vite.config.*` exists and no script starts either shell.
+  //
+  // So the boundary checker was extended to those files instead (it needs no toolchain to
+  // read an import), and `shells_runnable` in IMPLEMENTATION_PLAN.md now records 2 of 4
+  // rather than letting a directory count as a shell. If the UI is ever made buildable,
+  // this list is where that decision becomes visible.
   "include": [
     "contracts/**/*.ts",
     "core/**/*.ts",
