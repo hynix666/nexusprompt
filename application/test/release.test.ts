@@ -415,8 +415,12 @@ describe("dangling-ref precondition — the content plane (artifact-reference li
   /**
    * Pointer consistency says the three ids agree; the dangling-ref precondition says the
    * artifacts the pointers name are still REACHABLE. The Application collects the refs
-   * (an EvalRun does not carry its revisions) and hands them to the gate with an
-   * existence oracle; Core only composes the decision.
+   * (an EvalRun does not carry its revisions), resolves them, and hands the gate the
+   * resolved list; Core only composes the decision.
+   *
+   * `resolvedRefs` used to be a `(ref) => boolean` callback — the only one Core accepted
+   * anywhere, and invisible to both purity guards. The tri-state it carried is preserved:
+   * `null` is "no content plane", `[]` is "checked, nothing resolved".
    */
   it("refuses when a content ref no longer resolves", () => {
     const decision = decidePromotion({
@@ -431,7 +435,7 @@ describe("dangling-ref precondition — the content plane (artifact-reference li
         "npx:stage-output:" + "a".repeat(64) + ":local-bundle",  // present
         "npx:stage-output:" + "b".repeat(64) + ":local-bundle",  // EVICTED
       ],
-      refExists: (ref) => !ref.startsWith("npx:stage-output:" + "b".repeat(64)),
+      resolvedRefs: ["npx:stage-output:" + "a".repeat(64) + ":local-bundle"],
     });
     expect(decision.promoted).toBe(false);
     expect(decision.refusals.map((r) => r.code)).toEqual(["dangling-ref"]);
@@ -448,13 +452,36 @@ describe("dangling-ref precondition — the content plane (artifact-reference li
       },
       comparison: comparison(), judge: ADMITTED, suiteGranularity: GRANULARITY,
       contentRefs: ["npx:stage-output:" + "a".repeat(64) + ":local-bundle"],
-      refExists: () => true,
+      resolvedRefs: ["npx:stage-output:" + "a".repeat(64) + ":local-bundle"],
     });
     expect(decision.refusals.map((r) => r.code)).not.toContain("dangling-ref");
     expect(decision.promoted).toBe(true);
   });
 
-  it("checks nothing when the deployment keeps no content plane (no oracle)", () => {
+  it("distinguishes an empty resolved list from no content plane at all", () => {
+    /**
+     * The tri-state the callback carried, now carried by the data. `[]` means every ref was
+     * checked and none resolved — a refusal. `null` means nothing was checked. Collapsing the
+     * two would make a deployment with no content plane look like one whose content is gone.
+     */
+    const base = {
+      promotion_id: "p", promoted_at: "2026-08-22T12:30:00.000Z", promoted_by: "t",
+      candidateRun: run(), baselineRun: baselineRun(),
+      baseline: {
+        baseline_id: "base-1", configuration_id: CONFIG, run_id: "run-baseline",
+        frozen_at: "2026-08-22T12:00:00.000Z", lineage: "benchmark", supersedes: null,
+      },
+      comparison: comparison(), judge: ADMITTED, suiteGranularity: GRANULARITY,
+      contentRefs: ["npx:stage-output:" + "b".repeat(64) + ":local-bundle"],
+    } as const;
+
+    expect(decidePromotion({ ...base, resolvedRefs: [] }).refusals.map((r) => r.code))
+      .toContain("dangling-ref");
+    expect(decidePromotion({ ...base, resolvedRefs: null }).refusals.map((r) => r.code))
+      .not.toContain("dangling-ref");
+  });
+
+  it("checks nothing when the deployment keeps no content plane", () => {
     // Pre-lineage behaviour: pointer identity is all that can be checked.
     const decision = decidePromotion({
       promotion_id: "p", promoted_at: "2026-08-22T12:30:00.000Z", promoted_by: "t",
@@ -465,7 +492,7 @@ describe("dangling-ref precondition — the content plane (artifact-reference li
       },
       comparison: comparison(), judge: ADMITTED, suiteGranularity: GRANULARITY,
       contentRefs: ["npx:stage-output:" + "b".repeat(64) + ":local-bundle"],
-      refExists: null,
+      resolvedRefs: null,
     });
     expect(decision.refusals.map((r) => r.code)).not.toContain("dangling-ref");
   });
@@ -490,8 +517,8 @@ describe("the gate is pure, so it can be asked without a store", () => {
 /**
  * The gate, through the Application — which is where it had never run.
  *
- * `decidePromotion` accepted `contentRefs`/`refExists` from the day the precondition landed,
- * both optional, and `application/src/release.ts` passed neither. So every Core-level test
+ * `decidePromotion` accepted `contentRefs`/`refExists` (now `resolvedRefs`) from the day the
+ * precondition landed, both optional, and `application/src/release.ts` passed neither. So every Core-level test
  * above passed while a real promotion over evicted evidence was admitted exactly as before.
  * These drive `promote()` against a real `LocalContentStore`.
  */
@@ -527,7 +554,7 @@ describe("dangling-ref — wired through promote(), against a real content store
   });
 
   it("keeps the pre-lineage behaviour when no content store is supplied", async () => {
-    // Absent oracle means reachability is not checked — the deployment kept no content plane.
+    // No content store means reachability is not checked — the deployment kept no content plane.
     const store = mkstore();
     await seed(store);
     const { decision } = await promote(store, { ...request, contentRefs: [refFor(BODY)] });

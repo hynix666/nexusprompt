@@ -71,15 +71,26 @@ export interface PromotionRequest {
    * An `EvalRun` does not carry its revisions, so the Application is the right place to
    * gather them — the caller who read the runs from the revision store already has them.
    */
-  contentRefs?: string[] | null;
+  contentRefs?: readonly string[] | null;
   /**
-   * Existence oracle over the content plane. The Application resolves refs to
-   * `true`/`false`; Core only composes the decision. Absent oracle means no ref checking
-   * — the promotion proceeds on pointer identity alone, which is the pre-lineage
-   * behaviour. A present-but-failing oracle must throw rather than return false, so a
-   * broken content store cannot masquerade as "all content gone".
+   * Which of `contentRefs` the Application found present — data, not an oracle.
+   *
+   * This was a `(ref: string) => boolean` callback, and it was the only one Core accepted
+   * anywhere. Core is pure by an invariant that two guards enforce, and neither can see this:
+   * `check-boundaries.mjs` reads imports, and `purity.setup.ts` traps globals. A parameter
+   * typed as a function is an effect-shaped hole that passes both. The single caller already
+   * resolved every ref into a `Set` before calling and wrapped it in a closure purely to
+   * satisfy this signature, so nothing was gained by the indirection and a second caller
+   * could have handed `existsSync` straight through it.
+   *
+   * `null` means no content plane was consulted: no ref checking, and the promotion proceeds
+   * on pointer identity alone, which is the pre-lineage behaviour. An empty array is a
+   * different statement — every ref was checked and none resolved.
+   *
+   * Resolution failure must still THROW on the Application side rather than reporting a ref
+   * as absent, so a broken content store cannot masquerade as "all content gone".
    */
-  refExists?: ((ref: string) => boolean) | null;
+  resolvedRefs?: readonly string[] | null;
   /**
    * The judge's admission, when a judge graded this run.
    *
@@ -203,16 +214,18 @@ export function decidePromotion(req: PromotionRequest): PromotionDecision {
    * conditions: "instrument before measurement" — a gate refuses to evaluate a claim
    * about artifacts it cannot see.
    *
-   * The oracle is injected because existence is an effect. Absent oracle means the
-   * deployment keeps no content plane, and pointer identity is all that can be checked —
-   * the pre-lineage behaviour. A present-but-failing oracle must throw rather than
-   * return false, so a broken content store cannot masquerade as "all content gone".
+   * Existence is an effect, so the Application resolves it and hands the ANSWER here rather
+   * than a way to ask the question. `resolvedRefs: null` means the deployment keeps no
+   * content plane and pointer identity is all that can be checked — the pre-lineage
+   * behaviour. Resolution failure must throw on the caller's side rather than reporting a
+   * ref absent, so a broken content store cannot masquerade as "all content gone".
+   *
+   * The set difference stays here because it is arithmetic, not I/O: Core still decides what
+   * a dangling ref means and says so in the refusal.
    */
-  if (req.refExists != null) {
-    const dangling: string[] = [];
-    for (const ref of req.contentRefs ?? []) {
-      if (!req.refExists(ref)) dangling.push(ref);
-    }
+  if (req.resolvedRefs != null) {
+    const present = new Set(req.resolvedRefs);
+    const dangling = (req.contentRefs ?? []).filter((ref) => !present.has(ref));
     if (dangling.length > 0) {
       refuse(
         "dangling-ref",

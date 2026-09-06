@@ -237,7 +237,7 @@ describe.each(IMPLEMENTATIONS)("ContentStore conformance — %s", (_name, make) 
      * corrupt evidence.
      *
      * It throws rather than returning false, matching `get` and matching what
-     * `decidePromotion` requires of its oracle: a broken store must not be able to
+     * `decidePromotion` requires of ref resolution: a broken store must not be able to
      * masquerade as "all content gone".
      */
     const root = mkroot();
