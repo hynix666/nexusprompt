@@ -539,6 +539,36 @@ export type CostProfile =
   | "agentic-loop"
   | "training-time";
 
+/**
+ * One variable a `UsageTemplate` interpolates. Matches
+ * `technique-record.schema.json#/properties/usage_templates/items/properties/variables`.
+ */
+export interface TechniqueVariable {
+  name: string;
+  description: string | null;
+  example: string | null;
+}
+
+/**
+ * One worked invocation of a technique. Matches
+ * `technique-record.schema.json#/properties/usage_templates/items` exactly, including the
+ * closed `additionalProperties: false` the schema gained in the same audit pass that left
+ * this type as `Array<Record<string, unknown>>` -- looser than the schema it backs, which is
+ * the opposite of every other divergence that pass closed. Reconciled here.
+ */
+export interface UsageTemplate {
+  template_name: string;
+  template: string;
+  template_id: string;
+  determinism:
+    | "deterministic-at-temperature-zero"
+    | "stochastic-by-design"
+    | "requires-external-system"
+    | "training-time-not-applicable";
+  reproducibility_note?: string | null;
+  variables: TechniqueVariable[];
+}
+
 export interface TechniqueRecord {
   id: string;
   name: string;
@@ -555,7 +585,7 @@ export interface TechniqueRecord {
   related_techniques: string[];
   primary_source: TechniqueSource;
   secondary_sources: TechniqueSource[];
-  usage_templates: Array<Record<string, unknown>>;
+  usage_templates: UsageTemplate[];
   tags: string[];
   aliases: string[];
   corpus_file: string | null;

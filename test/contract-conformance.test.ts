@@ -585,7 +585,9 @@ describe("technique-record", () => {
      * refused by this; what it refuses is the next key someone invents without declaring.
      */
     const [first] = listTechniques();
-    const tpl = first.usage_templates[0] as Record<string, unknown>;
+    // usage_templates is now a real UsageTemplate[] (tightened alongside the schema in
+    // a later pass), so reaching for an arbitrary extra key needs the through-unknown cast.
+    const tpl = first.usage_templates[0] as unknown as Record<string, unknown>;
 
     const extraOnTemplate = {
       ...first,
