@@ -323,7 +323,7 @@ export class Orchestrator {
       model_id: null,
       failure_code: null,
       verdict: null,
-      schema_version: "1.0.0",
+      schema_version: CONTRACT_VERSIONS["observability-event"],
       ...fields,
     });
     return event_id;

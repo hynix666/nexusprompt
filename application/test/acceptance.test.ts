@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { Orchestrator } from "../src/orchestrator.js";
 import { LocalRevisionStore } from "../../adapters/storage-local/src/index.js";
 import { DEMO_MARKER } from "../../core/src/stages/compile.js";
+import { CONTRACT_VERSIONS } from "../../contracts/index.js";
 import type {
   GenerationRequest,
   GenerationResult,
@@ -399,6 +400,32 @@ describe("acceptance: provider reachable", () => {
     const root_event = events[0];
     expect(root_event.parent_event_id).toBeNull();
     for (const e of events.slice(1)) expect(e.parent_event_id).toBe(root_event.event_id);
+
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("stamps every event with the CURRENT observability-event version", async () => {
+    /**
+     * This path stamped "1.0.0" while the contract stood at 1.3.0, on every event
+     * `nexusprompt run` and the API have ever emitted.
+     *
+     * Nothing could have caught it. The schema types `schema_version` as a bare string with
+     * no `const`, so conformance validation passes any value — and `CONTRACT_VERSIONS` exists
+     * precisely because this table was once duplicated across the two runners and drifted.
+     * `pipeline.ts` reads from it; this path kept a third literal, so the fix that retired the
+     * duplication never reached the runner most callers actually use.
+     *
+     * Read from the table rather than asserting "1.3.0": pinning the number here would just
+     * relocate the literal into the test and go stale at the next bump.
+     */
+    const { orchestrator, command, events, root } = await harness(new LiveProvider("ok"));
+    await orchestrator.run(command);
+
+    expect(events.length).toBeGreaterThan(0);
+    for (const e of events) {
+      expect(e.schema_version, `${e.event_type} carried a stale schema_version`)
+        .toBe(CONTRACT_VERSIONS["observability-event"]);
+    }
 
     await rm(root, { recursive: true, force: true });
   });
