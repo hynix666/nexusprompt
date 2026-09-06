@@ -119,6 +119,30 @@ export function checkPlan(root = process.cwd()) {
   claim("adapters", declared.adapters.slice().sort(), dirNames("adapters"), "directories under adapters/");
   claim("shells", declared.shells.slice().sort(), dirNames("shells"), "directories under shells/");
 
+  /**
+   * Which of those directories anything can actually START.
+   *
+   * `shells` above compares declared names against directory names, so a directory alone
+   * counted as a shell. Two of the four cannot be built or run at all: there is no
+   * `vite.config.*` in the repository, neither UI shell declares a script, and no root script
+   * references them, so their `index.html` has nothing to serve it. The plan said "4 of 4 -
+   * pipeline-ui and toolkit-ui closed out Phase 6" and this check passed on that.
+   *
+   * Runnable means a script somewhere names the shell's directory: `api` and `cli` are each
+   * launched by a root script, which is why "declares its own start script" would have been
+   * the wrong test - `shells/cli/package.json` declares none and the CLI runs fine.
+   */
+  const allScripts = [
+    ...Object.values(JSON.parse(readText(at("package.json"))).scripts ?? {}),
+    ...dirNames("shells").flatMap((d) => {
+      const manifest = at(`shells/${d}/package.json`);
+      return existsSync(manifest) ? Object.values(JSON.parse(readText(manifest)).scripts ?? {}) : [];
+    }),
+  ];
+  const runnable = dirNames("shells").filter((d) => allScripts.some((c) => String(c).includes(`shells/${d}/`)));
+  claim("shells_runnable", (declared.shells_runnable ?? []).slice().sort(), runnable.sort(),
+    "shells named by a script in package.json (root or their own)");
+
   // Catalog: what is available in the frozen source, and what has been imported.
   const catalogSource = "sources/catalog/data/prompt_technique_catalog.json";
   const available = existsSync(at(catalogSource))

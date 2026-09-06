@@ -100,6 +100,31 @@ const RULES = [
     },
   },
   {
+    /**
+     * Shared packages, added 6 September 2026 with the `.tsx` extension above.
+     *
+     * These are two separate bugs and fixing one does not fix the other: the extension
+     * filter skipped `.tsx` inside directories this already walked, and there was no rule
+     * for `packages/` at all, so `packages/pipeline-presentation/` was invisible whatever
+     * the filter said. The audit reported them as one finding.
+     *
+     * The budget is the Shell's, plus the direction that makes a shared package a shared
+     * package: ADR-0006 created it so `toolkit-ui` could reuse the pipeline experience
+     * WITHOUT importing `pipeline-ui`, and a package that imports a Shell puts that back.
+     */
+    layer: "packages",
+    dir: "packages",
+    forbid: [
+      { test: (s) => /(^|\/)adapters\//.test(s),
+        why: "A shared package names no concrete adapter — that is the composition root's job (ADR-0006)." },
+      { test: (s) => /(^|\/)core\//.test(s),
+        why: "A shared package calls the Application protocol, not Core directly (ADR-0001, amended by ADR-0005)." },
+      { test: (s) => /(^|\/)shells\//.test(s),
+        why: "A shared package is reused BY Shells. Importing one inverts the dependency ADR-0006 created it to remove." },
+    ],
+    exempt: {},
+  },
+  {
     layer: "contracts",
     dir: "contracts",
     forbid: [
@@ -143,6 +168,16 @@ function crossShell(file, resolved) {
   return null;
 }
 
+/**
+ * Which files this walk considers source.
+ *
+ * `.tsx` was missing until 6 September 2026, so every React file under `shells/` was skipped
+ * by a checker that walks `shells/`. Nothing was violating a rule at the time, which is the
+ * quiet version of this failure: a guard whose scope is narrower than its name reports
+ * agreement rather than absence, and nobody reads a passing check twice.
+ */
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mjs", ".js"];
+
 function walk(root, dir, out = []) {
   let entries;
   try { entries = readdirSync(join(root, dir)); } catch { return out; }
@@ -152,7 +187,7 @@ function walk(root, dir, out = []) {
     if (statSync(abs).isDirectory()) {
       if (e === "node_modules" || e === "test") continue;
       walk(root, rel, out);
-    } else if (e.endsWith(".ts") || e.endsWith(".mjs") || e.endsWith(".js")) {
+    } else if (SOURCE_EXTENSIONS.some((x) => e.endsWith(x))) {
       out.push(rel);
     }
   }
