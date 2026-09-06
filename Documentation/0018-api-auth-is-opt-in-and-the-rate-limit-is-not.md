@@ -1,6 +1,6 @@
 # ADR-0018: API auth is opt-in, the rate limit is not, and neither adds a dependency
 
-**Status:** Accepted — 6 September 2026
+**Status:** Accepted — 6 September 2026 — **amended by [ADR-0019](./0019-api-refuses-non-loopback-without-a-token.md)**, which refuses a non-loopback bind with no token and adds an aggregate provider ceiling. Read ADR-0019 alongside this one; where the two disagree on the auth default, ADR-0019 governs.
 **Related:** ADR-0012 (the API shell and the dependency boundary), ADR-0005 (the
 Application/orchestration boundary — why this lives in the Shell).
 

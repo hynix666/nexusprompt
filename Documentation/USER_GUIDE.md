@@ -57,14 +57,21 @@ single-stage Orchestrator path.
 | `NEXUSPROMPT_API_TOKEN` | *unset* | when set, every route except `/api/v1/health` requires `Authorization: Bearer <token>` |
 | `NEXUSPROMPT_RATE_LIMIT` | `120` | requests per window per client IP, for routes that do no external work |
 | `NEXUSPROMPT_PROVIDER_RATE_LIMIT` | `10` | requests per window per client IP, for the routes that reach a provider |
+| `NEXUSPROMPT_GLOBAL_PROVIDER_LIMIT` | `50` | requests per window, summed across every client, for the routes that reach a provider |
 | `NEXUSPROMPT_RATE_WINDOW_MS` | `60000` | the window |
+| `NEXUSPROMPT_MAX_PROVIDER_CALLS` | *unset* | passed to the Orchestrator as a `Budget`. Below 3 (the retry ceiling) refuses every compile outright — see ADR-0019 for why this is a config assertion, not a spend control |
 
-**Auth is opt-in and the rate limit is not.** With no `NEXUSPROMPT_API_TOKEN` the server
-starts, warns on stderr, and serves every route to anyone who can reach it — so on a
-non-loopback bind, set the token. The rate limit applies either way, because it needs no
-secret to configure and it is what bounds provider spend. See ADR-0018 for why that default
-is what it is and what it leaves open. A rate-limit variable that is not a positive integer
-is refused at startup rather than replaced with the default.
+**Auth is opt-in on a loopback bind, and refused on anything else.** With no
+`NEXUSPROMPT_API_TOKEN`, a `HOST` of `127.0.0.1`, `::1`, or `localhost` still starts and warns
+on stderr, exactly as before — local development and `npm start` with no configuration are
+unaffected. Any other `HOST` with no token set refuses to start, naming the variable, before
+binding a socket. See ADR-0019 for why this changed from ADR-0018's original opt-in-everywhere
+default.
+
+The rate limit applies regardless of auth, because it needs no secret to configure and it is
+what bounds provider spend — both the per-client ceiling and, since ADR-0019, the aggregate
+one across every client. A rate-limit variable that is not a positive integer is refused at
+startup rather than replaced with the default.
 
 ## Choosing a provider
 
