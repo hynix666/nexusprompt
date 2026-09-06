@@ -475,7 +475,7 @@ recorded rather than implied.
 
 | schema | version | described below |
 |---|---|---|
-| `audit-report` | 1.0.0 | — |
+| `audit-report` | 1.0.1 | — |
 | `baseline` | 2.0.0 | — |
 | `comparison` | 2.3.0 | — |
 | `configuration` | 1.3.0 | — |

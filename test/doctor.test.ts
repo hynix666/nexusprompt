@@ -114,6 +114,26 @@ describe("doctor — must fire", () => {
     expect(findingIn(root, "lockfile").status).toBe("ok");
   });
 
+  it("actually captures the npm version, cross-platform", () => {
+    /**
+     * Regression: an earlier fix for DEP0190 (spawnSync with an args array plus
+     * shell: true) replaced it with spawnSync("npm.cmd", [...]) with no shell on
+     * Windows, which fails EINVAL -- Windows cannot exec a .cmd file directly without
+     * one. That version passed typecheck and looked right; only running it on a real
+     * Windows machine showed the detail silently falling back to "npm ?". Asserted
+     * against the real system rather than a stub, because a stub could not have
+     * caught this -- the bug was in what the OS does with the command, not in this
+     * file's own logic.
+     */
+    const root = plant({
+      "package.json": JSON.stringify({}),
+      "package-lock.json": JSON.stringify({ packages: {} }),
+    });
+    const f = findingIn(root, "package manager");
+    expect(f.status).toBe("ok");
+    expect(f.detail).toMatch(/^npm \d+\.\d+\.\d+/);
+  });
+
   it("catches a pnpm lockfile", () => {
     // pnpm is not installed and the workspace is defined with npm workspaces, but much of the
     // documentation still says pnpm — so this is a mistake someone will make by following it.

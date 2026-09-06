@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/audit-report/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/audit-report/1.0.1",
   "title": "AuditReport",
   "description": "Output of the Nexus Quality Audit Core. A deterministic verification report that manufactures error signals for silent failures. Does not generate code; only validates, lints, and reports deviations against the 5-layer architecture and versioned JSON contracts.",
   "type": "object",
@@ -86,7 +86,7 @@
           }
         }
       },
-      "description": "Which of the 15 versioned contracts were validated against. An audit that does not name its schemas is unauditable."
+      "description": "Which of the versioned contracts under contracts/ were validated against -- an audit that does not name its schemas is unauditable. The count is deliberately not stated here: this schema has no producer yet (ADR-0013), so a hardcoded number in this description would be exactly the kind of pinned count nothing derives or checks. See CONTRACTS.md, which lists every schema and is guarded by check:contracts."
     },
     "architectural_notes": {
       "type": [

@@ -49,6 +49,22 @@ Versioning, as applied here:
 
 ---
 
+## 2026-09-06 (audit remediation — a hardcoded count in a description)
+
+### `audit-report` 1.0.0 → **1.0.1** (patch — description only)
+
+`schemas_checked`'s description said "Which of the 15 versioned contracts were validated
+against" — 15 was already wrong (18 schemas exist) by the time the audit found it, from
+counting drift the same way every other pinned number in this repository has drifted.
+
+The description no longer states a count at all, rather than replacing one hardcoded number
+with a fresher one that will drift the same way. It points at `CONTRACTS.md` instead, which
+`check:contracts` (added 6 September 2026) regenerates and verifies against the schemas on
+disk. This schema still has no producer (ADR-0013), so nothing enforces the count here even
+after the fix — the absence of a number is the fix, not a placeholder for one.
+
+---
+
 ## 2026-09-06 (audit remediation — what "safe" was claiming)
 
 ### `provider-failure` 1.1.0 → **1.1.1** (patch — description only)

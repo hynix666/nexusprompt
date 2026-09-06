@@ -61,8 +61,11 @@ if (!Number.isFinite(N) || N < 0 || !Number.isFinite(SEED)) {
 /* ── the shared gate set ─────────────────────────────────────────────────── */
 
 // Only gates both implementations have can be compared. The Python linter emits
-// 16; the port currently registers 2. Comparing outside the intersection would
-// report a disagreement that is really just an unported gate.
+// 16 and the port now registers all 16 too -- this comment said "2" long after the
+// port count moved and was corrected 6 September 2026 by re-reading the intersection
+// this line computes rather than trusting the number written here. Comparing outside
+// the intersection would report a disagreement that is really just an unported gate;
+// SHARED below is computed from the two manifests, never from this comment.
 const SHARED = new Set(listGates().map((g) => g.id));
 
 /**
