@@ -52,7 +52,7 @@ const run = (over: Partial<EvalRun> = {}): EvalRun => ({
   cost: { tokens_in: 100, tokens_out: 50, provider_calls: 14, cache_hits: 0, usd: 0.01, budget_exceeded: false },
   detector_recall: null,
   grader_health: null,
-  provenance: { note: "fixture" },
+  provenance: { core_build_hash: "test", configuration_id: CONFIG, suite_version: "2.0.0", provider: "pinned-stub" },
   ...over,
 });
 
