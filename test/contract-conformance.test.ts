@@ -760,7 +760,7 @@ describe("evaluation plane, against values the suite actually produced", () => {
      */
     expect(report(validators["eval-run"], { ...run, provenance: {} })).toBe(false);
     for (const key of ["core_build_hash", "configuration_id", "suite_version", "provider"]) {
-      const without = { ...(run.provenance as Record<string, unknown>) };
+      const without = { ...(run.provenance as unknown as Record<string, unknown>) };
       delete without[key];
       expect(validators["eval-run"]({ ...run, provenance: without }), `missing ${key}`).toBe(false);
       // Present-but-empty is the same failure wearing a value: `provenance-complete` already
@@ -1121,7 +1121,7 @@ describe("release plane, against records the promotion path wrote", () => {
     suite_version: "2.0.0",
     aggregate: { cases: 14, passed, score: passed / 14 },
     cost: { tokens_in: 10, tokens_out: 5, provider_calls: 14, cache_hits: 0, usd: 0.01, budget_exceeded: false },
-    provenance: { source: "contract conformance" },
+    provenance: { core_build_hash: "test", configuration_id: CONFIG_ID, suite_version: "2.0.0", provider: "pinned-stub" },
   });
 
   const seeded = async () => {
