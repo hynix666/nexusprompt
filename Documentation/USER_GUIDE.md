@@ -34,9 +34,37 @@ promptnexus run --stage compile path/to/prompt.md
 ```
 Use this to wire gate checks into another repo's pre-commit hooks. Because `cli` and the web Shells both call the same Core functions through the same contracts, a prompt linted via `cli` produces identical `GateResult`s to the same prompt linted in `toolkit-ui`.
 
-## `api` — operational status, not a pipeline API yet
+## `api` — status routes, and two that do real work
 
-Not one of the three guided ways above — a small Fastify HTTP server (`npm start -w @nexusprompt/shell-api`) exposing read-only status routes: `/api/v1/health`, `/api/v1/system`, `/api/v1/hardware`, `/api/v1/gates`, and `/api/v1/provider/health`. There is no route to run a pipeline or lint a prompt over HTTP; use `cli` or a web Shell for that.
+Not one of the three guided ways above — a small Fastify HTTP server
+(`npm start -w @nexusprompt/shell-api`).
+
+Read-only status: `/api/v1/health`, `/api/v1/system`, `/api/v1/hardware`, `/api/v1/gates`,
+`/api/v1/provider/health`.
+
+Doing work: **`POST /api/v1/compiler/lint`** and **`POST /api/v1/compiler/compile`**. This
+section said there was "no route to run a pipeline or lint a prompt over HTTP" until
+6 September 2026; both have existed since the shell was adopted, and `compile` reaches a
+provider. There is still no route that runs the eleven-stage pipeline — `compile` is the
+single-stage Orchestrator path.
+
+### Environment
+
+| variable | default | what it does |
+|---|---|---|
+| `PORT` | `3000` | listening port |
+| `HOST` | `127.0.0.1` | bind address. Loopback by default; anything else exposes the two working routes to the network |
+| `NEXUSPROMPT_API_TOKEN` | *unset* | when set, every route except `/api/v1/health` requires `Authorization: Bearer <token>` |
+| `NEXUSPROMPT_RATE_LIMIT` | `120` | requests per window per client IP, for routes that do no external work |
+| `NEXUSPROMPT_PROVIDER_RATE_LIMIT` | `10` | requests per window per client IP, for the routes that reach a provider |
+| `NEXUSPROMPT_RATE_WINDOW_MS` | `60000` | the window |
+
+**Auth is opt-in and the rate limit is not.** With no `NEXUSPROMPT_API_TOKEN` the server
+starts, warns on stderr, and serves every route to anyone who can reach it — so on a
+non-loopback bind, set the token. The rate limit applies either way, because it needs no
+secret to configure and it is what bounds provider spend. See ADR-0018 for why that default
+is what it is and what it leaves open. A rate-limit variable that is not a positive integer
+is refused at startup rather than replaced with the default.
 
 ## Choosing a provider
 

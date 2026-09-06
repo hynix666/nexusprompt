@@ -5,6 +5,9 @@ import { availableParallelism } from "node:os";
 import { lint, listPortedGates, worstVerdict } from "../../../application/src/lint.js";
 import type { Orchestrator } from "../../../application/src/orchestrator.js";
 import type { ProviderTransport } from "../../../contracts/index.js";
+import {
+  registerSecurity, securityFromEnv, type SecurityConfig, type SecurityHooks,
+} from "./security.js";
 
 export interface ApiDependencies {
   provider: ProviderTransport;
@@ -39,9 +42,22 @@ function requireString(value: unknown, name: string): string {
   return value;
 }
 
-export function buildApi(deps: ApiDependencies): FastifyInstance {
+export function buildApi(
+  deps: ApiDependencies,
+  security: SecurityConfig = securityFromEnv(),
+  hooks: SecurityHooks = {},
+): FastifyInstance {
   const app = Fastify({ logger: false });
   app.register(sensible);
+
+  /**
+   * Before any route, so a route added later is covered without its author remembering.
+   *
+   * Registered here rather than in the composition root because it is a property of the
+   * HTTP surface, not of which adapters are wired behind it — the composition root names
+   * concrete adapters and holds no logic (ADR-0005), and a rate limit is logic.
+   */
+  registerSecurity(app, security, hooks);
 
   /**
    * No message this shell did not write reaches the caller.
