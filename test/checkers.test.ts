@@ -16,6 +16,11 @@ import { checkCitations } from "../scripts/check-citations.mjs";
 import {
   checkContractsDoc, schemaVersions, inlineClaims, declaredNoSchema,
 } from "../scripts/check-contracts-doc.mjs";
+import {
+  optionsSatisfied, covers, structuralProblems,
+  type AllowedDivergence, type Disagreement,
+} from "../scripts/allowlist-match.js";
+import { checkSizing, matchesGranularity, type Ack } from "../scripts/check-sizing.js";
 import { checkXsd, buildXml, validateAgainstXsd } from "../scripts/check-xsd.mjs";
 import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
 import { checkStages } from "../scripts/check-stages.mjs";
@@ -1855,5 +1860,305 @@ describe("check:contracts — line endings", () => {
     const r = checkContractsDoc(repoRoot, { readDoc: () => crlf });
     expect(r.ok).toBe(false);
     expect((r.problems ?? []).join("\n")).toMatch(/gate-result/);
+  });
+});
+
+/**
+ * The divergence-allowlist matching logic, isolated from `differential.ts` itself.
+ *
+ * A repository audit named this precisely: "matchesGranularity's tolerance math, the
+ * two-directional stale-acknowledgment check, and the allowlist covers/optionsSatisfied/
+ * structural-validation logic are only exercised end-to-end" -- reachable only by running
+ * the full 2,848-verdict comparison against the real frozen Python linter. A planted defect
+ * in the matching logic itself would have to survive that whole run to be missed here, and
+ * these tests plant exactly the shapes ADR-0011 named as the reason `only_when_options`
+ * exists: a blanket `also_matches: ".*"` excusing a case the entry never meant to cover.
+ */
+describe("allowlist-match — optionsSatisfied", () => {
+  const gate = (over: Partial<AllowedDivergence> = {}): AllowedDivergence => ({
+    gate: "QUTM_CEILING",
+    demonstration: { text: "x" },
+    source_verdict: "FAIL",
+    port_verdict: "PASS",
+    ...over,
+  });
+
+  it("is satisfied with no constraint at all", () => {
+    expect(optionsSatisfied(gate(), {})).toBe(true);
+    expect(optionsSatisfied(gate(), { naiveTokens: 5 })).toBe(true);
+  });
+
+  it("checks every declared operator", () => {
+    const cases: Array<[string, number, number, boolean]> = [
+      ["lt", 5, 10, true], ["lt", 10, 10, false],
+      ["lte", 10, 10, true], ["lte", 11, 10, false],
+      ["gt", 11, 10, true], ["gt", 10, 10, false],
+      ["gte", 10, 10, true], ["gte", 9, 10, false],
+      ["eq", 10, 10, true], ["eq", 9, 10, false],
+    ];
+    for (const [op, actual, bound, expected] of cases) {
+      const e = gate({ only_when_options: { naiveTokens: { [op]: bound } } });
+      expect(
+        optionsSatisfied(e, { naiveTokens: actual }),
+        `${op}(${actual}, ${bound}) should be ${expected}`,
+      ).toBe(expected);
+    }
+  });
+
+  it("is NOT satisfied when the case does not carry the constrained option at all", () => {
+    // The must-not-fire half ADR-0011 exists for: absence must not excuse by omission.
+    const e = gate({ only_when_options: { naiveTokens: { lt: 120 } } });
+    expect(optionsSatisfied(e, {})).toBe(false);
+    expect(optionsSatisfied(e, { stakes: "low" } as never)).toBe(false);
+  });
+
+  it("requires every constraint across every named option, not just one", () => {
+    const e = gate({
+      only_when_options: { naiveTokens: { lt: 120 }, stakes: { eq: 1 } as never },
+    });
+    expect(optionsSatisfied(e, { naiveTokens: 50, stakes: 1 } as never)).toBe(true);
+    expect(optionsSatisfied(e, { naiveTokens: 50, stakes: 2 } as never)).toBe(false);
+    expect(optionsSatisfied(e, { naiveTokens: 200, stakes: 1 } as never)).toBe(false);
+  });
+});
+
+describe("allowlist-match — covers", () => {
+  const disagreement = (over: Partial<Disagreement> = {}): Disagreement => ({
+    source: "generated:1:0", gate: "QUTM_CEILING", python: "FAIL", typescript: "PASS",
+    text: "aaaa", options: {}, ...over,
+  });
+  const entry = (over: Partial<AllowedDivergence> = {}): AllowedDivergence => ({
+    gate: "QUTM_CEILING", demonstration: { text: "aaaa" },
+    source_verdict: "FAIL", port_verdict: "PASS", ...over,
+  });
+
+  it("matches on gate and both verdicts, exact text", () => {
+    expect(covers(entry(), disagreement())).toBe(true);
+  });
+
+  it("does not match a different gate, or either verdict differing", () => {
+    expect(covers(entry({ gate: "TOKEN_BUDGET" }), disagreement())).toBe(false);
+    expect(covers(entry({ source_verdict: "PASS" }), disagreement())).toBe(false);
+    expect(covers(entry({ port_verdict: "FAIL" }), disagreement())).toBe(false);
+  });
+
+  it("does not match different text with no also_matches declared", () => {
+    expect(covers(entry(), disagreement({ text: "bbbb" }))).toBe(false);
+  });
+
+  it("also_matches broadens the text match, but only where options are also satisfied", () => {
+    /**
+     * The exact scenario ADR-0011 names: a blanket `.*` would excuse the
+     * `qutm-ceiling-crossing` boundary case along with the intended one.
+     * `only_when_options` is what keeps the broadening from doing that.
+     */
+    const e = entry({
+      also_matches: ".*",
+      only_when_options: { naiveTokens: { lt: 120 } },
+    });
+    expect(covers(e, disagreement({ text: "anything", options: { naiveTokens: 50 } })))
+      .toBe(true);
+    expect(covers(e, disagreement({ text: "anything", options: { naiveTokens: 400 } })))
+      .toBe(false);
+  });
+
+  it("an also_matches regex that does not match the text still refuses", () => {
+    const e = entry({ also_matches: "^only-this$" });
+    expect(covers(e, disagreement({ text: "not that" }))).toBe(false);
+  });
+});
+
+describe("allowlist-match — structuralProblems", () => {
+  const shared = new Set(["QUTM_CEILING", "TOKEN_BUDGET"]);
+  const valid = (): AllowedDivergence => ({
+    gate: "QUTM_CEILING",
+    demonstration: { text: "aaaa" },
+    source_verdict: "FAIL",
+    port_verdict: "PASS",
+    reason: "a genuine reason at least this long",
+    adr: "ADR-0011",
+  });
+
+  it("passes a well-formed entry", () => {
+    expect(structuralProblems([valid()], shared)).toEqual([]);
+  });
+
+  it("rejects an entry naming a gate outside the shared set", () => {
+    const problems = structuralProblems([{ ...valid(), gate: "NOT_A_REAL_GATE" }], shared);
+    expect(problems.some((p) => p.includes("not in the shared gate set"))).toBe(true);
+  });
+
+  it("rejects an entry with no reason, no ADR, or no demonstration", () => {
+    expect(structuralProblems([{ ...valid(), reason: "" }], shared).length).toBeGreaterThan(0);
+    expect(structuralProblems([{ ...valid(), adr: "" }], shared).length).toBeGreaterThan(0);
+    expect(
+      structuralProblems([{ ...valid(), demonstration: { text: "" } }], shared).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("rejects source_verdict equal to port_verdict — that is agreement, not a divergence", () => {
+    const problems = structuralProblems([{ ...valid(), port_verdict: "FAIL" }], shared);
+    expect(problems.some((p) => p.includes("agreement, not a divergence"))).toBe(true);
+  });
+
+  it("rejects an invalid also_matches regex", () => {
+    const problems = structuralProblems([{ ...valid(), also_matches: "(unterminated" }], shared);
+    expect(problems.some((p) => p.includes("not a valid regex"))).toBe(true);
+  });
+
+  it("rejects an only_when_options entry using an unknown operator", () => {
+    const bad = { ...valid(), only_when_options: { naiveTokens: { between: 5 } as never } };
+    const problems = structuralProblems([bad], shared);
+    expect(problems.some((p) => p.includes("unknown operator"))).toBe(true);
+  });
+
+  it("rejects an entry whose own demonstration does not satisfy its own only_when_options", () => {
+    // Otherwise it would fail the staleness rule elsewhere with a confusing message.
+    const bad = {
+      ...valid(),
+      demonstration: { text: "aaaa", options: { naiveTokens: 400 } },
+      only_when_options: { naiveTokens: { lt: 120 } },
+    };
+    const problems = structuralProblems([bad], shared);
+    expect(problems.some((p) => p.includes("cannot itself produce"))).toBe(true);
+  });
+});
+
+/**
+ * `check-sizing.ts`, planted rather than run only against the real `eval/*.json` files.
+ *
+ * A repository audit named this precisely: the granularity tolerance math and the
+ * two-directional stale-acknowledgment check were "only exercised end-to-end" -- a defect
+ * here had to survive the real suites undetected before anyone would see it. These tests
+ * plant fixtures via the injectable `listSuites`/`readAcks`, matching `check-repo-hygiene`'s
+ * `listTracked`/`sizeOf` pattern, so a fixture needs no `eval/` directory on disk at all.
+ */
+describe("check-sizing — matchesGranularity", () => {
+  it("accepts the exact fraction, and a truncation of it", () => {
+    expect(matchesGranularity(1 / 14, 14)).toBe(true);
+    expect(matchesGranularity(0.0714, 14)).toBe(true); // 1/14 = 0.07142857...
+  });
+
+  it("rejects a value the suite's own growth left behind", () => {
+    // The regression this check exists for: a 14-case suite grows to 15 and the field
+    // stays at 1/14 instead of moving to 1/15.
+    expect(matchesGranularity(1 / 14, 15)).toBe(false);
+  });
+
+  it("scales its tolerance to the declared precision, not a fixed epsilon", () => {
+    expect(matchesGranularity(0.08, 14)).toBe(false); // too coarse to be 1/14
+    expect(matchesGranularity(0.1, 10)).toBe(true); // exact at one decimal
+  });
+});
+
+describe("check-sizing — checkSizing", () => {
+  const suite = (over: Record<string, unknown> = {}) => ({
+    suite_id: "s", version: "1.0.0", kind: "smoke",
+    case_ids: ["a", "b", "c", "d", "e", "f"],
+    resolution: { detectable_delta: 1 / 6, confidence: 0.95, sized_for: null },
+    significance_protocol: "exact-mcnemar",
+    ...over,
+  });
+
+  const fixture = (
+    suites: Array<{ file: string; suite: ReturnType<typeof suite> }>,
+    acks: Ack[] = [],
+  ) => checkSizing({
+    listSuites: () => suites as never,
+    readAcks: () => acks,
+  });
+
+  it("passes a well-sized suite with no acknowledgment needed", () => {
+    // 6 cases is above the exact floor (5), so it needs no acknowledgment.
+    const r = fixture([{ file: "s.json", suite: suite() }]);
+    expect(r.ok).toBe(true);
+    expect(r.failures).toEqual([]);
+  });
+
+  it("fires when detectable_delta has drifted from 1/n", () => {
+    const r = fixture([{ file: "s.json", suite: suite({ resolution: { detectable_delta: 0.5, confidence: 0.95, sized_for: null } }) }]);
+    expect(r.ok).toBe(false);
+    expect(r.failures.some((f) => f.includes("score granularity"))).toBe(true);
+  });
+
+  it("fires when a suite claims sized_for more cases than it holds", () => {
+    const r = fixture([{ file: "s.json", suite: suite({ resolution: { detectable_delta: 1 / 6, confidence: 0.95, sized_for: 20 } }) }]);
+    expect(r.failures.some((f) => f.includes("sized_for"))).toBe(true);
+  });
+
+  it("refuses an under-floor anchor outright — not acknowledgeable", () => {
+    const small = suite({
+      kind: "anchor", case_ids: ["a", "b", "c"],
+      resolution: { detectable_delta: 1 / 3, confidence: 0.95, sized_for: null },
+    });
+    const r = fixture([{ file: "a.json", suite: small }], [
+      { suite_id: "s", cases: 3, reason: "an acknowledgment that must not be honoured here" },
+    ]);
+    expect(r.failures.some((f) => f.includes("not acknowledgeable"))).toBe(true);
+  });
+
+  it("requires an acknowledgment for a below-floor non-anchor suite", () => {
+    const small = suite({
+      case_ids: ["a", "b", "c"],
+      resolution: { detectable_delta: 1 / 3, confidence: 0.95, sized_for: null },
+    });
+    const r = fixture([{ file: "s.json", suite: small }]);
+    expect(r.failures.some((f) => f.includes("Add an entry to"))).toBe(true);
+  });
+
+  it("accepts a below-floor suite once acknowledged with a matching count and a real reason", () => {
+    const small = suite({
+      case_ids: ["a", "b", "c"],
+      resolution: { detectable_delta: 1 / 3, confidence: 0.95, sized_for: null },
+    });
+    const r = fixture([{ file: "s.json", suite: small }], [
+      { suite_id: "s", cases: 3, reason: "genuinely too small to ever attain significance" },
+    ]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("fires when the acknowledged count no longer matches the suite", () => {
+    const small = suite({
+      case_ids: ["a", "b", "c"],
+      resolution: { detectable_delta: 1 / 3, confidence: 0.95, sized_for: null },
+    });
+    const r = fixture([{ file: "s.json", suite: small }], [
+      { suite_id: "s", cases: 2, reason: "genuinely too small to ever attain significance" },
+    ]);
+    expect(r.failures.some((f) => f.includes("Pinning the count"))).toBe(true);
+  });
+
+  it("fires when the acknowledgment's reason is too short to be usable", () => {
+    const small = suite({
+      case_ids: ["a", "b", "c"],
+      resolution: { detectable_delta: 1 / 3, confidence: 0.95, sized_for: null },
+    });
+    const r = fixture([{ file: "s.json", suite: small }], [
+      { suite_id: "s", cases: 3, reason: "too short" },
+    ]);
+    expect(r.failures.some((f) => f.includes("no usable reason"))).toBe(true);
+  });
+
+  it("fires (forward direction) when an ack names a suite that does not exist", () => {
+    const r = fixture([{ file: "s.json", suite: suite() }], [
+      { suite_id: "ghost", cases: 3, reason: "an entry for a suite nobody kept" },
+    ]);
+    expect(r.failures.some((f) => f.includes("names no suite under"))).toBe(true);
+  });
+
+  it("fires (backward direction) when an ack is STALE — the suite has since grown past the floor", () => {
+    /**
+     * The other half of the stale rule. A suite once below the floor can grow past it, and
+     * the acknowledgment describing the old defect must not silently keep passing.
+     */
+    const r = fixture([{ file: "s.json", suite: suite() }], [
+      { suite_id: "s", cases: 3, reason: "this suite used to be too small, before it grew" },
+    ]);
+    expect(r.failures.some((f) => f.includes("is STALE"))).toBe(true);
+  });
+
+  it("passes on the real repository", () => {
+    const r = checkSizing();
+    expect(r.failures).toEqual([]);
   });
 });
