@@ -57,7 +57,7 @@
 
 import { readFileSync, statSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
@@ -373,12 +373,38 @@ export function checkRepoHygiene(root = process.cwd(), opts = {}) {
   let files = 0;
   const offenders = [];
 
+  /**
+   * The size bound applies to what is ABOUT to be tracked, not only to what already is.
+   *
+   * The rule above reads `git ls-files`, so a file over the bound passes here while it sits
+   * unstaged and fails in CI the moment it is committed — green locally on a tree that is not
+   * the one being committed. That is the same shape as the `build:hash` defect the truth
+   * boundary kept a five-entry tally of, and it is worth closing here for the same reason: a
+   * check scoped to the index cannot see the thing the next command will add to it.
+   *
+   * Milder than that one, because the failure is a loud CI refusal rather than a wrong number
+   * committed and believed. Closed anyway — the walk was already happening.
+   */
+  const willBeOversized = [];
+
   for (const entry of untracked(root)) {
-    const [entryBytes, entryFiles] = measure(join(root, entry));
+    const [entryBytes, entryFiles, largest] = measure(join(root, entry));
     if (entryFiles === 0 && entryBytes === 0) continue;
     offenders.push({ entry, bytes: entryBytes, files: entryFiles });
     bytes += entryBytes;
     files += entryFiles;
+    if (largest !== null && largest.bytes > MAX_TRACKED_BYTES) willBeOversized.push(largest);
+  }
+
+  for (const { path, bytes: size } of willBeOversized.sort((a, b) => b.bytes - a.bytes)) {
+    const shown = relative(root, path).split("\\").join("/") || path;
+    failures.push(
+      `\`${shown}\` is ${(size / 1048576).toFixed(1)} MB and is neither tracked nor ignored, ` +
+      `over the ${MAX_TRACKED_BYTES / 1048576} MB bound that applies once it is staged. Large ` +
+      `files are permanent: git keeps the blob whether or not a later commit removes it, so ` +
+      `the cheap moment to refuse is before the \`git add\`, not after. Ignore it, delete it, ` +
+      `or raise the bound deliberately and say why.`,
+    );
   }
 
   if (bytes > MAX_UNTRACKED_BYTES || files > MAX_UNTRACKED_FILES) {
@@ -430,6 +456,16 @@ function gitUntracked(root) {
 function measure(abs) {
   let bytes = 0;
   let files = 0;
+  /**
+   * The biggest single file, tracked alongside the aggregate.
+   *
+   * The two ceilings above are about BULK; this is about one file that would break the tracked
+   * size bound the moment it is staged. Aggregates cannot answer that question — a directory
+   * of a hundred 100 KB files is 10 MB and contains nothing oversized, while one 5 MB file
+   * inside a new directory is under both bulk ceilings and violates the tracked bound
+   * immediately. Without this, that second shape passes here and fails in CI.
+   */
+  let largest = null;
   const stack = [abs];
   while (stack.length > 0) {
     if (bytes > MAX_UNTRACKED_BYTES || files > MAX_UNTRACKED_FILES) break;
@@ -447,9 +483,10 @@ function measure(abs) {
     } else {
       bytes += st.size;
       files += 1;
+      if (largest === null || st.size > largest.bytes) largest = { path: current, bytes: st.size };
     }
   }
-  return [bytes, files];
+  return [bytes, files, largest];
 }
 
 function main() {

@@ -1498,6 +1498,76 @@ describe("check-repo-hygiene", () => {
     expect(r.failures.join("\n")).toMatch(/neither tracked nor ignored/);
   });
 
+  /**
+   * Rule 8b: the size bound applies to what is ABOUT to be tracked.
+   *
+   * The oversized-file rule reads `git ls-files`, so a file over the bound passed while it sat
+   * unstaged and failed in CI the moment it was committed — green locally on a tree that was
+   * not the one being committed. That is the same shape as the `build:hash` defect the truth
+   * boundary kept a five-entry tally of, found by sweeping the other checkers for it.
+   *
+   * Both ceilings above are about BULK, and neither answers this: a 5 MB file inside a new
+   * directory is under 25 MB and under 500 files, and violates the tracked bound immediately.
+   * That is why `measure` reports the largest single file and not only the aggregate.
+   */
+  it("fires on an untracked file that would break the size bound once staged", () => {
+    const root = mkroot("pnx-untracked-big-");
+    writeFileSync(join(root, "asset.bin"), Buffer.alloc(5 * 1024 * 1024));
+    writeFileSync(join(root, ".gitignore"), readFileSync(join(__dirnameShim, "..", ".gitignore"), "utf8"));
+
+    const r = checkRepoHygiene(root, {
+      listTracked: () => ["core/src/index.ts"],
+      isIgnored: () => false,
+      listIgnored: () => [],
+      listUntracked: () => ["asset.bin"],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/asset\.bin/);
+    expect(r.failures.join("\n")).toMatch(/once it is staged/);
+    // Not the bulk rule: 5 MB is far under the 25 MB ceiling, so only the new rule can fire.
+    expect(r.failures.filter((f) => /neither tracked nor ignored, over the/.test(f))).toHaveLength(1);
+  });
+
+  it("finds it nested inside a new untracked directory, not only at the top level", () => {
+    // The shape that made an aggregate insufficient: under both bulk ceilings, oversized.
+    const root = mkroot("pnx-untracked-big-nested-");
+    mkdirSync(join(root, "assets"), { recursive: true });
+    writeFileSync(join(root, "assets", "model.bin"), Buffer.alloc(5 * 1024 * 1024));
+    writeFileSync(join(root, ".gitignore"), readFileSync(join(__dirnameShim, "..", ".gitignore"), "utf8"));
+
+    const r = checkRepoHygiene(root, {
+      listTracked: () => ["core/src/index.ts"],
+      isIgnored: () => false,
+      listIgnored: () => [],
+      listUntracked: () => ["assets/"],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.failures.join("\n")).toMatch(/model\.bin/);
+  });
+
+  it("does not fire on bulk that contains no single oversized file", () => {
+    /**
+     * The must-not-fire half, and the one that distinguishes this rule from the two above it.
+     * Forty 100 KB files are 4 MB in aggregate — near the per-file bound, nowhere near either
+     * bulk ceiling, and containing nothing that would be refused once staged. A rule keyed on
+     * the aggregate would fire here and be wrong.
+     */
+    const root = mkroot("pnx-untracked-many-small-");
+    mkdirSync(join(root, "chunks"), { recursive: true });
+    for (let i = 0; i < 40; i++) {
+      writeFileSync(join(root, "chunks", `c${i}.bin`), Buffer.alloc(100 * 1024));
+    }
+    writeFileSync(join(root, ".gitignore"), readFileSync(join(__dirnameShim, "..", ".gitignore"), "utf8"));
+
+    const r = checkRepoHygiene(root, {
+      listTracked: () => ["core/src/index.ts"],
+      isIgnored: () => false,
+      listIgnored: () => [],
+      listUntracked: () => ["chunks/"],
+    });
+    expect(r.failures.filter((f) => /once it is staged/.test(f))).toEqual([]);
+  });
+
   it("does not fire on a small amount of untracked scratch", () => {
     // The must-not-fire half. A rule that fired on any untracked file at all would be
     // deleted by whoever it first inconvenienced — an editor swapfile is not an incident.
