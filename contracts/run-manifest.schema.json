@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/run-manifest/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/run-manifest/2.0.0",
   "title": "RunManifest",
   "description": "A whole semantic run as one immutable, atomically published unit: the run's revisions plus every content ref they cite. Metadata only — no content bodies. A run id must use exactly one storage mode (legacy bundle or semantic manifest); both under one run id is an error. Immutable after publication.",
   "type": "object",
@@ -15,7 +15,7 @@
   "additionalProperties": false,
   "properties": {
     "manifest_version": {
-      "description": "Pinned: the manifest format is versioned independently of revision-entry so readers can refuse formats they do not understand without guessing from shape.",
+      "description": "Pinned: the manifest format is versioned independently of revision-entry so readers can refuse formats they do not understand without guessing from shape. Deliberately still 1.0.0 while this schema is at 2.0.0 — the two version different things. This const is what a PRODUCER stamps on disk, and nothing a producer writes changed: every manifest ever written held real RevisionEntry objects, because that is what TypeScript required. The 2.0.0 bump is the schema document catching up to that, so no stored manifest needs migrating and no reader needs to refuse anything.",
       "const": "1.0.0"
     },
     "run_id": {
@@ -33,56 +33,12 @@
       "format": "date-time"
     },
     "revisions": {
-      "description": "Every revision of the run, in execution order. Non-empty: a manifest for a run with no revisions is not a state worth publishing.",
+      "description": "Every revision of the run, in execution order. Non-empty: a manifest for a run with no revisions is not a state worth publishing. Referenced, not re-declared — see the note on the $ref below.",
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "object",
-        "required": [
-          "revision_id",
-          "run_id",
-          "stage_id",
-          "timestamp",
-          "input_hash",
-          "output_hash",
-          "gate_results",
-          "freshness",
-          "status",
-          "execution_provenance",
-          "retention_scope",
-          "input_ref",
-          "output_ref"
-        ],
-        "properties": {
-          "revision_id": { "type": "string", "minLength": 1 },
-          "run_id": { "type": "string", "minLength": 1 },
-          "stage_id": { "type": "string" },
-          "timestamp": { "type": "string", "format": "date-time" },
-          "input_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "output_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "input_ref": {
-            "type": ["string", "null"],
-            "pattern": "^npx:stage-input:[0-9a-f]{64}:(local-bundle|db|export)$"
-          },
-          "output_ref": {
-            "type": ["string", "null"],
-            "pattern": "^npx:(stage-output|generation-response):[0-9a-f]{64}:(local-bundle|db|export)$"
-          },
-          "gate_results": { "type": "array" },
-          "freshness": { "enum": ["FRESH", "STALE"] },
-          "status": {
-            "enum": ["SUCCEEDED", "DEMO", "FAILED", "CANCELLED", "SKIPPED"]
-          },
-          "provider_used": { "type": ["string", "null"] },
-          "execution_provenance": { "type": "object" },
-          "retention_scope": { "enum": ["LOCAL_BUNDLE", "DB", "EXPORT"] },
-          "parent_revision_ids": {
-            "type": "array",
-            "items": { "type": "string" }
-          },
-          "stage_attempt": { "type": "integer", "minimum": 1 },
-          "feedback_round": { "type": "integer", "minimum": 0 }
-        }
+        "$comment": "Through 1.0.0 this re-declared the whole RevisionEntry shape inline, and the copy had already drifted looser than the original: no additionalProperties, stage_id a bare string, gate_results a bare array, execution_provenance a bare object. TypeScript said `revisions: RevisionEntry[]` the whole time, so the schema and the type disagreed about what a manifest holds — the same defect that took revision-entry to 2.0.0, one plane out. A $ref to a pinned version is how pipeline-outcome cites gate-result and judgement cites judge-verdict; it also means a future revision-entry bump forces a decision here rather than silently leaving this copy behind.",
+        "$ref": "https://promptnexus.dev/contracts/revision-entry/3.0.0"
       }
     },
     "content_refs": {

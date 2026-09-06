@@ -31,9 +31,9 @@ enforces, so this table and that test cannot disagree.
 | `pipeline-outcome` | 1.0.0 | validated |
 | `promotion` | 1.0.0 | validated |
 | `provider-failure` | 1.1.0 | validated |
-| `revision-entry` | 2.0.0 | validated |
+| `revision-entry` | 3.0.0 | validated |
 | `routing-policy` | 1.0.0 | validated |
-| `run-manifest` | 1.0.0 | validated |
+| `run-manifest` | 2.0.0 | validated |
 | `technique-record` | 1.3.0 | validated |
 
 **17 of 18** schemas are validated against a value the system produced.
