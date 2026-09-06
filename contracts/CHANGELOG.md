@@ -108,6 +108,32 @@ objects, because TypeScript required it. The bump is the schema document catchin
 was already true, so no stored manifest needs migrating and no reader needs to refuse
 anything. Bumping the const instead would have announced a format change that did not happen.
 
+### `eval-case` 1.2.0 → **2.0.0** (major)
+
+`expectation` and `perturbation` declared `required` and `properties` and omitted
+`additionalProperties`, so a key nobody declared rode along inside the field that says what a
+case expects. The case itself has been closed since 1.0.0; these two were the gap.
+
+Both match their TypeScript shapes exactly — `{kind, value?}` and `{of_case_id, kind, seed}` —
+so this is the schema agreeing with the type, not a new constraint. `perturbation` is
+`type: ["object", "null"]`, which is why a scan keyed on `type === "object"` walks past it;
+the audit found it by reading.
+
+### `technique-record` 1.3.0 → **2.0.0** (major)
+
+Same shape, in `usage_templates[]` and the `variables[]` inside them. Every other object in
+this schema — the record, `source_audit`, `definitions/source` — has been closed since it was
+written; these two were not, so a template could carry any key at all.
+
+Measured before closing rather than assumed: across the 195 imported records there are 195
+templates using **exactly** the six declared keys and 744 variables using **exactly** the
+three, with zero variation. Nothing that exists is refused. What is refused is the next key
+someone invents without declaring it, which is the whole reason the other objects are closed.
+
+`contracts/index.ts` still types `usage_templates` as `Array<Record<string, unknown>>`, which
+is now looser than the schema — the inverse of the disagreements above. Left for a follow-up,
+because tightening it is code and this is the schema PR.
+
 ---
 
 ## 2026-09-04 (judge-scored comparison pilot — contracts)

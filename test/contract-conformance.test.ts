@@ -574,6 +574,35 @@ describe("technique-record", () => {
     expect(validators["technique-record"]({ ...first, category: "vibes" })).toBe(false);
   });
 
+  it("closes the nested template and variable objects", () => {
+    /**
+     * Every other object in this schema — the record itself, `source_audit`, `source` —
+     * has been closed since it was written. `usage_templates[]` and the `variables[]` inside
+     * them were the two that were not, so a template could carry any key at all and validate.
+     *
+     * Measured before closing: all 195 records use exactly the six declared template keys and
+     * all 744 variables exactly the three declared ones, zero variation. Nothing real is
+     * refused by this; what it refuses is the next key someone invents without declaring.
+     */
+    const [first] = listTechniques();
+    const tpl = first.usage_templates[0] as Record<string, unknown>;
+
+    const extraOnTemplate = {
+      ...first,
+      usage_templates: [{ ...tpl, invented_key: "hello" }],
+    };
+    expect(validators["technique-record"](extraOnTemplate)).toBe(false);
+
+    const extraOnVariable = {
+      ...first,
+      usage_templates: [{
+        ...tpl,
+        variables: [{ ...(tpl.variables as Record<string, unknown>[])[0], invented_key: "hello" }],
+      }],
+    };
+    expect(validators["technique-record"](extraOnVariable)).toBe(false);
+  });
+
   it("rejects a record with no primary_source", () => {
     const { primary_source, ...withoutSource } = listTechniques()[0];
     expect(validators["technique-record"](withoutSource)).toBe(false);
@@ -664,6 +693,36 @@ describe("evaluation plane, against values the suite actually produced", () => {
     const { failure_mode, ...noMode } = first;
     expect(validators["eval-case"](noMode)).toBe(false);
     expect(validators["eval-case"]({ ...first, failure_mode: "vibes" })).toBe(false);
+  });
+
+  it("eval-case closes its nested expectation and perturbation objects", () => {
+    /**
+     * The case itself has been closed since 1.0.0; the two objects inside it were not, so a
+     * key nobody declared rode along in the field that says what the case expects. Both match
+     * their TypeScript shapes exactly — `{kind, value?}` and `{of_case_id, kind, seed}` — so
+     * closing them is the schema agreeing with the type rather than a new constraint.
+     *
+     * `perturbation` is `type: ["object", "null"]`, which is why a scan keyed on
+     * `type === "object"` missed it and the audit's hand read found it.
+     */
+    const { stub, variant_stubs, ...first } = suiteData.cases[0];
+
+    expect(validators["eval-case"]({
+      ...first,
+      expectation: { ...first.expectation, invented_key: "hello" },
+    })).toBe(false);
+
+    expect(validators["eval-case"]({
+      ...first,
+      perturbation: { of_case_id: "c1", kind: "typo", seed: 1, invented_key: "hello" },
+    })).toBe(false);
+
+    // Must-not-fire: null is still a perturbation value, and a well-formed one still passes.
+    expect(validators["eval-case"]({ ...first, perturbation: null })).toBe(true);
+    expect(validators["eval-case"]({
+      ...first,
+      perturbation: { of_case_id: "c1", kind: "typo", seed: 1 },
+    })).toBe(true);
   });
 
   it("configuration and eval-run validate against a real run", async () => {
