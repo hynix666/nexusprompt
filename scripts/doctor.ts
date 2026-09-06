@@ -128,7 +128,21 @@ const CHECKS: Array<(root: string) => Finding> = [
       return { name: "package manager", status: "fail", detail: "no package-lock.json",
         note: "Run `npm install`. `npm ci` needs a lockfile and will refuse without one." };
     }
-    return { name: "package manager", status: "ok", detail: `npm ${spawnSync("npm", ["-v"], { encoding: "utf8", shell: true }).stdout?.trim() || "?"}` };
+    /**
+     * `shell: true` with an args array is Node's DEP0190: the array is joined into one
+     * string and re-parsed by the shell, which is exactly the injection surface an args
+     * array exists to avoid. It was here only to resolve `npm` on Windows, where the real
+     * executable is the batch file `npm.cmd` -- and `spawnSync("npm.cmd", ...)` without a
+     * shell fails with EINVAL, because Windows cannot exec a .cmd file directly; measured,
+     * not assumed. `cmd.exe` is a real .exe and can be the command itself with `npm -v` as
+     * its own argv, which is not the DEP0190 shape: the array is never joined into a shell
+     * string, `cmd.exe` parses its own arguments. `/d` skips AutoRun scripts that could
+     * inject output; `/s` fixes how the remaining quoted arguments are stripped.
+     */
+    const [cmd, args] = process.platform === "win32"
+      ? ["cmd.exe", ["/d", "/s", "/c", "npm", "-v"]]
+      : ["npm", ["-v"]];
+    return { name: "package manager", status: "ok", detail: `npm ${spawnSync(cmd, args, { encoding: "utf8" }).stdout?.trim() || "?"}` };
   },
 
   /**

@@ -20,9 +20,12 @@
     "a twelfth stage therefore forces one of three visible decisions: raise the floor,",
     "lower the target, or do not add the stage. None of them can be made silently.",
     "",
-    "Neither number is measured yet. They are declared targets, and the evaluation",
-    "pipeline (ADR-0008) is what will replace them with observations. Until then this",
-    "check constrains the design, not the system.",
+    "Neither number is measured yet. They are declared targets. The evaluation",
+    "pipeline that will eventually replace them with observations now exists and is",
+    "tested (it did not when this file was written) -- what has not happened is a",
+    "LIVE run against it, which is a different gap than \"not yet built\". Until a",
+    "live run measures a real per-stage rate, this check constrains the design, not",
+    "the system.",
     "",
     "`max_feedback_rounds` bounds the reflexive loop ADR-0008 adds to Pipeline A: a gate",
     "FAIL routes back to `refine`, which then re-runs `lint`. Every round is therefore TWO",
@@ -35,6 +38,6 @@
   "end_to_end_target": 0.9,
   "per_stage_floor": 0.995,
   "status": "declared-not-measured",
-  "measured_by": "ADR-0008 evaluation pipeline — not yet built",
+  "measured_by": "the evaluation pipeline (ADR-0008 and after), which exists and is tested but has never been run to measure a real per-stage success rate against a live provider -- every evaluation number in this repository still comes from the pinned stub, per the truth boundary's first entry",
   "max_feedback_rounds": 3
 }

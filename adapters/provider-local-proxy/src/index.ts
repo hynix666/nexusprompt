@@ -13,10 +13,16 @@
  *
  * The invariants that do port:
  *   - fixed upstream host allowlist; no arbitrary URL passthrough
- *   - path-tail validation on provider-specific URL segments
  *   - request size checked before it is sent
  *   - the key is read from the environment, never accepted from a caller
  *   - failures are typed and their messages are safe to log
+ *
+ * "Path-tail validation on provider-specific URL segments" was claimed here until 6
+ * September 2026 and was false: this transport's URL is the fixed literal
+ * `https://api.anthropic.com/v1/messages`, with no caller-supplied segment for a validator
+ * to check. `isSafePathTail` existed, was tested, and validated nothing real -- the audit
+ * found it. Removed rather than kept "for later": a security function with no live caller
+ * is a claim of coverage this file was not entitled to make.
  */
 
 import type {
@@ -31,14 +37,6 @@ import type {
 const ALLOWED_HOSTS = Object.freeze(["api.anthropic.com"]);
 
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024; // serve.py: MAX_BODY
-
-/** Rejects traversal and sibling-prefix escapes in a provider path segment. */
-export function isSafePathTail(tail: string): boolean {
-  if (tail === "" || tail.length > 128) return false;
-  if (tail.includes("..") || tail.includes("/") || tail.includes("\\")) return false;
-  if (tail.includes("%2e") || tail.includes("%2E") || tail.includes("%2f") || tail.includes("%2F")) return false;
-  return /^[A-Za-z0-9._-]+$/.test(tail);
-}
 
 export interface LocalProxyOptions {
   /** Injected so tests never touch the network. Defaults to global fetch. */
