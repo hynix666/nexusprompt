@@ -332,6 +332,29 @@ describe("check-boundaries", () => {
     expect(r.violations.some((v: { file: string }) => v.file === file)).toBe(true);
   });
 
+  it("catches a violation crammed onto the same line as a preceding statement", () => {
+    // IMPORT_RE used to anchor on `\n` alone (plus file start), so a second import with no
+    // newline anywhere before it — sharing a physical line with a statement that just ended in
+    // `;` — was never even extracted into specifiers(), regardless of which rule would have
+    // forbidden it. Not specific to the crypto narrowing: this affects every layer's rules
+    // equally. The two imports must share the file's ONLY newline-free stretch for this to
+    // actually probe the anchor — a fixture where the second import happens to sit after some
+    // OTHER real `\n` gives the old regex's lazy `from` search a different foothold and passes
+    // even unfixed, which is not testing this bug at all.
+    const root = makeLayerRepo({});
+    const abs = join(root, "core/src/pure.ts");
+    writeFileSync(
+      abs,
+      'import { createHash } from "node:crypto"; import { readFileSync } from "node:fs";\n' +
+        "export const h = createHash;\n",
+    );
+    const r = checkBoundaries(root);
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v: { file: string; spec: string }) =>
+      v.file === "core/src/pure.ts" && v.spec === "node:fs",
+    )).toBe(true);
+  });
+
   it("honours a recorded exemption for the composition root", () => {
     // The exemption is what lets the CLI name adapters. If it stopped applying, the
     // real repository check above would fail — this pins the mechanism directly.
@@ -424,6 +447,76 @@ describe("check-core-callbacks", () => {
         memberName: "refExists",
       }),
     ]);
+  });
+
+  it("flags a callback member exported via `export { name }`, not only `export function`", () => {
+    // A prior version of this checker pattern-matched specific declaration shapes
+    // (`export function`, `export const x = () => ...`) instead of asking the type checker
+    // what a module actually exports. `export { decidePromotion }` — the same re-export
+    // syntax core/src/stages/compile.ts already uses idiomatically for DEMO_MARKER — made a
+    // function declared without its own `export` keyword completely invisible: 0 functions
+    // checked, 0 violations, on a fixture carrying the exact resolvedRefs-shaped callback
+    // member this checker exists to catch.
+    const root = mkroot("pnx-cb-reexport-");
+    write(
+      root,
+      "core/src/reexport.ts",
+      [
+        "export interface Req { refExists?: (ref: string) => boolean }",
+        "function decidePromotion(req: Req): boolean {",
+        '  return req.refExists ? req.refExists("x") : false;',
+        "}",
+        "export { decidePromotion };",
+        "",
+      ].join("\n"),
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) =>
+      v.functionName === "decidePromotion" && v.memberName === "refExists",
+    )).toBe(true);
+  });
+
+  it("does not flag Core's own RNG-injection pattern — a bare callback parameter", () => {
+    // core/src/eval/generator.ts's generate(rand: () => number) and pick(rand, xs) are real,
+    // exported, and load-bearing: Core avoids calling Math.random() itself by taking the
+    // generator as a parameter instead, which is how it stays deterministic and testable
+    // without a purity-harness exemption. A bare callback PARAMETER is not the shape this
+    // checker targets — only a function-typed MEMBER of an object parameter is — precisely so
+    // this pattern is never mistaken for the resolvedRefs risk shape.
+    const root = mkroot("pnx-cb-rng-");
+    write(
+      root,
+      "core/src/pure.ts",
+      "export function draw(rand: () => number): number { return rand(); }\n",
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
+  it("flags a callback hidden as a class method's parameter, not only a free function's", () => {
+    // Same root cause as the re-export gap: `ts.isClassDeclaration` was never matched, so a
+    // class's constructor and methods were invisible regardless of how the class itself was
+    // exported. core/src already exports classes (RoutingPolicyInvalid, AnchorCorpusExhausted,
+    // BriefCorpusExhausted), so this is not a hypothetical shape.
+    const root = mkroot("pnx-cb-classmethod-");
+    write(
+      root,
+      "core/src/classmethod.ts",
+      [
+        "export interface Req { refExists?: (ref: string) => boolean }",
+        "export class CallbackStage {",
+        "  run(req: Req): boolean { return req.refExists ? req.refExists(\"x\") : false; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) =>
+      v.functionName === "CallbackStage.run" && v.memberName === "refExists",
+    )).toBe(true);
   });
 
   it("still flags the callback shape when it only appears in one arm of a union", () => {

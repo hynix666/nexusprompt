@@ -32,6 +32,23 @@
  * shape that has actually occurred here, and does not require React or a build step the way a
  * full structural-assignability check across every parameter type would.
  *
+ * A bare callback PARAMETER (not nested in an object) is deliberately never flagged, even
+ * though it looks like the more obvious version of the same risk: `core/src/eval/generator.ts`'s
+ * `generate(rand: () => number)` and `pick(rand, xs)` take the RNG itself as a parameter, which
+ * is how Core avoids calling `Math.random()` while staying deterministic and testable. What
+ * this checker targets is a function-typed MEMBER of an object parameter — the `resolvedRefs`
+ * shape — not a parameter that is itself a function.
+ *
+ * ## Finding exports through the type checker, not by pattern-matching syntax
+ *
+ * An earlier version matched two AST shapes directly — `export function foo(...)` and
+ * `export const foo = (...) => ...` — which made `export { foo }` (already used idiomatically
+ * in `core/src/stages/compile.ts` for `DEMO_MARKER`) and any class method invisible: a function
+ * re-exported that way, or a callback hidden as `class Foo { method(cb) {} }`, produced zero
+ * violations regardless of what its parameters carried. `checker.getExportsOfModule` asks what
+ * a module actually exports rather than which syntax produced it, which closes both gaps at
+ * once and needs no third pattern the next syntax shape would require.
+ *
  * Exit 0 no new callback-shaped parameter reaches Core · 1 one does.
  */
 
@@ -80,31 +97,6 @@ function collectCoreFiles(root: string): string[] {
   };
   walk("core/src");
   return out;
-}
-
-interface ExportedFn {
-  name: string;
-  parameters: readonly ts.ParameterDeclaration[];
-}
-
-/** `export function foo(...)`, `export const foo = (...) => ...`, `export const foo = function(...) {}`. */
-function asExportedFunction(node: ts.Node): ExportedFn | null {
-  const hasExportModifier = (n: ts.Node): boolean =>
-    !!ts.canHaveModifiers(n) && !!ts.getModifiers(n)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-
-  if (ts.isFunctionDeclaration(node) && node.name && hasExportModifier(node)) {
-    return { name: node.name.text, parameters: node.parameters };
-  }
-  if (ts.isVariableStatement(node) && hasExportModifier(node)) {
-    for (const decl of node.declarationList.declarations) {
-      if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
-      const init = decl.initializer;
-      if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) {
-        return { name: decl.name.text, parameters: init.parameters };
-      }
-    }
-  }
-  return null;
 }
 
 /** Property names that some object literal under `core/src` assigns a real function to. */
@@ -215,39 +207,83 @@ export function checkCoreCallbacks(opts: CheckCoreCallbacksOptions = {}): CheckR
   const constructed = collectConstructedFunctionMembers(sourceFiles);
   const violations: Violation[] = [];
   let functionsChecked = 0;
+  let rel = "";
+
+  const flagParameter = (fnName: string, paramName: string, memberName: string) => {
+    if (constructed.has(memberName)) return;
+    violations.push({
+      file: rel,
+      functionName: fnName,
+      paramName,
+      memberName,
+      detail:
+        `${rel}: exported "${fnName}" parameter "${paramName}" carries a function-typed member ` +
+        `"${memberName}". No object literal anywhere in core/src assigns a real function to ` +
+        `"${memberName}", so every value reaching this parameter must be constructed by a caller ` +
+        `outside Core — an effect-shaped hole that reaches neither check-boundaries.mjs (reads ` +
+        `imports) nor purity.setup.ts (traps globals). Core must not take a callback (ADR-0005); ` +
+        `pass data the Application already computed.`,
+    });
+  };
+
+  const checkSignatures = (fnName: string, signatures: readonly ts.Signature[]) => {
+    for (const sig of signatures) {
+      for (const param of sig.parameters) {
+        const paramType = checker.getTypeOfSymbol(param);
+        functionMembersOf(checker, paramType, new Set(), (memberName) => {
+          flagParameter(fnName, param.name, memberName);
+        });
+      }
+    }
+  };
+
+  /**
+   * A class's constructor and every instance/static method, each checked the same way an
+   * exported function is. `export { Foo }` and `class Foo { method(cb: () => void) {} }` were
+   * both invisible to an earlier version of this checker that pattern-matched specific
+   * declaration shapes (`export function`, `export const = () => ...`) instead of asking the
+   * checker what a module actually exports.
+   */
+  const checkClass = (className: string, classSymbol: ts.Symbol) => {
+    const staticType = checker.getTypeOfSymbol(classSymbol);
+    checkSignatures(`${className} constructor`, checker.getSignaturesOfType(staticType, ts.SignatureKind.Construct));
+
+    const instanceType = checker.getDeclaredTypeOfSymbol(classSymbol);
+    for (const member of instanceType.getProperties()) {
+      const memberType = checker.getTypeOfSymbol(member);
+      checkSignatures(`${className}.${member.name}`, checker.getSignaturesOfType(memberType, ts.SignatureKind.Call));
+    }
+    for (const member of staticType.getProperties()) {
+      if (member.name === "prototype") continue;
+      const memberType = checker.getTypeOfSymbol(member);
+      checkSignatures(
+        `${className}.${member.name} (static)`,
+        checker.getSignaturesOfType(memberType, ts.SignatureKind.Call),
+      );
+    }
+  };
 
   for (const sf of sourceFiles) {
-    const rel = relative(root, sf.fileName).split(sep).join("/");
+    rel = relative(root, sf.fileName).split(sep).join("/");
+    const moduleSymbol = checker.getSymbolAtLocation(sf);
+    if (!moduleSymbol) continue;
 
-    const visit = (node: ts.Node) => {
-      const fn = asExportedFunction(node);
-      if (fn) {
+    for (const exp of checker.getExportsOfModule(moduleSymbol)) {
+      const resolved = exp.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exp) : exp;
+      // A pure type/interface export (no value) has nothing a caller could hand a callback
+      // through at runtime — there is no parameter to check.
+      if (!resolved.valueDeclaration) continue;
+
+      if (resolved.flags & ts.SymbolFlags.Class) {
         functionsChecked++;
-        for (const param of fn.parameters) {
-          const paramName = ts.isIdentifier(param.name) ? param.name.text : "<destructured>";
-          const type = checker.getTypeAtLocation(param);
-          const seen = new Set<ts.Type>();
-          functionMembersOf(checker, type, seen, (memberName) => {
-            if (constructed.has(memberName)) return;
-            violations.push({
-              file: rel,
-              functionName: fn.name,
-              paramName,
-              memberName,
-              detail:
-                `${rel}: exported function "${fn.name}" parameter "${paramName}" carries a ` +
-                `function-typed member "${memberName}". No object literal anywhere in core/src ` +
-                `assigns a real function to "${memberName}", so every value reaching this parameter ` +
-                `must be constructed by a caller outside Core — an effect-shaped hole that reaches ` +
-                `neither check-boundaries.mjs (reads imports) nor purity.setup.ts (traps globals). ` +
-                `Core must not take a callback (ADR-0005); pass data the Application already computed.`,
-            });
-          });
-        }
+        checkClass(exp.name, resolved);
+        continue;
       }
-      ts.forEachChild(node, visit);
-    };
-    visit(sf);
+      const signatures = checker.getSignaturesOfType(checker.getTypeOfSymbol(resolved), ts.SignatureKind.Call);
+      if (signatures.length === 0) continue;
+      functionsChecked++;
+      checkSignatures(exp.name, signatures);
+    }
   }
 
   return { ok: violations.length === 0, violations, filesChecked: files.length, functionsChecked };
