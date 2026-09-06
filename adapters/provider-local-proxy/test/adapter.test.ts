@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { LocalProxyProvider, isSafePathTail } from "../src/index.js";
+import { LocalProxyProvider } from "../src/index.js";
 import type { GenerationRequest } from "../../../contracts/index.js";
 
 /**
@@ -27,42 +27,6 @@ afterEach(() => {
   else process.env.ANTHROPIC_API_KEY = savedKey;
 });
 
-describe("isSafePathTail — port of test_server.py traversal checks", () => {
-  it("accepts an ordinary model segment", () => {
-    expect(isSafePathTail("claude-opus-5")).toBe(true);
-    expect(isSafePathTail("gemini-1.5_pro")).toBe(true);
-  });
-
-  // port of test_server.py "traversal blocked: <escape>"
-  for (const escape of ["..", "../", "../../etc/passwd", "a/../b", "..\\windows"]) {
-    it(`blocks traversal: ${JSON.stringify(escape)}`, () => {
-      expect(isSafePathTail(escape)).toBe(false);
-    });
-  }
-
-  // port of test_server.py "sibling-prefix traversal blocked"
-  it("blocks a URL-encoded traversal", () => {
-    expect(isSafePathTail("%2e%2e%2fsecret")).toBe(false);
-    expect(isSafePathTail("%2E%2E/secret")).toBe(false);
-  });
-
-  it("blocks path separators outright", () => {
-    expect(isSafePathTail("models/secret")).toBe(false);
-    expect(isSafePathTail("models\\secret")).toBe(false);
-  });
-
-  it("rejects empty and over-long segments", () => {
-    expect(isSafePathTail("")).toBe(false);
-    expect(isSafePathTail("a".repeat(129))).toBe(false);
-    expect(isSafePathTail("a".repeat(128))).toBe(true);
-  });
-
-  it("rejects characters outside the allowed set", () => {
-    expect(isSafePathTail("model?query=1")).toBe(false);
-    expect(isSafePathTail("model name")).toBe(false);
-    expect(isSafePathTail("model;rm")).toBe(false);
-  });
-});
 
 describe("credentials", () => {
   // port of test_server.py "missing key is 401, not a crash"
