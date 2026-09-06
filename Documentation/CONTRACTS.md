@@ -2,13 +2,27 @@
 
 Contracts are the sole cross-boundary interface. Most values that cross a layer boundary are defined by a versioned JSON Schema living under `contracts/` as a standalone `<name>.schema.json` file (18 exist today). Each schema carries a stable `$id`, a semantic version, and a changelog. Language-specific interfaces (TypeScript, Python, Rust, etc.) are generated or hand-written bindings around these schemas; they are never the source of truth.
 
-**Four documented below are the exception: `GenerationRequest`, `GenerationResult`, `PipelineCommand`, and `ProviderHealth` exist only as TypeScript interfaces in `contracts/index.ts` — no standalone `.schema.json` file backs them, so a non-TypeScript client has nothing to validate these payloads against.** The `$id` and JSON shown for each documents the interface; it is illustrative, not a file that exists or is checked. Each is noted individually below.
+**Six documented below name no schema file, and they are not all the same kind of exception.**
+
+Four exist as TypeScript interfaces in `contracts/index.ts` — `GenerationRequest`,
+`GenerationResult`, `PipelineCommand` and `ProviderHealth` — so they are real, but a
+non-TypeScript client has nothing to validate these payloads against.
+
+Two exist **nowhere**: `TenantContext` and `CapabilityRegistration` have no schema file and no
+TypeScript interface. They are described here as target state and nothing implements them.
+This document said "four" and named only the first group until 6 September 2026, so the two
+that do not exist read as though they did.
+
+The `$id` and JSON shown for all six documents an interface; it is illustrative, not a file
+that exists or is checked. Each is noted individually below, and all six are declared in the
+list at the end of this document so `check:contracts` can tell "no schema file, deliberately"
+from "schema file missing".
 
 A contract change without a corresponding version bump and changelog entry fails CI. Shells and adapters pin major versions; an unsupported major version also fails CI.
 
 ## Design principles
 
-- **Schema-first and language-neutral, for the 18 that have a standalone schema file.** A non-JavaScript client must be able to validate those payloads without importing any TypeScript. Four contracts (noted where they appear below) are TypeScript-only and don't yet meet this principle.
+- **Schema-first and language-neutral, for the 18 that have a standalone schema file.** A non-JavaScript client must be able to validate those payloads without importing any TypeScript. Six contracts described here do not meet this principle: four are TypeScript-only and two exist nowhere at all. All six are listed at the end of this document.
 - **Explicit effect ownership.** Live effects (network, persistence, clock, randomness, event emission) never appear inside Core schemas. Core schemas describe pure values and deterministic decisions only.
 - **Complete operational coverage.** Request, result, failure, health, revision lineage, freshness, and observability metadata required by the rest of the documentation are first-class contracts, not prose.
 
@@ -49,7 +63,7 @@ This schema is **derived from the 172 records that exist**, not designed indepen
 
 ```json
 {
-  "$id": "https://promptnexus.dev/contracts/technique-record/1.3.0",
+  "$id": "https://promptnexus.dev/contracts/technique-record/2.0.0",
   "type": "object",
   "required": ["id", "name", "category", "schema_version", "description",
                "verification_status", "primary_source"],
@@ -173,7 +187,7 @@ Typed failure returned by a provider adapter. Used by the Application to decide 
 
 ```json
 {
-  "$id": "https://promptnexus.dev/contracts/provider-failure/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/provider-failure/1.1.0",
   "type": "object",
   "required": ["request_id", "category", "retriable", "reason_code"],
   "properties": {
@@ -287,7 +301,7 @@ One stage execution within a run. Expanded to support lineage, freshness, and pr
 
 ```json
 {
-  "$id": "https://promptnexus.dev/contracts/revision-entry/1.1.0",
+  "$id": "https://promptnexus.dev/contracts/revision-entry/3.0.0",
   "type": "object",
   "required": [
     "revision_id", "run_id", "stage_id", "timestamp",
@@ -348,7 +362,7 @@ Redacted, privacy-safe event. Prompt bodies are forbidden; the sink itself rejec
 
 ```json
 {
-  "$id": "https://promptnexus.dev/contracts/observability-event/1.0.0",
+  "$id": "https://promptnexus.dev/contracts/observability-event/1.3.0",
   "type": "object",
   "required": ["event_id", "event_type", "run_id", "timestamp", "layer"],
   "properties": {
@@ -450,6 +464,74 @@ Machine-readable declaration used by the capability-matrix generator.
 - No Core module or Adapter is written against an unmerged contract change.
 - Shared contract-test suites assert behavioral parity for every implementation of a given protocol.
 - The generated capability matrix fails the build on orphaned contracts, missing implementations, or missing test evidence.
+
+## Schema inventory
+
+<!-- BEGIN GENERATED: schema-inventory -->
+All 18 schema files under `contracts/`, with the version from each `$id`.
+Generated by `npm run docs:contracts`; `check:contracts` fails when it is not current.
+**Described below** says whether this document has prose for it — most do not, and that is
+recorded rather than implied.
+
+| schema | version | described below |
+|---|---|---|
+| `audit-report` | 1.0.0 | — |
+| `baseline` | 2.0.0 | — |
+| `comparison` | 2.3.0 | — |
+| `configuration` | 1.3.0 | — |
+| `eval-case` | 2.0.0 | — |
+| `eval-run` | 2.0.0 | — |
+| `eval-suite` | 2.0.1 | — |
+| `gate-result` | 1.3.0 | yes |
+| `judge-verdict` | 1.2.0 | — |
+| `judgement` | 1.0.0 | — |
+| `observability-event` | 1.3.0 | yes |
+| `pipeline-outcome` | 1.0.0 | yes |
+| `promotion` | 1.0.0 | — |
+| `provider-failure` | 1.1.0 | yes |
+| `revision-entry` | 3.0.0 | yes |
+| `routing-policy` | 1.0.0 | — |
+| `run-manifest` | 2.0.0 | — |
+| `technique-record` | 2.0.0 | yes |
+<!-- END GENERATED: schema-inventory -->
+
+## Ids described here with no schema file
+
+Declared, not inferred. Left to inference, "no schema file" is indistinguishable from "schema
+file missing", so `check:contracts` requires that every id in the prose either match a real
+schema's `$id` or appear below.
+
+**TypeScript-only — real, but only in `contracts/index.ts`:**
+
+<!-- BEGIN DECLARED: no-schema-file -->
+- `generation-request` — `GenerationRequest` in `contracts/index.ts`
+- `generation-result` — `GenerationResult` in `contracts/index.ts`
+- `pipeline-command` — `PipelineCommand` in `contracts/index.ts`
+- `provider-health` — `ProviderHealth` in `contracts/index.ts`
+- `tenant-context` — target state. No schema file and no TypeScript interface.
+- `capability-registration` — target state. No schema file and no TypeScript interface.
+<!-- END DECLARED: no-schema-file -->
+
+The last two are a different claim from the first four and the list does not let them hide
+behind it: `TenantContext` and `CapabilityRegistration` are described in this document and
+implemented nowhere. `CAPABILITY_MATRIX.md` has no `Producers`/`Consumers` columns for the
+same reason — nothing writes a registration record.
+
+## How this document is kept honest
+
+Every other derived document here has a guard. This one had none until 6 September 2026, and
+had drifted to describing 6 of 18 schemas with three of those at wrong versions.
+
+- `npm run docs:contracts` regenerates the inventory table above.
+- `npm run check:contracts` fails when the table is stale, when an inline
+  `contracts/<name>/<version>` disagrees with that schema's `$id`, or when an id names no
+  schema file and is not declared above.
+
+The prose is **not** generated, deliberately. Most of this file is reasoning that no schema
+contains — why effects never appear in Core schemas, what a binding surface is, why
+`verification_status` is three-valued. Generating the file would delete the part worth having
+in order to guard the part that drifts. A version lives in the schema's `$id` and nowhere
+else; where this document and a schema disagree, this document is wrong.
 
 ## Relationship to other documents
 
