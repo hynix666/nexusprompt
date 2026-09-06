@@ -79,6 +79,9 @@
     "parity": "tsx scripts/parity.ts",
     "trace:view": "tsx scripts/trace-view.ts"
   },
+  "overrides": {
+    "fast-uri": "^3.1.7"
+  },
   "devDependencies": {
     "@types/node": "^24.7.0",
     "ajv": "^8.17.1",
