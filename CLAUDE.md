@@ -125,11 +125,12 @@ Treat these as open questions, not as things to quietly fix or invent answers fo
 
 **`vercel.json` exists only to switch Vercel off**, and carries no comment because it cannot: `check:hygiene` parses every tracked `.json` and only `tsconfig.json` may hold comments, so the reason lives here. A `nexusprompt-api` Vercel project has been attached to this repository since before it could build one, and it has failed on **every commit since `c9d5d3c`** — the API shell starts with `tsx src/index.ts`, there is no `build` script anywhere, and `tsx` is a devDependency a production install would omit. `{"git": {"deploymentEnabled": false}}` stops it attempting. It is a stopgap: the Vercel project and its GitHub App access still exist, and removing those is account-level work no token in this repository can do. If a real deployment target is ever wanted, delete this file rather than working around it.
 
-## Two guards, and what each one actually covers
+## Three guards, and what each one actually covers
 
-Core purity is enforced by two mechanisms, and conflating them is how the codebase spent a while believing it was checking something it was not:
+Core purity is enforced by three mechanisms, and conflating them is how the codebase spent a while believing it was checking something it was not:
 
-- **`scripts/check-boundaries.mjs`** — the filesystem/network guard. `core/src/**` may not import `node:fs` or any other effectful builtin at all. Reads every file, so it does not depend on test coverage.
-- **`core/test/purity.setup.ts`** — traps `fetch`, `Math.random`, `Date.now`, and `new Date()`. **It does not block the filesystem**, and cannot: Node snapshots a builtin's ESM exports when the module is first evaluated, so patching `node:fs` afterwards changes an object nothing reads. Only `require("fs")` is interceptable, and no Core module uses it.
+- **`scripts/check-boundaries.mjs`** — the filesystem/network guard. `core/src/**` may not import `node:fs` or any other effectful builtin at all; `node:crypto` is narrowed to `createHash` alone (a digest is deterministic, everything else the module exports is not). Reads every file, so it does not depend on test coverage.
+- **`core/test/purity.setup.ts`** — traps `fetch`, `Math.random`, `Date.now`, `new Date()`, `setTimeout`, `crypto.randomUUID()`, `performance.now()`, and reads of `process.env`. **It does not block the filesystem**, and cannot: Node snapshots a builtin's ESM exports when the module is first evaluated, so patching `node:fs` afterwards changes an object nothing reads. Only `require("fs")` is interceptable, and no Core module uses it.
+- **`scripts/check-core-callbacks.ts`** — the caller-supplied-callback guard, added after `core/src/release/promote.ts` once accepted a `(ref: string) => boolean` parameter (#151). Neither guard above can see a function arriving as an ordinary parameter; this one walks `core/src/**` with the TypeScript compiler API and refuses a function-typed member of an object parameter unless Core already constructs that shape itself somewhere (its own `decide`/`reduce` stage registry is the legitimate case this exempts).
 
 Do not "fix" the harness to block fs. It was tried, measured, and documented in the file's header.

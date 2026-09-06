@@ -116,8 +116,13 @@ record: the field that says which contracts a revision was executed against coul
 still pass. TypeScript required all four fields throughout.
 
 It now carries the shape `pipeline-outcome` has had since **1.0.0** in
-`#/definitions/provenance`. Two schemas describing one object had disagreed about it, which is
-the same seam as `stage_id` above and was found the same way — by writing the test that says
+`#/definitions/provenance` — which closes the schema-to-schema disagreement, not the
+schema-to-TypeScript one: `pipeline-outcome`'s own `provenance` definition requires only
+`core_build_hash` and `contract_versions`, so this bump makes the two schemas agree with each
+other while both remain looser than `ExecutionProvenance`, which requires all four (a later
+audit found this and corrected the record here rather than opening a fourth schema bump for a
+gap no producer has ever hit). Two schemas describing one object had disagreed about it, which
+is the same seam as `stage_id` above and was found the same way — by writing the test that says
 what the tightening buys, and watching one of the three cases pass when it should not have.
 
 Major rather than minor because it tightens two types. No producer changes: `StageId` and

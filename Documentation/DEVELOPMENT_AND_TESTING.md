@@ -90,12 +90,13 @@ What a new gate *is* checked against: `scripts/ported-gates.json` must list it, 
 
 ## Purity instrumentation: what it covers, exactly
 
-Core purity is enforced by **two** mechanisms that fail differently, and the distinction matters because for a while the documentation described one mechanism doing both jobs, and it was not doing the second.
+Core purity is enforced by **three** mechanisms that fail differently, and the distinction matters because for a while the documentation described one mechanism doing all of these jobs, and it was not doing the others.
 
 | Concern | Mechanism | Why that one |
 |---|---|---|
-| Network via `fetch`, clock, randomness | `core/test/purity.setup.ts` | Globals are resolved at call time, so replacing them traps the call |
-| Filesystem, sockets, subprocesses | `scripts/check-boundaries.mjs` | `core/src/**` may not import `node:fs` or any other effectful builtin at all |
+| Network, clock, randomness, `process.env` | `core/test/purity.setup.ts` | Globals are resolved at call time, so replacing them traps the call |
+| Filesystem, sockets, subprocesses, `node:crypto` beyond `createHash` | `scripts/check-boundaries.mjs` | `core/src/**` may not import `node:fs` or any other effectful builtin at all, and a digest is the only capability `node:crypto` is trusted for |
+| A caller-supplied callback arriving as an ordinary parameter | `scripts/check-core-callbacks.ts` | Neither of the above can see a function handed in as a value — added after `core/src/release/promote.ts` once accepted one (#151) |
 
 The runtime harness **does not block the filesystem**, and three places — including its own header — said it did until an audit put `readFileSync` inside a Core gate and watched the suite pass. It cannot: Node builds the ESM facade for a builtin by copying the CJS exports when the module is first evaluated, which happens as the test file's import graph loads, before any setup hook runs. Measured on this repository:
 
@@ -108,7 +109,7 @@ require("fs").readFileSync                 → interceptable
 
 Every Core module uses static ESM imports, so a runtime filesystem guard would have caught nothing while looking like it worked. The static check is stronger anyway: it reads every file under `core/src` whether or not a test runs it, which closes the coverage hole an earlier audit found — a Core module the harness never watched because no Core test imported it.
 
-Neither mechanism subsumes the other. The static check cannot see an effect handed in at runtime; the harness cannot see a line no test reaches.
+None of the three mechanisms subsumes the others. The static import check cannot see an effect handed in at runtime as a value; the runtime harness cannot see a line no test reaches; the callback checker sees neither a runtime effect nor an import, only the shape of an exported function's parameters.
 
 ## Intended CI pipeline stages
 
