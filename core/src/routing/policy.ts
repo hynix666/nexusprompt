@@ -45,6 +45,12 @@ export type RoutingMethod = "fixed" | "cascade";
 
 export interface RoutingPolicy {
   /**
+   * Identifies the policy, the way `configuration_id` identifies a `Configuration`. Not
+   * inspected by any function in this module — `validateRoutingPolicy` checks the routing
+   * invariants below, not the identifier's shape, which is the schema's `minLength: 1`'s job.
+   */
+  policy_id: string;
+  /**
    * `fixed` always uses tier 0 and exists so an unrouted configuration and a routed one are
    * the same code path — a policy that is bypassed for the common case is a policy whose
    * common case is untested.

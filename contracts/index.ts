@@ -569,6 +569,18 @@ export interface UsageTemplate {
   variables: TechniqueVariable[];
 }
 
+/**
+ * What has been checked about a record's prose, and against what. Matches
+ * `technique-record.schema.json#/properties/source_audit` exactly, including the enums the
+ * schema closed to mirror `sourceAuditType` in the frozen XSD -- the same "TS looser than the
+ * schema it backs" shape #164 closed for `usage_templates`, missed for this sibling field in
+ * the same pass.
+ */
+export interface SourceAudit {
+  description: "verified-against-abstract" | "verified-against-paper" | "unverified";
+  pitfalls: "verified-against-paper" | "unverified";
+}
+
 export interface TechniqueRecord {
   id: string;
   name: string;
@@ -590,7 +602,7 @@ export interface TechniqueRecord {
   aliases: string[];
   corpus_file: string | null;
   schema_version: string;
-  source_audit: { description: string; pitfalls: string };
+  source_audit: SourceAudit;
 }
 
 /* ── Observability ────────────────────────────────────────────────────────── */
@@ -777,7 +789,28 @@ export interface EvalRun {
   detector_recall?: DetectorRecallBlock | null;
   grader_health?: { max_disagreement_rate: number; judged_cases: number } | null;
   scorer_provenance?: { scorer_ids: string[]; selected_using: string | null } | null;
-  provenance: Record<string, unknown>;
+  provenance: EvalRunProvenance;
+}
+
+/**
+ * How a run was produced, and by WHAT. Matches `eval-run.schema.json#/definitions/provenance`
+ * exactly, including the closed shape and required fields the schema gained at 2.0.0 -- the
+ * same "TS looser than the schema it backs" divergence #164 closed for
+ * `TechniqueRecord.usage_templates`, left open here. `provider` is the one field separating a
+ * run that is evidence about a model from one that is evidence about this system's accounting
+ * (see `CachingProvider`'s own header on why the recorder sits inside the cache, not outside
+ * it), which is why it -- not only `core_build_hash` -- is required rather than optional.
+ */
+export interface EvalRunProvenance {
+  core_build_hash: string;
+  configuration_id: string;
+  suite_version: string;
+  provider: string;
+  model_id?: string | null;
+  decoding?: Record<string, unknown> | null;
+  topology?: Record<string, unknown> | null;
+  grader_id?: string | null;
+  budget?: Record<string, unknown> | null;
 }
 
 export interface Baseline {
