@@ -39,11 +39,31 @@
  * credibility from a much stronger claim — see the three claims kept separate in
  * `Documentation/TRUTH_BOUNDARY.md`.
  *
+ * ## Why an untracked artifact is refused rather than ignored
+ *
+ * The artifact set comes from `git ls-files`, so a new source file is invisible here until it
+ * is staged. That is not a detail: it means running this before `git add` records a count and
+ * a digest for a tree that does not contain the file, both of which go stale the instant it is
+ * added — and a full local `verify` passes on the wrong tree, so nothing local can catch it.
+ *
+ * That defect landed FIVE times, each time on a commit adding a new runtime source, twice
+ * caught only by CI. The running tally is kept in the reproducibility entry of
+ * `Documentation/TRUTH_BOUNDARY.md`, which is where the count it keeps getting wrong is pinned.
+ * Five recurrences of one mechanism is a defect in this tool, not in five authors: the tool
+ * could see the discrepancy every time and said nothing.
+ *
+ * So it now looks. `git ls-files --others --exclude-standard` lists exactly the files a
+ * developer could `git add` — gitignored scratch is excluded, so this cannot fire on a
+ * scrapbook — and any of those that would be part of the artifact stop the run. There is no
+ * override flag on purpose: the two honest answers are stage the file or ignore it, and a
+ * `--allow-untracked` would just be the old silence with a name.
+ *
  *   node scripts/build-hash.mjs           print the hash
  *   node scripts/build-hash.mjs --write   write build-hash.json
  *   node scripts/build-hash.mjs --check   fail if the committed hash is not what the tree gives
  *
- * Exit 0 match · 1 mismatch or missing · 2 the tree cannot be read.
+ * Exit 0 match · 1 mismatch or missing · 2 the tree cannot be read, or holds an untracked
+ * file that would change the artifact.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -92,6 +112,45 @@ const gitTracked = (root) =>
     .filter(Boolean);
 
 /**
+ * Files a developer could `git add` but has not.
+ *
+ * `--exclude-standard` applies .gitignore and friends, which is what keeps this from firing on
+ * gitignored scratch — the run bundles, `LLM/`, `PDF/`. What is left is the set whose staging
+ * would change the artifact.
+ */
+const gitUntracked = (root) =>
+  execFileSync("git", ["ls-files", "--others", "--exclude-standard", "-z"], {
+    cwd: root,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  })
+    .split("\0")
+    .filter(Boolean);
+
+/**
+ * Untracked files that WOULD be part of the artifact once staged.
+ *
+ * Injectable for the same reason `listTracked` is: a fixture tree should not have to be a git
+ * repository to be tested against.
+ */
+export function untrackedArtifacts(root = process.cwd(), opts = {}) {
+  const listUntracked = opts.listUntracked ?? gitUntracked;
+  return listUntracked(root).filter(isArtifactPath).sort();
+}
+
+/** The one message both modes print, so they cannot drift about what the problem is. */
+export const untrackedMessage = (paths) =>
+  `${paths.length} untracked file(s) would be part of the artifact:\n\n` +
+  paths.map((p) => `    ${p}`).join("\n") +
+  "\n\n" +
+  "  The artifact set comes from `git ls-files`, so a file that is not staged is not\n" +
+  "  counted — the hash and the count would both be written for a tree that does not\n" +
+  "  contain it, and both go stale the moment you `git add`. A full local `verify` passes\n" +
+  "  in that state, which is why this has reached CI twice.\n\n" +
+  "  Stage them and run this again, or delete or .gitignore them if they are not part of\n" +
+  "  the artifact.";
+
+/**
  * Exported so the suite can point it at a fixture tree. `listTracked` is injectable for the
  * same reason it is in `check-repo-hygiene`: a fixture should not need to be a git repository.
  */
@@ -112,6 +171,18 @@ export function checkBuildHash(root = process.cwd(), opts = {}) {
     computed = computeBuildHash(root, opts);
   } catch (err) {
     return { ok: false, fatalCode: 2, fatal: `cannot read the tree: ${err.message}` };
+  }
+
+  // Before comparing anything: a matching hash over the wrong file set is the failure this
+  // check exists to stop, and it looks exactly like success.
+  let untracked;
+  try {
+    untracked = untrackedArtifacts(root, opts);
+  } catch (err) {
+    return { ok: false, fatalCode: 2, fatal: `cannot list untracked files: ${err.message}` };
+  }
+  if (untracked.length > 0) {
+    return { ok: false, fatalCode: 2, fatal: untrackedMessage(untracked), untracked };
   }
 
   let committed;
@@ -143,6 +214,18 @@ function main() {
   const check = process.argv.includes("--check");
 
   if (!check) {
+    /**
+     * Guarded for `--write` and for the bare print alike.
+     *
+     * Writing is the mode that bakes the wrong number in, but the bare print is what someone
+     * reads when they are checking by eye, and a number that quietly omits a file is worse
+     * there than in a file nobody looks at.
+     */
+    const untracked = untrackedArtifacts(root);
+    if (untracked.length > 0) {
+      console.error(`build:hash — refusing. ${untrackedMessage(untracked)}`);
+      return 2;
+    }
     const { hash, files } = computeBuildHash(root);
     if (write) {
       writeFileSync(

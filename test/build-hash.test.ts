@@ -10,6 +10,7 @@ import {
   checkBuildHash,
   isArtifactPath,
   normalise,
+  untrackedArtifacts,
 } from "../scripts/build-hash.mjs";
 
 /**
@@ -154,6 +155,65 @@ describe("build hash — what it covers", () => {
   it("does not hash itself", () => {
     // Self-inclusion would make the hash unfixable: writing it changes the input.
     expect(isArtifactPath("build-hash.json")).toBe(false);
+  });
+});
+
+/**
+ * The failure this tool could see every time and said nothing about.
+ *
+ * The artifact set comes from `git ls-files`, so a new source file is invisible until it is
+ * staged: the hash and the count get written for a tree that does not contain it, and a full
+ * local `verify` passes on that wrong tree. It landed five times, each on a commit adding a
+ * runtime source, twice caught only by CI. The running tally is in TRUTH_BOUNDARY.md.
+ *
+ * Five recurrences of one mechanism is a defect in the tool rather than in five authors, so
+ * the tool now looks. Both halves are tested: it must fire on a file that would join the
+ * artifact, and it must stay silent on everything else, or the first person it inconveniences
+ * will route around it.
+ */
+describe("build hash — untracked files that would join the artifact", () => {
+  const withUntracked = (paths: string[]) => ({ listUntracked: () => paths });
+
+  it("lists an untracked runtime source", () => {
+    expect(untrackedArtifacts(repoRoot, withUntracked(["core/src/new-gate.ts"])))
+      .toEqual(["core/src/new-gate.ts"]);
+    expect(untrackedArtifacts(repoRoot, withUntracked(["adapters/storage-db/src/index.ts"])))
+      .toEqual(["adapters/storage-db/src/index.ts"]);
+  });
+
+  it("ignores everything that would not change the artifact", () => {
+    /**
+     * The must-not-fire half. `--exclude-standard` already keeps gitignored scratch out of
+     * the input; this covers the rest, which is the same predicate the hash itself uses —
+     * so the two cannot disagree about what an artifact is.
+     */
+    expect(
+      untrackedArtifacts(repoRoot, withUntracked([
+        "core/test/new.test.ts",
+        "test/checkers.test.ts",
+        "scripts/new-checker.mjs",
+        "Documentation/0019-something.md",
+        "spec/thing.json",
+        "adapters/README.md",
+        "shells/notes.txt",
+        "node_modules/pkg/index.js",
+      ])),
+    ).toEqual([]);
+  });
+
+  it("refuses the check rather than comparing a hash over the wrong file set", () => {
+    // A matching hash over the wrong file set looks exactly like success, which is why this
+    // is checked before the comparison rather than reported alongside it.
+    const r = checkBuildHash(repoRoot, withUntracked(["core/src/new-gate.ts"]));
+    expect(r.ok).toBe(false);
+    expect(r.fatalCode).toBe(2);
+    expect(r.fatal).toContain("core/src/new-gate.ts");
+    expect(r.fatal).toContain("git add");
+  });
+
+  it("says nothing when the tree is clean, which is the repository's own state", () => {
+    const r = checkBuildHash(repoRoot, withUntracked([]));
+    expect({ ok: r.ok, fatal: r.fatal ?? null }).toEqual({ ok: true, fatal: null });
   });
 });
 
