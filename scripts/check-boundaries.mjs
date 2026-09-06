@@ -31,8 +31,13 @@ import { readdirSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-/** Node builtins that perform an effect. `node:crypto` is deliberately absent — a
- *  digest is deterministic, which is the sense of "pure" that matters here. */
+/**
+ * Node builtins that perform an effect. `node:crypto` is deliberately absent from this
+ * blanket list — a digest is deterministic, so importing it is not automatically forbidden
+ * the way `node:fs` is. It gets its own narrower rule below instead of a free pass: the
+ * module also exports `randomUUID`, `randomBytes`, and timing-sensitive comparisons, none of
+ * which are pure, and a module-wide exemption could not tell those apart from `createHash`.
+ */
 const EFFECTFUL_BUILTINS = [
   "fs", "fs/promises", "child_process", "net", "tls", "http", "https", "http2",
   "dns", "dgram", "cluster", "worker_threads", "readline", "repl", "inspector",
@@ -53,7 +58,12 @@ const RULES = [
     dir: "core/src",
     forbid: [
       { test: (s) => EFFECTFUL_BUILTINS.some((b) => isBuiltin(s, b)),
-        why: "Core is pure — no I/O, clock, or ambient state (ADR-0005). node:crypto is the one allowed builtin." },
+        why: "Core is pure — no I/O, clock, or ambient state (ADR-0005)." },
+      { test: (s, statement) => isBuiltin(s, "crypto") && !cryptoNamesOK(statement),
+        why: "Core may import only createHash from node:crypto. A digest is deterministic, " +
+          "which is the sense of \"pure\" that matters here; randomUUID, randomBytes, and " +
+          "everything else the module exports either reads ambient state or is a capability " +
+          "this rule has not vetted, so a module-wide exemption would wave both through." },
       { test: (s) => /(^|\/)(application|adapters|shells)\//.test(s),
         why: "Core may not depend on the layers above it (ADR-0001)." },
     ],
@@ -196,10 +206,40 @@ function walk(root, dir, out = []) {
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]{0,400}?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|require\s*\(\s*["']([^"']+)["']\s*\)/g;
 
+/**
+ * Returns the full matched statement alongside each specifier, not only the specifier
+ * string. `cryptoNamesOK` below needs the named-import list, which the specifier string
+ * alone throws away.
+ */
 function specifiers(source) {
   const out = [];
-  for (const m of source.matchAll(IMPORT_RE)) out.push(m[1] ?? m[2] ?? m[3]);
-  return out.filter(Boolean);
+  for (const m of source.matchAll(IMPORT_RE)) {
+    const spec = m[1] ?? m[2] ?? m[3];
+    if (spec) out.push({ spec, statement: m[0] });
+  }
+  return out;
+}
+
+/**
+ * True only when a statement provably imports nothing from `node:crypto` but `createHash`.
+ *
+ * A digest is deterministic — same input, same output, no ambient state — which is the
+ * sense of "pure" that matters for Core (ADR-0005). Every other crypto capability is either
+ * genuinely effectful (`randomUUID`, `randomBytes`) or a distinct capability this rule has
+ * not vetted, so the default for anything this cannot prove is "forbidden": a namespace
+ * import, a default import, or a dynamic `import()`/`require()` all hand back the whole
+ * module object, which could carry anything through unnoticed.
+ */
+function cryptoNamesOK(statement) {
+  if (/import\s*\(/.test(statement) || /require\s*\(/.test(statement)) return false;
+  if (/import\s+\*\s+as/.test(statement)) return false;
+  const named = statement.match(/import\s+(?:type\s+)?\{([^}]*)\}\s*from/);
+  if (!named) return false;
+  const names = named[1]
+    .split(",")
+    .map((n) => n.replace(/^type\s+/, "").split(/\s+as\s+/)[0].trim())
+    .filter(Boolean);
+  return names.length > 0 && names.every((n) => n === "createHash");
 }
 
 /**
@@ -218,13 +258,13 @@ export function checkBoundaries(root = process.cwd()) {
       const norm = file.split(sep).join("/");
       filesChecked++;
       const source = readFileSync(join(root, file), "utf8");
-      for (const spec of specifiers(source)) {
+      for (const { spec, statement } of specifiers(source)) {
         importsChecked++;
         const resolved = resolveSpec(norm, spec);
         const cross = crossShell(norm, resolved);
         if (cross) violations.push({ file: norm, spec, resolved, why: cross });
         for (const f of rule.forbid) {
-          if (!f.test(resolved)) continue;
+          if (!f.test(resolved, statement)) continue;
           if (rule.exempt[norm]) continue;
           violations.push({ file: norm, spec, resolved, why: f.why });
         }

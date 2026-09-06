@@ -29,6 +29,7 @@ import { checkCounts } from "../scripts/check-counts.mjs";
 import { checkFingerprint, RUNS as FP_RUNS } from "../scripts/check-fingerprint.mjs";
 import { checkRepoHygiene, NEVER_IGNORED } from "../scripts/check-repo-hygiene.mjs";
 import { collect, render } from "../scripts/generate-capability-matrix.mjs";
+import { checkCoreCallbacks } from "../scripts/check-core-callbacks.js";
 
 /**
  * Must-fire cases for the three checker scripts.
@@ -303,6 +304,9 @@ describe("check-boundaries", () => {
     ["Core importing child_process", "core/src/pure.ts", 'import { execSync } from "node:child_process";\n'],
     ["Core importing an adapter", "core/src/pure.ts", 'import { r } from "../../adapters/store/src/index.js";\n'],
     ["Core importing the Application", "core/src/pure.ts", 'import type { Y } from "../../application/src/app.js";\n'],
+    ["Core importing randomUUID from node:crypto", "core/src/pure.ts", 'import { randomUUID } from "node:crypto";\n'],
+    ["Core importing node:crypto as a namespace", "core/src/pure.ts", 'import * as crypto from "node:crypto";\n'],
+    ["Core importing createHash mixed with randomBytes", "core/src/pure.ts", 'import { createHash, randomBytes } from "node:crypto";\n'],
     ["the Application naming a concrete adapter", "application/src/app.ts", 'import { r } from "../../adapters/store/src/index.js";\n'],
     ["a Shell importing an adapter", "shells/cli/src/index.ts", 'import { r } from "../../../adapters/store/src/index.js";\n'],
     ["a Shell importing Core", "shells/cli/src/index.ts", 'import { h } from "../../../core/src/pure.js";\n'],
@@ -334,6 +338,132 @@ describe("check-boundaries", () => {
     const r = checkBoundaries(process.cwd());
     expect(r.exemptions.map(([f]) => f)).toContain("shells/cli/src/composition-root.ts");
     for (const [, why] of r.exemptions) expect(why.length).toBeGreaterThan(20);
+  });
+});
+
+/* ── check-core-callbacks ─────────────────────────────────────────────────── */
+
+describe("check-core-callbacks", () => {
+  it("passes on the real repository", () => {
+    const r = checkCoreCallbacks({ root: process.cwd() });
+    expect(r.violations.map((v) => `${v.file}:${v.functionName}.${v.paramName}.${v.memberName}`)).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.functionsChecked).toBeGreaterThan(0);
+  });
+
+  it("does not flag a primitive parameter's prototype methods", () => {
+    // The bug this pins: `getPropertiesOfType(number)` returns `Number.prototype`'s members
+    // (toFixed, toString, ...) via lib.es5.d.ts, and those are genuinely function-typed. A
+    // checker that did not exclude lib-declared shapes flagged every numeric parameter in
+    // Core the first time it ran for real — 152 false violations across `sizing.ts` and
+    // `budget.ts` alone.
+    const root = mkroot("pnx-cb-primitive-");
+    write(root, "core/src/pure.ts", "export function floorLike(alpha: number): number { return Math.floor(alpha); }\n");
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
+  it("does not flag a registry Core builds internally, even through an array and a union", () => {
+    // Mirrors `core/src/stages/pipeline.ts`: `PipelineStage` is a union with function-typed
+    // members (`decide`, `run`), and `decideGateFeedback` takes `readonly PipelineStage[]` as
+    // a parameter. That is not a caller-supplied callback — the only values of that shape are
+    // built by Core itself, in the same file, as the frozen registry array.
+    const root = mkroot("pnx-cb-registry-");
+    write(
+      root,
+      "core/src/stages/registry.ts",
+      [
+        "export type Stage =",
+        '  | { kind: "a"; decide(x: number): number }',
+        '  | { kind: "b"; run(x: number): number };',
+        "",
+        "export const STAGES: readonly Stage[] = [",
+        '  { kind: "a", decide: (x) => x + 1 },',
+        '  { kind: "b", run: (x) => x - 1 },',
+        "];",
+        "",
+        "export function planFor(stages: readonly Stage[]): readonly Stage[] {",
+        "  return stages;",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
+  it("flags a function-typed parameter member no object literal in core/src ever constructs", () => {
+    // The historical shape: `promote.ts` once took `resolvedRefs` as a `(ref: string) =>
+    // boolean` callback, the only one Core ever accepted (#151). Nothing in core/src ever
+    // built a value of that shape — only the single Application caller did — so it must be
+    // caught even though it compiles cleanly and every global stays untouched.
+    const root = mkroot("pnx-cb-callback-");
+    write(
+      root,
+      "core/src/release/promote.ts",
+      [
+        "export interface PromotionRequest {",
+        "  refExists?: (ref: string) => boolean;",
+        "}",
+        "",
+        "export function decidePromotion(req: PromotionRequest): boolean {",
+        "  return req.refExists ? req.refExists(\"x\") : false;",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(false);
+    expect(r.violations).toEqual([
+      expect.objectContaining({
+        file: "core/src/release/promote.ts",
+        functionName: "decidePromotion",
+        paramName: "req",
+        memberName: "refExists",
+      }),
+    ]);
+  });
+
+  it("still flags the callback shape when it only appears in one arm of a union", () => {
+    const root = mkroot("pnx-cb-union-");
+    write(
+      root,
+      "core/src/pure.ts",
+      [
+        "export type Req =",
+        "  | { simple: true }",
+        "  | { simple: false; onEvent: (e: string) => void };",
+        "",
+        "export function handle(req: Req): void {}",
+        "",
+      ].join("\n"),
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) => v.memberName === "onEvent")).toBe(true);
+  });
+
+  it("exempts a function-typed member by name once ANY core/src object literal builds one", () => {
+    // The heuristic's known blind spot, pinned rather than hidden: exemption is by property
+    // NAME across all of core/src, not by matching the parameter's own type. A second,
+    // unrelated "run" field built somewhere else would also exempt a genuine new callback
+    // called "run" — documented in the script's header as the cost of not requiring a full
+    // structural-assignability check.
+    const root = mkroot("pnx-cb-exempt-");
+    write(root, "core/src/unrelated.ts", 'export const thing = { run: (x: number) => x };\n');
+    write(
+      root,
+      "core/src/pure.ts",
+      [
+        "export interface Req { run: (x: number) => number }",
+        "export function handle(req: Req): number { return req.run(1); }",
+        "",
+      ].join("\n"),
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(true);
   });
 });
 
