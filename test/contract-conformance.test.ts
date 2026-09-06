@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Ajv, type ValidateFunction } from "ajv";
-import { providerAnswered, FAILURE_CATEGORIES, type FailureCategory } from "../contracts/index.js";
+import { providerAnswered, FAILURE_CATEGORIES, STAGE_IDS, type FailureCategory } from "../contracts/index.js";
 import { GuardedJudge } from "../application/src/judge.js";
 import addFormatsImport from "ajv-formats";
 
@@ -307,6 +307,24 @@ describe("revision-entry", () => {
     expect(report(validators["revision-entry"], revision)).toBe(true);
   });
 
+  it("the TypeScript stage ids and the schema enum are the same list", () => {
+    /**
+     * The same seam `provider-failure.category` already had a guard for, and this one did not.
+     *
+     * `stage_id` was a bare `{"type":"string"}` through 2.0.0, so an entry naming a stage that
+     * does not exist validated — in the plane whose entire job is recording which stage
+     * produced what. Neither declaration is generated from the other, so this assertion is
+     * what keeps them one set.
+     */
+    expect([...STAGE_IDS]).toEqual(load("revision-entry").properties.stage_id.enum);
+  });
+
+  it("refuses a stage id that is not a stage", () => {
+    // The must-fire half: without it, an enum that silently reverted to a bare string would
+    // still satisfy the assertion above only by accident of both being absent.
+    expect(validators["revision-entry"]({ ...revision, stage_id: "not_a_stage" })).toBe(false);
+  });
+
   it("records a demo run as DEMO, and the schema admits it", () => {
     expect(revision.status).toBe("DEMO");
   });
@@ -392,6 +410,32 @@ describe("run-manifest", () => {
 
   it("accepts a manifest whose revisions retained nothing (leeg is de eerlijke staat)", () => {
     expect(report(validators["run-manifest"], manifestFrom([revision]))).toBe(true);
+  });
+
+  /**
+   * The three cases the inlined copy admitted, and the $ref does not.
+   *
+   * Through 1.0.0 `revisions[]` re-declared RevisionEntry inline and the copy had drifted
+   * looser: no `additionalProperties`, `stage_id` a bare string, `execution_provenance` a bare
+   * object. TypeScript said `RevisionEntry[]` throughout, so schema and type disagreed about
+   * what a manifest holds. Each of these passed before the $ref; a revert fails all three.
+   */
+  it("rejects a revision carrying a property RevisionEntry does not have", () => {
+    const m = manifestFrom([withRefs()]);
+    const smuggled = { ...m, revisions: [{ ...m.revisions[0], smuggled_field: "hello" }] };
+    expect(validators["run-manifest"](smuggled)).toBe(false);
+  });
+
+  it("rejects a revision naming a stage that does not exist", () => {
+    const m = manifestFrom([withRefs()]);
+    const bad = { ...m, revisions: [{ ...m.revisions[0], stage_id: "not_a_stage" }] };
+    expect(validators["run-manifest"](bad)).toBe(false);
+  });
+
+  it("rejects a revision whose execution_provenance is not the real shape", () => {
+    const m = manifestFrom([withRefs()]);
+    const bad = { ...m, revisions: [{ ...m.revisions[0], execution_provenance: {} }] };
+    expect(validators["run-manifest"](bad)).toBe(false);
   });
 
   it("rejects duplicate content refs", () => {

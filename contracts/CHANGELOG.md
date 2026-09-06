@@ -49,6 +49,67 @@ Versioning, as applied here:
 
 ---
 
+## 2026-09-06 (audit remediation — the revision-entry seams)
+
+Two schemas, three tightenings, one theme: the plane that records what a run did could not
+say which stages exist, and could not say whether a revision had any provenance at all. Two
+found by the repository audit at `34206e9`; the third found while writing the test that
+proves the second.
+
+### `revision-entry` 2.0.0 → **3.0.0** (major)
+
+`stage_id` was `{"type": "string"}`. An entry naming `"compil"`, `"deploy"` or `""` validated,
+in the one field whose whole job is identifying a stage. `pipeline-outcome` has carried the
+proper eleven-value enum since 1.0.0, so the two contracts disagreed about what a stage id is
+while backing the same TypeScript `StageId` union.
+
+Now the enum, and — the half that matters more — `test/contract-conformance.test.ts` asserts
+it equals `STAGE_IDS` from `contracts/index.ts`. That is the guard `provider-failure.category`
+has had all along and this field did not: two declarations of one set, in two languages,
+neither generated from the other, is exactly where they drift. A second case pins the
+must-fire direction, so an enum that silently reverted to a bare string fails rather than
+satisfying the equality by both sides being absent.
+
+**`execution_provenance` was `{"type": "object"}` in the same schema, and that is worse.** A
+revision carrying `execution_provenance: {}` validated — the same defect, in the same words,
+that took `eval-run` to 2.0.0 ("`provenance` was `{"type": "object"}` … A run carrying
+`provenance: {}` validated"), and worse here because `contract_versions` *is* the provenance
+record: the field that says which contracts a revision was executed against could be empty and
+still pass. TypeScript required all four fields throughout.
+
+It now carries the shape `pipeline-outcome` has had since **1.0.0** in
+`#/definitions/provenance`. Two schemas describing one object had disagreed about it, which is
+the same seam as `stage_id` above and was found the same way — by writing the test that says
+what the tightening buys, and watching one of the three cases pass when it should not have.
+
+Major rather than minor because it tightens two types. No producer changes: `StageId` and
+`ExecutionProvenance` already constrained every writer in this repository, so nothing that
+exists emits a value either shape rejects, and the conformance suite validates real persisted
+entries unchanged.
+
+### `run-manifest` 1.0.0 → **2.0.0** (major)
+
+`revisions[]` re-declared the entire `RevisionEntry` shape inline, and the copy had drifted
+looser than the original: no `additionalProperties`, `stage_id` a bare string, `gate_results`
+a bare array, `execution_provenance` a bare object. Meanwhile `contracts/index.ts` declared
+`revisions: RevisionEntry[]`.
+
+So the schema and the type disagreed about what a manifest holds — the same defect that took
+`revision-entry` to 2.0.0, one plane out, and the reason that entry is worth re-reading before
+inlining anything again. Now a `$ref` to `revision-entry/3.0.0`, which is how
+`pipeline-outcome` cites `gate-result` and `judgement` cites `judge-verdict`. It also makes
+the dependency a decision: a future `revision-entry` bump now forces a choice here instead of
+leaving a stale copy behind quietly.
+
+**`manifest_version` stays `"1.0.0"` while the schema goes to 2.0.0, and the two are not in
+conflict.** They version different things. The const is what a producer stamps on disk, and
+nothing a producer writes changed — every manifest ever written held real `RevisionEntry`
+objects, because TypeScript required it. The bump is the schema document catching up to what
+was already true, so no stored manifest needs migrating and no reader needs to refuse
+anything. Bumping the const instead would have announced a format change that did not happen.
+
+---
+
 ## 2026-09-04 (judge-scored comparison pilot — contracts)
 
 ### `comparison` 2.2.0 → **2.3.0** (minor)

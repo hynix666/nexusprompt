@@ -214,7 +214,7 @@ export const CONTRACT_VERSIONS = {
   "gate-result": "1.3.0",
   "provider-failure": "1.1.0",
   "pipeline-outcome": "1.0.0",
-  "revision-entry": "2.0.0",
+  "revision-entry": "3.0.0",
   "observability-event": "1.3.0",
   "eval-run": "2.0.0",
   comparison: "2.3.0",
