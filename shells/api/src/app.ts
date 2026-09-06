@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyError, type FastifyInstance } from "fastify";
 import sensible from "@fastify/sensible";
 import { randomUUID } from "node:crypto";
 import { availableParallelism } from "node:os";
@@ -42,6 +42,26 @@ function requireString(value: unknown, name: string): string {
 export function buildApi(deps: ApiDependencies): FastifyInstance {
   const app = Fastify({ logger: false });
   app.register(sensible);
+
+  /**
+   * No message this shell did not write reaches the caller.
+   *
+   * Fastify's default handler puts `error.message` straight into the response body, and an
+   * unexpected throw out of the Orchestrator carries the brief — so an unhandled exception
+   * published over HTTP exactly what the observability sink refuses to log. `statusCode` is
+   * the discriminator: Fastify's own errors and `@fastify/sensible`'s replies carry one and
+   * their messages are ours, an unexpected throw carries none and its message is not.
+   *
+   * Testing `statusCode < 500` instead would fold `reply.serviceUnavailable()` — a 503 this
+   * shell raises deliberately — into a generic 500, losing both the honest status and a
+   * message that was always safe to send.
+   */
+  app.setErrorHandler((error: FastifyError, _request, reply) => {
+    if (typeof error.statusCode === "number") {
+      return reply.status(error.statusCode).send({ ok: false, error: error.message });
+    }
+    return reply.status(500).send({ ok: false, error: "internal_error" });
+  });
 
   app.get("/api/v1/health", async () => ({ ok: true, service: "nexusprompt-api" }));
 
