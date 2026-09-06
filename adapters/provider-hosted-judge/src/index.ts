@@ -175,15 +175,22 @@ export class HostedJudgeTransport implements JudgeTransport {
     }
 
     if (!res.ok) {
-      // The provider's own error message is safe to surface — it never echoes the key.
-      let detail = `HTTP ${res.status}`;
-      try {
-        const errBody = (await res.json()) as { error?: { message?: string } };
-        if (errBody.error?.message) detail = errBody.error.message;
-      } catch {
-        /* body wasn't JSON; the status code alone is still informative */
-      }
-      throw new HostedJudgeFailure(`http_${res.status}`, `Judge call failed: ${detail}`);
+      /**
+       * The upstream body is NOT lifted into the message.
+       *
+       * This used to read `errBody.error.message` straight out of the provider's JSON and put
+       * it into `HostedJudgeFailure.message` under a comment claiming it was "safe to surface"
+       * because it never echoes the key — true, but beside the point. `scripts/judge.ts`
+       * prints a caught error's `.message` straight to the operator's console, unredacted, so
+       * whatever the upstream body says would land there verbatim. The status is ours; the
+       * body is not. See `adapters/provider-hosted-server/src/index.ts`'s `callWithTimeout`,
+       * which carries the same fix for the same reason.
+       */
+      await res.json().catch(() => undefined);
+      const detail = res.status === 429
+        ? "the judge's rate limit was reached"
+        : `HTTP ${res.status}`;
+      throw new HostedJudgeFailure(`http_${res.status}`, `Judge call failed: ${detail}.`);
     }
 
     const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
