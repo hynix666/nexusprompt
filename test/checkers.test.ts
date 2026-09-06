@@ -1803,3 +1803,34 @@ describe("check:contracts — CONTRACTS.md against the schemas", () => {
     expect(inlineClaims(text).length).toBeGreaterThan(10);
   });
 });
+
+describe("check:contracts — line endings", () => {
+  /**
+   * The hazard that actually bit. `core.autocrlf` is true here, so CONTRACTS.md is CRLF after
+   * a checkout and LF after `docs:contracts` writes it. The inventory comparison was sensitive
+   * to which, and every must-FIRE test still passed — a spurious mismatch is still a failure.
+   * Only the must-not-fire case could see it, and only once a merge handed git the file.
+   */
+  const repoRoot = join(__dirnameShim, "..");
+
+  it("reaches the same verdict whichever line endings the document has", () => {
+    const lf = readFileSync(join(repoRoot, "Documentation", "CONTRACTS.md"), "utf8")
+      .replace(/\r\n/g, "\n");
+    const crlf = lf.replace(/\n/g, "\r\n");
+    expect(lf).not.toBe(crlf); // or this proves nothing
+
+    expect(checkContractsDoc(repoRoot, { readDoc: () => lf }).ok).toBe(true);
+    expect(checkContractsDoc(repoRoot, { readDoc: () => crlf }).ok).toBe(true);
+  });
+
+  it("still fires on a real defect in a CRLF document", () => {
+    // The must-fire half of the same property: normalising must not blunt the check.
+    const crlf = readFileSync(join(repoRoot, "Documentation", "CONTRACTS.md"), "utf8")
+      .replace(/\r\n/g, "\n")
+      .replace("contracts/gate-result/1.3.0", "contracts/gate-result/9.9.9")
+      .replace(/\n/g, "\r\n");
+    const r = checkContractsDoc(repoRoot, { readDoc: () => crlf });
+    expect(r.ok).toBe(false);
+    expect((r.problems ?? []).join("\n")).toMatch(/gate-result/);
+  });
+});

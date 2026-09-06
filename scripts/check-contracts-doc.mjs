@@ -130,7 +130,19 @@ export function checkContractsDoc(root = process.cwd(), opts = {}) {
   let text;
   try {
     versions = schemaVersions(root, opts);
-    text = opts.readDoc ? opts.readDoc() : read(root, DOC);
+    /**
+     * Normalised HERE, not only in `read`, because the caller may supply the text.
+     *
+     * `core.autocrlf` is true in this repository, so a checkout writes this file with CRLF
+     * while `docs:contracts` writes it with LF — the same file is one or the other depending
+     * on whether git last touched it. Normalising only inside `read` left the comparison
+     * below sensitive to that, and every must-FIRE test still passed because a spurious
+     * inventory mismatch is still a failure. Only the must-not-fire case caught it, and only
+     * after a merge happened to hand git the file. Fourth time line endings have decided
+     * something here; see the note in `build-hash.mjs`.
+     */
+    const raw = opts.readDoc ? opts.readDoc() : read(root, DOC);
+    text = raw.replace(/\r\n/g, "\n");
   } catch (err) {
     return { ok: false, fatalCode: 2, fatal: err.message };
   }
