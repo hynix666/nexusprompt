@@ -54,4 +54,39 @@ describe("REST API v1", () => {
     expect(response.statusCode).toBe(400);
     await app.close();
   });
+
+  it("does not leak internal error messages to the client", async () => {
+    const secret = "prompt body that must not reach the caller";
+    const throwing = { run: () => { throw new Error(secret); } } as unknown as Orchestrator;
+    const app = buildApi(deps(throwing));
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/compiler/compile",
+      payload: { brief: "anything" },
+    });
+
+    expect(response.statusCode).toBe(500);
+    const body = response.json();
+    expect(body).toEqual({ ok: false, error: "internal_error" });
+    expect(response.payload).not.toContain(secret);
+    await app.close();
+  });
+
+  // The scrubbing above must not swallow a status this shell raises on purpose. A
+  // `status < 500` test would have reported 500 "internal_error" here.
+  it("keeps a deliberate 5xx status and its own message", async () => {
+    const failing: ProviderTransport = {
+      ...provider,
+      async healthCheck() {
+        throw new Error("upstream detail that must not reach the caller");
+      },
+    };
+    const app = buildApi({ provider: failing, orchestrator: {} as Orchestrator, coreBuildHash: "test" });
+    const response = await app.inject({ method: "GET", url: "/api/v1/provider/health" });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ ok: false, error: "provider health check failed" });
+    expect(response.payload).not.toContain("upstream detail");
+    await app.close();
+  });
 });
