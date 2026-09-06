@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { redactingSink, sharesBody, WINDOW, REDACTED } from "../src/redaction.js";
 import { redactionBodies } from "../src/pipeline.js";
-import type { ObservabilityEvent } from "../../contracts/index.js";
+import { Orchestrator } from "../src/orchestrator.js";
+import type {
+  GenerationRequest, GenerationResult, ObservabilityEvent, ProviderFailure, ProviderHealth,
+  ProviderTransport, RevisionStore,
+} from "../../contracts/index.js";
 import type { PipelineContext } from "../../core/src/stages/pipeline.js";
 
 /**
@@ -178,5 +182,100 @@ describe("the body set the pipeline hands the sink", () => {
     // A short scalar cannot cause a redaction on its own.
     expect(sharesBody("stakes were HIGH and depth STANDARD for this run", ["HIGH", "STANDARD"]))
       .toBe(false);
+  });
+});
+
+/**
+ * The single-stage path, which had no wrap at all.
+ *
+ * `pipeline.ts` has wrapped its sink since sweep fourteen. The Orchestrator did not — so the
+ * guarantee held on eleven-stage runs and not on `nexusprompt run` or
+ * `POST /api/v1/compiler/compile`, the two paths that reach a provider with a user's brief and
+ * nothing else in front of them.
+ *
+ * The vector here is `model_id`, which an adapter fills from the provider's own response. An
+ * upstream that echoes prompt text into a metadata field puts it straight into
+ * PROVIDER_CALL_SUCCEEDED: the same shape as sweep fourteen's leak, one layer further out. It is
+ * a live field rather than a contrived one, which is why the test uses it instead of planting a
+ * rogue emit — nothing the Orchestrator emits today carries a body, and a test that only checked
+ * the current fields would pass with the wrap removed.
+ */
+describe("the Orchestrator hands its own sink the same check", () => {
+  const BRIEF = "Draft an assistant for reconciling quarterly ledger discrepancies at Northwind.";
+
+  /** The Orchestrator only ever calls `append`; the rest of the port is not on this path. */
+  const store = { append: async () => {} } as unknown as RevisionStore;
+
+  const echoingProvider: ProviderTransport = {
+    provider_id: "local-proxy",
+    async generate(req: GenerationRequest): Promise<GenerationResult | ProviderFailure> {
+      return {
+        request_id: req.request_id,
+        content: "Identity: a reconciliation analyst bound to the Northwind chart of accounts.",
+        provider_id: "local-proxy",
+        // The upstream echoed the prompt into a metadata field and the adapter passed it through.
+        model_id: `claude-opus-5 (echo: ${BRIEF})`,
+        finish_reason: "end_turn",
+      };
+    },
+    async healthCheck(): Promise<ProviderHealth> {
+      return {
+        ok: true, checked_at: "2026-08-16T00:00:00.000Z", latency_ms: 1,
+        degradation_state: "NONE", failing_dependency: null,
+      };
+    },
+  };
+
+  const run = async () => {
+    const events: ObservabilityEvent[] = [];
+    const orchestrator = new Orchestrator({
+      provider: echoingProvider,
+      store,
+      sink: { emit: (e) => events.push(e) },
+      now: () => new Date(1_760_000_000_000),
+      sleep: async () => {},
+      coreBuildHash: "test",
+    });
+    const outcome = await orchestrator.run({
+      command_id: "cmd-1",
+      run_id: "run-1",
+      stage_id: "compile",
+      input: { brief: BRIEF },
+      context: { stakes: "HIGH" },
+    });
+    return { events, outcome };
+  };
+
+  it("redacts a body that reaches an event through provider metadata", async () => {
+    const { events } = await run();
+    const succeeded = events.find((e) => e.event_type === "PROVIDER_CALL_SUCCEEDED");
+
+    expect(succeeded, "the run emitted no PROVIDER_CALL_SUCCEEDED to check").toBeDefined();
+    expect(succeeded!.model_id).toBe(REDACTED);
+  });
+
+  it("leaves no window of the brief anywhere in the stream, field-by-field", async () => {
+    /**
+     * Every string field of every event, rather than the one the test above names. Picking
+     * fields by hand is the sparse-matcher failure this whole module exists to abolish, and a
+     * field added to an emit later is covered by this assertion the day it is added.
+     */
+    const { events } = await run();
+    expect(events.length).toBeGreaterThan(0);
+    for (const event of events) {
+      for (const [field, value] of Object.entries(event)) {
+        if (typeof value !== "string") continue;
+        expect(sharesBody(value, [BRIEF]), `${event.event_type}.${field} carried the brief`)
+          .toBe(false);
+      }
+    }
+  });
+
+  it("still produces its artifact — redaction must not cost the run", async () => {
+    // Fail closed on the body, not on availability. Same reason `redactingSink` substitutes
+    // rather than throws: the artifact must not be lost to a logging concern.
+    const { outcome } = await run();
+    expect(outcome.output.text.length).toBeGreaterThan(0);
+    expect(outcome.demo_mode).toBe(false);
   });
 });
