@@ -32,6 +32,10 @@ import { runGates, listGates, SOURCE_GATE_COUNT } from "../core/src/gates/regist
 // validates. Two copies would agree on the day they forked and diverge silently after.
 import { rng, generate, generateOptions, type CaseOptions } from "../core/src/eval/generator.js";
 import type { GateResult, Verdict } from "../contracts/index.js";
+import {
+  covers, structuralProblems,
+  type AllowedDivergence, type Disagreement,
+} from "./allowlist-match.js";
 
 const LINTER = "sources/v5/prompt_lint.py";
 const FIXTURES = "sources/v5/fixtures.json";
@@ -180,70 +184,12 @@ function tsVerdicts(text: string, o: CaseOptions): Map<string, Verdict> {
 
 /* ── run ─────────────────────────────────────────────────────────────────── */
 
-interface Disagreement {
-  source: string;
-  gate: string;
-  python: Verdict;
-  typescript: Verdict;
-  text: string;
-  options: CaseOptions;
-}
-
 /**
- * A deliberate difference from the source (ADR-0007 action item 2).
- *
- * Without this, a port that fixes a source defect can only get a green build by
- * un-fixing itself or by deleting the oracle. The ADR names that as the most likely
- * reason the oracle gets abandoned.
- *
- * Both verdicts are pinned, not just the fact of a difference: an entry saying only
- * "these may differ" would keep covering the case if the port later drifted to a third
- * verdict. Pinning both makes a change of shape a new decision.
+ * AllowedDivergence, Disagreement, optionsSatisfied and covers now live in
+ * ./allowlist-match.js so the matching logic can be unit-tested without importing this
+ * script -- importing this file directly would run the whole oracle as a side effect,
+ * since it has no main() guard.
  */
-interface AllowedDivergence {
-  gate: string;
-  demonstration: { text: string; options?: CaseOptions };
-  source_verdict: Verdict;
-  port_verdict: Verdict;
-  also_matches?: string;
-  /**
-   * NARROWS the entry to cases whose options satisfy every constraint. Added because a
-   * divergence can be option-shaped rather than input-shaped, and the text-only matcher
-   * could not express one without excusing far more than the decision covers.
-   *
-   * QUTM_CEILING's baseline floor (ADR-0011) is the case that forced this. It diverges on
-   * any text whose baseline is below the floor, so the only text regex that covers it is
-   * `.*` — which would also excuse the `qutm-ceiling-crossing` boundary case, the one a
-   * mutation probe added to make half-up rounding observable at all. Declaring one
-   * deliberate difference must not cost an unrelated regression detector.
-   */
-  only_when_options?: Record<string, Record<string, number>>;
-  reason?: string;
-  adr?: string;
-}
-
-const OPERATORS: Record<string, (a: number, b: number) => boolean> = {
-  lt: (a, b) => a < b, lte: (a, b) => a <= b,
-  gt: (a, b) => a > b, gte: (a, b) => a >= b,
-  eq: (a, b) => a === b,
-};
-
-/**
- * True when every declared constraint holds. A constraint on an option the case does not
- * carry is NOT satisfied — an absent option means the case is outside what the entry
- * described, so it must stay a live disagreement rather than be excused by omission.
- */
-function optionsSatisfied(e: AllowedDivergence, options: CaseOptions): boolean {
-  if (!e.only_when_options) return true;
-  for (const [name, constraint] of Object.entries(e.only_when_options)) {
-    const actual = (options as Record<string, unknown>)[name];
-    if (typeof actual !== "number") return false;
-    for (const [op, bound] of Object.entries(constraint)) {
-      if (!OPERATORS[op]?.(actual, bound)) return false;
-    }
-  }
-  return true;
-}
 
 const allowlist: AllowedDivergence[] = (() => {
   try {
@@ -256,51 +202,7 @@ const allowlist: AllowedDivergence[] = (() => {
 })();
 
 /** Structural checks. These run before any comparison, so a malformed entry cannot excuse anything. */
-const allowlistProblems: string[] = [];
-for (const [i, e] of allowlist.entries()) {
-  const at = `entry ${i} (${e.gate ?? "no gate"})`;
-  if (!e.gate) allowlistProblems.push(`${at}: no gate named`);
-  else if (!SHARED.has(e.gate)) {
-    allowlistProblems.push(`${at}: ${e.gate} is not in the shared gate set — excusing a gate that is never compared`);
-  }
-  if (!e.reason?.trim()) allowlistProblems.push(`${at}: no reason. A difference without a stated reason is a defect.`);
-  if (!e.adr?.trim()) allowlistProblems.push(`${at}: no ADR. Deliberate divergence is a decision and needs one.`);
-  if (!e.demonstration?.text) allowlistProblems.push(`${at}: no demonstration input`);
-  if (e.source_verdict === e.port_verdict) {
-    allowlistProblems.push(`${at}: source_verdict equals port_verdict — that is agreement, not a divergence`);
-  }
-  if (e.also_matches) {
-    try { new RegExp(e.also_matches); }
-    catch { allowlistProblems.push(`${at}: also_matches is not a valid regex`); }
-  }
-  for (const [name, constraint] of Object.entries(e.only_when_options ?? {})) {
-    for (const op of Object.keys(constraint)) {
-      if (!OPERATORS[op]) {
-        allowlistProblems.push(
-          `${at}: only_when_options.${name} uses unknown operator "${op}". ` +
-          `Known: ${Object.keys(OPERATORS).join(", ")}. An unrecognised operator must not read as satisfied.`,
-        );
-      }
-    }
-  }
-  // An entry whose own demonstration falls outside its option constraints could never
-  // prove itself, so it would fail the staleness rule below with a confusing message.
-  // Say the real thing here instead.
-  if (e.only_when_options && !optionsSatisfied(e, e.demonstration?.options ?? {})) {
-    allowlistProblems.push(
-      `${at}: its demonstration's options do not satisfy its own only_when_options. ` +
-      `The entry describes a case it cannot itself produce.`,
-    );
-  }
-}
-
-const covers = (e: AllowedDivergence, d: Disagreement): boolean =>
-  d.gate === e.gate &&
-  d.python === e.source_verdict &&
-  d.typescript === e.port_verdict &&
-  // Narrowing, applied to every match including the demonstration's own text.
-  optionsSatisfied(e, d.options) &&
-  (d.text === e.demonstration?.text || (!!e.also_matches && new RegExp(e.also_matches).test(d.text)));
+const allowlistProblems: string[] = structuralProblems(allowlist, SHARED);
 
 const disagreements: Disagreement[] = [];
 let compared = 0;

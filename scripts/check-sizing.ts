@@ -32,11 +32,22 @@
  * enforces with. A checker carrying its own copy of a formula is the drift this repository
  * keeps finding.
  *
+ * ## Why the check is a pure function, and printing is not
+ *
+ * `checkSizing()` below takes no wall-clock action and touches no filesystem by default
+ * (`readdirSync`/`readFileSync` are injectable, matching `check-repo-hygiene.mjs`'s
+ * `listTracked`/`sizeOf` pattern) and returns every line `main()` prints, rather than
+ * printing them itself. A repository audit found this file's tolerance math, its
+ * two-directional stale-acknowledgment check, and its granularity comparison were "only
+ * exercised end-to-end" — a planted defect had to survive the real `eval/*.json` suites to
+ * be caught. `test/checkers.test.ts` now plants fixtures directly against `checkSizing()`.
+ *
  * Exit 0 every suite is honest about its resolution · 1 one is not · 2 inputs unreadable.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   LEGACY_ASSUMPTIONS, STATED_ASSUMPTIONS, floorDiscordant, legacyAnchorSize, minAttainableP,
   requiredPairedSize, resolvableDelta,
@@ -46,12 +57,10 @@ import type { EvalSuite } from "../contracts/index.js";
 const SUITE_DIR = "eval";
 const ACK_FILE = "scripts/suite-sizing-acknowledgments.json";
 
-interface Ack { suite_id: string; cases: number; reason: string }
-
-const read = (p: string) => JSON.parse(readFileSync(p, "utf8"));
+export interface Ack { suite_id: string; cases: number; reason: string }
 
 /** Is `declared` the same number as 1/n, allowing for the decimals the file actually wrote? */
-function matchesGranularity(declared: number, n: number): boolean {
+export function matchesGranularity(declared: number, n: number): boolean {
   const exact = 1 / n;
   // Tolerance is half a unit in the last place the declaration used, so 0.0714 satisfies
   // 1/14 = 0.0714285... while 0.08 does not.
@@ -60,27 +69,51 @@ function matchesGranularity(declared: number, n: number): boolean {
   return Math.abs(declared - exact) <= tolerance;
 }
 
-function main(): void {
-  let suites: Array<{ file: string; suite: EvalSuite }>;
-  let acks: Ack[];
-  try {
-    suites = readdirSync(SUITE_DIR)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => ({ file: f, suite: read(join(SUITE_DIR, f)).suite as EvalSuite }))
-      .filter((s) => s.suite && Array.isArray(s.suite.case_ids));
-    acks = read(ACK_FILE).acknowledged as Ack[];
-  } catch (err) {
-    console.error(`check:sizing — cannot read inputs: ${(err as Error).message}`);
-    process.exit(2);
-  }
+export interface CheckSizingOptions {
+  root?: string;
+  /** Injectable so a test needs neither a real `eval/` directory nor real suite files. */
+  listSuites?: (root: string) => Array<{ file: string; suite: EvalSuite }>;
+  readAcks?: (root: string) => Ack[];
+}
+
+export interface SizingResult {
+  ok: boolean;
+  failures: string[];
+  /** Every line `main()` would print, in order — the report is data, not a side effect. */
+  lines: string[];
+  suiteCount: number;
+  ackCount: number;
+}
+
+const defaultListSuites = (root: string): Array<{ file: string; suite: EvalSuite }> =>
+  readdirSync(join(root, SUITE_DIR))
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => ({ file: f, suite: JSON.parse(readFileSync(join(root, SUITE_DIR, f), "utf8")).suite as EvalSuite }))
+    .filter((s) => s.suite && Array.isArray(s.suite.case_ids));
+
+const defaultReadAcks = (root: string): Ack[] =>
+  JSON.parse(readFileSync(join(root, ACK_FILE), "utf8")).acknowledged as Ack[];
+
+/**
+ * The whole check, as a pure function of its inputs. Throws only when the inputs cannot be
+ * read at all — `main()` is the only caller that turns that into exit code 2.
+ */
+export function checkSizing(opts: CheckSizingOptions = {}): SizingResult {
+  const root = opts.root ?? process.cwd();
+  const listSuites = opts.listSuites ?? defaultListSuites;
+  const readAcks = opts.readAcks ?? defaultReadAcks;
+
+  const suites = listSuites(root);
+  const acks = readAcks(root);
 
   const failures: string[] = [];
+  const lines: string[] = [];
   const acked = new Map(acks.map((a) => [a.suite_id, a]));
   const seen = new Set<string>();
 
-  console.log("check:sizing — what each suite can actually resolve\n");
-  console.log("  suite                  kind         n   granularity   floor   min p    verdict");
-  console.log("  " + "-".repeat(76));
+  lines.push("check:sizing — what each suite can actually resolve\n");
+  lines.push("  suite                  kind         n   granularity   floor   min p    verdict");
+  lines.push("  " + "-".repeat(76));
 
   for (const { file, suite } of suites) {
     const n = suite.case_ids.length;
@@ -90,7 +123,7 @@ function main(): void {
     seen.add(suite.suite_id);
 
     const verdict = capable ? "can reject" : "CANNOT EVER REJECT";
-    console.log(
+    lines.push(
       `  ${suite.suite_id.padEnd(22)} ${suite.kind.padEnd(11)} ${String(n).padStart(2)}   ` +
       `${String(suite.resolution.detectable_delta).padEnd(11)}   ${String(floor).padStart(3)}   ` +
       `${minAttainableP(n).toFixed(4)}   ${verdict}`,
@@ -166,29 +199,51 @@ function main(): void {
    *
    * Each is optimistic and they compound. The figure three documents quote is their product.
    */
-  console.log("\n  Sizing an anchor at 2 pp, one assumption at a time:");
+  lines.push("\n  Sizing an anchor at 2 pp, one assumption at a time:");
   const rows: Array<[string, number]> = [
     ["as quoted: one-sided z, 50% power, p_d=0.5", legacyAnchorSize(0.02)],
     ["two-sided z, as the test is actually run  ", requiredPairedSize(0.02, LEGACY_ASSUMPTIONS)],
     ["...and at 80% power                       ", requiredPairedSize(0.02, STATED_ASSUMPTIONS)],
   ];
-  for (const [label, n] of rows) console.log(`    ${label}   ${String(n).padStart(6)} items`);
-  console.log(`    Each line adds one assumption the old rule made silently; the last is ` +
-              `${(rows[2][1] / rows[0][1]).toFixed(1)}x the first.`);
-  console.log("\n  What the suites here resolve at 80% power:");
+  for (const [label, n] of rows) lines.push(`    ${label}   ${String(n).padStart(6)} items`);
+  lines.push(`    Each line adds one assumption the old rule made silently; the last is ` +
+             `${(rows[2][1] / rows[0][1]).toFixed(1)}x the first.`);
+  lines.push("\n  What the suites here resolve at 80% power:");
   for (const { suite } of suites) {
     const d = resolvableDelta(suite.case_ids.length, {
       ...STATED_ASSUMPTIONS, alpha: 1 - suite.resolution.confidence,
     });
-    console.log(`    ${suite.suite_id.padEnd(22)} ${(100 * d).toFixed(1).padStart(5)} pp`);
+    lines.push(`    ${suite.suite_id.padEnd(22)} ${(100 * d).toFixed(1).padStart(5)} pp`);
   }
 
-  if (failures.length > 0) {
-    console.error(`\ncheck:sizing — FAILED, ${failures.length} problem(s):\n`);
-    for (const f of failures) console.error(`  - ${f}\n`);
-    process.exit(1);
-  }
-  console.log(`\ncheck:sizing — OK. ${suites.length} suite(s), ${acks.length} acknowledged below the floor.`);
+  return { ok: failures.length === 0, failures, lines, suiteCount: suites.length, ackCount: acks.length };
 }
 
-main();
+function main(): void {
+  let result: SizingResult;
+  try {
+    result = checkSizing();
+  } catch (err) {
+    console.error(`check:sizing — cannot read inputs: ${(err as Error).message}`);
+    process.exit(2);
+  }
+
+  for (const line of result.lines) console.log(line);
+
+  if (result.failures.length > 0) {
+    console.error(`\ncheck:sizing — FAILED, ${result.failures.length} problem(s):\n`);
+    for (const f of result.failures) console.error(`  - ${f}\n`);
+    process.exit(1);
+  }
+  console.log(`\ncheck:sizing — OK. ${result.suiteCount} suite(s), ${result.ackCount} acknowledged below the floor.`);
+}
+
+/**
+ * Run directly, not when imported -- otherwise importing this module for `checkSizing`
+ * (as `test/checkers.test.ts` now does) would run the real check, print its report, and
+ * possibly exit the test process, as a side effect of the import. Same guard as
+ * `doctor.ts` and `scripts/run-eval.ts` use for the same reason.
+ */
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
