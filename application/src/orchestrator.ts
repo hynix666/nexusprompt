@@ -24,6 +24,7 @@ import type {
 } from "../../contracts/index.js";
 import { isFailure, CONTRACT_VERSIONS } from "../../contracts/index.js";
 import { invokeWithRetry as sharedInvoke } from "./invoke.js";
+import { redactingSink } from "./redaction.js";
 import { refuseForgedMarker } from "../../core/src/stages/stage-kit.js";
 import { decide, reduce } from "../../core/src/stages/compile.js";
 import { admitRun, type Budget } from "../../core/src/eval/budget.js";
@@ -70,7 +71,33 @@ export class Orchestrator {
 
   async run(command: PipelineCommand): Promise<PipelineOutcome> {
     const t0 = this.now().getTime();
-    const received = this.emit(command.run_id, "PIPELINE_COMMAND_RECEIVED", null, {
+
+    /**
+     * Every event this run emits passes the redaction check first.
+     *
+     * `application/src/pipeline.ts` has wrapped its sink since sweep fourteen, when `failStage`
+     * was found copying `err.message` — which carries whatever text produced it — into four
+     * events. This path never got the same wrap, so the guarantee held on eleven-stage runs and
+     * not on `nexusprompt run` or `POST /api/v1/compiler/compile`, which are the two that reach
+     * a provider with a user's brief and no other check in front of them.
+     *
+     * Nothing emitted below carries a body TODAY: the fields are hashes, enum codes and
+     * `reason_code`. That is the argument for wrapping rather than against it — the pipeline's
+     * leak arrived when someone later added a field to an existing emit, and the wrap is what
+     * makes the check unavoidable for an emit added by someone who never read this comment.
+     *
+     * Wrapped per RUN, not in the constructor: a composition root builds one Orchestrator and
+     * the API calls `run()` per request, so bodies held on the instance would leak across
+     * concurrent requests — and worse, one run finishing would clear the list while another was
+     * still emitting.
+     */
+    const held: string[] = [
+      ...Object.values(command.input),
+      ...Object.values(command.context ?? {}),
+    ].filter((v): v is string => typeof v === "string");
+    const sink = redactingSink(this.sink, () => held);
+
+    const received = this.emit(sink, command.run_id, "PIPELINE_COMMAND_RECEIVED", null, {
       component: "orchestrator",
     });
 
@@ -93,17 +120,21 @@ export class Orchestrator {
 
     // ── decide (Core, pure) ────────────────────────────────────────────────
     const request = decide(command.input, command.run_id);
-    this.emit(command.run_id, "STAGE_DECISION", received, {
+    this.emit(sink, command.run_id, "STAGE_DECISION", received, {
       component: "core/stages/compile",
       input_hash: sha256(JSON.stringify(command.input)),
     });
 
     // ── invoke + classify (this layer, effectful) ──────────────────────────
     // `outcome` is already settled through `refuseForgedMarker` — see `invokeWithRetry`.
-    const { outcome, attempts } = await this.invokeWithRetry(request, command.run_id, received);
+    const { outcome, attempts } = await this.invokeWithRetry(request, command.run_id, received, sink);
+    // The completion is a body the moment it exists, and it exists before `reduce` runs.
+    if (!isFailure(outcome)) held.push(outcome.content);
 
     // ── reduce (Core, pure) ────────────────────────────────────────────────
     const reduced = reduce(command.input, outcome);
+    // Not the same string as the completion when the run degraded: this is the placeholder.
+    held.push(reduced.output.text);
 
     // ── persist + report ───────────────────────────────────────────────────
     /**
@@ -164,7 +195,7 @@ export class Orchestrator {
     };
 
     await this.store.append(revision);
-    this.emit(command.run_id, "REVISION_PERSISTED", received, {
+    this.emit(sink, command.run_id, "REVISION_PERSISTED", received, {
       component: "adapters/storage-local",
       output_hash: revision.output_hash,
       duration_ms: this.now().getTime() - t0,
@@ -203,6 +234,7 @@ export class Orchestrator {
     request: ReturnType<typeof decide>,
     run_id: string,
     parent: string,
+    sink: EventSink,
   ): Promise<{ outcome: GenerationResult | ProviderFailure; attempts: number }> {
     const { outcome: raw, attempts } = await sharedInvoke(request, {
       provider: this.provider,
@@ -211,14 +243,14 @@ export class Orchestrator {
       sleep: this.sleep,
       onAttempt: (e) => {
         if (e.phase === "started") {
-          this.emit(run_id, "PROVIDER_CALL_STARTED", parent, {
+          this.emit(sink, run_id, "PROVIDER_CALL_STARTED", parent, {
             component: this.provider.provider_id,
             provider_id: this.provider.provider_id,
             attempt: e.attempt,
           });
         } else if (e.phase === "succeeded") {
           const r = e.outcome;
-          this.emit(run_id, "PROVIDER_CALL_SUCCEEDED", parent, {
+          this.emit(sink, run_id, "PROVIDER_CALL_SUCCEEDED", parent, {
             component: this.provider.provider_id,
             provider_id: r.provider_id,
             model_id: r.model_id,
@@ -227,7 +259,7 @@ export class Orchestrator {
           });
         } else {
           const f = e.outcome;
-          this.emit(run_id, "PROVIDER_CALL_FAILED", parent, {
+          this.emit(sink, run_id, "PROVIDER_CALL_FAILED", parent, {
             component: this.provider.provider_id,
             provider_id: f.provider_id,
             attempt: e.attempt,
@@ -251,7 +283,7 @@ export class Orchestrator {
 
     if (isFailure(outcome)) {
       // Retries exhausted, the failure was terminal, or the answer was unusable. Degrade, loudly.
-      this.emit(run_id, "DEGRADE", parent, {
+      this.emit(sink, run_id, "DEGRADE", parent, {
         component: "orchestrator",
         provider_id: outcome.provider_id,
         failure_code: outcome.reason_code,
@@ -264,14 +296,19 @@ export class Orchestrator {
     return { outcome, attempts };
   }
 
+  /**
+   * Takes the sink rather than reading `this.sink`, so the redaction wrap cannot be bypassed
+   * by an emit that forgets it — the only reference in scope is already wrapped.
+   */
   private emit(
+    sink: EventSink,
     run_id: string,
     event_type: ObservabilityEvent["event_type"],
     parent_event_id: string | null,
     fields: Partial<ObservabilityEvent> & { component: string },
   ): string {
     const event_id = randomUUID();
-    this.sink.emit({
+    sink.emit({
       event_id,
       event_type,
       run_id,
