@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildApi, type ApiDependencies } from "../src/app.js";
 import { startupWarning } from "../src/index.js";
 import {
-  securityFromEnv, tokenMatches, FixedWindow, type SecurityConfig,
+  securityFromEnv, tokenMatches, FixedWindow, providerCallBudgetFromEnv, type SecurityConfig,
 } from "../src/security.js";
 import type { Orchestrator } from "../../../application/src/orchestrator.js";
 import type { ProviderTransport } from "../../../contracts/index.js";
@@ -23,7 +23,9 @@ const provider: ProviderTransport = {
 const deps: ApiDependencies = { provider, orchestrator: {} as Orchestrator, coreBuildHash: "test" };
 
 const config = (over: Partial<SecurityConfig> = {}): SecurityConfig => ({
-  token: null, windowMs: 60_000, generalLimit: 120, providerLimit: 10, ...over,
+  // Generous by default so existing per-tier tests never brush the aggregate ceiling;
+  // tests of the ceiling itself override it explicitly.
+  token: null, windowMs: 60_000, generalLimit: 120, providerLimit: 10, globalProviderLimit: 1000, ...over,
 });
 
 /** A clock the test moves, so a window test needs no sleeping. */
@@ -179,6 +181,60 @@ describe("rate limiting", () => {
   });
 });
 
+/**
+ * The residual ADR-0018 named: "the rate limit bounds requests, not spend." `providerLimit`
+ * bounds one client; nothing bounded what every client spent together until this.
+ */
+describe("the aggregate provider ceiling", () => {
+  it("refuses once the SUM across clients passes the ceiling, even though no one client does", async () => {
+    const app = buildApi(deps, config({ providerLimit: 100, globalProviderLimit: 3 }));
+    // Three different callers, one request each — the per-client ceiling never fires.
+    for (const ip of ["10.0.0.1", "10.0.0.2", "10.0.0.3"]) {
+      const r = await app.inject({
+        method: "GET", url: "/api/v1/provider/health", remoteAddress: ip,
+      });
+      expect(r.statusCode, `client ${ip} should have been admitted`).toBe(200);
+    }
+    // A fourth caller, previously unseen, is refused — the shared budget is what is empty.
+    const fourth = await app.inject({
+      method: "GET", url: "/api/v1/provider/health", remoteAddress: "10.0.0.4",
+    });
+    expect(fourth.statusCode).toBe(429);
+    expect(fourth.json()).toMatchObject({ error: "provider budget exceeded for this window" });
+    await app.close();
+  });
+
+  it("does not spend the shared budget on a request its own client-ceiling already refused", async () => {
+    /**
+     * Ordering matters: if a refused request still incremented the global counter, one
+     * hostile client hammering past its OWN ceiling would exhaust the aggregate budget for
+     * every well-behaved client too — the opposite of what an aggregate ceiling is for.
+     */
+    const app = buildApi(deps, config({ providerLimit: 1, globalProviderLimit: 5 }));
+    for (let i = 0; i < 10; i++) {
+      await app.inject({ method: "GET", url: "/api/v1/provider/health", remoteAddress: "10.0.0.9" });
+    }
+    // Nine of those ten were refused by the PER-CLIENT ceiling. A fresh client still has its
+    // full share of the aggregate budget, which it would not if those nine had spent it.
+    const fresh = await app.inject({
+      method: "GET", url: "/api/v1/provider/health", remoteAddress: "10.0.0.10",
+    });
+    expect(fresh.statusCode).toBe(200);
+    await app.close();
+  });
+
+  it("does not apply to the general tier at all", async () => {
+    // The must-not-fire half. A cheap read is not a spend, so it must never be measured
+    // against a ceiling that exists to bound spend.
+    const app = buildApi(deps, config({ generalLimit: 100, globalProviderLimit: 2 }));
+    for (let i = 0; i < 10; i++) {
+      const r = await app.inject({ method: "GET", url: "/api/v1/gates", remoteAddress: `10.0.1.${i}` });
+      expect(r.statusCode).toBe(200);
+    }
+    await app.close();
+  });
+});
+
 describe("FixedWindow", () => {
   it("clears wholesale rather than pruning, so it cannot outlive one window", () => {
     // Why there is no eviction policy and no timer: the map is bounded by the clients seen
@@ -208,6 +264,26 @@ describe("securityFromEnv", () => {
       ).toThrow(/positive integer/);
     }
     expect(securityFromEnv({} as NodeJS.ProcessEnv).generalLimit).toBe(120);
+  });
+});
+
+describe("providerCallBudgetFromEnv", () => {
+  it("declares no budget when the variable is unset, matching admitRun's default", () => {
+    expect(providerCallBudgetFromEnv({} as NodeJS.ProcessEnv)).toBeNull();
+  });
+
+  it("builds a refuse-on-exceed Budget from a positive integer", () => {
+    expect(providerCallBudgetFromEnv({ NEXUSPROMPT_MAX_PROVIDER_CALLS: "5" } as NodeJS.ProcessEnv))
+      .toEqual({ max_provider_calls: 5, max_usd: null, on_exceed: "refuse" });
+  });
+
+  it("refuses an unparseable value, the same way the rate limits do", () => {
+    for (const bad of ["0", "-1", "abc", ""]) {
+      expect(
+        () => providerCallBudgetFromEnv({ NEXUSPROMPT_MAX_PROVIDER_CALLS: bad } as NodeJS.ProcessEnv),
+        `expected "${bad}" to be refused`,
+      ).toThrow(/positive integer/);
+    }
   });
 });
 

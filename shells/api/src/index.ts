@@ -20,15 +20,30 @@ import { composeApi } from "./composition-root.js";
 import { securityFromEnv, type SecurityConfig } from "./security.js";
 
 /**
+ * Loopback addresses this shell treats as safe to serve unauthenticated.
+ *
+ * Shared by `startupWarning` and `createApiServer`'s refusal below so the two can never
+ * silently disagree about what counts as loopback — a warning that calls a host safe while
+ * the refusal calls the same host unsafe (or the reverse) would be worse than either alone.
+ */
+export const isLoopbackHost = (host: string): boolean =>
+  host === "127.0.0.1" || host === "::1" || host === "localhost";
+
+/**
  * What the operator is told at startup, given how the server is configured.
  *
  * Returned rather than printed so a test can assert the sentence without capturing stdout,
  * and so the one place that decides what is worth warning about is not also the place that
  * owns the console. Null means nothing needs saying.
+ *
+ * Only reachable with a non-loopback host when a caller builds the app without going through
+ * `createApiServer` — `createApiServer` itself refuses that combination before this could run
+ * in the shell's own startup path. Kept general on purpose: this function describes the
+ * exposure for whatever host it is given, not only the ones the shell's own entry point allows.
  */
 export function startupWarning(security: SecurityConfig, host: string): string | null {
   if (security.token !== null) return null;
-  const loopback = host === "127.0.0.1" || host === "::1" || host === "localhost";
+  const loopback = isLoopbackHost(host);
   return (
     `WARNING: NEXUSPROMPT_API_TOKEN is not set, so every route except /api/v1/health is ` +
     `open to anyone who can reach ${host}.` +
@@ -66,6 +81,25 @@ export function createApiServer(options: ApiServerOptions = {}): ApiServer {
   const host = options.host ?? process.env.HOST ?? "127.0.0.1";
   const requested = options.port ?? Number(process.env.PORT ?? 3000);
   const security = options.security ?? securityFromEnv();
+
+  /**
+   * Refuse before binding, rather than bind and warn.
+   *
+   * ADR-0018 chose the warning on the grounds that refusing broke zero-config local use —
+   * but the default HOST is loopback, so the refusal below only fires when someone has
+   * ALREADY set a non-loopback HOST, which `npm start` never does on its own. ADR-0019
+   * revisits the choice; this is that revision. Nothing is bound and nothing was spent.
+   */
+  if (security.token === null && !isLoopbackHost(host)) {
+    throw new Error(
+      `Refusing to start: bound to "${host}" with no NEXUSPROMPT_API_TOKEN set. Every route ` +
+        `except /api/v1/health would be open to anyone who can reach ${host}.
+` +
+        `  Set NEXUSPROMPT_API_TOKEN, or bind to a loopback address (127.0.0.1, ::1, ` +
+        `localhost) for local development. Nothing was bound.`,
+    );
+  }
+
   const app = buildApi(options.deps ?? composeApi(), security);
 
   const server: ApiServer = {

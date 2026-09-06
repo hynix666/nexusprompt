@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createApiServer } from "../src/index.js";
+import { createApiServer, isLoopbackHost } from "../src/index.js";
+import type { SecurityConfig } from "../src/security.js";
 import type { ApiDependencies } from "../src/app.js";
 import type { Orchestrator } from "../../../application/src/orchestrator.js";
 import type { ProviderTransport } from "../../../contracts/index.js";
@@ -44,6 +45,11 @@ const deps: ApiDependencies = {
   coreBuildHash: "test",
 };
 
+const security = (over: Partial<SecurityConfig> = {}): SecurityConfig => ({
+  token: null, windowMs: 60_000, generalLimit: 120, providerLimit: 10,
+  globalProviderLimit: 1000, ...over,
+});
+
 describe("createApiServer", () => {
   it("binds a real socket, answers, and closes", async () => {
     // Port 0 asks the OS for a free one, so the suite cannot collide with a running server.
@@ -79,5 +85,60 @@ describe("createApiServer", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const source = readFileSync(join(here, "../src/index.ts"), "utf8");
     expect(source).toContain("import.meta.url ===");
+  });
+});
+
+/**
+ * ADR-0018's opt-in default, revisited by ADR-0019. A deployment that never sets the token
+ * used to be unauthenticated with nothing to stop it on any bind, including a public one.
+ */
+describe("createApiServer refuses a non-loopback bind with no token", () => {
+  it("refuses before binding anything", () => {
+    // Synchronous and pre-listen: the assertion is on the constructor call itself, not on
+    // .listen(), because nothing should touch a socket for a configuration this wrong.
+    expect(() => createApiServer({ host: "0.0.0.0", deps, security: security() }))
+      .toThrow(/NEXUSPROMPT_API_TOKEN/);
+  });
+
+  it("names the offending host in the refusal", () => {
+    expect(() => createApiServer({ host: "0.0.0.0", deps, security: security() }))
+      .toThrow(/0\.0\.0\.0/);
+  });
+
+  it("still starts on loopback with no token — the default must not regress", async () => {
+    const started = await createApiServer({ port: 0, host: "127.0.0.1", deps, security: security() }).listen();
+    try {
+      const res = await fetch(`http://${started.host}:${started.port}/api/v1/health`);
+      expect(res.status).toBe(200);
+    } finally {
+      await started.close();
+    }
+  });
+
+  it("still starts on a non-loopback bind once a token is set", async () => {
+    // 0.0.0.0 binds every interface including loopback, so fetching via 127.0.0.1 still
+    // reaches it — the test needs no real non-loopback network interface to prove this.
+    const started = await createApiServer({
+      port: 0, host: "0.0.0.0", deps, security: security({ token: "s3cret" }),
+    }).listen();
+    try {
+      const res = await fetch(`http://127.0.0.1:${started.port}/api/v1/health`);
+      expect(res.status).toBe(200);
+    } finally {
+      await started.close();
+    }
+  });
+
+  it("agrees with isLoopbackHost about which hosts are exempt", () => {
+    // The refusal and the predicate must not drift apart — see the comment on
+    // isLoopbackHost for why it is shared rather than reimplemented at each call site.
+    for (const host of ["127.0.0.1", "::1", "localhost"]) {
+      expect(isLoopbackHost(host), host).toBe(true);
+      expect(() => createApiServer({ host, deps, security: security() })).not.toThrow();
+    }
+    for (const host of ["0.0.0.0", "192.168.1.5", "example.com"]) {
+      expect(isLoopbackHost(host), host).toBe(false);
+      expect(() => createApiServer({ host, deps, security: security() })).toThrow();
+    }
   });
 });

@@ -26,6 +26,17 @@
  * The alternative is worse: honouring `X-Forwarded-For` without knowing the proxy is real
  * lets any caller mint a fresh identity per request, which is a rate limiter that cannot
  * limit. Enabling it is a deployment decision that needs the proxy's address, not a default.
+ *
+ * ── ADR-0018's residual, closed in ADR-0019 ──────────────────────────────────
+ *
+ * ADR-0018 named two things this file did not yet do: "a deployment that never sets the
+ * token is unauthenticated, and nothing stops it", and "the rate limit bounds requests, not
+ * spend." `createApiServer` (in `index.ts`, the only place that knows the host) now refuses to
+ * start on a non-loopback bind with no token, and
+ * `globalProviderLimit` below is a SECOND, aggregate ceiling on provider-tier requests —
+ * `providerLimit` bounds one client, `globalProviderLimit` bounds all of them added
+ * together, which a per-client-only ceiling cannot: N different source addresses each
+ * spending their own allowance has no aggregate limit without it.
  */
 
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -39,6 +50,14 @@ export interface SecurityConfig {
   readonly generalLimit: number;
   /** Requests per window per client, for routes that reach a provider. */
   readonly providerLimit: number;
+  /**
+   * Provider-tier requests per window, summed across every client.
+   *
+   * `providerLimit` bounds what ONE client can spend; nothing bounded what all of them
+   * spend together until this. Only incremented for a request `providerLimit` already
+   * admitted, so a client refused by its own ceiling never counts against this one too.
+   */
+  readonly globalProviderLimit: number;
 }
 
 /**
@@ -57,6 +76,14 @@ const OPEN_PATHS = new Set(["/api/v1/health"]);
  * generous for a compile, and tight enough for a compile makes the cheap reads unusable.
  */
 const PROVIDER_PATHS = new Set(["/api/v1/compiler/compile", "/api/v1/provider/health"]);
+
+/**
+ * The bucket every client's admitted provider-tier request counts against, together.
+ *
+ * `request.ip` can never literally be the string "*" — `trustProxy` is off, so Fastify
+ * derives it from the socket's own remote address, never from a header a client controls.
+ */
+const GLOBAL_PROVIDER_KEY = "provider:*";
 
 const positiveInt = (raw: string | undefined, fallback: number): number => {
   if (raw === undefined) return fallback;
@@ -79,6 +106,7 @@ export function securityFromEnv(env: NodeJS.ProcessEnv = process.env): SecurityC
     windowMs: positiveInt(env.NEXUSPROMPT_RATE_WINDOW_MS, 60_000),
     generalLimit: positiveInt(env.NEXUSPROMPT_RATE_LIMIT, 120),
     providerLimit: positiveInt(env.NEXUSPROMPT_PROVIDER_RATE_LIMIT, 10),
+    globalProviderLimit: positiveInt(env.NEXUSPROMPT_GLOBAL_PROVIDER_LIMIT, 50),
   };
 }
 
@@ -164,6 +192,25 @@ export function registerSecurity(
       return reply.tooManyRequests("rate limit exceeded");
     }
 
+    /**
+     * The aggregate ceiling, checked only once the per-client one has already admitted.
+     *
+     * Ordering matters: a request the per-client check would have refused anyway must not
+     * also spend a unit of the shared budget, or one hostile client could exhaust the global
+     * ceiling for every well-behaved one purely by being refused over and over.
+     *
+     * `GLOBAL_PROVIDER_KEY` shares `window` with the per-tier buckets above — one Map, one
+     * roll — because a second `FixedWindow` instance would roll on its own schedule and the
+     * two ceilings could disagree about which window a request fell in.
+     */
+    if (tier === "provider") {
+      const globalRetryAfter = window.check(GLOBAL_PROVIDER_KEY, config.globalProviderLimit, now());
+      if (globalRetryAfter !== null) {
+        reply.header("retry-after", String(globalRetryAfter));
+        return reply.tooManyRequests("provider budget exceeded for this window");
+      }
+    }
+
     if (config.token === null) return;
 
     const header = request.headers.authorization;
@@ -176,4 +223,33 @@ export function registerSecurity(
       return reply.unauthorized("a valid bearer token is required");
     }
   });
+}
+
+/**
+ * The Orchestrator's own `Budget`, from the environment. Not a Core import: `shells` may not
+ * import `core/` directly (ADR-0001, amended by ADR-0005), so this returns an object shaped
+ * to satisfy `Budget` structurally, the same way `shells/cli` constructs one inline.
+ *
+ * `undefined` means no budget declared, which `admitRun` treats as "admit everything" — the
+ * default every other budget-checked path in this repository uses.
+ *
+ * This is NOT the spend control; `globalProviderLimit` above is. `Orchestrator.run()` always
+ * attempts `maxAttempts` (a constant, currently 3) provider calls for the one stage the API's
+ * compile route runs, so `max_provider_calls` here can only ever admit every request or
+ * refuse every request — there is no request volume it modulates, because nothing about a
+ * single request varies the count `admitRun` compares it against. Setting it below 3 refuses
+ * every compile permanently, which is a real and intentional use — "disable this route
+ * without touching auth" — not a misconfiguration this function tries to prevent. It exists
+ * so the API is not the one path where `admitRun` is unarmed, not because it modulates spend.
+ */
+export function providerCallBudgetFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): { max_provider_calls: number; max_usd: null; on_exceed: "refuse" } | null {
+  if (env.NEXUSPROMPT_MAX_PROVIDER_CALLS === undefined) return null;
+  return {
+    // positiveInt's fallback branch is unreachable here: the undefined case already returned.
+    max_provider_calls: positiveInt(env.NEXUSPROMPT_MAX_PROVIDER_CALLS, -1),
+    max_usd: null,
+    on_exceed: "refuse",
+  };
 }
