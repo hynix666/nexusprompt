@@ -57,6 +57,23 @@ export interface JudgePilotResult {
   dropped: Array<{ case_id: string; reason: string }>;
 }
 
+/**
+ * Why a brief was dropped, in terms that are safe to print.
+ *
+ * `JudgeBundleRefused` carries a `code` chosen for exactly this. Anything else is an
+ * unexpected throw, and `err.message` is whatever produced it — a judge adapter whose parse
+ * error quotes its payload puts the compiled prompt in here, and `scripts/judge-pilot.ts`
+ * prints every reason verbatim.
+ *
+ * Same rule as `failStage` in `pipeline.ts`, which forwards `err.name` and explains why. It
+ * lives in one function rather than on both branches below because a rule about what may not
+ * be printed is exactly the kind that drifts when it is written twice.
+ */
+const dropReason = (err: unknown): string =>
+  err instanceof JudgeBundleRefused ? err.code
+  : err instanceof Error ? err.name
+  : "UnknownError";
+
 async function gradeOneSide(
   deps: JudgePilotDeps,
   provider: ProviderTransport,
@@ -109,8 +126,7 @@ export async function runJudgePilot(
         deps, deps.candidateProvider, `${case_id}-candidate`, brief, nowIso,
       );
     } catch (err) {
-      const reason = err instanceof JudgeBundleRefused ? err.code : (err as Error).message;
-      dropped.push({ case_id, reason: `candidate: ${reason}` });
+      dropped.push({ case_id, reason: `candidate: ${dropReason(err)}` });
       continue;
     }
 
@@ -119,8 +135,7 @@ export async function runJudgePilot(
         deps, deps.baselineProvider, `${case_id}-baseline`, brief, nowIso,
       );
     } catch (err) {
-      const reason = err instanceof JudgeBundleRefused ? err.code : (err as Error).message;
-      dropped.push({ case_id, reason: `baseline: ${reason}` });
+      dropped.push({ case_id, reason: `baseline: ${dropReason(err)}` });
       continue;
     }
 
