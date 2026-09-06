@@ -19,11 +19,13 @@
  * ── How a case gets its ground truth ────────────────────────────────────────
  *
  * 1. Generate a base text and a set of gate options from the seed.
- * 2. Run the full registry over it and record which gates are silent.
+ * 2. Run the full registry over it and record which gates are silent, and which are firing.
  * 3. Inject one more generated fragment.
- * 4. Run the full registry again. If exactly one previously-silent gate now fires, that gate
- *    is the case's `planted_gate` — discovered, not declared.
- * 5. If nothing newly fires, or several gates do, discard the candidate and draw again.
+ * 4. Run the full registry again. If exactly one previously-silent gate now fires, AND no
+ *    previously-firing gate goes silent, that gate is the case's `planted_gate` — discovered,
+ *    not declared.
+ * 5. If nothing newly fires, several gates do, or the injection silenced a gate that was
+ *    already firing on the base text, discard the candidate and draw again.
  *
  * Step 5 is what makes the label trustworthy. Labelling fragments by hand would have been
  * wrong in exactly the cases that matter: this corpus contains a citation that silences both
@@ -34,6 +36,17 @@
  * is a case where "did this set catch the defect" has three different answers depending on
  * which gate you meant, and pooling them would let a set score a hit for catching something
  * other than the planted defect.
+ *
+ * The silenced-gate half of step 5 closes the same hole from the other direction, and was
+ * missing for a while: nothing checked whether the SECOND `generate()` call — drawn from the
+ * same `FRAGMENTS` set as the planted defect, entirely independently of it — happened to also
+ * fix an unrelated finding already present on the base text (a runtime key the base left
+ * undeclared, now declared by the fragment; an orphan citation the fragment's own reference
+ * resolves). A case built that way is evidence about two edits conflated into one, not about
+ * the planted defect alone, and comparing `FULL_GATE_SET` against `withoutGate(X)` on it
+ * systematically flatters whichever gate the fragment set happens to co-silence most often.
+ * `before` is recorded for exactly this reason: not only to find what starts firing, but to
+ * confirm nothing that was already firing stops.
  *
  * ── What it certifies, and what it does not ─────────────────────────────────
  *
@@ -135,7 +148,8 @@ export function buildAnchorCorpus(opts: BuildOptions): AnchorCase[] {
     const after = firingGates(injected, options);
 
     const added = [...after].filter((id) => !before.has(id));
-    if (added.length !== 1) continue;
+    const removed = [...before].filter((id) => !after.has(id));
+    if (added.length !== 1 || removed.length !== 0) continue;
 
     cases.push({
       case_id: `anchor-${opts.seed}-${cases.length.toString().padStart(5, "0")}`,
