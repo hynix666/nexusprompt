@@ -78,6 +78,24 @@ describe("ground truth is derived, not declared", () => {
     }
   });
 
+  it("never accepts a case where the injection ALSO silences a gate that was already firing", () => {
+    /**
+     * The mirror of "names the ONLY gate that newly fires": that test re-derives the added set
+     * and never checked the removed set, so a fragment that both plants a new finding and
+     * silences an unrelated pre-existing one (a runtime key the base left undeclared, now
+     * declared by the same fragment draw) passed construction with a label that was accurate
+     * about the plant but silent about the second, uninvited change. Rebuilt against seed 1 at
+     * 4,906 cases — the exact call `scripts/build-anchor.ts` uses for the committed anchor —
+     * before this fix, 328 of them (6.69%) had `before \ after` nonempty.
+     */
+    for (const k of buildAnchorCorpus({ seed: 1, count: 400 })) {
+      const before = firingGates(k.base_text, k.options);
+      const after = firingGates(k.text, k.options);
+      const removed = [...before].filter((id) => !after.has(id));
+      expect(removed, k.case_id).toEqual([]);
+    }
+  });
+
   it("draws planted gates from several gates, not one", () => {
     // A corpus where every case plants the same gate would compare two sets on one behaviour
     // and report it as coverage. This is the fixture-too-uniform failure, pre-empted.
