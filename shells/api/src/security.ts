@@ -193,11 +193,37 @@ export function registerSecurity(
     }
 
     /**
-     * The aggregate ceiling, checked only once the per-client one has already admitted.
+     * Auth, checked before the SHARED ceiling but after the per-client one.
      *
-     * Ordering matters: a request the per-client check would have refused anyway must not
-     * also spend a unit of the shared budget, or one hostile client could exhaust the global
-     * ceiling for every well-behaved one purely by being refused over and over.
+     * The per-client bucket above still throttles an unauthenticated caller — brute-forcing
+     * the token from one address is still bounded by `providerLimit`/`generalLimit`, keyed
+     * per IP, so this ordering does not remove that protection. What it removes is the global
+     * ceiling counting a request that was never going to be admitted anyway: `providerLimit`
+     * bounds one client's spend, but `globalProviderLimit` is the budget every *legitimate*
+     * client shares, and a caller with no credential at all is not one of them. Checking auth
+     * first means credential-less traffic can only ever exhaust its own per-client allowance,
+     * never the pool every authenticated caller draws from.
+     */
+    if (config.token !== null) {
+      const header = request.headers.authorization;
+      const presented = typeof header === "string" && header.startsWith("Bearer ")
+        ? header.slice("Bearer ".length).trim()
+        : null;
+      // One message for every failure shape. Distinguishing "no header" from "wrong token"
+      // tells an unauthenticated caller which half they got right.
+      if (presented === null || !tokenMatches(presented, config.token)) {
+        return reply.unauthorized("a valid bearer token is required");
+      }
+    }
+
+    /**
+     * The aggregate ceiling, checked only once the per-client one — and auth — have admitted.
+     *
+     * Ordering matters twice here: a request the per-client check would have refused anyway
+     * must not also spend a unit of the shared budget, or one hostile client could exhaust the
+     * global ceiling for every well-behaved one purely by being refused over and over. The same
+     * argument is why auth runs first — an unauthenticated request was never going to reach a
+     * provider, so it must not spend the budget provider calls are rationed against either.
      *
      * `GLOBAL_PROVIDER_KEY` shares `window` with the per-tier buckets above — one Map, one
      * roll — because a second `FixedWindow` instance would roll on its own schedule and the
@@ -209,18 +235,6 @@ export function registerSecurity(
         reply.header("retry-after", String(globalRetryAfter));
         return reply.tooManyRequests("provider budget exceeded for this window");
       }
-    }
-
-    if (config.token === null) return;
-
-    const header = request.headers.authorization;
-    const presented = typeof header === "string" && header.startsWith("Bearer ")
-      ? header.slice("Bearer ".length).trim()
-      : null;
-    // One message for every failure shape. Distinguishing "no header" from "wrong token"
-    // tells an unauthenticated caller which half they got right.
-    if (presented === null || !tokenMatches(presented, config.token)) {
-      return reply.unauthorized("a valid bearer token is required");
     }
   });
 }

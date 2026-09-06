@@ -233,6 +233,52 @@ describe("the aggregate provider ceiling", () => {
     }
     await app.close();
   });
+
+  it("does not spend the shared budget on a request that never had a valid credential", async () => {
+    // The bug this pins: auth used to run AFTER both rate-limit checks, so an unauthenticated
+    // caller — no credential needed, so no per-client ceiling protects the pool from it —
+    // could exhaust `globalProviderLimit` before ever being told "no". A caller with no token
+    // was never going to reach a provider, so it must never spend the budget provider calls
+    // are rationed against.
+    const app = buildApi(deps, config({
+      token: "s3cret-token", providerLimit: 100, globalProviderLimit: 3,
+    }));
+    // More failed-auth attempts than the shared ceiling, each from a different address so the
+    // per-client bucket (still checked first, and still a real throttle) never intervenes.
+    for (let i = 0; i < 10; i++) {
+      const r = await app.inject({
+        method: "GET", url: "/api/v1/provider/health", remoteAddress: `10.0.2.${i}`,
+        headers: { authorization: "Bearer wrong-token" },
+      });
+      expect(r.statusCode).toBe(401);
+    }
+    // The shared budget must still be full: three authenticated callers are all admitted.
+    for (const ip of ["10.0.3.1", "10.0.3.2", "10.0.3.3"]) {
+      const r = await app.inject({
+        method: "GET", url: "/api/v1/provider/health", remoteAddress: ip,
+        headers: { authorization: "Bearer s3cret-token" },
+      });
+      expect(r.statusCode, `client ${ip} should have been admitted`).toBe(200);
+    }
+    await app.close();
+  });
+
+  it("still throttles a single client's unauthenticated attempts via the per-client ceiling", async () => {
+    // Moving auth ahead of the SHARED ceiling must not remove the PER-CLIENT ceiling's
+    // protection against one address hammering the auth check itself — that check still runs
+    // first, unauthenticated or not.
+    const app = buildApi(deps, config({
+      token: "s3cret-token", providerLimit: 2, globalProviderLimit: 1000,
+    }));
+    const statuses: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const r = await app.inject({ method: "GET", url: "/api/v1/provider/health", remoteAddress: "10.0.4.1" });
+      statuses.push(r.statusCode);
+    }
+    expect(statuses.slice(0, 2)).toEqual([401, 401]);
+    expect(statuses.slice(2)).toEqual([429, 429, 429]);
+    await app.close();
+  });
 });
 
 describe("FixedWindow", () => {
