@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runJudgePilot, type JudgePilotBrief } from "../src/judge-pilot.js";
+import { sharesBody, WINDOW } from "../src/redaction.js";
 import { LocalRevisionStore } from "../../adapters/storage-local/src/index.js";
 import { LocalContentStore } from "../../adapters/content-local/src/index.js";
 import { LocalEvidenceStore } from "../../adapters/evidence-local/src/index.js";
@@ -65,6 +66,22 @@ class MarkerJudge implements JudgeTransport {
       runs: req.runs, disagreement_rate: 0, position_randomized: req.position_randomized,
       rubric_breakdown,
     };
+  }
+}
+
+/**
+ * Throws a parse error that quotes its payload — sweep fourteen's exact shape, one layer out.
+ *
+ * A judge adapter talking to an HTTP API does this for real: the response fails to parse and
+ * the thrown error carries the request it was answering. That request is the compiled prompt.
+ */
+let quotedCandidate = "";
+class QuotingJudge implements JudgeTransport {
+  readonly judge_id = "quoting-judge";
+  readonly judge_family = "reviewer";
+  async grade(req: JudgeRequest): Promise<JudgeVerdict> {
+    quotedCandidate = req.candidate;
+    throw new SyntaxError(`Unexpected token < in judge response for payload: ${req.candidate}`);
   }
 }
 
@@ -141,6 +158,35 @@ describe("runJudgePilot", () => {
 
     expect(result.survived_n).toBe(12);
     expect(result.dropped).toHaveLength(0);
+  }, 30_000);
+
+  it("reports a drop by the error's TYPE, never its message", async () => {
+    /**
+     * `dropped[].reason` is printed verbatim by `scripts/judge-pilot.ts`, so a message that
+     * quotes a payload puts the compiled prompt on the operator's terminal — and this pilot
+     * runs real briefs through a real pipeline.
+     *
+     * `pipeline.ts`'s `failStage` already forwards `err.name` and says why; the rule never
+     * reached this module, which still had `(err as Error).message` on both the candidate and
+     * baseline branches. A name routes the failure; the message belongs in a log the operator
+     * owns rather than in a summary that prints itself.
+     */
+    const deps = makeDeps(
+      new ScriptedProvider("# SYSTEM PROMPT\n\nHIGH_FIDELITY_MARKER present."),
+      new ScriptedProvider("# SYSTEM PROMPT\n\nno marker here."),
+    );
+    const result = await runJudgePilot({ ...deps, transport: new QuotingJudge() }, briefs(3));
+
+    expect(result.survived_n).toBe(0);
+    expect(result.dropped).toHaveLength(3);
+    expect(quotedCandidate.length).toBeGreaterThan(WINDOW);
+
+    for (const d of result.dropped) {
+      expect(d.reason).toBe("candidate: SyntaxError");
+      // The property that matters, checked with the same predicate the sink uses.
+      expect(sharesBody(d.reason, [quotedCandidate]), "the drop reason carried the payload")
+        .toBe(false);
+    }
   }, 30_000);
 
   it("refuses via compareGraded, not a thrown error, when nothing survives", async () => {
