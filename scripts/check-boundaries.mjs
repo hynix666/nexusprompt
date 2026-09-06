@@ -204,7 +204,16 @@ function walk(root, dir, out = []) {
   return out;
 }
 
-const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]{0,400}?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|require\s*\(\s*["']([^"']+)["']\s*\)/g;
+/**
+ * The static-import/export branch is anchored on `\n` or `;` (as well as file start), not `\n`
+ * alone — a second `import ... from "..."` sharing a line with a preceding statement
+ * (`import { createHash } from "node:crypto"; import { randomBytes } from "node:crypto";`) has
+ * no newline before it, so a `\n`-only anchor never even extracts its specifier: every rule in
+ * every layer would silently skip it, not only the crypto narrowing this was found while
+ * reviewing. `;` is a reasonable proxy for "the previous statement just ended" without a real
+ * parser, and is a strict broadening — every specifier the old anchor found, it still finds.
+ */
+const IMPORT_RE = /(?:^|[\n;])\s*(?:import|export)[\s\S]{0,400}?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|require\s*\(\s*["']([^"']+)["']\s*\)/g;
 
 /**
  * Returns the full matched statement alongside each specifier, not only the specifier
