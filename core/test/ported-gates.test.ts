@@ -46,7 +46,9 @@ const GUARDRAILS = "anti-override scope fact-grounding";
 describe("gate versions are provenance, not decoration", () => {
   it("pins every registered gate id to its version", () => {
     expect(Object.fromEntries(listGates().map((g) => [g.id, g.version]))).toEqual({
-      SECRET_LEAK_SCAN: "1.1.0",
+      // 1.2.0 — four credential shapes the source does not carry (ADR-0017). The gate
+      // reports WARN on inputs it previously called clean; no existing verdict reversed.
+      SECRET_LEAK_SCAN: "1.2.0",
       CLAIM_DISCIPLINE: "1.1.0",
       PLACEHOLDER_AUDIT: "1.0.0",
       RUNTIME_KEY_UNDECLARED: "1.2.0",   // ADR-0010, amended twice — see its Decision section

@@ -19,7 +19,10 @@ export interface GateResult {
 }
 
 export const GATE_ID = "SECRET_LEAK_SCAN";
-export const GATE_VERSION = "1.1.0";
+// 1.2.0 — four credential shapes added beyond the source's set (ADR-0017). Minor, not
+// patch: the gate reports WARN on inputs it previously called clean, which changes lint
+// outcomes for callers even though no existing verdict was reversed.
+export const GATE_VERSION = "1.2.0";
 
 /**
  * Every quantifier below is BOUNDED at both ends, and that is load-bearing rather
@@ -52,6 +55,37 @@ export const SECRET_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
   [/AKIA[0-9A-Z]{16}/, "aws_access_key_id"],
   [/ghp_[A-Za-z0-9]{30,128}/, "github_token"],
   [/xox[baprs]-[A-Za-z0-9-]{10,128}/, "slack_token"],
+  /**
+   * ── Four shapes the source does not carry (gate 1.2.0, ADR-0017) ──────────
+   *
+   * A deliberate divergence from the frozen linter, declared in
+   * `scripts/divergence-allowlist.json` rather than hidden. Each is a credential this
+   * scanner would otherwise report clean on, and "clean" is the one answer a leak scanner
+   * must not give wrongly.
+   *
+   * Widening a matcher buys detection with false positives, so each pattern below is
+   * written to need something an accident does not produce, and `secret-leak-scan.test.ts`
+   * probes BOTH directions for every one of them. The must-not-fire half is the half that
+   * decides whether this gate survives contact with a real prompt: a scanner that cries
+   * wolf gets its WARN ignored, which is a false clean by another route.
+   *
+   * `stripe_secret_key` is why that half is not a formality. The obvious fix for Stripe's
+   * `sk_live_…` was to widen `generic_sk_key`'s separator and class to `sk[-_][A-Za-z0-9_]`,
+   * which is one character of diff and reads as harmless. It fires on `task_manager_config`,
+   * `disk_usage_threshold_value` and every other snake_case identifier with `sk_` inside it —
+   * the substring is not rare, it is a suffix of ask, task, risk, desk, disk and mask. Hence
+   * a specific pattern with `\b` in front, which cannot start mid-identifier, instead of a
+   * looser generic one.
+   *
+   * `url_embedded_credentials` requires an actual `user:password@`, not merely a scheme: a
+   * bare `postgres://localhost/db` in a prompt is configuration, not a leak. It matches on
+   * URL shape rather than a list of known schemes, because a hand-picked scheme list is the
+   * sparse matcher this repository keeps rediscovering.
+   */
+  [/eyJ[A-Za-z0-9_-]{8,1024}\.[A-Za-z0-9_-]{8,1024}\.[A-Za-z0-9_-]{8,1024}/, "jwt"],
+  [/-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----/, "private_key_block"],
+  [/[a-z][a-z0-9+.-]{1,20}:\/\/[^\s:@/]{1,64}:[^\s:@/]{1,128}@/, "url_embedded_credentials"],
+  [/\bsk_(?:live|test)_[A-Za-z0-9]{16,128}/, "stripe_secret_key"],
   // PII heuristics — same WARN posture; a hit means "look here", not proof.
   [/[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,255}\.[A-Za-z]{2,24}/, "pii_email"],
   [/\+[0-9][0-9 ().-]{8,20}[0-9]/, "pii_phone_intl"],

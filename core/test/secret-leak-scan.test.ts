@@ -115,6 +115,85 @@ describe("determinism", () => {
  * and timing is used only for `pii_email`, the one pattern where a removed bound is
  * genuinely a performance cliff.
  */
+/**
+ * The four shapes added in gate 1.2.0 (ADR-0017), probed in both directions.
+ *
+ * Both halves matter equally and the second is the one that decides whether this gate
+ * survives contact with a real prompt. Widening a matcher buys detection with false
+ * positives, and a scanner that cries wolf gets its WARN ignored — a false clean reached
+ * by a different road. Every must-not-fire case below is text a compiled prompt plausibly
+ * contains.
+ */
+describe("credential shapes beyond the source's set", () => {
+  const fires = (text: string, label: string) =>
+    expect(secretLeakLabels(text), `expected ${label} to fire`).toContain(label);
+  const silent = (text: string) =>
+    expect(secretLeakLabels(text), `expected no finding for: ${text.slice(0, 60)}`).toEqual([]);
+
+  it("finds a JWT, and ignores prose that merely looks structured", () => {
+    fires(
+      "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+        "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4ifQ.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+      "jwt",
+    );
+    silent("Answer in the form section.subsection.paragraph when citing the handbook.");
+    silent("Version 1.2.3 of the schema supersedes 1.2.2.");
+  });
+
+  it("finds a private-key block in any of its header spellings", () => {
+    for (const kind of ["", "RSA ", "EC ", "OPENSSH ", "ENCRYPTED "]) {
+      fires(`-----BEGIN ${kind}PRIVATE KEY-----\nMIIEvQIBADANBg\n`, "private_key_block");
+    }
+    // A prompt may legitimately discuss keys without carrying one.
+    silent("Never paste a private key into the chat; ask the user to rotate it instead.");
+    silent("-----BEGIN CERTIFICATE-----\nMIIDdzCCAl+gAwIBAgIE\n");
+  });
+
+  it("finds credentials embedded in a URL, but not a bare connection string", () => {
+    fires("DATABASE_URL=postgres://svc_user:hunter2@db.internal:5432/app", "url_embedded_credentials");
+    fires("git remote add origin https://oauth2:ghs_16C7e42F292c6912@github.com/o/r.git", "url_embedded_credentials");
+    fires("mongodb+srv://admin:s3cr3t@cluster0.mongodb.net/test", "url_embedded_credentials");
+    // Configuration, not a leak — no credentials in any of these.
+    silent("Connect to postgres://localhost:5432/app_development for local work.");
+    silent("Docs live at https://example.com/guide; read the section on retries.");
+  });
+
+  it("finds a Stripe secret key without firing on snake_case identifiers", () => {
+    fires("STRIPE_KEY = sk_live_EXAMPLEONLYNOTREAL", "stripe_secret_key");
+    fires("test mode uses sk_test_EXAMPLEONLYNOTREAL", "stripe_secret_key");
+    /**
+     * A real-length body, assembled at runtime rather than written as one literal.
+     *
+     * GitHub's push protection rejected the first version of this file: a 25-character
+     * body is what its Stripe partner pattern looks for, so the fixture read as a live
+     * key and the push was blocked. That is a useful independent check on the shape, and
+     * the fix is not to click "allow this secret" — a repository that trains its own
+     * protection to ignore `sk_live_…` has disarmed it. The short bodies above stay under
+     * the scanner's threshold; this one proves the pattern still matches at full length.
+     */
+    fires(`STRIPE_KEY = ${"sk_live_"}${"51H8xR2KZvNqLmP3wYtBcDfGh"}`, "stripe_secret_key");
+    /**
+     * The reason this is a specific pattern and not a widened `generic_sk_key`.
+     *
+     * `sk[-_][A-Za-z0-9_]{20,128}` is a one-character diff that reads as harmless and
+     * fires on every one of these: `sk_` is a suffix of ask, task, risk, desk, disk and
+     * mask, and snake_case does the rest.
+     */
+    silent("Set task_manager_configuration_key before the first run.");
+    silent("The disk_usage_threshold_value_setting governs eviction.");
+    silent("Record risk_assessment_completion_status for each vendor.");
+  });
+
+  it("leaves an ordinary compiled prompt clean", () => {
+    // The whole-gate must-not-fire check: a realistic artifact, no findings at all.
+    silent(
+      "# SYSTEM PROMPT\n\nYou are a support assistant for a billing team.\n" +
+        "Answer questions about invoices, refunds and disk_usage_reporting_limits.\n" +
+        "Do not speculate about account balances you cannot verify.\n",
+    );
+  });
+});
+
 describe("bounded-quantifier invariant", () => {
   /**
    * Walk a regex source and report quantifiers with no upper bound. Escapes and
