@@ -13,6 +13,9 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 const __dirnameShim = dirname(fileURLToPath(import.meta.url));
 import { checkCitations } from "../scripts/check-citations.mjs";
+import {
+  checkContractsDoc, schemaVersions, inlineClaims, declaredNoSchema,
+} from "../scripts/check-contracts-doc.mjs";
 import { checkXsd, buildXml, validateAgainstXsd } from "../scripts/check-xsd.mjs";
 import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
 import { checkStages } from "../scripts/check-stages.mjs";
@@ -1698,5 +1701,105 @@ describe("package.json --project filters", () => {
     expect(projects.has("api")).toBe(false);
     const planted: Array<[string, string]> = [["test:api", "api"], ["test:core", "core"]];
     expect(planted.filter(([, p]) => !projects.has(p))).toEqual([["test:api", "api"]]);
+  });
+});
+
+/**
+ * `check:contracts` — the guard CONTRACTS.md did not have.
+ *
+ * Every other derived document here has one. This one did not, and drifted to describing 6 of
+ * 18 schemas with three of those at wrong versions and two contracts that exist nowhere at
+ * all. The audit at `34206e9` found it by reading the file beside the schemas, which is
+ * exactly the work a check does for free.
+ *
+ * Both directions are tested. The must-not-fire half matters as much here as anywhere: a doc
+ * checker that fires on ordinary edits gets the doc frozen or the check deleted.
+ */
+describe("check:contracts — CONTRACTS.md against the schemas", () => {
+  const repoRoot = join(__dirnameShim, "..");
+
+  it("passes against this repository", () => {
+    const r = checkContractsDoc(repoRoot);
+    expect({ ok: r.ok, problems: r.problems ?? [], fatal: r.fatal ?? null })
+      .toEqual({ ok: true, problems: [], fatal: null });
+  });
+
+  it("reads every schema's version from its own $id, and nowhere else", () => {
+    // The authority rule. If this ever read build-hash.json, CONTRACT_VERSIONS or the doc
+    // itself, the check would be comparing a claim against a copy of the same claim.
+    const versions = schemaVersions(repoRoot);
+    expect(versions.size).toBe(18);
+    for (const [name, v] of versions) {
+      const raw = JSON.parse(readFileSync(join(repoRoot, "contracts", `${name}.schema.json`), "utf8"));
+      expect(raw.$id.endsWith(`/${name}/${v}`), `${name} $id`).toBe(true);
+    }
+  });
+
+  it("fires when a prose version disagrees with the $id", () => {
+    // The defect that shipped: revision-entry cited at 1.1.0 while the schema said 2.0.0.
+    const real = readFileSync(join(repoRoot, "Documentation", "CONTRACTS.md"), "utf8");
+    const stale = real.replace("contracts/gate-result/1.3.0", "contracts/gate-result/9.9.9");
+    const r = checkContractsDoc(repoRoot, { readDoc: () => stale });
+    expect(r.ok).toBe(false);
+    expect((r.problems ?? []).join("\n")).toMatch(/gate-result/);
+    expect((r.problems ?? []).join("\n")).toMatch(/authority/);
+  });
+
+  it("fires on an id that names no schema file and is not declared", () => {
+    const real = readFileSync(join(repoRoot, "Documentation", "CONTRACTS.md"), "utf8");
+    const invented = real.replace(
+      "## Design principles",
+      "See `contracts/invented-thing/1.0.0`.\n\n## Design principles",
+    );
+    const r = checkContractsDoc(repoRoot, { readDoc: () => invented });
+    expect(r.ok).toBe(false);
+    expect((r.problems ?? []).join("\n")).toMatch(/invented-thing/);
+  });
+
+  it("fires on a stale exemption — a declared id that now has a schema file", () => {
+    // The direction that would otherwise rot silently: someone writes the schema, and the
+    // "no schema file" note stays behind saying it does not exist.
+    const real = readFileSync(join(repoRoot, "Documentation", "CONTRACTS.md"), "utf8");
+    const stale = real.replace(
+      "- `tenant-context` —",
+      "- `gate-result` — pretend this has no file\n- `tenant-context` —",
+    );
+    const r = checkContractsDoc(repoRoot, { readDoc: () => stale });
+    expect(r.ok).toBe(false);
+    expect((r.problems ?? []).join("\n")).toMatch(/gate-result.*exists|exists.*gate-result/s);
+  });
+
+  it("fires when the generated inventory is stale", () => {
+    const real = readFileSync(join(repoRoot, "Documentation", "CONTRACTS.md"), "utf8");
+    const stale = real.replace("| `gate-result` | 1.3.0 |", "| `gate-result` | 0.0.1 |");
+    const r = checkContractsDoc(repoRoot, { readDoc: () => stale });
+    expect(r.ok).toBe(false);
+    expect((r.problems ?? []).join("\n")).toMatch(/docs:contracts/);
+  });
+
+  it("does not fire on an ordinary prose edit", () => {
+    /**
+     * The must-not-fire half. A doc guard that objects to rewording is a guard that gets the
+     * document frozen, which is the opposite of keeping it accurate.
+     */
+    const real = readFileSync(join(repoRoot, "Documentation", "CONTRACTS.md"), "utf8");
+    const reworded = real.replace(
+      "Contracts are the sole cross-boundary interface.",
+      "Contracts are the only interface that crosses a layer boundary. Reworded freely.",
+    );
+    const r = checkContractsDoc(repoRoot, { readDoc: () => reworded });
+    expect(r.ok).toBe(true);
+  });
+
+  it("reads the declared list and the inline claims from the document itself", () => {
+    // Neither list is hardcoded in the script: both are the doc's own statements, so adding
+    // a contract cannot be satisfied by editing the checker.
+    const text = readFileSync(join(repoRoot, "Documentation", "CONTRACTS.md"), "utf8");
+    const declared = declaredNoSchema(text);
+    expect([...declared].sort()).toEqual([
+      "capability-registration", "generation-request", "generation-result",
+      "pipeline-command", "provider-health", "tenant-context",
+    ]);
+    expect(inlineClaims(text).length).toBeGreaterThan(10);
   });
 });
