@@ -171,15 +171,21 @@ async function callWithTimeout(fetchImpl: FetchLike, url: string, init: RequestI
     const response = await fetchImpl(url, { ...init, signal: controller.signal });
     const data = await responseJson(response);
     if (!response.ok) {
-      const d = data as Record<string, unknown>;
-      const err = d?.error as Record<string, unknown> | undefined;
-      const message = (err?.message ?? err?.status ?? d?.message ?? `Provider request failed with HTTP ${response.status}.`) as string;
+      /**
+       * The upstream body is NOT lifted into the message.
+       *
+       * This read `err?.message ?? err?.status ?? d?.message` straight out of the provider's
+       * JSON and put it, truncated to 300 characters, into `safe_message` — which the
+       * degradation placeholder renders into a persisted artifact. That handed the far end a
+       * few hundred characters inside the one artifact whose job is to be honest about
+       * degradation. The status is ours; the body is not.
+       */
       const kind = response.status === 429 ? "rate_limit" : "http";
       throw new HostedProviderError(
         kind,
         kind === "rate_limit"
           ? "The hosted provider rate limit was reached. Please try again shortly."
-          : `Hosted provider request failed: ${String(message).slice(0, 300)}`,
+          : `Hosted provider request failed with HTTP ${response.status}.`,
         response.status,
       );
     }

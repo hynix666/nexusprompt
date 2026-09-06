@@ -126,7 +126,7 @@ export class LocalProxyProvider implements ProviderTransport {
         body,
       });
 
-      if (!res.ok) return this.classifyHttp(res.status, await safeJson(res), fail);
+      if (!res.ok) return this.classifyHttp(res.status, fail);
 
       const data = (await res.json()) as {
         content?: Array<{ type: string; text?: string }>;
@@ -166,12 +166,19 @@ export class LocalProxyProvider implements ProviderTransport {
 
   private classifyHttp(
     status: number,
-    body: { error?: { message?: string } } | null,
     fail: (c: ProviderFailure["category"], r: string, m: string, retriable?: boolean, after?: number | null) => ProviderFailure,
   ): ProviderFailure {
-    // The provider's own message is safe — it never echoes the key. Request
-    // content is not included here.
-    const msg = body?.error?.message ?? `Provider returned HTTP ${status}.`;
+    /**
+     * The provider's own message is NOT carried into `safe_message`.
+     *
+     * This read `body?.error?.message`, justified by a comment saying the provider's message
+     * is safe because it never echoes the key or request content. That is true, and it is a
+     * narrower claim than the field needed: `safe_message` is rendered into the degradation
+     * placeholder, a persisted artifact later stages read and the gates lint. "Contains none
+     * of our secrets" is not "safe to embed in the artifact" — the far end still chooses the
+     * words. The status is ours and says as much as the placeholder needs.
+     */
+    const msg = `Provider returned HTTP ${status}.`;
     if (status === 401 || status === 403) return fail("AUTH", `http_${status}`, msg);
     if (status === 429) return fail("RATE_LIMIT", "http_429", msg, true, 1000);
     if (status === 400) return fail("INVALID_REQUEST", "http_400", msg);
@@ -193,10 +200,3 @@ export class LocalProxyProvider implements ProviderTransport {
   }
 }
 
-async function safeJson(res: Response): Promise<{ error?: { message?: string } } | null> {
-  try {
-    return (await res.json()) as { error?: { message?: string } };
-  } catch {
-    return null;
-  }
-}

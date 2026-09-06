@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/provider-failure/1.1.0",
+  "$id": "https://promptnexus.dev/contracts/provider-failure/1.1.1",
   "title": "ProviderFailure",
   "description": "A typed provider failure. Adapters return this instead of throwing, so the Application can classify without parsing messages and Core never sees an exception.",
   "type": "object",
@@ -16,7 +16,7 @@
     "reason_code": { "type": "string", "minLength": 1 },
     "safe_message": {
       "type": "string",
-      "description": "Safe to log and display. Never contains request content or credentials."
+      "description": "Safe to LOG and DISPLAY to an operator: it never contains request content or credentials. That is the whole of the claim, and it is narrower than it reads. Adapters derive this partly from the provider's own response body - hosted-server lifts error.message from the upstream JSON, ollama interpolates the daemon's response text, local-proxy uses body.error.message - so the far end influences it. It is therefore NOT safe to embed in a persisted artifact that later stages read and the gates lint. core/src/stages/stage-kit.ts did exactly that in the degradation placeholder until 6 September 2026; use reason_code and category there, which are ours."
     },
     "retry_after_ms": { "type": ["integer", "null"], "minimum": 0 },
     "attempt": { "type": "integer", "minimum": 1 },

@@ -187,7 +187,7 @@ Typed failure returned by a provider adapter. Used by the Application to decide 
 
 ```json
 {
-  "$id": "https://promptnexus.dev/contracts/provider-failure/1.1.0",
+  "$id": "https://promptnexus.dev/contracts/provider-failure/1.1.1",
   "type": "object",
   "required": ["request_id", "category", "retriable", "reason_code"],
   "properties": {
@@ -488,7 +488,7 @@ recorded rather than implied.
 | `observability-event` | 1.3.0 | yes |
 | `pipeline-outcome` | 1.0.0 | yes |
 | `promotion` | 1.0.0 | — |
-| `provider-failure` | 1.1.0 | yes |
+| `provider-failure` | 1.1.1 | yes |
 | `revision-entry` | 3.0.0 | yes |
 | `routing-policy` | 1.0.0 | — |
 | `run-manifest` | 2.0.0 | — |
