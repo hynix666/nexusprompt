@@ -17,6 +17,27 @@
 import type { FastifyInstance } from "fastify";
 import { buildApi, type ApiDependencies } from "./app.js";
 import { composeApi } from "./composition-root.js";
+import { securityFromEnv, type SecurityConfig } from "./security.js";
+
+/**
+ * What the operator is told at startup, given how the server is configured.
+ *
+ * Returned rather than printed so a test can assert the sentence without capturing stdout,
+ * and so the one place that decides what is worth warning about is not also the place that
+ * owns the console. Null means nothing needs saying.
+ */
+export function startupWarning(security: SecurityConfig, host: string): string | null {
+  if (security.token !== null) return null;
+  const loopback = host === "127.0.0.1" || host === "::1" || host === "localhost";
+  return (
+    `WARNING: NEXUSPROMPT_API_TOKEN is not set, so every route except /api/v1/health is ` +
+    `open to anyone who can reach ${host}.` +
+    (loopback ? "" : ` This server is bound to a NON-LOOPBACK address.`) +
+    ` A caller can spend against your provider up to the rate ceiling ` +
+    `(${security.providerLimit} provider-backed request(s) per ${security.windowMs}ms). ` +
+    `Set NEXUSPROMPT_API_TOKEN to require a bearer token.`
+  );
+}
 
 export interface ApiServerOptions {
   /** 0 asks the OS for a free port, which is what a test wants. */
@@ -28,6 +49,8 @@ export interface ApiServerOptions {
    * runner uses, where the stub is the default and reaching a provider is the deliberate act.
    */
   readonly deps?: ApiDependencies;
+  /** Absent means read it from the environment. Supplied by tests that pin a token or a limit. */
+  readonly security?: SecurityConfig;
 }
 
 export interface ApiServer {
@@ -42,7 +65,8 @@ export interface ApiServer {
 export function createApiServer(options: ApiServerOptions = {}): ApiServer {
   const host = options.host ?? process.env.HOST ?? "127.0.0.1";
   const requested = options.port ?? Number(process.env.PORT ?? 3000);
-  const app = buildApi(options.deps ?? composeApi());
+  const security = options.security ?? securityFromEnv();
+  const app = buildApi(options.deps ?? composeApi(), security);
 
   const server: ApiServer = {
     app,
@@ -65,6 +89,9 @@ export function createApiServer(options: ApiServerOptions = {}): ApiServer {
  * `scripts/run-eval.ts` carried until its flag parsing moved inside `main()`.
  */
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1].replace(/\\/g, "/")}`).href) {
-  const started = await createApiServer().listen();
+  const security = securityFromEnv();
+  const started = await createApiServer({ security }).listen();
   console.log(`nexusprompt-api listening on http://${started.host}:${started.port}`);
+  const warning = startupWarning(security, started.host);
+  if (warning) console.warn(warning);
 }

@@ -163,7 +163,7 @@ that event is a failing build, not a note in a backlog.
 
 ```json
 {
-  "documentation_markdown_files": 55,
+  "documentation_markdown_files": 56,
   "gates_built": 16,
   "stages_built": 11,
   "adapters_built": [
