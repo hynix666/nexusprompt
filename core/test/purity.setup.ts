@@ -6,7 +6,8 @@
 //
 // ## What this file catches — and what it does not
 //
-// This harness guards **globals**: `fetch`, `Math.random`, `Date.now`, and `new Date()`.
+// This harness guards **globals**: `fetch`, `Math.random`, `Date.now`, `new Date()`,
+// `setTimeout`, `crypto.randomUUID()`, `performance.now()`, and reads of `process.env`.
 // Those are resolved at call time, so replacing them is enough to trap a call.
 //
 // It does **not** guard the filesystem, and until an audit probed it, three separate
@@ -43,6 +44,14 @@
 //
 // Deliberately NOT blocked: node:crypto hashing. A digest is deterministic — same
 // input, same output, no ambient state — so it is pure in the sense that matters here.
+// (`check-boundaries.mjs` separately restricts Core's import of `node:crypto` to
+// `createHash` alone, so `crypto.randomUUID()` below is the *global* Web Crypto object,
+// not that module.)
+//
+// `process.env` is trapped on read, not replaced with a stub value. A Core function that
+// silently returns a different answer depending on `NODE_ENV` is exactly the ambient-state
+// dependency ADR-0005 forbids, and stubbing the value would only hide that a Core module
+// consulted it at all.
 //
 // The guards arm per-test rather than per-file so the window is exactly the test body.
 // Vitest reads source maps off disk when formatting a failure; a wider window would
@@ -65,10 +74,21 @@ beforeEach(() => {
   saved.random = Math.random;
   saved.now = Date.now;
   saved.dateCtor = globalThis.Date;
+  saved.setTimeout = globalThis.setTimeout;
+  saved.env = process.env;
+  saved.cryptoRandomUUID = globalThis.crypto?.randomUUID;
+  saved.performanceNow = globalThis.performance?.now;
 
   globalThis.fetch = violation("fetch()") as typeof fetch;
   Math.random = violation("Math.random()") as typeof Math.random;
   Date.now = violation("Date.now()") as typeof Date.now;
+  globalThis.setTimeout = violation("setTimeout()") as unknown as typeof setTimeout;
+  if (globalThis.crypto) {
+    globalThis.crypto.randomUUID = violation("crypto.randomUUID()") as typeof globalThis.crypto.randomUUID;
+  }
+  if (globalThis.performance) {
+    globalThis.performance.now = violation("performance.now()") as typeof performance.now;
+  }
 
   // `new Date()` with no arguments reads the clock; `new Date(fixed)` does not.
   const RealDate = saved.dateCtor as DateConstructor;
@@ -80,6 +100,17 @@ beforeEach(() => {
   });
   globalThis.Date = GuardedDate;
   globalThis.Date.now = violation("Date.now()") as typeof Date.now;
+
+  // A property read, not a function call, so the trap lives on `get` rather than replacing
+  // the value outright — replacing it would still let `"X" in process.env` and
+  // `Object.keys(process.env)` through unnoticed.
+  const RealEnv = saved.env as NodeJS.ProcessEnv;
+  process.env = new Proxy(RealEnv, {
+    get(target, prop, receiver) {
+      if (typeof prop === "symbol") return Reflect.get(target, prop, receiver);
+      violation(`process.env.${String(prop)}`)();
+    },
+  });
 });
 
 afterEach(() => {
@@ -87,4 +118,12 @@ afterEach(() => {
   Math.random = saved.random as typeof Math.random;
   globalThis.Date = saved.dateCtor as DateConstructor;
   Date.now = saved.now as typeof Date.now;
+  globalThis.setTimeout = saved.setTimeout as typeof setTimeout;
+  process.env = saved.env as NodeJS.ProcessEnv;
+  if (globalThis.crypto && saved.cryptoRandomUUID) {
+    globalThis.crypto.randomUUID = saved.cryptoRandomUUID as typeof globalThis.crypto.randomUUID;
+  }
+  if (globalThis.performance && saved.performanceNow) {
+    globalThis.performance.now = saved.performanceNow as typeof performance.now;
+  }
 });

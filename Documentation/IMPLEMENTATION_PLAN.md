@@ -64,6 +64,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "check:catalog",
     "check:citations",
     "check:citations:online",
+    "check:core-callbacks",
     "check:corpus",
     "check:counts",
     "check:depth",
