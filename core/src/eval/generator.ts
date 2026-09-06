@@ -23,7 +23,7 @@
  * compares, and so is an anchor.
  */
 
-/** Options that arm the gates. Eight of sixteen do nothing until one of these is set. */
+/** Options that arm the gates. Six of sixteen do nothing until one of these is set. */
 export interface CaseOptions {
   safetyTier?: boolean;
   recursiveTarget?: boolean;
