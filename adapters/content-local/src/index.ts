@@ -175,9 +175,9 @@ export class LocalContentStore implements ContentStore {
    * caller that could not detect corruption. `get` threw on exactly the same file.
    *
    * Corruption throws rather than returning false, matching `get` and matching what
-   * `decidePromotion` requires of its oracle: "a present-but-failing oracle must throw
-   * rather than return false, so a broken content store cannot masquerade as 'all content
-   * gone'." False is reserved for genuinely absent content.
+   * `decidePromotion` requires of ref resolution: "Resolution failure must throw on the
+   * caller's side rather than reporting a ref absent, so a broken content store cannot
+   * masquerade as 'all content gone'." False is reserved for genuinely absent content.
    *
    * The cost is a read where there used to be a stat. That is the correct trade for a
    * method whose answer gates a promotion: an existence check that cannot see corruption

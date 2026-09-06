@@ -126,34 +126,37 @@ export async function promote(store: EvidenceStore, input: PromoteInput): Promis
   const baselineRun = await load<EvalRun>(store, "eval-run", baseline.run_id);
 
   /**
-   * Resolve every ref BEFORE deciding, because `decidePromotion` is Core and its oracle is
-   * synchronous — Core composes the decision, the Application performs the effect.
+   * Resolve every ref BEFORE deciding, and hand Core the ANSWER rather than a way to ask.
+   *
+   * This already resolved everything into a `Set` here and then wrapped it in a closure to
+   * satisfy a `(ref) => boolean` parameter on `decidePromotion` — the only callback Core
+   * accepted anywhere, and one that neither purity guard could see. Core takes the resolved
+   * list now, so the indirection is gone and there is no function-shaped hole for a second
+   * caller to pass `existsSync` through.
    *
    * This is the wiring the `dangling-ref` precondition shipped without: `decidePromotion`
-   * accepted `contentRefs`/`refExists` from the day it landed, both optional, and the only
-   * caller passed neither — so the gate that refuses a promotion over evicted evidence never
-   * ran outside its own tests. A gate nothing invokes is the same defect as a budget cap
-   * nothing reads.
+   * accepted both ref parameters from the day it landed, both optional, and the only caller
+   * passed neither — so the gate that refuses a promotion over evicted evidence never ran
+   * outside its own tests. A gate nothing invokes is the same defect as a budget cap nothing
+   * reads.
    *
    * `has` throws on a corrupt store rather than returning false, and that throw is allowed to
-   * propagate: `decidePromotion` requires exactly this ("a present-but-failing oracle must
-   * throw rather than return false, so a broken content store cannot masquerade as 'all
-   * content gone'"). Refusing every promotion because the disk is broken would be a wrong
-   * refusal wearing the right words.
+   * propagate: `decidePromotion` requires exactly this, so a broken content store cannot
+   * masquerade as "all content gone". Refusing every promotion because the disk is broken
+   * would be a wrong refusal wearing the right words. Note this is why the loop cannot be a
+   * `filter` over an `await` — the throw has to escape, not resolve to `false`.
    */
-  let refExists: ((ref: string) => boolean) | null = null;
+  let resolvedRefs: string[] | null = null;
   if (input.content) {
-    const refs = [...new Set(input.contentRefs ?? [])];
-    const present = new Set<string>();
-    for (const ref of refs) {
-      if (await input.content.has(ref)) present.add(ref);
+    resolvedRefs = [];
+    for (const ref of new Set(input.contentRefs ?? [])) {
+      if (await input.content.has(ref)) resolvedRefs.push(ref);
     }
-    refExists = (ref: string) => present.has(ref);
   }
 
   const decision = decidePromotion({
     contentRefs: [...(input.contentRefs ?? [])],
-    refExists,
+    resolvedRefs,
     promotion_id: input.promotion_id,
     promoted_at: input.promoted_at,
     promoted_by: input.promoted_by,
