@@ -212,7 +212,7 @@ export interface PipelineOutcome {
  */
 export const CONTRACT_VERSIONS = {
   "gate-result": "1.3.0",
-  "provider-failure": "1.1.0",
+  "provider-failure": "1.1.1",
   "pipeline-outcome": "1.0.0",
   "revision-entry": "3.0.0",
   "observability-event": "1.3.0",

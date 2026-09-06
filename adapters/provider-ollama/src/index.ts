@@ -204,7 +204,7 @@ export class OllamaProvider implements ProviderTransport {
         body,
       });
 
-      if (!res.ok) return this.classifyHttp(res.status, await safeText(res), fail);
+      if (!res.ok) return this.classifyHttp(res.status, fail);
 
       /**
        * From here on the call SUCCEEDED. Everything that can still go wrong is
@@ -286,22 +286,30 @@ export class OllamaProvider implements ProviderTransport {
    */
   private classifyHttp(
     status: number,
-    detail: string,
     fail: (c: ProviderFailure["category"], r: string, m: string, retriable?: boolean, after?: number | null) => ProviderFailure,
   ): ProviderFailure {
+    /**
+     * The daemon's own response text is NOT interpolated into these messages.
+     *
+     * Each branch used to append or fall back to `detail`, which was `safeText(res)` — 200
+     * characters of whatever the daemon returned. `safe_message` is rendered into the
+     * degradation placeholder, a persisted artifact later stages read and the gates lint, so
+     * that put the far end's words inside it. The hand-written guidance below is the valuable
+     * part and it is ours; the daemon's text was never what made it useful.
+     */
     // 404 from Ollama means the model is not pulled — by far the most likely first-run
     // failure, and one an operator can act on immediately if told plainly.
     if (status === 404) {
       return fail(
         "INVALID_REQUEST",
         "model_not_pulled",
-        `The daemon does not have that model. Pull it first: \`ollama pull <model>\`. ${detail}`.trim(),
+        "The daemon does not have that model. Pull it first: `ollama pull <model>`.",
       );
     }
-    if (status === 400) return fail("INVALID_REQUEST", "http_400", detail || "The daemon rejected the request.");
-    if (status === 429) return fail("RATE_LIMIT", "http_429", detail || "The daemon is busy.", true, 1000);
-    if (status >= 500) return fail("UNAVAILABLE", `http_${status}`, detail || `Daemon returned HTTP ${status}.`, true, 500);
-    return fail("INTERNAL", `http_${status}`, detail || `Daemon returned HTTP ${status}.`);
+    if (status === 400) return fail("INVALID_REQUEST", "http_400", "The daemon rejected the request.");
+    if (status === 429) return fail("RATE_LIMIT", "http_429", "The daemon is busy.", true, 1000);
+    if (status >= 500) return fail("UNAVAILABLE", `http_${status}`, `Daemon returned HTTP ${status}.`, true, 500);
+    return fail("INTERNAL", `http_${status}`, `Daemon returned HTTP ${status}.`);
   }
 
   /**
@@ -354,12 +362,3 @@ export class OllamaProvider implements ProviderTransport {
   }
 }
 
-/** The daemon's error text, read defensively. Never contains request content. */
-async function safeText(res: Response): Promise<string> {
-  try {
-    const t = await res.text();
-    return t.slice(0, 200);
-  } catch {
-    return "";
-  }
-}

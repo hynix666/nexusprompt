@@ -49,6 +49,28 @@ Versioning, as applied here:
 
 ---
 
+## 2026-09-06 (audit remediation — what "safe" was claiming)
+
+### `provider-failure` 1.1.0 → **1.1.1** (patch — description only)
+
+No shape change. `safe_message`'s description said "Safe to log and display. Never contains
+request content or credentials", which is true and is the whole of the claim. It reads wider
+than it is, and something read it wider: `core/src/stages/stage-kit.ts` reproduced the field
+verbatim in the degradation placeholder — a persisted artifact that later stages read and the
+sixteen gates lint.
+
+All three adapters that write the field derive it partly from the far end.
+`provider-hosted-server` lifts `error.message` out of the upstream JSON body,
+`provider-ollama` interpolates the daemon's raw response text, `provider-local-proxy` uses
+`body.error.message`. So the placeholder carried a few hundred characters of somebody else's
+prose, inside the one artifact whose entire job is to be honest about degradation.
+
+The description now says what the field is for and what it is not for. The code fix is
+separate and does not touch this contract: the placeholder renders `category`, `reason_code`
+and `provider_id`, which are ours.
+
+---
+
 ## 2026-09-06 (audit remediation — the revision-entry seams)
 
 Two schemas, three tightenings, one theme: the plane that records what a run did could not

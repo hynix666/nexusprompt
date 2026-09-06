@@ -342,6 +342,23 @@ const truncate = (s: string, n: number): string => {
  * making. Without the fence a brief containing "100% accurate" makes CLAIM_DISCIPLINE warn
  * about the *input's* overclaim as though the placeholder had asserted it.
  */
+/** What the placeholder will show of an adapter's message, and no more. */
+const DETAIL_MAX = 200;
+const DETAIL_REFUSED = "[refused: the failure message carried a pipeline marker]";
+
+/**
+ * One bounded line, or nothing of it at all.
+ *
+ * Flattening is not cosmetic. The artifact is Markdown that later stages read, so a newline
+ * or a fence inside a `Detail:` value is a structural edit rather than a diagnostic, and a
+ * heading smuggled in that way reads as part of the compiled prompt.
+ */
+export function detailLine(message: string): string {
+  const flat = message.replace(/\s+/g, " ").trim();
+  if (flat.includes(DEMO_MARKER) || flat.includes(UNUSABLE_MARKER)) return DETAIL_REFUSED;
+  return flat.length <= DETAIL_MAX ? flat : `${flat.slice(0, DETAIL_MAX)}…`;
+}
+
 export function failurePlaceholder(stage_id: string, echo: string, failure: ProviderFailure): string {
   /**
    * Which of the two situations this is, decided by the category rather than by a message.
@@ -384,10 +401,24 @@ export function failurePlaceholder(stage_id: string, echo: string, failure: Prov
         "not model output, and nothing below it was generated.",
       ];
 
+  /**
+   * The provider's message is rendered, but never on the far end's terms.
+   *
+   * The rule six lines above is about the model's response; this field reached the same
+   * artifact by a route nothing checked. Adapters are supposed to keep `safe_message` to
+   * their own words — see the note on the field in `provider-failure.schema.json` — but Core
+   * cannot verify an adapter's discipline, and one that forgets would put somebody else's
+   * prose inside the one artifact whose job is to be honest about degradation.
+   *
+   * So it is flattened to a single bounded line and refused outright if it carries one of
+   * this pipeline's own markers. That is the `refuseForgedMarker` rule applied to the other
+   * direction: that one refuses a COMPLETION claiming to be a placeholder, this refuses a
+   * FAILURE MESSAGE claiming the same. Neither is allowed to forge the pipeline's voice.
+   */
   return [
     ...head,
     `Provider: ${failure.provider_id} · category: ${failure.category} · reason: ${failure.reason_code}`,
-    `Detail: ${failure.safe_message}`,
+    `Detail: ${detailLine(failure.safe_message)}`,
     "",
     ...body,
     "",
