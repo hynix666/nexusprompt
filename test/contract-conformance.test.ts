@@ -337,6 +337,18 @@ describe("revision-entry", () => {
     expect(validators["revision-entry"]({ ...revision, retention_scope: "FOREVER" })).toBe(false);
   });
 
+  it("rejects gate_results entries that are not gate-result objects", () => {
+    // 4.0.0: gate_results was a bare {"type": "array"} through 3.0.0, the same shape
+    // pipeline-outcome's identically-named field has referenced gate-result against since
+    // 1.0.0 -- an entry carrying junk here validated in the plane whose whole job is recording
+    // what the gates found.
+    expect(validators["revision-entry"]({ ...revision, gate_results: ["not-a-gate-result"] })).toBe(false);
+    expect(validators["revision-entry"]({ ...revision, gate_results: [{ garbage: true }] })).toBe(false);
+    // The must-not-break half: the real value, produced by the store, still validates.
+    expect(revision.gate_results.length).toBeGreaterThan(0);
+    expect(report(validators["revision-entry"], revision)).toBe(true);
+  });
+
   it("rejects a timestamp that is not a date-time", () => {
     // Proves the formats plugin is registered. Without it ajv ignores `format`
     // entirely, and "last Tuesday" would validate.

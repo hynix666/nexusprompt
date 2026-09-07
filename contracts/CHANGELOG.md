@@ -49,6 +49,36 @@ Versioning, as applied here:
 
 ---
 
+## 2026-09-07 (second audit pass — a sibling of the 3.0.0 tightening, missed by it)
+
+### `revision-entry` 3.0.0 → **4.0.0** (major)
+
+`gate_results` was `{"type": "array"}` — an entry carrying `gate_results: ["not-a-gate-result",
+42, {"garbage":true}]` validated. `pipeline-outcome`'s identically-named field has referenced
+`gate-result` since 1.0.0; this was the same "TS looser — no, schema looser than the type it
+backs" defect the 3.0.0 bump closed for `stage_id` and `execution_provenance` in the same
+file, on a third field the pass that found those two didn't check. TypeScript's
+`RevisionEntry.gate_results: GateResult[]` required structured items throughout, so no
+producer changes: nothing that exists emits a value the tightened schema rejects.
+
+Now references `gate-result/1.3.0`, the same pin `pipeline-outcome` uses.
+
+### `run-manifest` 2.0.0 → **3.0.0** (major)
+
+`revisions[].$ref` pointed at `revision-entry/3.0.0`. The `$comment` beside that `$ref` already
+said a future `revision-entry` bump "forces a decision here rather than silently leaving this
+copy behind" — this is that decision. Re-pointed to `revision-entry/4.0.0`; a manifest whose
+revisions carried non-gate-result garbage in `gate_results` was valid until now.
+
+`Documentation/CONTRACTS.md`'s hand-written `RevisionEntry` illustration was also stale
+independent of the version bump: its `required` list omitted `execution_provenance`,
+`retention_scope`, `input_ref`, and `output_ref` (all required since 2.0.0/1.4.0), and its
+`status` enum omitted `"SKIPPED"` (added at 1.4.0). Corrected both; `check:contracts` verifies
+the version citation but not `required`/enum content, which is how this survived one full
+audit pass already.
+
+---
+
 ## 2026-09-06 (audit remediation — a hardcoded count in a description)
 
 ### `audit-report` 1.0.0 → **1.0.1** (patch — description only)

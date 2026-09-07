@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/run-manifest/2.0.0",
+  "$id": "https://promptnexus.dev/contracts/run-manifest/3.0.0",
   "title": "RunManifest",
   "description": "A whole semantic run as one immutable, atomically published unit: the run's revisions plus every content ref they cite. Metadata only — no content bodies. A run id must use exactly one storage mode (legacy bundle or semantic manifest); both under one run id is an error. Immutable after publication.",
   "type": "object",
@@ -37,8 +37,8 @@
       "type": "array",
       "minItems": 1,
       "items": {
-        "$comment": "Through 1.0.0 this re-declared the whole RevisionEntry shape inline, and the copy had already drifted looser than the original: no additionalProperties, stage_id a bare string, gate_results a bare array, execution_provenance a bare object. TypeScript said `revisions: RevisionEntry[]` the whole time, so the schema and the type disagreed about what a manifest holds — the same defect that took revision-entry to 2.0.0, one plane out. A $ref to a pinned version is how pipeline-outcome cites gate-result and judgement cites judge-verdict; it also means a future revision-entry bump forces a decision here rather than silently leaving this copy behind.",
-        "$ref": "https://promptnexus.dev/contracts/revision-entry/3.0.0"
+        "$comment": "Through 1.0.0 this re-declared the whole RevisionEntry shape inline, and the copy had already drifted looser than the original: no additionalProperties, stage_id a bare string, gate_results a bare array, execution_provenance a bare object. TypeScript said `revisions: RevisionEntry[]` the whole time, so the schema and the type disagreed about what a manifest holds — the same defect that took revision-entry to 2.0.0, one plane out. A $ref to a pinned version is how pipeline-outcome cites gate-result and judgement cites judge-verdict; it also means a future revision-entry bump forces a decision here rather than silently leaving this copy behind — this bump, to 4.0.0, is exactly that decision: revision-entry's own gate_results went from a bare array to gate-result items, and a manifest whose revisions carried garbage there was valid until now.",
+        "$ref": "https://promptnexus.dev/contracts/revision-entry/4.0.0"
       }
     },
     "content_refs": {
