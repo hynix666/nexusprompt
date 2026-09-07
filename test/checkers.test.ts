@@ -538,6 +538,57 @@ describe("check-core-callbacks", () => {
     expect(r.violations.some((v) => v.memberName === "onEvent")).toBe(true);
   });
 
+  it("flags a callback member reachable through a setter, not only a method's own parameter", () => {
+    // A setter's parameter is a caller-supplied value in exactly the sense a function
+    // parameter is (`obj.opts = { refExists: attackerControlledFn }`), but its own type is
+    // the VALUE type, not a function type -- getSignaturesOfType(memberType, Call) never
+    // finds anything for an accessor, which is why an earlier version missed this shape
+    // entirely: 0 functions checked, 0 violations, on a class built to trigger it.
+    const root = mkroot("pnx-cb-setter-");
+    write(
+      root,
+      "core/src/setter.ts",
+      [
+        "export interface Req { refExists?: (ref: string) => boolean }",
+        "export class Config {",
+        "  private _opts: Req = {};",
+        "  set opts(value: Req) { this._opts = value; }",
+        "  get opts(): Req { return this._opts; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) =>
+      v.functionName === "Config.opts (setter)" && v.memberName === "refExists",
+    )).toBe(true);
+  });
+
+  it("flags a callback member on an exported plain object's method, not only a class's", () => {
+    // The "shared registry" pattern -- an exported object literal with methods, rather than a
+    // class or a free function -- was invisible to an earlier version: the export loop only
+    // descended into a value's members when the value ITSELF was callable or a class, and a
+    // plain object is neither.
+    const root = mkroot("pnx-cb-plainobject-");
+    write(
+      root,
+      "core/src/registry.ts",
+      [
+        "export interface Req { refExists?: (ref: string) => boolean }",
+        "export const registry = {",
+        "  run(req: Req): boolean { return req.refExists ? req.refExists(\"x\") : false; },",
+        "};",
+        "",
+      ].join("\n"),
+    );
+    const r = checkCoreCallbacks({ root });
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) =>
+      v.functionName === "registry.run" && v.memberName === "refExists",
+    )).toBe(true);
+  });
+
   it("exempts a function-typed member by name once ANY core/src object literal builds one", () => {
     // The heuristic's known blind spot, pinned rather than hidden: exemption is by property
     // NAME across all of core/src, not by matching the parameter's own type. A second,
