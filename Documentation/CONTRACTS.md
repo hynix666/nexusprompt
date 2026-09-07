@@ -301,11 +301,12 @@ One stage execution within a run. Expanded to support lineage, freshness, and pr
 
 ```json
 {
-  "$id": "https://promptnexus.dev/contracts/revision-entry/3.0.0",
+  "$id": "https://promptnexus.dev/contracts/revision-entry/4.0.0",
   "type": "object",
   "required": [
     "revision_id", "run_id", "stage_id", "timestamp",
-    "input_hash", "output_hash", "gate_results", "freshness", "status"
+    "input_hash", "output_hash", "gate_results", "freshness", "status",
+    "execution_provenance", "retention_scope", "input_ref", "output_ref"
   ],
   "properties": {
     "revision_id": { "type": "string" },
@@ -324,7 +325,7 @@ One stage execution within a run. Expanded to support lineage, freshness, and pr
       "items": { "$ref": "https://promptnexus.dev/contracts/gate-result/1.3.0" }
     },
     "freshness": { "enum": ["FRESH", "STALE"] },
-    "status": { "enum": ["SUCCEEDED", "DEMO", "FAILED", "CANCELLED"] },
+    "status": { "enum": ["SUCCEEDED", "DEMO", "FAILED", "CANCELLED", "SKIPPED"] },
     "provider_used": { "type": ["string", "null"] },
     "execution_provenance": {
       "type": "object",
@@ -489,9 +490,9 @@ recorded rather than implied.
 | `pipeline-outcome` | 1.0.0 | yes |
 | `promotion` | 1.0.0 | — |
 | `provider-failure` | 1.1.1 | yes |
-| `revision-entry` | 3.0.0 | yes |
+| `revision-entry` | 4.0.0 | yes |
 | `routing-policy` | 1.0.0 | — |
-| `run-manifest` | 2.0.0 | — |
+| `run-manifest` | 3.0.0 | — |
 | `technique-record` | 2.0.0 | yes |
 <!-- END GENERATED: schema-inventory -->
 

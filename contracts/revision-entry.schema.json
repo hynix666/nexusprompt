@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/revision-entry/3.0.0",
+  "$id": "https://promptnexus.dev/contracts/revision-entry/4.0.0",
   "title": "RevisionEntry",
   "description": "One stage execution. freshness and status are independent: a revision can be SUCCEEDED and STALE at once.",
   "type": "object",
@@ -91,7 +91,9 @@
       "pattern": "^npx:(stage-output|generation-response):[0-9a-f]{64}:(local-bundle|db|export)$"
     },
     "gate_results": {
-      "type": "array"
+      "description": "Was a bare array through 3.0.0, unlike pipeline-outcome's identically-named field, which has referenced gate-result since 1.0.0 -- an entry carrying gate_results: [\"not-a-gate-result\"] validated.",
+      "type": "array",
+      "items": { "$ref": "https://promptnexus.dev/contracts/gate-result/1.3.0" }
     },
     "freshness": {
       "enum": [
