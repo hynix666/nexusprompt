@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { version } from "node:process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -178,6 +178,92 @@ if (NODE_MAJOR < 22) {
     });
   });
 
+  describe("the mechanism evict()'s own bare check-then-delete exploited", () => {
+    // `evict()` used to run AFTER append()'s transaction committed: a bare SELECT deciding
+    // which runs are oldest, then bare DELETEs acting on that decision -- the exact
+    // check-then-write shape the rest of this file exists to warn about, in the one place
+    // that runs after every single append. A second connection's real, correctly-protected
+    // append() to one of the "doomed" runs could land and commit entirely inside the gap
+    // between evict()'s SELECT and its DELETE, and evict() would then destroy that
+    // freshly-committed revision along with the one that was actually stale.
+    const schema = `CREATE TABLE revisions (revision_id TEXT PRIMARY KEY, run_id TEXT, stage_id TEXT,
+      parent_ids TEXT, timestamp TEXT, stage_attempt INTEGER, feedback_round INTEGER,
+      input_hash TEXT, output_hash TEXT, input_ref TEXT, output_ref TEXT, gate_results TEXT,
+      freshness TEXT, status TEXT, provider_used TEXT, provenance TEXT, retention_scope TEXT);
+      CREATE TABLE manifests (run_id TEXT PRIMARY KEY, manifest_ver TEXT, created_at TEXT,
+      committed_at TEXT, content_refs TEXT);`;
+    const evictSelectSql = "SELECT run_id FROM revisions GROUP BY run_id ORDER BY MAX(timestamp) ASC";
+
+    it("a concurrent append to a doomed run is destroyed when eviction runs after commit", () => {
+      const path = tempDbPath();
+      const a = new DatabaseSync(path);
+      a.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;");
+      a.exec(schema);
+      insertRevision(a, entry("old-1", "old-1-rev", 0));
+
+      const b = new DatabaseSync(path);
+      b.exec("PRAGMA busy_timeout=5000;");
+
+      // A's evict(), as it ran before the fix: a bare SELECT deciding which run is oldest,
+      // separate from the DELETE that acts on the decision.
+      const doomed = (a.prepare(evictSelectSql).all() as { run_id: string }[]).map((r) => r.run_id);
+      expect(doomed).toEqual(["old-1"]);
+
+      // B's ENTIRE append() to that same run completes and commits, in full, before A's
+      // DELETE -- exactly what a second process's real, BEGIN-IMMEDIATE-protected append()
+      // could do in the gap the old evict()-after-commit left open.
+      b.exec("BEGIN IMMEDIATE");
+      insertRevision(b, entry("old-1", "fresh-from-b", 5));
+      b.exec("COMMIT");
+
+      // A now deletes on its stale decision -- the bare DELETE the old evict() would issue.
+      const ph = doomed.map(() => "?").join(", ");
+      a.prepare(`DELETE FROM revisions WHERE run_id IN (${ph})`).run(...doomed);
+
+      // B's freshly-committed revision is gone, silently, along with the one that was
+      // genuinely stale -- B has no way to know its successful write vanished.
+      const remaining = a.prepare("SELECT COUNT(*) AS n FROM revisions WHERE run_id = ?").get("old-1") as { n: number };
+      expect(remaining.n).toBe(0);
+
+      a.close();
+      b.close();
+    });
+
+    it("running eviction inside the write's own transaction makes that same interleaving impossible", () => {
+      const path = tempDbPath();
+      const a = new DatabaseSync(path);
+      a.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=100;");
+      a.exec(schema);
+      insertRevision(a, entry("old-1", "old-1-rev", 0));
+
+      const b = new DatabaseSync(path);
+      b.exec("PRAGMA busy_timeout=100;");
+
+      // The fixed shape: eviction's SELECT and its DELETE both run inside the same BEGIN
+      // IMMEDIATE as the write that triggered it, exactly as `append()` now does.
+      a.exec("BEGIN IMMEDIATE");
+      const doomed = (a.prepare(evictSelectSql).all() as { run_id: string }[]).map((r) => r.run_id);
+
+      // B cannot even acquire the floor to append to "old-1" while A holds it -- the exact
+      // window the previous test walked through by hand no longer exists to walk through.
+      expect(() => b.exec("BEGIN IMMEDIATE")).toThrow(/locked|busy/i);
+
+      const ph = doomed.map(() => "?").join(", ");
+      a.prepare(`DELETE FROM revisions WHERE run_id IN (${ph})`).run(...doomed);
+      a.exec("COMMIT");
+
+      // Only now can B proceed, appending to what eviction left as a clean slate.
+      b.exec("BEGIN IMMEDIATE");
+      insertRevision(b, entry("old-1", "fresh-from-b", 5));
+      b.exec("COMMIT");
+      const n = (b.prepare("SELECT COUNT(*) AS n FROM revisions WHERE run_id = ?").get("old-1") as { n: number }).n;
+      expect(n).toBe(1); // B's write survives -- nothing could land in the gap to destroy it.
+
+      a.close();
+      b.close();
+    });
+  });
+
   describe("a failed write leaves the store usable and leaves no partial state", () => {
     it("append: a duplicate revision_id rolls back and does not wedge the connection", async () => {
       const store = new DbRevisionStore(":memory:");
@@ -187,6 +273,36 @@ if (NODE_MAJOR < 22) {
       // proven by a completely unrelated subsequent call succeeding normally.
       await store.append(entry("r2", "fine"));
       expect(await store.getRun("r2")).toHaveLength(1);
+      store.close();
+    });
+
+    it("append: a failure inside eviction rolls back the revision that triggered it too", async () => {
+      // Exercises the real class, unlike the two mechanism tests above: proves eviction runs
+      // INSIDE append()'s transaction rather than after it, by forcing eviction's own query to
+      // throw and checking that the revision which triggered it never got committed either. If
+      // evict() were ever moved back to running after COMMIT, this revision WOULD survive the
+      // eviction failure, and this assertion would fail.
+      const store = new DbRevisionStore(":memory:", 1); // max=1, so a second run triggers eviction
+      await store.append(entry("old", "old-rev", 0));
+
+      const db = (store as unknown as { db: { prepare: (sql: string) => unknown } }).db;
+      const real = db.prepare.bind(db);
+      const evictionFailure = new Error("simulated eviction failure");
+      const spy = vi.spyOn(db, "prepare").mockImplementation((sql: string) => {
+        if (sql.includes("GROUP BY run_id") && sql.includes("ORDER BY MAX(timestamp)")) {
+          throw evictionFailure;
+        }
+        return real(sql);
+      });
+
+      await expect(store.append(entry("new", "new-rev", 1))).rejects.toThrow(evictionFailure);
+      spy.mockRestore();
+
+      // The revision that triggered the failing eviction must not have been committed either.
+      expect(await store.getRun("new")).toEqual([]);
+      // And the transaction was cleanly rolled back, not left open.
+      await store.append(entry("r6", "fine"));
+      expect(await store.getRun("r6")).toHaveLength(1);
       store.close();
     });
 
