@@ -24,6 +24,16 @@
  * does not resolve re-exports transitively, and it cannot see an effect reached
  * through a value passed in at runtime — that is what ADR-0005 and the harness
  * are for.
+ *
+ * The same regex-not-a-parser tradeoff also has a false-POSITIVE shape, found by a second
+ * audit pass and left as a known limitation rather than deepened, since neither direction
+ * fires on the real tree today and a spurious failure is the safe direction to fail in.
+ * `IMPORT_RE`'s `[\s\S]{0,400}?from\s*["']...["']` clause is a lazy wildcard scan with no real
+ * syntax requirement between `import`/`export` and `from` — a comment or string literal
+ * containing text shaped like an import (`; import fs from "fs"` inside an anti-example
+ * comment, or a string like `"data flows from 'legacy-db' to..."`) can be read as a real
+ * import and flagged. A real parser would not have this problem; a regex checking every file
+ * under three layers without one is the tradeoff this script's own opening paragraph explains.
  */
 
 import { readFileSync } from "node:fs";
