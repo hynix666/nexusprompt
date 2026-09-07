@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { HostedServerProvider } from "../src/index.js";
+import { HostedServerProvider, createHostedProviderGateway } from "../src/index.js";
 import type { GenerationRequest } from "../../../contracts/index.js";
 
 // Base request using an OpenAI model (routed to openai provider)
@@ -242,6 +242,49 @@ describe("healthCheck", () => {
     const p = new HostedServerProvider({ env: { OPENAI_API_KEY: "SECRETVALUE01234" }, fetchImpl: fetchMock });
     const health = await p.healthCheck();
     expect(JSON.stringify(health)).not.toContain("SECRETVALUE01234");
+  });
+});
+
+/**
+ * `callsByUser` used to be a sliding-window array per user, filtered on every call but never
+ * evicted from the Map itself -- every distinct userId this gateway ever served left a
+ * permanent entry for the process's lifetime. No sequence of ONE caller's own accept/reject
+ * results can tell a sliding window from a fixed one; both correctly let that same caller
+ * retry after their own entries age out. The defect is about how many DISTINCT users' keys
+ * the Map is still holding, which is why these tests call `activeCallers()` directly rather
+ * than only asserting on generate()'s outcome.
+ */
+describe("the rate limiter's memory footprint", () => {
+  const okBody = async () => new Response(openaiOkBody, { status: 200 });
+  const req = (userId: number) => ({
+    provider: "openai" as const, model: "gpt-4.1-mini", system: "", user: "hi",
+    temperature: 0.2, userId,
+  });
+
+  it("does not keep a permanent entry per distinct caller ever seen", async () => {
+    let t = 0;
+    const gateway = createHostedProviderGateway({ OPENAI_API_KEY: "k" }, vi.fn(okBody), () => t);
+
+    // 20 distinct callers, one call each, all inside the same window.
+    for (let userId = 0; userId < 20; userId++) await gateway.generate(req(userId));
+    expect(gateway.activeCallers()).toBe(20);
+
+    // The window rolls; a single new caller's request must not carry the previous window's
+    // 20 distinct entries forward. A permanent-per-caller map would read 21 here.
+    t += 60_000;
+    await gateway.generate(req(999));
+    expect(gateway.activeCallers()).toBe(1);
+  });
+
+  it("still enforces the per-window cap for one caller", async () => {
+    let t = 0;
+    const gateway = createHostedProviderGateway({ OPENAI_API_KEY: "k" }, vi.fn(okBody), () => t);
+    for (let i = 0; i < 12; i++) await gateway.generate(req(1)); // REQUESTS_PER_WINDOW
+    await expect(gateway.generate(req(1))).rejects.toThrow(/temporarily limited/);
+
+    // The must-not-break half: rolling the window clears the cap, not only the Map's size.
+    t += 60_000;
+    await expect(gateway.generate(req(1))).resolves.toBeDefined();
   });
 });
 
