@@ -49,6 +49,27 @@
  * a module actually exports rather than which syntax produced it, which closes both gaps at
  * once and needs no third pattern the next syntax shape would require.
  *
+ * ## Two more shapes the export-driven rewrite still missed
+ *
+ * Fixing the discovery mechanism did not fix everything reachable through it. Two more
+ * fixture-verified gaps, both closed here:
+ *
+ * - A **setter** (`set opts(value: { onDone: (ref: string) => boolean }) {}`) was invisible:
+ *   the member loop asked `getSignaturesOfType(memberType, Call)`, where `memberType` for an
+ *   accessor is the VALUE'S type, not a function type, so it never has a call signature and the
+ *   check silently passed. A setter's parameter is exactly a caller-supplied value — the same
+ *   shape as a function parameter — so it is now checked the same way `functionMembersOf`
+ *   checks a parameter, not via call-signature detection. A getter's return type is
+ *   deliberately left unchecked, for the same reason function return types are: nothing a
+ *   caller supplies flows out through a return value.
+ * - An **exported plain object with methods** (`export const registry = { run(cb) {} }`, the
+ *   "shared registry" pattern `core/src/stages/pipeline.ts`'s own internal use of object
+ *   literals shows is idiomatic here) was invisible: the export loop only descended into a
+ *   value's members when the value ITSELF was callable or a class. An object literal is
+ *   neither, so its methods' parameters were never reached. The export loop now inspects any
+ *   project-declared exported value's own members for a callable method or a setter,
+ *   independent of whether the exported value itself is callable.
+ *
  * Exit 0 no new callback-shaped parameter reaches Core · 1 one does.
  */
 
@@ -238,6 +259,29 @@ export function checkCoreCallbacks(opts: CheckCoreCallbacksOptions = {}): CheckR
   };
 
   /**
+   * One property of a class or a plain object, checked whichever way its shape calls for.
+   * A setter's parameter is a caller-supplied value in exactly the sense a function parameter
+   * is, so it goes through `functionMembersOf` directly rather than call-signature detection
+   * (its own type IS the value type, not a function type — `getSignaturesOfType` would never
+   * find anything). A getter alone, or a method, is checked as a call whose parameters matter;
+   * a getter's return type is left unchecked for the same reason a function's return type is.
+   * Returns whether this member was actually examined, so the caller can count it.
+   */
+  const checkMember = (labelPrefix: string, member: ts.Symbol): boolean => {
+    const memberType = checker.getTypeOfSymbol(member);
+    if (member.flags & ts.SymbolFlags.SetAccessor) {
+      functionMembersOf(checker, memberType, new Set(), (memberName) => {
+        flagParameter(`${labelPrefix}.${member.name} (setter)`, "value", memberName);
+      });
+      return true;
+    }
+    const signatures = checker.getSignaturesOfType(memberType, ts.SignatureKind.Call);
+    if (signatures.length === 0) return false;
+    checkSignatures(`${labelPrefix}.${member.name}`, signatures);
+    return true;
+  };
+
+  /**
    * A class's constructor and every instance/static method, each checked the same way an
    * exported function is. `export { Foo }` and `class Foo { method(cb: () => void) {} }` were
    * both invisible to an earlier version of this checker that pattern-matched specific
@@ -249,17 +293,10 @@ export function checkCoreCallbacks(opts: CheckCoreCallbacksOptions = {}): CheckR
     checkSignatures(`${className} constructor`, checker.getSignaturesOfType(staticType, ts.SignatureKind.Construct));
 
     const instanceType = checker.getDeclaredTypeOfSymbol(classSymbol);
-    for (const member of instanceType.getProperties()) {
-      const memberType = checker.getTypeOfSymbol(member);
-      checkSignatures(`${className}.${member.name}`, checker.getSignaturesOfType(memberType, ts.SignatureKind.Call));
-    }
+    for (const member of instanceType.getProperties()) checkMember(className, member);
     for (const member of staticType.getProperties()) {
       if (member.name === "prototype") continue;
-      const memberType = checker.getTypeOfSymbol(member);
-      checkSignatures(
-        `${className}.${member.name} (static)`,
-        checker.getSignaturesOfType(memberType, ts.SignatureKind.Call),
-      );
+      checkMember(`${className} (static)`, member);
     }
   };
 
@@ -279,10 +316,26 @@ export function checkCoreCallbacks(opts: CheckCoreCallbacksOptions = {}): CheckR
         checkClass(exp.name, resolved);
         continue;
       }
-      const signatures = checker.getSignaturesOfType(checker.getTypeOfSymbol(resolved), ts.SignatureKind.Call);
-      if (signatures.length === 0) continue;
-      functionsChecked++;
-      checkSignatures(exp.name, signatures);
+
+      const type = checker.getTypeOfSymbol(resolved);
+      let checked = false;
+
+      const signatures = checker.getSignaturesOfType(type, ts.SignatureKind.Call);
+      if (signatures.length > 0) {
+        checkSignatures(exp.name, signatures);
+        checked = true;
+      }
+
+      // The exported value's OWN members, independent of whether the value itself is
+      // callable — an object literal with methods (`export const registry = { run(cb) {} }`)
+      // is not callable, so the check above alone would never reach `run`'s parameters.
+      if (isProjectType(type)) {
+        for (const member of checker.getPropertiesOfType(type)) {
+          if (checkMember(exp.name, member)) checked = true;
+        }
+      }
+
+      if (checked) functionsChecked++;
     }
   }
 
