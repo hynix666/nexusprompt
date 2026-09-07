@@ -121,24 +121,45 @@ export class DbRevisionStore implements RevisionStore {
   }
 
   async append(entry: RevisionEntry): Promise<void> {
-    if (this.db.prepare("SELECT 1 FROM manifests WHERE run_id = ?").get(entry.run_id)) {
-      throw new Error(
-        `mixed-lineage: run "${entry.run_id}" is a committed manifest; append is refused.`,
+    /**
+     * `BEGIN IMMEDIATE`, not a bare check-then-write.
+     *
+     * Two separate autocommit statements — a `SELECT`, then an `INSERT` — are two separate
+     * transactions as far as SQLite is concerned. WAL readers are never blocked by a writer,
+     * so a second process's `commitManifest()` for this same run_id can start, run to
+     * completion, and COMMIT entirely inside the gap between this method's own SELECT and its
+     * INSERT: the SELECT correctly saw "no manifest" at the instant it ran, and the INSERT
+     * then proceeds on that now-stale answer, leaving the run with both a manifest and an
+     * independently-appended revision it never declared. `BEGIN IMMEDIATE` acquires the
+     * RESERVED lock before the check runs, so a second writer's own `BEGIN IMMEDIATE` for the
+     * same file cannot even start until this whole check-and-write unit has committed or
+     * rolled back — `busy_timeout` (set in `SCHEMA`) makes it wait rather than fail.
+     */
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      if (this.db.prepare("SELECT 1 FROM manifests WHERE run_id = ?").get(entry.run_id)) {
+        throw new Error(
+          `mixed-lineage: run "${entry.run_id}" is a committed manifest; append is refused.`,
+        );
+      }
+      const r = pack(entry);
+      this.db.prepare(`
+        INSERT INTO revisions
+          (revision_id, run_id, stage_id, parent_ids, timestamp, stage_attempt,
+           feedback_round, input_hash, output_hash, input_ref, output_ref,
+           gate_results, freshness, status, provider_used, provenance, retention_scope)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        r.revision_id, r.run_id, r.stage_id, r.parent_ids, r.timestamp,
+        r.stage_attempt, r.feedback_round, r.input_hash, r.output_hash,
+        r.input_ref, r.output_ref, r.gate_results, r.freshness, r.status,
+        r.provider_used, r.provenance, r.retention_scope,
       );
+      this.db.exec("COMMIT");
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
     }
-    const r = pack(entry);
-    this.db.prepare(`
-      INSERT INTO revisions
-        (revision_id, run_id, stage_id, parent_ids, timestamp, stage_attempt,
-         feedback_round, input_hash, output_hash, input_ref, output_ref,
-         gate_results, freshness, status, provider_used, provenance, retention_scope)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      r.revision_id, r.run_id, r.stage_id, r.parent_ids, r.timestamp,
-      r.stage_attempt, r.feedback_round, r.input_hash, r.output_hash,
-      r.input_ref, r.output_ref, r.gate_results, r.freshness, r.status,
-      r.provider_used, r.provenance, r.retention_scope,
-    );
     this.evict();
   }
 
@@ -170,56 +191,65 @@ export class DbRevisionStore implements RevisionStore {
   }
 
   async markStale(run_id: string, from_revision_id: string): Promise<void> {
-    if (this.db.prepare("SELECT 1 FROM manifests WHERE run_id = ?").get(run_id)) {
-      throw new Error(
-        `immutable manifest: run "${run_id}" is committed; markStale would mutate history.`,
-      );
-    }
+    // Same reason as `append`: the manifest-exists check and the final UPDATE must be one
+    // unit, or a manifest committed by another writer in between would leave this call
+    // mutating a run that is, by the time the UPDATE runs, supposed to be immutable. Reads the
+    // bundle directly rather than through `getRun` so the whole method stays inside one
+    // transaction with no `await` in the middle — an `await`, even on a call that does no
+    // real I/O, yields to the microtask queue, which is a real (if narrower) in-process
+    // version of the same gap.
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      if (this.db.prepare("SELECT 1 FROM manifests WHERE run_id = ?").get(run_id)) {
+        throw new Error(
+          `immutable manifest: run "${run_id}" is committed; markStale would mutate history.`,
+        );
+      }
 
-    const bundle = await this.getRun(run_id);
-    if (!bundle.some((e) => e.revision_id === from_revision_id)) return;
+      const rows = this.db.prepare(
+        "SELECT * FROM revisions WHERE run_id = ? ORDER BY timestamp ASC",
+      ).all(run_id) as DbRow[];
+      const bundle = rows.map(unpack);
 
-    const unlineaged = bundle.filter((e) => !Array.isArray(e.parent_revision_ids));
-    if (unlineaged.length > 0) {
-      throw new Error(
-        `unlineaged bundle: run "${run_id}" has ${unlineaged.length} of ${bundle.length} revision(s) ` +
-        `with no parent_revision_ids. Written before contract 1.3.1; cascade cannot be computed.`,
-      );
-    }
+      if (!bundle.some((e) => e.revision_id === from_revision_id)) {
+        this.db.exec("ROLLBACK");
+        return;
+      }
 
-    const stale = new Set<string>([from_revision_id]);
-    for (let grew = true; grew; ) {
-      grew = false;
-      for (const e of bundle) {
-        if (stale.has(e.revision_id)) continue;
-        if (e.parent_revision_ids.some((p) => stale.has(p))) {
-          stale.add(e.revision_id);
-          grew = true;
+      const unlineaged = bundle.filter((e) => !Array.isArray(e.parent_revision_ids));
+      if (unlineaged.length > 0) {
+        throw new Error(
+          `unlineaged bundle: run "${run_id}" has ${unlineaged.length} of ${bundle.length} revision(s) ` +
+          `with no parent_revision_ids. Written before contract 1.3.1; cascade cannot be computed.`,
+        );
+      }
+
+      const stale = new Set<string>([from_revision_id]);
+      for (let grew = true; grew; ) {
+        grew = false;
+        for (const e of bundle) {
+          if (stale.has(e.revision_id)) continue;
+          if (e.parent_revision_ids.some((p) => stale.has(p))) {
+            stale.add(e.revision_id);
+            grew = true;
+          }
         }
       }
-    }
 
-    const ids = [...stale];
-    const ph = ids.map(() => "?").join(", ");
-    this.db.prepare(
-      `UPDATE revisions SET freshness = 'STALE' WHERE run_id = ? AND revision_id IN (${ph})`,
-    ).run(run_id, ...ids);
+      const ids = [...stale];
+      const ph = ids.map(() => "?").join(", ");
+      this.db.prepare(
+        `UPDATE revisions SET freshness = 'STALE' WHERE run_id = ? AND revision_id IN (${ph})`,
+      ).run(run_id, ...ids);
+      this.db.exec("COMMIT");
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
+    }
   }
 
   async commitManifest(manifest: RunManifest): Promise<void> {
     validateManifest(manifest);
-
-    if (this.db.prepare("SELECT 1 FROM manifests WHERE run_id = ?").get(manifest.run_id)) {
-      throw new Error(`immutable manifest: run "${manifest.run_id}" is already published.`);
-    }
-    const { n } = this.db.prepare(
-      "SELECT COUNT(*) AS n FROM revisions WHERE run_id = ?",
-    ).get(manifest.run_id) as { n: number };
-    if (n > 0) {
-      throw new Error(
-        `mixed-lineage: run "${manifest.run_id}" already has revisions; commitManifest is refused.`,
-      );
-    }
 
     const insertRev = this.db.prepare(`
       INSERT INTO revisions
@@ -232,8 +262,24 @@ export class DbRevisionStore implements RevisionStore {
       "INSERT INTO manifests (run_id, manifest_ver, created_at, committed_at, content_refs) VALUES (?, ?, ?, ?, ?)",
     );
 
-    this.db.exec("BEGIN");
+    // The two checks moved INSIDE the transaction, and BEGIN became BEGIN IMMEDIATE, for the
+    // same reason as `append`: checking, then opening a transaction to write, leaves a gap
+    // where a concurrent `append()` for the same run_id can land in between and go
+    // undetected. See `append`'s comment for the full mechanism.
+    this.db.exec("BEGIN IMMEDIATE");
     try {
+      if (this.db.prepare("SELECT 1 FROM manifests WHERE run_id = ?").get(manifest.run_id)) {
+        throw new Error(`immutable manifest: run "${manifest.run_id}" is already published.`);
+      }
+      const { n } = this.db.prepare(
+        "SELECT COUNT(*) AS n FROM revisions WHERE run_id = ?",
+      ).get(manifest.run_id) as { n: number };
+      if (n > 0) {
+        throw new Error(
+          `mixed-lineage: run "${manifest.run_id}" already has revisions; commitManifest is refused.`,
+        );
+      }
+
       for (const e of manifest.revisions) {
         const r = pack(e);
         insertRev.run(
