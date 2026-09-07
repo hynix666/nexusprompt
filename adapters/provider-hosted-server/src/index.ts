@@ -229,8 +229,31 @@ async function probeModel(fetchImpl: FetchLike, provider: HostedProviderId, conf
 
 // ── Embedded gateway factory ───────────────────────────────────────────────────
 
-function createHostedProviderGateway(env: ServerEnvironment, fetchImpl: FetchLike) {
-  const callsByUser = new Map<number, number[]>();
+/**
+ * Exported so a test can drive `enforceRateLimit`'s window-roll directly through `generate()`
+ * and inspect `activeCallers()`, rather than only observing accept/reject outcomes that a
+ * sliding-window and a fixed-window implementation would both produce identically for a single
+ * caller -- the defect this closes is about the size of the Map, which no sequence of one
+ * caller's own accept/reject results can distinguish.
+ */
+export function createHostedProviderGateway(
+  env: ServerEnvironment,
+  fetchImpl: FetchLike,
+  now: () => number = Date.now,
+) {
+  /**
+   * Fixed window, cleared wholesale when it rolls -- the same shape as
+   * `shells/api/src/security.ts`'s `FixedWindow`, reimplemented here rather than imported
+   * because an adapter may not depend on a Shell. That file's own header explains the
+   * tradeoff this makes on purpose: a sliding per-user array (filtered to unexpired entries
+   * on every call, as this used to be) reads as more accurate, but a user who calls once and
+   * never again leaves their key in the map for the lifetime of the process -- every distinct
+   * caller this gateway ever serves, forever. Wholesale clearing bounds the map by the number
+   * of distinct callers seen WITHIN one window, which cannot grow without bound the way
+   * "one entry per caller ever" can.
+   */
+  let windowStart = 0;
+  const callsByUser = new Map<number, number>();
   const healthCache = new Map<HostedProviderId, HostedProviderHealth>();
 
   const health = async (force = false): Promise<HostedProviderHealth[]> => {
@@ -254,13 +277,16 @@ function createHostedProviderGateway(env: ServerEnvironment, fetchImpl: FetchLik
   };
 
   const enforceRateLimit = (userId: number) => {
-    const now = Date.now();
-    const recent = (callsByUser.get(userId) ?? []).filter((at) => now - at < REQUEST_WINDOW_MS);
-    if (recent.length >= REQUESTS_PER_WINDOW) {
+    const t = now();
+    if (t - windowStart >= REQUEST_WINDOW_MS) {
+      windowStart = t;
+      callsByUser.clear();
+    }
+    const count = (callsByUser.get(userId) ?? 0) + 1;
+    if (count > REQUESTS_PER_WINDOW) {
       throw new HostedProviderError("rate_limit", "Hosted generation is temporarily limited for this workspace. Please wait a minute and try again.");
     }
-    recent.push(now);
-    callsByUser.set(userId, recent);
+    callsByUser.set(userId, count);
   };
 
   const generate = async (request: HostedRequest): Promise<HostedProviderResult> => {
@@ -306,7 +332,8 @@ function createHostedProviderGateway(env: ServerEnvironment, fetchImpl: FetchLik
     return { text, usage: usage ? { inputTokens: usage.total_input_tokens, outputTokens: usage.total_output_tokens, totalTokens: usage.total_tokens } : undefined, finishReason: d?.status as string | undefined };
   };
 
-  return { health, generate };
+  /** Test-only visibility into the rate limiter's memory footprint; data, not a callback. */
+  return { health, generate, activeCallers: () => callsByUser.size };
 }
 
 // ── Adapter utilities ──────────────────────────────────────────────────────────
