@@ -155,12 +155,26 @@ export class DbRevisionStore implements RevisionStore {
         r.input_ref, r.output_ref, r.gate_results, r.freshness, r.status,
         r.provider_used, r.provenance, r.retention_scope,
       );
+      /**
+       * Run inside THIS transaction, not after it commits.
+       *
+       * `evict()` is itself a bare check-then-act (a SELECT deciding which runs are oldest,
+       * then two DELETEs) — the exact shape the comment above this method exists to warn
+       * about. Calling it after COMMIT gave a concurrent append() to one of the "doomed" runs
+       * a real window to land and be silently destroyed: evict()'s SELECT and the other
+       * process's whole append() could both run between this transaction's COMMIT and this
+       * call. Running it here instead means evict() shares this call's RESERVED lock, so
+       * nothing can write a run out from under its own read-then-delete. It also means a
+       * failure inside evict() rolls back the revision just inserted above, rather than
+       * throwing an exception that makes append() look like it failed when the write had
+       * already durably committed.
+       */
+      this.evict();
       this.db.exec("COMMIT");
     } catch (err) {
       this.db.exec("ROLLBACK");
       throw err;
     }
-    this.evict();
   }
 
   async getRun(run_id: string): Promise<RevisionEntry[]> {
@@ -307,6 +321,11 @@ export class DbRevisionStore implements RevisionStore {
     this.db.close();
   }
 
+  /**
+   * Must be called from inside an already-open transaction — see the comment at its call
+   * site in `append()`. Its own SELECT-then-DELETE is not atomic on its own, which is exactly
+   * why it needs to borrow a caller's lock rather than open one of its own.
+   */
   private evict(): void {
     const bundles = this.db.prepare(`
       SELECT run_id FROM revisions

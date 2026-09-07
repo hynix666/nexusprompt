@@ -201,6 +201,14 @@ describe("DbRevisionStore — markStale", () => {
     await expect(store.markStale("r1", "nonexistent")).resolves.toBeUndefined();
     const [e] = await store.getRun("r1");
     expect(e.freshness).toBe("FRESH");
+    // This no-op path has its OWN `ROLLBACK` (markStale opens BEGIN IMMEDIATE before it knows
+    // whether there is anything to update, so even the "nothing to do" exit has to release the
+    // floor explicitly). A follow-up call proves that rollback actually ran, the same way the
+    // other two rollback paths above are proven -- without it, this call would leave the
+    // connection stuck inside an open transaction and every subsequent call would fail with
+    // "cannot start a transaction within a transaction".
+    await store.append(entry("r5", "fine"));
+    expect(await store.getRun("r5")).toHaveLength(1);
     store.close();
   });
 
