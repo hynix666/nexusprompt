@@ -35,6 +35,7 @@ describe("loadEvalSuite", () => {
   it("refuses a suite that does not satisfy eval-suite.schema.json", () => {
     const p = write({ suite: { suite_id: "x" }, cases: [caseOf("a")] });
     expect(() => loadEvalSuite(p)).toThrow(/eval-suite\.schema\.json/);
+    expect(() => loadEvalSuite(p)).toThrow(SuiteError);
   });
 
   it("refuses a declared case that is absent", () => {
@@ -50,11 +51,6 @@ describe("loadEvalSuite", () => {
   it("refuses duplicate case ids", () => {
     const p = write({ suite: suite(["a"]), cases: [caseOf("a"), caseOf("a")] });
     expect(() => loadEvalSuite(p)).toThrow(/duplicate/);
-  });
-
-  it("refuses a suite that does not satisfy eval-suite.schema.json (SuiteError)", () => {
-    const p = write({ suite: { suite_id: "x" }, cases: [caseOf("a")] });
-    expect(() => loadEvalSuite(p)).toThrow(SuiteError);
   });
 
   it("loads every real suite in eval/ unchanged", () => {
