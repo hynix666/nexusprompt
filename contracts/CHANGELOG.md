@@ -49,6 +49,29 @@ Versioning, as applied here:
 
 ---
 
+## 2026-09-09 (a version claim inside the file the last bump edited)
+
+### `run-manifest` 3.0.0 → **3.0.1** (patch — description only)
+
+No shape change. `manifest_version`'s description read "Deliberately still 1.0.0 while this
+schema is at 2.0.0 … The 2.0.0 bump is the schema document catching up to that" — one line
+above the `$comment` the 3.0.0 bump *did* update, in the same file, in the same commit. The
+defect is the one that commit existed to fix, one field over: a hand-written claim naming a
+version that is no longer true.
+
+Nothing catches it. `check:contracts` verifies version citations in `CONTRACTS.md`, not prose
+inside a schema, and `test/contract-conformance.test.ts`'s drift check walks the nine keys of
+`CONTRACT_VERSIONS` — `run-manifest` is not one of them, because it is not stamped into
+`execution_provenance`. The `$ref` half of that same bump *is* guarded: ajv fails to compile a
+schema whose `$ref` names a version not on disk, which is why re-pointing at
+`revision-entry/4.0.0` could not have been forgotten.
+
+Following `audit-report` 1.0.1's precedent, the description no longer names the `$id`'s current
+value at all, rather than replacing 2.0.0 with a 3.0.1 that will drift the same way at the next
+bump. It points at the `$id` instead, which cannot disagree with itself.
+
+---
+
 ## 2026-09-07 (second audit pass — a sibling of the 3.0.0 tightening, missed by it)
 
 ### `revision-entry` 3.0.0 → **4.0.0** (major)
@@ -63,19 +86,19 @@ producer changes: nothing that exists emits a value the tightened schema rejects
 
 Now references `gate-result/1.3.0`, the same pin `pipeline-outcome` uses.
 
-### `run-manifest` 2.0.0 → **3.0.0** (major)
-
-`revisions[].$ref` pointed at `revision-entry/3.0.0`. The `$comment` beside that `$ref` already
-said a future `revision-entry` bump "forces a decision here rather than silently leaving this
-copy behind" — this is that decision. Re-pointed to `revision-entry/4.0.0`; a manifest whose
-revisions carried non-gate-result garbage in `gate_results` was valid until now.
-
 `Documentation/CONTRACTS.md`'s hand-written `RevisionEntry` illustration was also stale
 independent of the version bump: its `required` list omitted `execution_provenance`,
 `retention_scope`, `input_ref`, and `output_ref` (all required since 2.0.0/1.4.0), and its
 `status` enum omitted `"SKIPPED"` (added at 1.4.0). Corrected both; `check:contracts` verifies
 the version citation but not `required`/enum content, which is how this survived one full
 audit pass already.
+
+### `run-manifest` 2.0.0 → **3.0.0** (major)
+
+`revisions[].$ref` pointed at `revision-entry/3.0.0`. The `$comment` beside that `$ref` already
+said a future `revision-entry` bump "forces a decision here rather than silently leaving this
+copy behind" — this is that decision. Re-pointed to `revision-entry/4.0.0`; a manifest whose
+revisions carried non-gate-result garbage in `gate_results` was valid until now.
 
 ---
 
