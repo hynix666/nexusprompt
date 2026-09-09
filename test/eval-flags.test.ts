@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { KNOWN_FLAGS, flagError, callsPhrase } from "../scripts/run-eval.js";
@@ -183,5 +184,22 @@ describe("a run says which transport answered — all three of them", () => {
     // A phrase that dropped the number would still satisfy every assertion above.
     expect(callsPhrase("local", 0)).toContain("0 ");
     expect(callsPhrase("local", 137)).toContain("137 ");
+  });
+});
+
+describe("a suite whose declared population is not what it holds", () => {
+  it("exits 2 on a suite whose declared population is not what it holds", () => {
+    const p = join(mkdtempSync(join(tmpdir(), "badsuite-")), "s.json");
+    writeFileSync(p, JSON.stringify({
+      suite: {
+        suite_id: "x", version: "1.0.0", kind: "smoke", case_ids: ["a", "b"],
+        resolution: { detectable_delta: 0.5, confidence: 0.95 },
+        significance_protocol: "exact-mcnemar",
+      },
+      cases: [{ case_id: "a", brief: "b", stub: { text: "t" } }],
+    }), "utf8");
+    const r = run(["--suite", p]);
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/declared but absent: b/);
   });
 });

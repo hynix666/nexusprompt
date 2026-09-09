@@ -22,6 +22,7 @@
 import { readFileSync } from "node:fs";
 import { runSuite, configurationId, type StubbedCase } from "../application/src/eval.js";
 import type { Configuration, EvalSuite } from "../contracts/index.js";
+import { loadEvalSuite, SuiteError } from "./load-eval-suite.js";
 
 const SUITE = "eval/compile-adversarial.json";
 const LEDGER = "eval/adversarial-known-evasions.json";
@@ -32,10 +33,16 @@ async function main(): Promise<number> {
   let data: { suite: EvalSuite; cases: StubbedCase[] };
   let ledger: { evasions: Evasion[] };
   try {
-    data = JSON.parse(readFileSync(SUITE, "utf8"));
+    data = loadEvalSuite<StubbedCase>(SUITE);
+  } catch (err) {
+    if (!(err instanceof SuiteError)) throw err;
+    console.error(`eval:adversarial: ${err.message}`);
+    return 2;
+  }
+  try {
     ledger = JSON.parse(readFileSync(LEDGER, "utf8"));
   } catch (err) {
-    console.error(`adversarial: cannot read the suite or its ledger — ${(err as Error).message}`);
+    console.error(`adversarial: cannot read the ledger — ${(err as Error).message}`);
     return 2;
   }
 

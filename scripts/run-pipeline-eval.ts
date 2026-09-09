@@ -26,9 +26,9 @@
  * Exit 0 every case passed · 1 a case failed · 2 the suite cannot be read or is the wrong shape.
  */
 
-import { readFileSync } from "node:fs";
 import { runPipelineSuite, isPipelineCase, type PipelineEvalCase } from "../application/src/pipeline-eval.js";
 import type { EvalSuite } from "../contracts/index.js";
+import { loadEvalSuite, SuiteError } from "./load-eval-suite.js";
 
 const SUITE = process.argv.includes("--suite")
   ? process.argv[process.argv.indexOf("--suite") + 1]
@@ -44,9 +44,10 @@ const C = {
 async function main(): Promise<number> {
   let data: { suite: EvalSuite; cases: PipelineEvalCase[] };
   try {
-    data = JSON.parse(readFileSync(SUITE, "utf8"));
+    data = loadEvalSuite<PipelineEvalCase>(SUITE);
   } catch (err) {
-    console.error(`eval:pipeline: cannot read ${SUITE} — ${(err as Error).message}`);
+    if (!(err instanceof SuiteError)) throw err;
+    console.error(`eval:pipeline: ${err.message}`);
     return 2;
   }
 

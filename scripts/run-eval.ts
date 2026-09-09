@@ -33,10 +33,10 @@
  */
 
 import { pathToFileURL } from "node:url";
-import { readFileSync } from "node:fs";
 import { runSuite, configurationId, type StubbedCase } from "../application/src/eval.js";
 import { MemoryCacheStore } from "../application/src/cache.js";
 import { isPipelineCase } from "../application/src/pipeline-eval.js";
+import { loadEvalSuite, SuiteError } from "./load-eval-suite.js";
 // Naming a concrete adapter is what a composition root is for.
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
 import { OllamaProvider } from "../adapters/provider-ollama/src/index.js";
@@ -366,9 +366,10 @@ async function main(): Promise<number> {
 
   let data: { suite: EvalSuite; cases: StubbedCase[] };
   try {
-    data = JSON.parse(readFileSync(SUITE, "utf8"));
+    data = loadEvalSuite<StubbedCase>(SUITE);
   } catch (err) {
-    console.error(`eval: cannot read ${SUITE} — ${(err as Error).message}`);
+    if (!(err instanceof SuiteError)) throw err;
+    console.error(`eval: ${err.message}`);
     return 2;
   }
 
