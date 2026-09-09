@@ -123,7 +123,7 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `scripts/divergence-allowlist.json` | 8 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
-| `Documentation/` | 57 Markdown files: 19 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary, and nine 2026 planning documents added 2 September 2026 |
+| `Documentation/` | 59 Markdown files: 19 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary, nine 2026 planning documents added 2 September 2026, and the repository audit and remediation strategy added 9 September 2026 |
 | `docs/superpowers/specs/` | The corpus-grounded spec that drove Phases α–ζ |
 | `test/` | Cross-cutting: contract conformance, evidence conformance, checker tests |
 | `.github/workflows/verify.yml` | CI. Runs `npm run verify` on every push and PR. Actions pinned to commit SHAs, not mutable tags |
