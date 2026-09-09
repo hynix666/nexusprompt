@@ -126,12 +126,32 @@ export class LocalProxyProvider implements ProviderTransport {
 
       if (!res.ok) return this.classifyHttp(res.status, fail);
 
-      const data = (await res.json()) as {
+      /**
+       * A nested boundary, because the outer catch owns the NETWORK.
+       *
+       * `res.json()` throwing on a 2xx body used to fall through to that catch, which reports
+       * UNAVAILABLE/connection_failed — so a provider that answered with garbage was recorded
+       * as unreachable, and the retry policy treated a permanent shape problem as transient.
+       * A reply that arrived is never a transport failure, whatever it contains.
+       */
+      let data: {
         content?: Array<{ type: string; text?: string }>;
         model?: string;
         stop_reason?: string;
         usage?: { input_tokens?: number; output_tokens?: number };
       };
+      try {
+        data = (await res.json()) as typeof data;
+      } catch {
+        return fail("MALFORMED_RESPONSE", "unparseable_body", "The provider returned 2xx with a body that is not JSON.");
+      }
+
+      // Before any field is READ. `null` and `"a string"` are valid JSON, so the parse above
+      // succeeds and the first property access then throws into the outer catch — reporting a
+      // reply that arrived as a connection failure, which is the bug this block closes.
+      if (typeof data !== "object" || data === null || Array.isArray(data)) {
+        return fail("MALFORMED_RESPONSE", "invalid_body", "The provider returned 2xx with a body that is not a JSON object.");
+      }
 
       /**
        * A truncated response is not a successful one — and it is not `INVALID_REQUEST`.
@@ -156,6 +176,11 @@ export class LocalProxyProvider implements ProviderTransport {
       if (data.stop_reason === "refusal") {
         return fail("CONTENT_FILTER", "refusal", "The model declined this request.");
       }
+
+      // Checked AFTER stop_reason so a truncation or a refusal keeps its own category rather
+      // than being flattened into "malformed" — those are answers, and they say what they are.
+      const badShape = malformedReason(data);
+      if (badShape !== null) return fail("MALFORMED_RESPONSE", "invalid_body", badShape);
 
       return {
         request_id: req.request_id,
@@ -214,3 +239,46 @@ export class LocalProxyProvider implements ProviderTransport {
   }
 }
 
+
+/**
+ * Why a 2xx body cannot be used, or null when it can.
+ *
+ * Returns a REASON rather than a boolean so the typed failure carries something a reader can
+ * act on. `safe_message` is persisted and later linted by the gates, so it must describe the
+ * shape problem without echoing any of the body that caused it.
+ *
+ * Optional fields are checked only when present: absence is the provider declining to say,
+ * which the result already models as undefined. A present field of the wrong type is
+ * different — it is a claim that cannot be true.
+ */
+function malformedReason(data: unknown): string | null {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return "The provider returned 2xx with a body that is not a JSON object.";
+  }
+  const d = data as {
+    content?: unknown;
+    model?: unknown;
+    stop_reason?: unknown;
+    usage?: { input_tokens?: unknown; output_tokens?: unknown };
+  };
+
+  if (!Array.isArray(d.content)) return "The 2xx body carries no content array.";
+  const text = (d.content as Array<{ type?: unknown; text?: unknown }>)
+    .filter((b) => b && b.type === "text")
+    .map((b) => (typeof b.text === "string" ? b.text : ""))
+    .join("");
+  if (text.length === 0) return "The 2xx body carries no text content.";
+
+  if (d.model !== undefined && typeof d.model !== "string") return "The 2xx body's model is present but not a string.";
+  if (d.stop_reason !== undefined && typeof d.stop_reason !== "string") {
+    return "The 2xx body's stop_reason is present but not a string.";
+  }
+
+  for (const key of ["input_tokens", "output_tokens"] as const) {
+    const v = d.usage?.[key];
+    if (v !== undefined && (typeof v !== "number" || !Number.isFinite(v))) {
+      return `The 2xx body's usage.${key} is present but not a finite number.`;
+    }
+  }
+  return null;
+}
