@@ -8,7 +8,7 @@ Every other check in this repository asks whether a number is right. This one as
 it is right *about*. A correct figure attached to an overreaching claim is the more
 dangerous of the two, because a checker has already blessed it.
 
-10 entries · spec version 1.0.0.
+11 entries · spec version 1.0.0.
 
 Each entry states a scope in two halves and pins the numbers that bound it. The
 **Crossed when** line names the event that should make someone rewrite the claim —
@@ -293,3 +293,25 @@ that event is a failing build, not a note in a backlog.
 **Crossed when.** Any of the three pinned values moves. `models_measured` changing means the floor now speaks for a different set of models and every claim checked against it needs re-reading; `cases_scored` changing means the suite itself changed and the floor is no longer comparable to the one it replaced. `floor_measured` going false would mean the artifact was deleted while claims pinned in scripts/noise-claims.json still stand — the gate silently disarming, which is the state it exists to make impossible.
 
 **Evidence:** `scripts/check-noise.ts` · `scripts/noise-claims.json` · `scripts/compare-models.ts` · `scripts/noise-floor.ts` · `docs/superpowers/specs/2026-09-01-noise-floor-design.md` · `docs/superpowers/plans/2026-09-03-brief-pilot-findings.md`
+
+## Nothing here can be installed and run by someone who did not clone it
+
+`nothing-here-is-installable` · probe `deliverySurface`
+
+**Establishes.** That the engine runs from a checkout. `npm install && npm run verify` works in about ten seconds, and `npm run cli` drives a full pipeline run from source.
+
+**Does not establish.** That anyone can install this and run it. `tsx` is a devDependency, no workspace declares a `build` script, and `shells/cli` declares no `bin`, so `npm install --omit=dev` produces a tree where `npm run cli` and `npm start -w @nexusprompt/shell-api` both fail on a missing `tsx`. This was proven on 9 September 2026 by performing that install, not inferred from the manifests. `three-reproducibility-claims` already says NOTHING IS COMPILED, but says it about build reproducibility; this entry says what it means for delivery, which is a different claim and was stated nowhere. Until it is, `USER_GUIDE.md` describes commands that work only for people who already have the development tree — which is everyone who has ever run them, and is why it went unnoticed.
+
+**Pinned:**
+
+```json
+{
+  "tsx_is_a_dev_dependency_only": true,
+  "build_script_in_root_or_shells": 0,
+  "cli_declares_a_bin": false
+}
+```
+
+**Crossed when.** A build step lands, `tsx` moves to `dependencies`, or `shells/cli` gains a `bin`. Any of the three changes what this repository can hand to someone, and the entry should then be rewritten as a delivery claim rather than renumbered.
+
+**Evidence:** `package.json` · `shells/cli/package.json` · `Documentation/USER_GUIDE.md`
