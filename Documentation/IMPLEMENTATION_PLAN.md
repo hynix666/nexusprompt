@@ -55,6 +55,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "configured": true
   },
   "commands": [
+    "ack:schema-self-reference",
     "build:anchor",
     "build:brief-pilot",
     "build:hash",
@@ -79,6 +80,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "check:matrix",
     "check:noise",
     "check:plan",
+    "check:schema-self-reference",
     "check:sizing",
     "check:stages",
     "check:truth",

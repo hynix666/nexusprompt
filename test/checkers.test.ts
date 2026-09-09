@@ -26,6 +26,11 @@ import { checkDepthBudget } from "../scripts/check-depth-budget.mjs";
 import { checkStages } from "../scripts/check-stages.mjs";
 import { checkCorpus, buildManifest } from "../scripts/check-corpus.mjs";
 import { checkCounts } from "../scripts/check-counts.mjs";
+import {
+  checkSchemaSelfReference,
+  readSchemas,
+  renderLedger,
+} from "../scripts/check-schema-self-reference.mjs";
 import { checkFingerprint, RUNS as FP_RUNS } from "../scripts/check-fingerprint.mjs";
 import { checkRepoHygiene, NEVER_IGNORED } from "../scripts/check-repo-hygiene.mjs";
 import { collect, render } from "../scripts/generate-capability-matrix.mjs";
@@ -2434,5 +2439,153 @@ describe("check-sizing — checkSizing", () => {
   it("passes on the real repository", () => {
     const r = checkSizing();
     expect(r.failures).toEqual([]);
+  });
+});
+
+/* ── check-schema-self-reference ──────────────────────────────────────────── */
+
+/**
+ * The guard exists because `run-manifest`'s `manifest_version` description said "this schema
+ * is at 2.0.0" and #179 moved the `$id` to 3.0.0 one line below it. What makes it hard is that
+ * a correct sentence is indistinguishable from a rotting one: `judge-verdict`'s "Added in
+ * 1.2.0" and the run-manifest line above were, when written, both a semver equal to the
+ * then-current `$id`, and both keep their number as the `$id` moves past. So the check reads
+ * none of the English. It pins version-bearing prose to the `$id` it was read under and fails
+ * on the bump — the one event that can turn a true sentence false.
+ *
+ * These cases pin that design decision, not just the behaviour: the historical sentence and
+ * the rotting one are treated IDENTICALLY, and that is the point rather than a shortcoming.
+ */
+function makeSelfRefRepo(
+  schemas: Record<string, unknown>,
+  ledgerSchemas: Record<string, unknown> | null,
+): string {
+  const root = mkroot("pnx-selfref-");
+  for (const [name, body] of Object.entries(schemas)) {
+    write(root, `contracts/${name}.schema.json`, JSON.stringify(body, null, 2));
+  }
+  if (ledgerSchemas !== null) {
+    write(root, "contracts/self-reference-ledger.json", JSON.stringify({ schemas: ledgerSchemas }, null, 2));
+  }
+  return root;
+}
+
+/** The ledger the tree deserves — the writer's output, so tests never hand-copy a hash. */
+const ackOf = (root: string) => renderLedger(readSchemas(root), "2026-09-09");
+
+const schemaWith = (id: string, description: string) => ({
+  $schema: "http://json-schema.org/draft-07/schema#",
+  $id: `https://promptnexus.dev/contracts/${id}`,
+  type: "object",
+  properties: { field: { type: "string", description } },
+});
+
+describe("check-schema-self-reference", () => {
+  it("passes on the real repository", () => {
+    const r = checkSchemaSelfReference(process.cwd());
+    expect(r.problems.map((p) => `${p.schema}: ${p.why}`)).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("fires when a $id moves and the prose is not re-read — the #179 scenario", () => {
+    const before = { "run-manifest": schemaWith("run-manifest/2.0.0", "Deliberately still 1.0.0 while this schema is at 2.0.0.") };
+    const root = makeSelfRefRepo(before, null);
+    const ledger = ackOf(root);
+
+    // The bump that falsified the sentence, with the sentence left exactly as it was.
+    const bumped = { "run-manifest": schemaWith("run-manifest/3.0.0", "Deliberately still 1.0.0 while this schema is at 2.0.0.") };
+    const after = makeSelfRefRepo(bumped, ledger);
+
+    const r = checkSchemaSelfReference(after);
+    expect(r.ok).toBe(false);
+    expect(r.problems[0].schema).toBe("run-manifest");
+    expect(r.problems[0].why).toContain("last read at 2.0.0");
+    // The failure must print the sentence, or it only tells you that something moved.
+    expect(r.problems[0].sentences[0].text).toContain("this schema is at 2.0.0");
+  });
+
+  it("treats a permanently-true sentence exactly like a rotting one, by design", () => {
+    // "Added in 1.2.0" stays correct forever; "is at 1.2.0" rots at the next bump. No matcher
+    // can separate them, so both are held to the same rule: re-read on bump. If this test ever
+    // fails because someone taught the check to tell them apart, read the header first.
+    const historical = { "judge-verdict": schemaWith("judge-verdict/1.2.0", "Added in 1.2.0 for the brief-fidelity rubric.") };
+    const root = makeSelfRefRepo(historical, null);
+    const ledger = ackOf(root);
+    expect(checkSchemaSelfReference(makeSelfRefRepo(historical, ledger)).ok).toBe(true);
+
+    const bumped = { "judge-verdict": schemaWith("judge-verdict/1.3.0", "Added in 1.2.0 for the brief-fidelity rubric.") };
+    const r = checkSchemaSelfReference(makeSelfRefRepo(bumped, ledger));
+    expect(r.ok).toBe(false);
+    expect(r.problems[0].why).toContain("last read at 1.2.0");
+  });
+
+  it("fires when a version-bearing sentence is reworded and no version changes", () => {
+    // The mutation the fingerprint exists for: "Added in 1.2.0" -> "is at 1.2.0" turns a
+    // permanent claim into one that rots, while the version multiset is untouched. Hashing
+    // the versions alone would pass this.
+    const before = { "judge-verdict": schemaWith("judge-verdict/1.2.0", "Added in 1.2.0 for the rubric.") };
+    const ledger = ackOf(makeSelfRefRepo(before, null));
+
+    const reworded = { "judge-verdict": schemaWith("judge-verdict/1.2.0", "This schema is at 1.2.0.") };
+    const r = checkSchemaSelfReference(makeSelfRefRepo(reworded, ledger));
+    expect(r.ok).toBe(false);
+    expect(r.problems[0].why).toContain("prose changed");
+  });
+
+  it("fires on a schema that gains a version and has no entry — derived, not enumerated", () => {
+    // The failure mode of CONTRACT_VERSIONS' drift check, which walks nine keys of eighteen
+    // schemas and so could not see run-manifest at all. A registration list cannot fail for
+    // an absent registration; a walk can.
+    const root = makeSelfRefRepo({ "gate-result": schemaWith("gate-result/1.3.0", "Stable since 1.0.0.") }, {});
+    const r = checkSchemaSelfReference(root);
+    expect(r.ok).toBe(false);
+    expect(r.problems[0].why).toContain("no ledger entry");
+  });
+
+  it("does not require an entry for a schema whose prose names no version", () => {
+    const root = makeSelfRefRepo({ "gate-result": schemaWith("gate-result/1.3.0", "One gate's verdict.") }, {});
+    expect(checkSchemaSelfReference(root).ok).toBe(true);
+  });
+
+  it("fires on an entry whose schema no longer carries a version", () => {
+    const before = { "baseline": schemaWith("baseline/2.0.0", "1.0.0 had superseded_by.") };
+    const ledger = ackOf(makeSelfRefRepo(before, null));
+    const cleaned = { "baseline": schemaWith("baseline/2.0.0", "The baseline this one replaces.") };
+    const r = checkSchemaSelfReference(makeSelfRefRepo(cleaned, ledger));
+    expect(r.ok).toBe(false);
+    expect(r.problems[0].why).toContain("stale");
+  });
+
+  it("fires on an entry for a schema that no longer exists", () => {
+    const root = makeSelfRefRepo(
+      { "gate-result": schemaWith("gate-result/1.3.0", "One gate's verdict.") },
+      { "deleted-contract": { acknowledged_at: "1.0.0", fingerprint: "x", mentions: ["1.0.0"], reviewed: "2026-09-09" } },
+    );
+    const r = checkSchemaSelfReference(root);
+    expect(r.ok).toBe(false);
+    expect(r.problems[0].schema).toBe("deleted-contract");
+  });
+
+  it("is fatal, not merely failing, when the ledger cannot be read", () => {
+    const root = makeSelfRefRepo({ "gate-result": schemaWith("gate-result/1.3.0", "Stable since 1.0.0.") }, null);
+    const r = checkSchemaSelfReference(root);
+    expect(r.ok).toBe(false);
+    expect(r.fatal).toContain("cannot read");
+  });
+
+  it("finds a version in a nested $comment, not only a top-level description", () => {
+    // run-manifest's real case lives at properties.revisions.items.$comment.
+    const nested = {
+      "run-manifest": {
+        $schema: "http://json-schema.org/draft-07/schema#",
+        $id: "https://promptnexus.dev/contracts/run-manifest/3.0.0",
+        type: "object",
+        properties: { revisions: { type: "array", items: { $comment: "Pinned to revision-entry/4.0.0." } } },
+      },
+    };
+    const root = makeSelfRefRepo(nested, {});
+    const r = checkSchemaSelfReference(root);
+    expect(r.ok).toBe(false);
+    expect(r.problems[0].sentences[0].path).toBe("properties.revisions.items.$comment");
   });
 });
