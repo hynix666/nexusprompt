@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://promptnexus.dev/contracts/run-manifest/3.0.0",
+  "$id": "https://promptnexus.dev/contracts/run-manifest/3.0.1",
   "title": "RunManifest",
   "description": "A whole semantic run as one immutable, atomically published unit: the run's revisions plus every content ref they cite. Metadata only — no content bodies. A run id must use exactly one storage mode (legacy bundle or semantic manifest); both under one run id is an error. Immutable after publication.",
   "type": "object",
@@ -15,7 +15,7 @@
   "additionalProperties": false,
   "properties": {
     "manifest_version": {
-      "description": "Pinned: the manifest format is versioned independently of revision-entry so readers can refuse formats they do not understand without guessing from shape. Deliberately still 1.0.0 while this schema is at 2.0.0 — the two version different things. This const is what a PRODUCER stamps on disk, and nothing a producer writes changed: every manifest ever written held real RevisionEntry objects, because that is what TypeScript required. The 2.0.0 bump is the schema document catching up to that, so no stored manifest needs migrating and no reader needs to refuse anything.",
+      "description": "Pinned: the manifest format is versioned independently of revision-entry so readers can refuse formats they do not understand without guessing from shape. Deliberately still 1.0.0 while this schema's own $id has moved on — the two version different things. This description no longer names the $id's current value, which is how it came to claim 2.0.0 a bump after that stopped being true; read the $id. This const is what a PRODUCER stamps on disk, and no bump so far has changed anything a producer writes: every manifest ever written held real RevisionEntry objects, whose gate_results held real GateResult objects, because that is what TypeScript required. Each bump is the schema document catching up to that, so no stored manifest needs migrating and no reader needs to refuse anything.",
       "const": "1.0.0"
     },
     "run_id": {

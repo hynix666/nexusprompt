@@ -492,7 +492,7 @@ recorded rather than implied.
 | `provider-failure` | 1.1.1 | yes |
 | `revision-entry` | 4.0.0 | yes |
 | `routing-policy` | 1.0.0 | — |
-| `run-manifest` | 3.0.0 | — |
+| `run-manifest` | 3.0.1 | — |
 | `technique-record` | 2.0.0 | yes |
 <!-- END GENERATED: schema-inventory -->
 
