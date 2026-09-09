@@ -12,6 +12,20 @@
       "verdict": "deliberate",
       "reason": "Tracked node_modules/ and emptied .gitignore — the sixth gitignore incident. Reverted on purpose; check:hygiene now pins the repository's shape so it cannot recur silently.",
       "evidence": "merge_commit c5ad91d2; .gitignore and every node_modules/ path absent from master by design"
+    },
+    {
+      "pr": 158,
+      "title": "docs: CONTRACTS.md gets the guard every other derived document has",
+      "verdict": "superseded",
+      "reason": "The content is on master; only these commits are not. #157 landed the same guard first — scripts/check-contracts-doc.mjs was added to master by c103538, and check:contracts runs inside npm run verify today. The two implementations are not byte-identical, so `git cherry` sees different patch-ids and reports the patches absent. That is the checker working as designed and still pointing at the wrong conclusion: it measures patch presence, which stops tracking content presence the moment work re-lands through a different PR. Cherry-picking would duplicate a guard that already exists.",
+      "evidence": "merge_commit a20a5ea0, base fix/contract-nested-closure; absent commits de5a28f9 and 058462a9; scripts/check-contracts-doc.mjs introduced on master by c103538 (#157); `git diff 058462a:scripts/check-contracts-doc.mjs origin/master:scripts/check-contracts-doc.mjs` reports 13 insertions and 1 deletion — master carries the evolved copy; `npm run check:contracts` green on master"
+    },
+    {
+      "pr": 93,
+      "title": "plan: build the brief generator, measure it, and decide either way",
+      "verdict": "deliberate",
+      "reason": "Genuinely absent, unlike #158: docs/superpowers/plans/2026-09-02-brief-generator-pilot.md (1,548 lines) never reached master. Recorded rather than cherry-picked because the plan was executed and outlived: the pilot it describes was built, ran, and returned a verdict, and both halves of that outcome are on master — the design spec carries 'Tasks 1-5 complete, 3 September 2026 ... verdict \"does not pay\" (delta = 0.4 pp, p = 0.5716)' and the findings document records the measurement. Landing the execution plan now would add a 1,548-line document describing work already finished and decided against, which is the documentation growth Documentation/TRUTH_BOUNDARY.md exists to warn about. The decision it was written to produce was made and is durable without it.",
+      "evidence": "merge_commit 36190d23, base fix-doc-counts-after-91; absent commit 02853e51 (one file, 1,548 insertions); on master: docs/superpowers/specs/2026-09-01-brief-generator-pilot-design.md and docs/superpowers/plans/2026-09-03-brief-pilot-findings.md; scripts/build-brief-pilot.ts and check:brief-pilot in the verify chain"
     }
   ]
 }

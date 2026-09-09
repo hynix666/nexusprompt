@@ -33,7 +33,7 @@ enforces, so this table and that test cannot disagree.
 | `provider-failure` | 1.1.1 | validated |
 | `revision-entry` | 4.0.0 | validated |
 | `routing-policy` | 1.0.0 | validated |
-| `run-manifest` | 3.0.0 | validated |
+| `run-manifest` | 3.0.1 | validated |
 | `technique-record` | 2.0.0 | validated |
 
 **17 of 18** schemas are validated against a value the system produced.
