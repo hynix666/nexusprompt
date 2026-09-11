@@ -133,9 +133,25 @@ export class LocalProxyProvider implements ProviderTransport {
         usage?: { input_tokens?: number; output_tokens?: number };
       };
 
-      // A truncated response is not a successful one.
+      /**
+       * A truncated response is not a successful one — and it is not `INVALID_REQUEST`.
+       *
+       * It was classified that way until this change, which got both halves wrong. Our
+       * request was well-formed; the call returned 200; a model ran and produced the bytes
+       * that got cut off at the ceiling. `provider-failure` 1.1.0 defines every category
+       * except `MALFORMED_RESPONSE` as meaning NO RESPONSE ARRIVED, so the old value sent
+       * Core to the demo placeholder, whose "No output was produced" would be a false
+       * statement about this run. ADR-0014 names a truncated object as the
+       * `MALFORMED_RESPONSE` case for exactly that reason, and `provider-hosted-server`
+       * already classifies the same event this way under the same `reason_code`.
+       *
+       * `retriable` stays false, unlike this category's three uses in `provider-ollama`.
+       * Those are stochastic — a resample may parse. This one is not: the ceiling is ours,
+       * sent on the request, so the identical request truncates at the identical point. The
+       * fix is a larger `max_tokens` or a shorter stage, neither of which a retry supplies.
+       */
       if (data.stop_reason === "max_tokens") {
-        return fail("INVALID_REQUEST", "max_tokens_truncated", "Response hit the token ceiling and is incomplete.");
+        return fail("MALFORMED_RESPONSE", "max_tokens_truncated", "Response hit the token ceiling and is incomplete.");
       }
       if (data.stop_reason === "refusal") {
         return fail("CONTENT_FILTER", "refusal", "The model declined this request.");
