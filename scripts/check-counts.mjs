@@ -123,6 +123,13 @@ export function resolvers(root = process.cwd()) {
     "manifest.known_limits": () =>
       readJson(at("spec/manifest-shapes.json")).cases.filter((c) => c.status === "known-limit").length,
 
+    /**
+     * Entries in the truth boundary. Pinned because seven places stated eight or nine while the
+     * spec held twelve -- and the entry count is the one number a reader uses to judge how much
+     * the repository admits it does not establish.
+     */
+    "truth.entries": () => readJson(at("spec/truth-boundary.json")).entries.length,
+
     "divergences.declared": () =>
       readJson(at("scripts/divergence-allowlist.json")).entries.length,
     "stages.built": () =>

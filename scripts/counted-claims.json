@@ -284,6 +284,48 @@
       "pattern": "[Rr]uns against ([\\d,]+) local models",
       "resolver": "models.fingerprints_pinned",
       "reason": "The count of local model fingerprints observed and pinned. Four places now state it in prose, and it is exactly the number that grows the next time somebody runs a model and does not grow in the docs — the shape every wrong count in this file had. Derived from scripts/model-fingerprints.json, the file the fingerprint watch itself reads, so the documentation and the guard cannot disagree about how many models have answered."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d+)\\s+machine-checked entries",
+      "resolver": "truth.entries",
+      "reason": "The README sends every reader to the truth boundary before they quote a number, and said nine while it held twelve. The pointer to the list of what is not established must not itself be unestablished."
+    },
+    {
+      "document": "README.md",
+      "pattern": "(\\d+) truth boundaries",
+      "resolver": "truth.entries",
+      "reason": "Restated in the README's tree table. Two statements of one number are two chances to be wrong."
+    },
+    {
+      "document": "CLAUDE.md",
+      "pattern": "The truth boundary: (\\d+) entries",
+      "resolver": "truth.entries",
+      "reason": "Said eight. Every session reads this file first, so a stale count here is the one repeated most."
+    },
+    {
+      "document": "AGENTS.md",
+      "pattern": "The truth boundary: (\\d+) entries",
+      "resolver": "truth.entries",
+      "reason": "The same sentence as CLAUDE.md, and it drifted with it."
+    },
+    {
+      "document": "project-knowledge/00-index.md",
+      "pattern": "(\\d+)\\s+machine-checked entries",
+      "resolver": "truth.entries",
+      "reason": "The knowledge base's index table. Said nine."
+    },
+    {
+      "document": "project-knowledge/06-testing-and-quality.md",
+      "pattern": "(\\d+) entries in `spec/truth-boundary.json`",
+      "resolver": "truth.entries",
+      "reason": "Said eight, spelled out, which no pattern could see."
+    },
+    {
+      "document": "project-knowledge/09-commands-and-workflows.md",
+      "pattern": "(\\d+) truth-boundary entries",
+      "resolver": "truth.entries",
+      "reason": "Said eight, spelled out, which no pattern could see."
     }
   ]
 }

@@ -55,7 +55,7 @@ components were rejected by it.
 | Shells | 2 built — `cli` and `api` (adopted 29 Aug, ADR-0012; typechecked and tested). 2 specified and unbuilt (`pipeline-ui`, `toolkit-ui`) |
 | Source size | ~28,600 lines of TypeScript and ESM across `contracts/ core/ application/ adapters/ shells/ scripts/ test/ spec/` |
 | Artifact hash | `fd1e1a80e9b7c95d…` over 78 runtime files, LF-normalised so a Windows and a Linux checkout agree |
-| Truth boundary | 9 machine-checked entries stating what this repository establishes and what it does **not** |
+| Truth boundary | 12 machine-checked entries stating what this repository establishes and what it does **not** |
 | Commits | 131 — and note that a commit stating this number changes it, which is why it is not pinned |
 | Licence | MIT |
 

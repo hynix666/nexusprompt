@@ -65,7 +65,7 @@ Three things, all offline, none of which need a provider key:
 What it will not do is tell you a prompt is *better*. Nothing here has ever called a model,
 and every evaluation figure in this repository was produced by a pinned stub. That is not a
 gap waiting to be filled quietly; it is the boundary the whole design protects, and
-[`Documentation/TRUTH_BOUNDARY.md`](./Documentation/TRUTH_BOUNDARY.md) states it in nine
+[`Documentation/TRUTH_BOUNDARY.md`](./Documentation/TRUTH_BOUNDARY.md) states it in 12
 machine-checked entries. Read that before quoting any number from anywhere else here.
 
 ---
@@ -80,7 +80,7 @@ machine-checked entries. Read that before quoting any number from anywhere else 
 | `adapters/` | Swappable implementations: provider, storage, evidence |
 | `shells/cli/` | The CLI Shell — lint, pipeline, gates, evidence. Calls the Application protocol only |
 | `shells/api/` | A REST Shell over the same protocol: seven endpoints, adopted 29 Aug (ADR-0012). The only part of the tree with runtime dependencies |
-| `spec/` | Behaviour specified as data: 135 manifest shapes and 9 truth boundaries, each one simultaneously the test and the document |
+| `spec/` | Behaviour specified as data: 135 manifest shapes and 12 truth boundaries, each one simultaneously the test and the document |
 | `scripts/` | The checks. Each one fails the build rather than printing a warning |
 | `eval/` | Evaluation suites, with their declared resolution and significance protocol |
 | `sources/` | 420 frozen, hash-pinned files from prior versions. Read from these; never write into them |
