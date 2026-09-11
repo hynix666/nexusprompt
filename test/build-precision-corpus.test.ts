@@ -7,6 +7,7 @@ import {
   cleanSliceCases,
   buildPrecisionCorpus,
   main,
+  PinnedHostedModel,
 } from "../scripts/build-precision-corpus.js";
 import type {
   GenerationRequest, GenerationResult, ProviderFailure, ProviderHealth, ProviderTransport,
@@ -129,7 +130,8 @@ describe("refusals, before any model is asked", () => {
         makeProvider: () => provider,
         fileExists: () => false,
         writeFile: (p: string) => { written.push(p); },
-        log: () => {},
+        log: (_: string) => {},
+        env: {} as Record<string, string | undefined>,
         now: () => "2026-09-11T00:00:00.000Z",
         ...over,
       },
@@ -169,5 +171,56 @@ describe("refusals, before any model is asked", () => {
     const d = deps();
     expect(await main(["--model", "llama3.1:8b"], d.deps)).toBe(0);
     expect(d.written).toEqual(["eval/precision-corpus/llama3.1_8b.json"]);
+  });
+
+  it("refuses --hosted without the endpoint's key and base URL, and never prints either", async () => {
+    // A hosted run sends every brief off this machine; it is opted into by flag and by the
+    // operator's own environment, never by a value typed into a command or committed file.
+    const lines: string[] = [];
+    const d = deps({ env: { COMPATIBLE_OPENAI_BASE_URL: "https://integrate.api.nvidia.com/v1" }, log: (l: string) => { lines.push(l); } });
+    expect(await main(["--model", "nvidia/nemotron-3-super-120b-a12b", "--hosted"], d.deps)).toBe(2);
+    expect(d.provider.calls).toBe(0);
+    expect(lines.join("\n")).toMatch(/COMPATIBLE_OPENAI_API_KEY/);
+    expect(lines.join("\n")).not.toMatch(/integrate\.api\.nvidia\.com/);
+  });
+
+  it("writes a hosted model's file under a path its slash cannot escape", async () => {
+    const d = deps({ env: { COMPATIBLE_OPENAI_API_KEY: "k", COMPATIBLE_OPENAI_BASE_URL: "https://integrate.api.nvidia.com/v1" } });
+    expect(await main(["--model", "nvidia/nemotron-3-super-120b-a12b", "--hosted"], d.deps)).toBe(0);
+    expect(d.written).toEqual(["eval/precision-corpus/nvidia_nemotron-3-super-120b-a12b.json"]);
+  });
+});
+
+describe("a hosted model, driven from the composition root", () => {
+  const request = (): GenerationRequest => ({
+    request_id: "r", run_id: "run", messages: [{ role: "user", content: "brief" }],
+    model_policy: { preferred_models: ["claude-opus-5"], allow_fallback: true },
+    generation_options: { max_tokens: 100, effort: "medium" }, idempotency_key: "r",
+  });
+
+  it("asks for the model named, not the one Core writes into every request", async () => {
+    // core/src/stages/stage-kit.ts names claude-opus-5 on every request; the hosted adapter
+    // sends preferred_models[0]. Unpinned, NVIDIA would be asked for a Claude model.
+    const seen: GenerationRequest[] = [];
+    const inner = new FakeOllama();
+    const spy: ProviderTransport = { provider_id: "hosted", healthCheck: () => inner.healthCheck(),
+      generate: (r) => { seen.push(r); return inner.generate(r); } };
+    const pinned = new PinnedHostedModel(spy, "nvidia/nemotron-3-super-120b-a12b", { minIntervalMs: 0 });
+    await pinned.generate(request());
+    expect(seen[0].model_policy).toEqual({ preferred_models: ["nvidia/nemotron-3-super-120b-a12b"], allow_fallback: false });
+  });
+
+  it("spaces calls so the adapter's own 12-per-minute limit is never the reason a brief is excluded", async () => {
+    // runSuite's retries do not wait, so a rate-limited call fails for good and its brief is
+    // dropped as degraded — a corpus thinned by the limiter rather than by the model.
+    let clock = 0;
+    const slept: number[] = [];
+    const pinned = new PinnedHostedModel(new FakeOllama(), "m", {
+      minIntervalMs: 5_100, now: () => clock, sleep: async (ms) => { slept.push(ms); clock += ms; },
+    });
+    await pinned.generate(request());
+    clock += 1_000; // the first answer took a second
+    await pinned.generate(request());
+    expect(slept).toEqual([4_100]);
   });
 });

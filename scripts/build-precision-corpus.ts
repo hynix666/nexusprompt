@@ -2,6 +2,7 @@
  * build:precision-corpus — the compiled prompts gate precision is measured on (Phase 9, Task 2).
  *
  *   npm run build:precision-corpus -- --model llama3.1:8b [--force]
+ *   npm run build:precision-corpus -- --model <id> --hosted    (an OpenAI-compatible endpoint)
  *
  * Precision is TP / firings, so it needs text the gates can fire on that nobody wrote to make
  * them fire. The repository had none: the frozen fixtures are the port's own regression set,
@@ -26,8 +27,11 @@ import { dirname } from "node:path";
 import { runSuite, configurationId, type StubbedCase } from "../application/src/eval.js";
 // Naming a concrete adapter is what a composition root is for.
 import { OllamaProvider } from "../adapters/provider-ollama/src/index.js";
+import { HostedServerProvider } from "../adapters/provider-hosted-server/src/index.js";
 import { buildBriefCorpus, type BriefCase } from "../core/src/eval/brief-generator.js";
-import type { Configuration, EvalSuite, ProviderTransport } from "../contracts/index.js";
+import type {
+  Configuration, EvalSuite, GenerationRequest, GenerationResult, ProviderFailure, ProviderTransport,
+} from "../contracts/index.js";
 
 type Slice = "pilot" | "clean";
 
@@ -79,6 +83,45 @@ export function cleanSliceCases(pilotBriefs: ReadonlySet<string>): BriefCase[] {
 }
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
+
+/**
+ * A hosted, OpenAI-compatible model driven from this composition root. Added 11 September 2026
+ * at the owner's request, for a model no machine here can run.
+ *
+ * Two jobs, neither of which belongs in Core or the adapter. It pins the model: the stages
+ * name `claude-opus-5` on every request and the hosted adapter asks for `preferred_models[0]`,
+ * so unpinned the endpoint would be asked for a Claude model. And it paces calls under the
+ * adapter's own 12-per-minute limit, because `runSuite`'s retries do not wait — a rate-limited
+ * call would fail for good and its brief would be excluded as degraded, thinning the corpus
+ * by the limiter rather than by the model.
+ */
+export class PinnedHostedModel implements ProviderTransport {
+  readonly provider_id: string;
+  private last: number | null = null;
+
+  constructor(
+    private readonly inner: ProviderTransport,
+    private readonly model: string,
+    private readonly opts: { minIntervalMs: number; now?: () => number; sleep?: (ms: number) => Promise<void> },
+  ) {
+    this.provider_id = inner.provider_id;
+  }
+
+  async generate(req: GenerationRequest): Promise<GenerationResult | ProviderFailure> {
+    const now = this.opts.now ?? Date.now;
+    const sleep = this.opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+    if (this.last !== null) {
+      const wait = this.last + this.opts.minIntervalMs - now();
+      if (wait > 0) await sleep(wait);
+    }
+    this.last = now();
+    return this.inner.generate({ ...req, model_policy: { preferred_models: [this.model], allow_fallback: false } });
+  }
+
+  healthCheck() {
+    return this.inner.healthCheck();
+  }
+}
 
 function configurationFor(model: string): Configuration {
   const base = {
@@ -152,17 +195,29 @@ export async function buildPrecisionCorpus(opts: {
 }
 
 export interface MainDeps {
-  makeProvider: (model: string) => ProviderTransport;
+  makeProvider: (model: string, hosted: boolean, env: Record<string, string | undefined>) => ProviderTransport;
   fileExists: (path: string) => boolean;
   writeFile: (path: string, text: string) => void;
   log: (line: string) => void;
   now: () => string;
+  env?: Record<string, string | undefined>;
 }
 
+/** The adapter allows 12 calls a minute; 5.1 s apart keeps any 60 s window at 12. */
+const HOSTED_MIN_INTERVAL_MS = 5_100;
+
 const realDeps: MainDeps = {
-  // Ten minutes, not the adapter's 120 s: a 27B model is slow, and a timeout here would
-  // silently shrink the corpus by turning a slow answer into an exclusion.
-  makeProvider: (model) => new OllamaProvider({ model, timeoutMs: 600_000 }),
+  makeProvider: (model, hosted, env) =>
+    hosted
+      ? new PinnedHostedModel(
+          new HostedServerProvider({ env: { ...env, COMPATIBLE_OPENAI_MODELS: model }, defaultProvider: "compatible" }),
+          model,
+          { minIntervalMs: HOSTED_MIN_INTERVAL_MS },
+        )
+      : // Ten minutes, not the adapter's 120 s: a 27B model is slow, and a timeout here would
+        // silently shrink the corpus by turning a slow answer into an exclusion.
+        new OllamaProvider({ model, timeoutMs: 600_000 }),
+  env: process.env,
   fileExists: existsSync,
   writeFile: (path, text) => {
     mkdirSync(dirname(path), { recursive: true });
@@ -192,10 +247,25 @@ export async function main(argv: string[], deps: MainDeps = realDeps): Promise<n
     );
     return 2;
   }
-  const provider = deps.makeProvider(model);
+  const hosted = argv.includes("--hosted");
+  const env = deps.env ?? {};
+  if (hosted && !(env.COMPATIBLE_OPENAI_API_KEY?.trim() && env.COMPATIBLE_OPENAI_BASE_URL?.trim())) {
+    // Names the variables, never their values: a key belongs in the operator's environment,
+    // not in a command line, a log, or a file in a public repository.
+    deps.log(
+      "build:precision-corpus: --hosted sends every brief to a hosted endpoint, and reads it only\n" +
+      "  from COMPATIBLE_OPENAI_API_KEY and COMPATIBLE_OPENAI_BASE_URL. Set both in this shell. Nothing was asked.",
+    );
+    return 2;
+  }
+  const provider = deps.makeProvider(model, hosted, env);
   const health = await provider.healthCheck();
   if (!health.ok) {
-    deps.log("build:precision-corpus: the Ollama daemon did not answer. Start it, then re-run. Nothing was asked.");
+    deps.log(
+      hosted
+        ? `build:precision-corpus: the hosted endpoint failed its health check (${health.failing_dependency ?? "no detail"}). Nothing was asked.`
+        : "build:precision-corpus: the Ollama daemon did not answer. Start it, then re-run. Nothing was asked.",
+    );
     return 2;
   }
 
