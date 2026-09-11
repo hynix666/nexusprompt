@@ -95,15 +95,37 @@ describe("failure classification", () => {
     expect(called).toBe(false);
   });
 
-  it("treats a truncated response as a failure, not a success", async () => {
+  /**
+   * A truncated response is MALFORMED_RESPONSE, not INVALID_REQUEST.
+   *
+   * This asserted only that SOME failure came back, and the adapter returned
+   * `INVALID_REQUEST` — which says our request was bad and, per `provider-failure` 1.1.0,
+   * says no response arrived. Both halves are false here: the request was well-formed, the
+   * call returned 200, and a model produced the bytes that got cut off. ADR-0014 names a
+   * truncated object as the MALFORMED_RESPONSE case precisely because the demo placeholder's
+   * "No output was produced" would be a false statement about this run.
+   *
+   * `retriable` stays false, unlike the Ollama adapter's three MALFORMED_RESPONSE cases. Those
+   * are stochastic — a resample may well parse. This one is not: the ceiling is ours, sent on
+   * the request, so the identical request truncates again at the identical point.
+   */
+  it("classifies a truncated response as MALFORMED_RESPONSE — the model answered", async () => {
     process.env.ANTHROPIC_API_KEY = "k";
     const p = new LocalProxyProvider({
       fetchImpl: async () =>
         new Response(JSON.stringify({ content: [{ type: "text", text: "half" }], stop_reason: "max_tokens" })),
     });
     const out = await p.generate(req);
-    expect("category" in out).toBe(true);
+    expect("category" in out && out.category).toBe("MALFORMED_RESPONSE");
     expect("reason_code" in out && out.reason_code).toBe("max_tokens_truncated");
+    expect("retriable" in out && out.retriable).toBe(false);
+  });
+
+  it("keeps INVALID_REQUEST for the cases where OUR request was the problem", async () => {
+    process.env.ANTHROPIC_API_KEY = "k";
+    const p = new LocalProxyProvider({ fetchImpl: async () => new Response("{}", { status: 400 }) });
+    const out = await p.generate(req);
+    expect("category" in out && out.category).toBe("INVALID_REQUEST");
   });
 
   it("treats a refusal as a failure", async () => {
