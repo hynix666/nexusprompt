@@ -60,6 +60,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "build:brief-pilot",
     "build:hash",
     "build:judge-calibration",
+    "build:precision-corpus",
     "check:anchor",
     "check:brief-pilot",
     "check:catalog",
