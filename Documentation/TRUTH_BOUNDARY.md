@@ -8,7 +8,7 @@ Every other check in this repository asks whether a number is right. This one as
 it is right *about*. A correct figure attached to an overreaching claim is the more
 dangerous of the two, because a checker has already blessed it.
 
-11 entries · spec version 1.0.0.
+12 entries · spec version 1.0.0.
 
 Each entry states a scope in two halves and pins the numbers that bound it. The
 **Crossed when** line names the event that should make someone rewrite the claim —
@@ -315,3 +315,24 @@ that event is a failing build, not a note in a backlog.
 **Crossed when.** A build step lands, `tsx` moves to `dependencies`, or `shells/cli` gains a `bin`. Any of the three changes what this repository can hand to someone, and the entry should then be rewritten as a delivery claim rather than renumbered.
 
 **Evidence:** `package.json` · `shells/cli/package.json` · `Documentation/USER_GUIDE.md`
+
+## Nothing here measures how often a gate is wrong when it fires
+
+`gate-precision-is-unmeasured` · probe `precisionSurface`
+
+**Establishes.** Recall, and which figures depend on the quantity that is missing. `anchor-measures-its-own-registry` measures whether a gate set catches a planted defect, and the smoke and adversarial suites check that gates fire when they should. Of the eleven detectors in `core/src/eval/detectors.ts`, three read gate verdicts (`no-gate-failures`, `no-gate-warnings`, `gate-verdict`) and one is a keyword list (`no-fabrication-when-degraded`); those four inherit whatever the gates' precision is. The other seven test exact conditions and do not.
+
+**Does not establish.** That any gate is right when it fires. Precision — the share of a gate's FAIL and WARN verdicts that are real defects — has never been measured, and `IMPLEMENTATION_PLAN.md` has listed it as open since Phase 2b: a detector with a moderate false-positive rate would pass every suite here, because every suite counts hits. The rate is known not to be zero. `CLAIM_DISCIPLINE` flags `guarantee-free` on a hyphen boundary, and ADR-0007 records that the frozen Python source shares that false positive — which is exactly why the differential oracle cannot see it, since agreement with a source that is wrong the same way is still agreement. The anchor cannot see it either: its labels come from gate behaviour, so a gate that fires wrongly is credited with the planted defect. And nothing in the tree is a corpus to measure it on: the 40 frozen fixtures are what the differential oracle replays, so a rate measured there is agreement with the port's own regression set.
+
+**Pinned:**
+
+```json
+{
+  "precision_corpus_exists": false,
+  "adjudicated_firings": 0
+}
+```
+
+**Crossed when.** `eval/precision-corpus.json` is committed or any firing is adjudicated in `eval/precision-adjudications.json` (Phase 9, Tasks 2 and 3). The entry is then rewritten as a measured claim that pins, per gate, the number of firings and the exact interval bounds — never a rounded point estimate — and says the figure belongs to that corpus, not to the gate.
+
+**Evidence:** `Documentation/IMPLEMENTATION_PLAN.md` · `core/src/eval/detectors.ts` · `core/src/eval/anchor.ts` · `Documentation/0007-permanent-differential-oracle.md`
