@@ -333,6 +333,6 @@ that event is a failing build, not a note in a backlog.
 }
 ```
 
-**Crossed when.** `eval/precision-corpus.json` is committed or any firing is adjudicated in `eval/precision-adjudications.json` (Phase 9, Tasks 2 and 3). The entry is then rewritten as a measured claim that pins, per gate, the number of firings and the exact interval bounds — never a rounded point estimate — and says the figure belongs to that corpus, not to the gate.
+**Crossed when.** A model's corpus file is committed under `eval/precision-corpus/` or any firing is adjudicated in `eval/precision-adjudications.json` (Phase 9, Tasks 2 and 3). The entry is then rewritten as a measured claim that pins, per gate, the number of firings and the exact interval bounds — never a rounded point estimate — and says the figure belongs to that corpus, not to the gate.
 
 **Evidence:** `Documentation/IMPLEMENTATION_PLAN.md` · `core/src/eval/detectors.ts` · `core/src/eval/anchor.ts` · `Documentation/0007-permanent-differential-oracle.md`

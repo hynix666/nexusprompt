@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status: DRAFT for review — three decisions below are the owner's, and Tasks 2–5 cannot start until they are made.** Task 1 needs none of them.
+**Status: decided — the owner made D1–D3 on 11 September 2026 (see below). Task 1 is done; Tasks 2–5 are unblocked.**
 
 **Goal:** Measure how often the gates are wrong when they fire, and until that measurement exists, say that it does not.
 
@@ -49,6 +49,12 @@ The gates are defined over **complete compiled system prompts**, and the reposit
 
 **D3 — Accept that the figure is corpus-relative.** `brief-pilot`'s briefs deliberately plant secrets, Unicode, placeholders and structure defects. That raises the true-positive share, and precision depends on it. The figure will be reported as *precision on this corpus*, with the corpus composition beside it, never as a property of the gate alone.
 
+### Decided by the owner, 11 September 2026
+
+- **D1 → (b), Claude alone, disclosed.** Every adjudication records `adjudicated_by: "claude"` and the model id. The measured truth entry must say the labels are unreviewed judgements by an uncalibrated model, and `check:precision` prints that beside every interval. An owner review can later overturn a label; it is then a new record with `adjudicated_by: "owner"`, not an edit.
+- **D2 → four local models:** `llama3.1:8b`, `phi4-mini:latest` and `qwen3.8:27b` (all three already pinned), plus `qwen3-coder:30b`, which is **not** pinned. The owner may add more models after these four finish, so the corpus is **one file per model** (`eval/precision-corpus/<model>.json`). A model is added without regenerating the others, and the builder refuses to overwrite a model's file without `--force`. Any `:cloud` model is refused: Ollama routes those off this machine, which would break "local only, zero spend" and send the briefs to a third party.
+- **D3 → add a clean-brief slice.** Correction to D3's premise: brief-pilot plants a hazard in only two of its four shapes (`secret` and `placeholder`, 25 each); `unicode` and `structure` briefs carry none. The clean slice is 100 `structure`-shape briefs taken from `buildBriefCorpus` at seed 2, deduplicated against each other and against brief-pilot's briefs (8 × 4 × 4 × 4 = 512 are possible). This needs no Core change. Each record carries `slice: "pilot" | "clean"`, and every reported interval is split by slice, so false positives on briefs with nothing planted are visible on their own.
+
 ## Global constraints
 
 - Everything Phase 8 required: `npm`, tests before code, `verify` after every commit with the exit code checked, no `Co-Authored-By`, and every new script added to `IMPLEMENTATION_PLAN.md`'s `commands` array.
@@ -70,11 +76,11 @@ Needs no decision. Lands first, and alone it already retires an unstated gap.
 - [x] **Step 4: Mutation proof.** Create an empty `eval/precision-corpus.json`; `check:truth` must fail naming the key. Remove it; exit 0.
 - [x] **Step 5:** `npm run docs:truth`, then `verify`. Commit `docs: state that gate precision is unmeasured`.
 
-**Done — `bfe4dc4`.** Two deviations from the steps above: the entry also carries `title`, `establishes` and `evidence`, which every `TruthEntry` has and this plan omitted (the same gap Phase 8's Task 1 had); and the entry's text states only what was re-verified on 11 September, so the catalog figures in *Negative results* are not in it. A follow-on commit `8f79314` corrected and pinned the entry count, which seven current-state documents stated as eight or nine while the spec held eleven and now twelve.
+**Done — `bfe4dc4`.** Two deviations from the steps above: the entry also carries `title`, `establishes` and `evidence`, which every `TruthEntry` has and this plan omitted (the same gap Phase 8's Task 1 had); and the entry's text states only what was re-verified on 11 September, so the catalog figures in *Negative results* are not in it. A follow-on commit `8f79314` corrected and pinned the entry count, which seven current-state documents stated as eight or nine while the spec held eleven and now twelve. After D2 made the corpus one file per model, the probe was changed to look for any `.json` under `eval/precision-corpus/`, and the mutation proof re-run against that directory.
 
 ### Task 2: Build the corpus (needs D2)
 
-**Files:** create `scripts/build-precision-corpus.ts` (script `build:precision-corpus`) and its output `eval/precision-corpus.json`.
+**Files:** create `scripts/build-precision-corpus.ts` (script `build:precision-corpus`) and its output, one file per model: `eval/precision-corpus/<model>.json` (see D2).
 
 - [ ] **Step 1: Read before writing.** `scripts/run-eval.ts`'s `--local` composition (it imports `OllamaProvider` at line 42) is the pattern to reuse. Do not write a second transport path.
 - [ ] **Step 2: Behaviour.** For each `brief-pilot` input × chosen model, run the same stage `eval --local` runs and keep the output text **only when `demo_mode` is false**. Degraded output is not a compiled prompt; it is counted and excluded, and the count is recorded. Each record is `{ case_id, model, provider_model_fingerprint, output_sha256, text }`, and the file header records the models, the date, the decoding options, and the excluded count.

@@ -361,12 +361,15 @@ export const PROBES: Record<string, Probe> = {
    * compiled prompts to fire on, and a human adjudication of each firing. Both are absent, so
    * both read as the zero they are — never as precision 1, which is what an unmeasured gate
    * looks like to every suite that only counts hits. Phase 9's Task 3 writes the adjudication
-   * file as `{ adjudications: [...] }`; this reads that shape.
+   * file as `{ adjudications: [...] }`; this reads that shape. The corpus is one file per model
+   * under `eval/precision-corpus/`, so models can be added without regenerating the others.
    */
   precisionSurface(root) {
     const adjudications = join(root, "eval/precision-adjudications.json");
+    const corpusDir = join(root, "eval/precision-corpus");
     return {
-      precision_corpus_exists: existsSync(join(root, "eval/precision-corpus.json")),
+      precision_corpus_exists:
+        existsSync(corpusDir) && readdirSync(corpusDir).some((f) => f.endsWith(".json")),
       adjudicated_firings: existsSync(adjudications)
         ? (readJson(root, "eval/precision-adjudications.json").adjudications?.length ?? 0)
         : 0,
