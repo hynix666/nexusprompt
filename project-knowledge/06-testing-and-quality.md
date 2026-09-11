@@ -104,7 +104,7 @@ CRLF).
 ### 5. The truth boundary — `npm run check:truth`
 
 The four above check that the system does what it says. This one checks what "does" is
-being claimed for. Eight entries in `spec/truth-boundary.json` state a scope in two halves —
+being claimed for. 12 entries in `spec/truth-boundary.json` state a scope in two halves —
 `establishes` and `does_not_establish` — with the numbers bounding it pinned; eight probes
 re-derive those numbers from the tree and render `Documentation/TRUTH_BOUNDARY.md`.
 

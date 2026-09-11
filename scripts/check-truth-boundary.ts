@@ -355,6 +355,28 @@ export const PROBES: Record<string, Probe> = {
   },
 
   /**
+   * Whether anything here measures how often a gate is wrong when it fires.
+   *
+   * Precision is TP / (TP + FP) over firings, so it needs two committed files: a corpus of
+   * compiled prompts to fire on, and a human adjudication of each firing. Both are absent, so
+   * both read as the zero they are — never as precision 1, which is what an unmeasured gate
+   * looks like to every suite that only counts hits. Phase 9's Task 3 writes the adjudication
+   * file as `{ adjudications: [...] }`; this reads that shape. The corpus is one file per model
+   * under `eval/precision-corpus/`, so models can be added without regenerating the others.
+   */
+  precisionSurface(root) {
+    const adjudications = join(root, "eval/precision-adjudications.json");
+    const corpusDir = join(root, "eval/precision-corpus");
+    return {
+      precision_corpus_exists:
+        existsSync(corpusDir) && readdirSync(corpusDir).some((f) => f.endsWith(".json")),
+      adjudicated_firings: existsSync(adjudications)
+        ? (readJson(root, "eval/precision-adjudications.json").adjudications?.length ?? 0)
+        : 0,
+    };
+  },
+
+  /**
    * The literature corpus is the stated warrant for the measured results the evaluation ADR
    * opens with. It is 2 GB of third-party PDFs, gitignored, so no clean checkout has ever
    * verified it and CI never has either. That does not make it false; it makes it a local

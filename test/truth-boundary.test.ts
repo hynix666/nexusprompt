@@ -213,6 +213,15 @@ describe("check-truth-boundary — the real spec", () => {
       "tsx_is_a_dev_dependency_only",
     ]);
   });
+
+  it("states that gate precision is unmeasured", () => {
+    const spec = JSON.parse(readFileSync("spec/truth-boundary.json", "utf8"));
+    const entry = spec.entries.find((e: { id: string }) => e.id === "gate-precision-is-unmeasured");
+    expect(entry, "an unmeasured quantity every gate-backed figure depends on must be stated").toBeDefined();
+    // Precision is TP / firings, so the two facts are whether firings exist to adjudicate and
+    // whether any have been adjudicated. Either moving is the measurement starting to exist.
+    expect(Object.keys(entry.expect).sort()).toEqual(["adjudicated_firings", "precision_corpus_exists"]);
+  });
 });
 
 describe("providerReach — the boundary that matters most", () => {
