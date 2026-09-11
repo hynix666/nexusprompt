@@ -64,11 +64,13 @@ Needs no decision. Lands first, and alone it already retires an unstated gap.
 
 **Files:** `scripts/check-truth-boundary.ts` (a probe beside `deliverySurface`), `spec/truth-boundary.json` (one entry), `Documentation/TRUTH_BOUNDARY.md` (regenerated), `test/truth-boundary.test.ts`.
 
-- [ ] **Step 1: Test first.** Assert that an entry `gate-precision-is-unmeasured` exists and that its `expect` keys are exactly `precision_corpus_exists` and `adjudicated_firings`. Run it and watch it fail.
-- [ ] **Step 2: Probe `precisionSurface(root)`.** It returns `{ precision_corpus_exists: existsSync("eval/precision-corpus.json"), adjudicated_firings: <count of entries in eval/precision-adjudications.json, or 0 when absent> }`.
-- [ ] **Step 3: Entry.** `expect: { precision_corpus_exists: false, adjudicated_firings: 0 }`. `does_not_establish` names the four facts above: the unmeasured status, `IMPLEMENTATION_PLAN.md:241`, the known `CLAIM_DISCIPLINE` false positive, and which detectors inherit it. It also cross-references `anchor-measures-its-own-registry`, whose text already concedes that a systematically wrong gate is wrong in its own ground truth. `crossed_when`: Task 5 lands.
-- [ ] **Step 4: Mutation proof.** Create an empty `eval/precision-corpus.json`; `check:truth` must fail naming the key. Remove it; exit 0.
-- [ ] **Step 5:** `npm run docs:truth`, then `verify`. Commit `docs: state that gate precision is unmeasured`.
+- [x] **Step 1: Test first.** Assert that an entry `gate-precision-is-unmeasured` exists and that its `expect` keys are exactly `precision_corpus_exists` and `adjudicated_firings`. Run it and watch it fail.
+- [x] **Step 2: Probe `precisionSurface(root)`.** It returns `{ precision_corpus_exists: existsSync("eval/precision-corpus.json"), adjudicated_firings: <count of entries in eval/precision-adjudications.json, or 0 when absent> }`.
+- [x] **Step 3: Entry.** `expect: { precision_corpus_exists: false, adjudicated_firings: 0 }`. `does_not_establish` names the four facts above: the unmeasured status, `IMPLEMENTATION_PLAN.md:241`, the known `CLAIM_DISCIPLINE` false positive, and which detectors inherit it. It also cross-references `anchor-measures-its-own-registry`, whose text already concedes that a systematically wrong gate is wrong in its own ground truth. `crossed_when`: Task 5 lands.
+- [x] **Step 4: Mutation proof.** Create an empty `eval/precision-corpus.json`; `check:truth` must fail naming the key. Remove it; exit 0.
+- [x] **Step 5:** `npm run docs:truth`, then `verify`. Commit `docs: state that gate precision is unmeasured`.
+
+**Done — `bfe4dc4`.** Two deviations from the steps above: the entry also carries `title`, `establishes` and `evidence`, which every `TruthEntry` has and this plan omitted (the same gap Phase 8's Task 1 had); and the entry's text states only what was re-verified on 11 September, so the catalog figures in *Negative results* are not in it. A follow-on commit `8f79314` corrected and pinned the entry count, which seven current-state documents stated as eight or nine while the spec held eleven and now twelve.
 
 ### Task 2: Build the corpus (needs D2)
 
@@ -83,7 +85,7 @@ Needs no decision. Lands first, and alone it already retires an unstated gap.
 
 **Files:** create `scripts/check-precision.ts` (`check:precision`, added to `verify`), `eval/precision-adjudications.json`, and `test/check-precision.test.ts`.
 
-- [ ] **Step 1: Tests first**, one per rule below, each shown failing.
+- [ ] **Step 1: Tests first**, one per rule below, each shown failing. The adjudication file is `{ corpus_sha256, adjudications: [...] }`: `precisionSurface` in `scripts/check-truth-boundary.ts` already counts `adjudications`, so a different key leaves the truth entry reading 0 after firings are adjudicated.
 - [ ] **Step 2: Rules.** The check reruns the registry over every corpus text and derives the set of firings `(output_sha256, gate_id, verdict)`. It fails when:
   - a firing has no adjudication (a gate change that starts firing somewhere new must be looked at, not absorbed);
   - an adjudication has no firing (stale — the same rule `divergence-allowlist.json` enforces);
