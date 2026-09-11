@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -200,6 +200,18 @@ describe("check-truth-boundary — the real spec", () => {
       expect(doc).toContain(e.does_not_establish);
       for (const key of Object.keys(e.expect)) expect(doc).toContain(key);
     }
+  });
+
+  it("states that nothing here can be installed and run", () => {
+    const spec = JSON.parse(readFileSync("spec/truth-boundary.json", "utf8"));
+    const entry = spec.entries.find((e: { id: string }) => e.id === "nothing-here-is-installable");
+    expect(entry, "the delivery boundary must be stated, not left implied").toBeDefined();
+    // The claim is about delivery, so it must pin the three facts that make it true.
+    expect(Object.keys(entry.expect).sort()).toEqual([
+      "build_script_in_root_or_shells",
+      "cli_declares_a_bin",
+      "tsx_is_a_dev_dependency_only",
+    ]);
   });
 });
 

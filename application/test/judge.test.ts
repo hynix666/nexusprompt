@@ -60,6 +60,16 @@ describe("the judge refuses before it grades", () => {
     expect(inner.seen).toHaveLength(1);
   });
 
+  it("records that candidate order was not randomized, because it was not", async () => {
+    // Nothing on this path shuffles candidate order. measuredBiases() counts a true flag as
+    // position bias MEASURED, so reporting true without doing it marks the bias covered when
+    // it was never controlled — and the transport echoes the flag into the recorded verdict.
+    const inner = new ScriptedJudge();
+    const v = await new GuardedJudge(inner).grade(req(), CONTRACT_CHANGED, NOW);
+    expect(inner.seen[0].position_randomized).toBe(false);
+    expect(v.position_randomized).toBe(false);
+  });
+
   it("refuses to grade its own family", async () => {
     // Self-grading is a cycle in the grading order, and a cycle does not merely risk reward
     // hacking — given a search that can find higher-scoring evaluators, it constructs it.

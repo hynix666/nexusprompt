@@ -165,6 +165,63 @@ describe("generate — Anthropic and Gemini parsers", () => {
   });
 });
 
+/**
+ * A response cut off at the token ceiling is not a completed stage.
+ *
+ * Each of these used to return a successful GenerationResult carrying the fragment, which was
+ * persisted as the stage's output and then linted by every gate as if it were the artifact.
+ * The category is MALFORMED_RESPONSE, not INVALID_REQUEST: the model DID answer, so the demo
+ * placeholder's "No output was produced" would be false about it (ADR-0014 names a truncated
+ * object as exactly this case). `end_turn` staying a success is pinned by the Anthropic parser
+ * test above; the compatible dialect had no success test at all, so it gets one here.
+ */
+describe("generate — truncation at the token ceiling", () => {
+  const compatibleEnv = {
+    COMPATIBLE_OPENAI_API_KEY: "k",
+    COMPATIBLE_OPENAI_BASE_URL: "https://compatible.example/v1",
+    COMPATIBLE_OPENAI_MODELS: "local-model",
+  };
+  const cases = [
+    {
+      dialect: "anthropic stop_reason max_tokens",
+      env: { ANTHROPIC_API_KEY: "k" },
+      model: "claude-sonnet-4-5",
+      body: { content: [{ type: "text", text: "half an ans" }], stop_reason: "max_tokens" },
+    },
+    {
+      dialect: "compatible finish_reason length",
+      env: compatibleEnv,
+      model: "local-model",
+      body: { choices: [{ message: { content: "half an ans" }, finish_reason: "length" }] },
+    },
+    {
+      dialect: "openai status incomplete (max_output_tokens)",
+      env: { OPENAI_API_KEY: "k" },
+      model: "gpt-4.1-mini",
+      body: { output_text: "half an ans", status: "incomplete", incomplete_details: { reason: "max_output_tokens" } },
+    },
+  ];
+
+  it.each(cases)("$dialect is a MALFORMED_RESPONSE, not a success", async ({ env, model, body }) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+    const p = new HostedServerProvider({ env, fetchImpl: fetchMock, defaultProvider: "compatible" });
+    const out = await p.generate({ ...req, model_policy: { preferred_models: [model], allow_fallback: false } });
+    expect("content" in out, "a truncated fragment must not be returned as content").toBe(false);
+    expect("category" in out && out.category).toBe("MALFORMED_RESPONSE");
+    expect("reason_code" in out && out.reason_code).toBe("max_tokens_truncated");
+    expect("retriable" in out && out.retriable).toBe(false);
+  });
+
+  it("compatible finish_reason stop is still a success", async () => {
+    const body = { choices: [{ message: { content: "whole answer" }, finish_reason: "stop" }] };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+    const p = new HostedServerProvider({ env: compatibleEnv, fetchImpl: fetchMock, defaultProvider: "compatible" });
+    const out = await p.generate({ ...req, model_policy: { preferred_models: ["local-model"], allow_fallback: false } });
+    expect("content" in out && out.content).toBe("whole answer");
+    expect("finish_reason" in out && out.finish_reason).toBe("stop");
+  });
+});
+
 describe("generate — multi-turn flattening", () => {
   it("sends multi-turn conversation as a formatted user string", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(openaiOkBody, { status: 200 }));

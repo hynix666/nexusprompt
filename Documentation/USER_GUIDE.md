@@ -37,7 +37,8 @@ Use this to wire gate checks into another repo's pre-commit hooks. Because `cli`
 ## `api` — status routes, and two that do real work
 
 Not one of the three guided ways above — a small Fastify HTTP server
-(`npm start -w @nexusprompt/shell-api`).
+(`npm start -w @nexusprompt/shell-api`, from a development checkout — see
+[the truth boundary](./TRUTH_BOUNDARY.md) on why a production install cannot run it).
 
 Read-only status: `/api/v1/health`, `/api/v1/system`, `/api/v1/hardware`, `/api/v1/gates`,
 `/api/v1/provider/health`.

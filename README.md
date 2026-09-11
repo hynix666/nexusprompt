@@ -25,7 +25,7 @@ npm install && npm run verify
 
 That is the whole check: repository hygiene, import boundaries, types, frozen-source hashes,
 documentation counts, suite sizing, the generated documents, the truth boundary, the artifact
-hash, the evaluation suites, 929 tests, and the differential oracle. It runs offline in about
+hash, the evaluation suites, the Vitest test suite, and the differential oracle. It runs offline in about
 thirty seconds and it is the only command you need.
 
 Lint a prompt against the ported gates:

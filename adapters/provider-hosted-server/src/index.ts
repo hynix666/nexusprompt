@@ -42,7 +42,7 @@ type HostedProviderHealth = {
 
 class HostedProviderError extends Error {
   constructor(
-    readonly kind: "configuration" | "rate_limit" | "network" | "timeout" | "http" | "parse",
+    readonly kind: "configuration" | "rate_limit" | "network" | "timeout" | "http" | "parse" | "truncated",
     message: string,
     readonly status?: number,
   ) {
@@ -158,6 +158,16 @@ function extractGeminiText(data: unknown) {
     .map((part) => typeof (part as Record<string, unknown>)?.text === "string" ? (part as Record<string, unknown>).text as string : "")
     .filter(Boolean)
     .join("\n");
+}
+
+/**
+ * A response cut off at the token ceiling arrived, but it is not the answer — it is a fragment.
+ * Returned as success, it was persisted as the stage's output and every gate linted it as the
+ * artifact. Each dialect names the state differently; Gemini is absent because its value for
+ * this state has not been verified, and a guessed one would be a test pinned to an invention.
+ */
+function truncated(provider: string): HostedProviderError {
+  return new HostedProviderError("truncated", `${provider} stopped at the token ceiling; the response is incomplete.`);
 }
 
 async function responseJson(response: Response): Promise<unknown> {
@@ -300,26 +310,30 @@ export function createHostedProviderGateway(
 
     if (request.provider === "openai") {
       const data = await callWithTimeout(fetchImpl, `${config.baseUrl}/responses`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` }, body: JSON.stringify({ model: request.model, input: [{ role: "system", content: request.system }, { role: "user", content: request.user }], temperature: request.temperature }) });
+      const d = data as Record<string, unknown>;
+      const incomplete = d?.incomplete_details as { reason?: string } | undefined;
+      if (d?.status === "incomplete" && incomplete?.reason === "max_output_tokens") throw truncated("OpenAI");
       const text = extractOpenAIText(data);
       if (!text.trim()) throw new HostedProviderError("parse", "OpenAI returned no usable text output.");
-      const d = data as Record<string, unknown>;
       const usage = d?.usage as Record<string, number> | undefined;
       return { text, usage: usage ? { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens, totalTokens: usage.total_tokens } : undefined, finishReason: d?.status as string | undefined };
     }
     if (request.provider === "compatible") {
       const data = await callWithTimeout(fetchImpl, `${config.baseUrl}/chat/completions`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` }, body: JSON.stringify({ model: request.model, temperature: request.temperature, messages: [{ role: "system", content: request.system }, { role: "user", content: request.user }] }) });
+      const d = data as Record<string, unknown>;
+      const choices = d?.choices as Array<{ finish_reason?: string }> | undefined;
+      if (choices?.[0]?.finish_reason === "length") throw truncated("The compatible provider");
       const text = extractOpenAIText(data);
       if (!text.trim()) throw new HostedProviderError("parse", "The compatible provider returned no usable text output.");
-      const d = data as Record<string, unknown>;
       const usage = d?.usage as Record<string, number> | undefined;
-      const choices = d?.choices as Array<{ finish_reason?: string }> | undefined;
       return { text, usage: usage ? { inputTokens: usage.prompt_tokens, outputTokens: usage.completion_tokens, totalTokens: usage.total_tokens } : undefined, finishReason: choices?.[0]?.finish_reason };
     }
     if (request.provider === "anthropic") {
       const data = await callWithTimeout(fetchImpl, `${config.baseUrl}/messages`, { method: "POST", headers: { "content-type": "application/json", "x-api-key": config.apiKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: request.model, system: request.system, messages: [{ role: "user", content: request.user }], max_tokens: 4096, temperature: request.temperature }) });
+      const d = data as Record<string, unknown>;
+      if (d?.stop_reason === "max_tokens") throw truncated("Anthropic");
       const text = extractAnthropicText(data);
       if (!text.trim()) throw new HostedProviderError("parse", "Anthropic returned no usable text output.");
-      const d = data as Record<string, unknown>;
       const usage = d?.usage as Record<string, number> | undefined;
       return { text, usage: usage ? { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens, totalTokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0) } : undefined, finishReason: d?.stop_reason as string | undefined };
     }
@@ -439,6 +453,9 @@ export class HostedServerProvider implements ProviderTransport {
       case "timeout": return fail("TIMEOUT", "timeout", err.message, true, 500);
       case "network": return fail("UNAVAILABLE", "network_error", err.message, true, 250);
       case "parse": return fail("MALFORMED_RESPONSE", "parse_error", err.message, false);
+      // MALFORMED_RESPONSE, not INVALID_REQUEST: the model answered, so "No output was produced"
+      // would be false about it (ADR-0014). Same reason_code as provider-local-proxy.
+      case "truncated": return fail("MALFORMED_RESPONSE", "max_tokens_truncated", err.message, false);
       case "configuration": return fail("INVALID_REQUEST", "configuration_error", err.message, false);
       case "http": {
         const s = err.status;

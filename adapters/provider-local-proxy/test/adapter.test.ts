@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { LocalProxyProvider } from "../src/index.js";
 import type { GenerationRequest } from "../../../contracts/index.js";
 
@@ -201,4 +201,73 @@ describe("the provider's response body never reaches safe_message", () => {
       expect(msg).toContain(String(status));
     });
   }
+});
+
+/**
+ * A 2xx body is not evidence that the provider answered.
+ *
+ * The audit found this adapter accepting any successful HTTP response whose JSON parsed.
+ * `new Response("{}")` produced a GenerationResult with empty content, and a body that was
+ * not JSON at all threw out of `res.json()` into the outer catch — which reports
+ * UNAVAILABLE/connection_failed. So a provider that replied 200 with garbage was recorded
+ * as a network problem, and one that replied 200 with nothing was recorded as success.
+ *
+ * Validation lives in a NESTED boundary for that reason: the outer catch owns transport
+ * failures, and it must not also own the shape of a reply that arrived intact.
+ */
+describe("a successful response still has to be a response", () => {
+  // Without this every case below fails AUTH before reaching fetch, because the credentials
+  // block's afterEach deletes the variable when the environment had none. Seven tests that
+  // all passed-by-failing for the wrong reason is the defect this suite exists to catch.
+  beforeEach(() => { process.env.ANTHROPIC_API_KEY = "sk-ant-" + "t".repeat(20); });
+
+  const okWith = (body: string) =>
+    new LocalProxyProvider({ fetchImpl: async () => new Response(body, { status: 200 }) });
+  const categoryOf = (out: unknown) => ("category" in (out as object) ? (out as { category: string }).category : null);
+
+  it("does not report a connection failure when a 2xx body is not JSON", async () => {
+    const out = await okWith("this is not json").generate(req);
+    expect(categoryOf(out)).toBe("MALFORMED_RESPONSE");
+  });
+
+  it("rejects a 2xx body that is not an object", async () => {
+    expect(categoryOf(await okWith("null").generate(req))).toBe("MALFORMED_RESPONSE");
+    expect(categoryOf(await okWith('"a string"').generate(req))).toBe("MALFORMED_RESPONSE");
+  });
+
+  it("rejects a body with no content array", async () => {
+    expect(categoryOf(await okWith("{}").generate(req))).toBe("MALFORMED_RESPONSE");
+  });
+
+  it("rejects content whose text is empty", async () => {
+    const body = JSON.stringify({ content: [{ type: "text", text: "" }], model: "m" });
+    expect(categoryOf(await okWith(body).generate(req))).toBe("MALFORMED_RESPONSE");
+  });
+
+  it("rejects a model field that is present but not a string", async () => {
+    const body = JSON.stringify({ content: [{ type: "text", text: "hi" }], model: 42 });
+    expect(categoryOf(await okWith(body).generate(req))).toBe("MALFORMED_RESPONSE");
+  });
+
+  it("rejects a usage number that is not finite", async () => {
+    const body = JSON.stringify({ content: [{ type: "text", text: "hi" }], usage: { input_tokens: "many" } });
+    expect(categoryOf(await okWith(body).generate(req))).toBe("MALFORMED_RESPONSE");
+  });
+
+  it("must not break: a valid response is unchanged", async () => {
+    const body = JSON.stringify({
+      content: [{ type: "text", text: "hello" }],
+      model: "claude-opus-5",
+      stop_reason: "end_turn",
+      usage: { input_tokens: 3, output_tokens: 5 },
+    });
+    const out = await okWith(body).generate(req);
+    expect(categoryOf(out)).toBe(null);
+    expect(out).toMatchObject({
+      content: "hello",
+      model_id: "claude-opus-5",
+      finish_reason: "end_turn",
+      usage: { prompt_tokens: 3, completion_tokens: 5 },
+    });
+  });
 });

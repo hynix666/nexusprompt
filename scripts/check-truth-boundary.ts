@@ -328,6 +328,33 @@ export const PROBES: Record<string, Probe> = {
   },
 
   /**
+   * Whether anything here can be installed and run by someone who did not clone it.
+   *
+   * `three-reproducibility-claims` already says NOTHING IS COMPILED, but says it as a
+   * reproducibility caveat. Nobody had written down what it means for delivery: `tsx` is a
+   * devDependency, no workspace has a `build` script, and `shells/cli` declares no `bin`, so
+   * `npm install --omit=dev` produces a tree in which neither Shell starts. Proven on
+   * 9 September 2026 by doing it.
+   */
+  deliverySurface(root) {
+    const rootPkg = JSON.parse(readText(root, "package.json"));
+    const shellPkgPaths = dirNames(root, "shells")
+      .map((d) => `shells/${d}/package.json`)
+      .filter((p) => existsSync(join(root, p)));
+    const withBuild = ["package.json", ...shellPkgPaths].filter((p) => {
+      const j = JSON.parse(readText(root, p));
+      return Boolean(j.scripts?.build);
+    });
+    const cliPkg = JSON.parse(readText(root, "shells/cli/package.json"));
+    return {
+      tsx_is_a_dev_dependency_only:
+        Boolean(rootPkg.devDependencies?.tsx) && !rootPkg.dependencies?.tsx,
+      build_script_in_root_or_shells: withBuild.length,
+      cli_declares_a_bin: Boolean(cliPkg.bin),
+    };
+  },
+
+  /**
    * The literature corpus is the stated warrant for the measured results the evaluation ADR
    * opens with. It is 2 GB of third-party PDFs, gitignored, so no clean checkout has ever
    * verified it and CI never has either. That does not make it false; it makes it a local

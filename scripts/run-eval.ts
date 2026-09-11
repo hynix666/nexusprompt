@@ -33,10 +33,10 @@
  */
 
 import { pathToFileURL } from "node:url";
-import { readFileSync } from "node:fs";
 import { runSuite, configurationId, type StubbedCase } from "../application/src/eval.js";
 import { MemoryCacheStore } from "../application/src/cache.js";
 import { isPipelineCase } from "../application/src/pipeline-eval.js";
+import { loadEvalSuite, SuiteError } from "./load-eval-suite.js";
 // Naming a concrete adapter is what a composition root is for.
 import { LocalProxyProvider } from "../adapters/provider-local-proxy/src/index.js";
 import { OllamaProvider } from "../adapters/provider-ollama/src/index.js";
@@ -360,15 +360,37 @@ async function main(): Promise<number> {
     return 2;
   }
 
+  /**
+   * `--compare` runs both arms against the pinned stub. `compareRuns` passes no provider to
+   * `runSuite`, so the default stub answers whatever `--live` or `--local` selected, and it
+   * compares the unfiltered case list rather than the runnable one. Accepting the combination
+   * means an operator can pay for a live run and be handed a comparison that never touched it.
+   *
+   * Refused rather than implemented: threading a live provider through both arms needs
+   * provider factories, cache policy, budget accounting, filtering and provenance to agree,
+   * which is a design, not a patch.
+   */
+  if (process.argv.includes("--compare") && (LIVE || LOCAL)) {
+    console.error(
+      `eval: --compare cannot be combined with ${LIVE ? "--live" : "--local"}.\n` +
+      "  Comparison runs both arms against the pinned offline harness, so the transport you\n" +
+      "  selected would be built, charged for, and then ignored. Run them separately:\n\n" +
+      `    npm run eval -- ${LIVE ? "--live" : "--local"}   # measure the transport\n` +
+      "    npm run eval -- --compare        # measure the harness\n",
+    );
+    return 2;
+  }
+
   const SUITE = process.argv.includes("--suite")
     ? process.argv[process.argv.indexOf("--suite") + 1]
     : "eval/compile-smoke.json";
 
   let data: { suite: EvalSuite; cases: StubbedCase[] };
   try {
-    data = JSON.parse(readFileSync(SUITE, "utf8"));
+    data = loadEvalSuite<StubbedCase>(SUITE);
   } catch (err) {
-    console.error(`eval: cannot read ${SUITE} — ${(err as Error).message}`);
+    if (!(err instanceof SuiteError)) throw err;
+    console.error(`eval: ${err.message}`);
     return 2;
   }
 
