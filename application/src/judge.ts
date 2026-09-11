@@ -131,7 +131,10 @@ export class GuardedJudge {
       candidate: prompt,
       // Randomization is the caller's responsibility to DO and the verdict's to record; a
       // judge that reported it without doing it would be worse than one that reported false.
-      position_randomized: true,
+      // Set false on 11 September 2026: nothing in this path shuffles candidate order, so the
+      // flag was reporting an intent. Implementing randomization needs a recorded seed, a
+      // recorded order, score remapping, and new calibration — a separate decision.
+      position_randomized: false,
       runs: req.runs ?? 3,
     });
 
