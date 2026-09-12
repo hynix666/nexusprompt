@@ -214,13 +214,16 @@ describe("check-truth-boundary — the real spec", () => {
     ]);
   });
 
-  it("states that gate precision is unmeasured", () => {
+  it("states what gate precision was measured on, per gate", () => {
     const spec = JSON.parse(readFileSync("spec/truth-boundary.json", "utf8"));
-    const entry = spec.entries.find((e: { id: string }) => e.id === "gate-precision-is-unmeasured");
-    expect(entry, "an unmeasured quantity every gate-backed figure depends on must be stated").toBeDefined();
-    // Precision is TP / firings, so the two facts are whether firings exist to adjudicate and
-    // whether any have been adjudicated. Either moving is the measurement starting to exist.
-    expect(Object.keys(entry.expect).sort()).toEqual(["adjudicated_firings", "precision_corpus_exists"]);
+    const entry = spec.entries.find((e: { id: string }) => e.id === "gate-precision-measured-on-one-corpus");
+    expect(entry, "a measured quantity every gate-backed figure depends on must be stated").toBeDefined();
+    expect(Object.keys(entry.expect).sort()).toEqual(["adjudicated_firings", "precision_by_gate", "precision_corpus_exists"]);
+    // The counts are pinned, never the bounds: the interval follows from them by exact
+    // arithmetic, and a rounded percentage in the spec could drift from the data it describes.
+    for (const line of entry.precision_by_gate ?? entry.expect.precision_by_gate) {
+      expect(line, "each pin is `GATE tp/n`").toMatch(/^[A-Z_]+ \d+\/\d+$/);
+    }
   });
 });
 

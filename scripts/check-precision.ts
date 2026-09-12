@@ -9,8 +9,10 @@
  * stale rule `divergence-allowlist.json` already enforces), and when a corpus file's bytes no
  * longer match the ones that were judged.
  *
- * It prints counts only. The interval belongs to Core (Task 4) and the report to Task 5 —
- * a point estimate without `n` and an interval is the figure this phase exists to avoid.
+ * It reports, per gate: how many firings were judged real, the exact (Clopper-Pearson) interval
+ * from Core, and the same split by slice. Never a point estimate alone — at these counts one
+ * would be the most misleading number this phase could produce. Gates that never fired are
+ * named as such rather than left out of the table.
  *
  * Labels here were made by Claude alone, which is the owner's D1 decision and a weaker warrant
  * than a human review: an uncalibrated model judging text. `adjudicated_by` records it on every
@@ -20,7 +22,11 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { runGates } from "../core/src/gates/registry.js";
+import { listGates, runGates } from "../core/src/gates/registry.js";
+import { precisionInterval } from "../core/src/eval/precision.js";
+
+/** The interval's confidence level. Reported beside every bound, never left to be assumed. */
+const CONFIDENCE = 0.95;
 
 const CORPUS_DIR = "eval/precision-corpus";
 const ADJUDICATIONS = "eval/precision-adjudications.json";
@@ -122,6 +128,43 @@ export function validate(
   return problems;
 }
 
+export interface GateSummary {
+  gate: string;
+  n: number;
+  tp: number;
+  interval: ReturnType<typeof precisionInterval>;
+  bySlice: Record<"pilot" | "clean", { n: number; tp: number }>;
+}
+
+/**
+ * One row per gate in the registry, including the gates that never fired.
+ *
+ * A gate absent from a table reads as "fine". A gate with no firings on this corpus has no
+ * precision at all, which is a different statement from a precision of 1, so it is listed
+ * with `interval: null` rather than left out.
+ *
+ * Split by slice because the two slices are not the same instrument: half the pilot briefs
+ * plant a hazard on purpose, so a gate's true-positive share there says nothing about how it
+ * behaves on the clean briefs, where nothing was planted.
+ */
+export function summarise(firings: Firing[], labelOf: Map<string, string>, gateIds: readonly string[]): GateSummary[] {
+  return gateIds.map((gate) => {
+    const mine = firings.filter((f) => f.gate_id === gate);
+    const tp = mine.filter((f) => labelOf.get(firingKey(f)) === "TRUE").length;
+    const forSlice = (slice: "pilot" | "clean") => {
+      const s = mine.filter((f) => f.slice === slice);
+      return { n: s.length, tp: s.filter((f) => labelOf.get(firingKey(f)) === "TRUE").length };
+    };
+    return {
+      gate, n: mine.length, tp,
+      interval: precisionInterval(tp, mine.length, CONFIDENCE),
+      bySlice: { pilot: forSlice("pilot"), clean: forSlice("clean") },
+    };
+  });
+}
+
+const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+
 function main(): number {
   const file = JSON.parse(readFileSync(ADJUDICATIONS, "utf8"));
   const firings = deriveFirings();
@@ -135,23 +178,44 @@ function main(): number {
     return 1;
   }
 
-  const byGate = new Map<string, { n: number; tp: number }>();
-  const labelOf = new Map(file.adjudications.map((a: Adjudication) => [firingKey(a), a.label]));
-  for (const f of firings) {
-    const g = byGate.get(f.gate_id) ?? { n: 0, tp: 0 };
-    g.n += 1;
-    if (labelOf.get(firingKey(f)) === "TRUE") g.tp += 1;
-    byGate.set(f.gate_id, g);
+  const labelOf = new Map<string, string>(file.adjudications.map((a: Adjudication) => [firingKey(a), a.label]));
+  const rows = summarise(firings, labelOf, listGates().map((g) => g.id));
+
+  const files = readdirSync(CORPUS_DIR).filter((f) => f.endsWith(".json"));
+  const corpora = files.map((f) => JSON.parse(readFileSync(join(CORPUS_DIR, f), "utf8")));
+  const prompts = corpora.reduce((n, c) => n + c.records.length, 0);
+  const inSlice = (slice: string) => corpora.reduce((n, c) => n + c.records.filter((r: { slice: string }) => r.slice === slice).length, 0);
+
+  console.log(`check:precision — OK. ${firings.length} firing(s) over ${prompts} compiled prompt(s), all adjudicated.`);
+  console.log(`  Corpus: ${corpora.length} model(s), ${inSlice("pilot")} pilot prompt(s) (half the briefs plant a hazard) ` +
+              `and ${inSlice("clean")} clean prompt(s) (nothing planted).\n`);
+  console.log(`  ${"gate".padEnd(28)} ${"defect/fired".padStart(12)}   exact ${pct(CONFIDENCE)} interval        pilot     clean`);
+
+  for (const r of [...rows].sort((a, b) => b.n - a.n || a.gate.localeCompare(b.gate))) {
+    if (r.n === 0) {
+      console.log(`  ${r.gate.padEnd(28)} ${"—".padStart(12)}   never fired on this corpus`);
+      continue;
+    }
+    const i = r.interval!;
+    console.log(
+      `  ${r.gate.padEnd(28)} ${`${r.tp}/${r.n}`.padStart(12)}   ${pct(i.lower).padStart(6)} – ${pct(i.upper).padEnd(6)}` +
+      ` (point ${pct(i.point).padStart(6)})   ${`${r.bySlice.pilot.tp}/${r.bySlice.pilot.n}`.padStart(6)}` +
+      ` ${`${r.bySlice.clean.tp}/${r.bySlice.clean.n}`.padStart(6)}`,
+    );
   }
 
-  const prompts = readdirSync(CORPUS_DIR).filter((f) => f.endsWith(".json"))
-    .reduce((n, f) => n + JSON.parse(readFileSync(join(CORPUS_DIR, f), "utf8")).records.length, 0);
-  console.log(`check:precision — OK. ${firings.length} firing(s) over ${prompts} compiled prompt(s), all adjudicated.`);
-  for (const [gate, { n, tp }] of [...byGate].sort((a, b) => b[1].n - a[1].n)) {
-    console.log(`  ${gate.padEnd(24)} ${String(tp).padStart(3)} of ${String(n).padStart(3)} firing(s) judged a real defect`);
-  }
-  console.log("  Counts only: no precision figure until Task 4 computes an interval, and every\n" +
-              "  label here was made by an uncalibrated model (adjudicated_by: claude).");
+  console.log(
+    "\n  no-fabrication-when-degraded, the keyword detector that inherits the same risk, is not\n" +
+    "  measured here and cannot be: it only reads degraded output, and the corpus excludes every\n" +
+    "  degraded answer by construction. Its precision is unmeasured, not good.",
+  );
+  console.log(
+    "\n  What this is not. Every label was made by Claude alone, an uncalibrated model reviewed by\n" +
+    "  nobody (adjudicated_by: claude). The figure belongs to THIS corpus — generated briefs, half\n" +
+    "  the pilot slice planting a hazard on purpose — not to the gate: a gate's precision on prompts\n" +
+    "  a person wrote is unmeasured. Recall and precision come from different corpora and do not\n" +
+    "  compose. A gate that never fired has no precision here, which is not a precision of 1.",
+  );
   return 0;
 }
 

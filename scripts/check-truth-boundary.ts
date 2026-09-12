@@ -367,7 +367,26 @@ export const PROBES: Record<string, Probe> = {
   precisionSurface(root) {
     const adjudications = join(root, "eval/precision-adjudications.json");
     const corpusDir = join(root, "eval/precision-corpus");
+    /**
+     * Per gate, defects over firings — the two numbers the interval is computed from.
+     *
+     * Pinning these rather than the bounds is deliberate: the bounds follow from them by exact
+     * arithmetic, so pinning a rounded percentage would add a number that can drift from the
+     * one it describes. A gate that starts or stops firing moves this, which is the event the
+     * entry exists to make visible.
+     */
+    const perGate = existsSync(adjudications)
+      ? (() => {
+          const counts = new Map<string, { n: number; tp: number }>();
+          for (const a of readJson(root, "eval/precision-adjudications.json").adjudications ?? []) {
+            const c = counts.get(a.gate_id) ?? { n: 0, tp: 0 };
+            counts.set(a.gate_id, { n: c.n + 1, tp: c.tp + (a.label === "TRUE" ? 1 : 0) });
+          }
+          return [...counts].sort().map(([gate, c]) => `${gate} ${c.tp}/${c.n}`);
+        })()
+      : [];
     return {
+      precision_by_gate: perGate,
       precision_corpus_exists:
         existsSync(corpusDir) && readdirSync(corpusDir).some((f) => f.endsWith(".json")),
       adjudicated_firings: existsSync(adjudications)
