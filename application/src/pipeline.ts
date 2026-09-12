@@ -475,6 +475,22 @@ export async function runPipeline(
       continue;
     }
     const { outcome: raw, attempts } = invoked;
+
+    /**
+     * An adapter that threw is a defect in this codebase, not a provider that could not be
+     * reached, and the two must not arrive at the same place.
+     *
+     * `invokeWithRetry` now turns the throw into a typed failure so that no caller gets an
+     * unhandled rejection — the Orchestrator never caught one. Left as an ordinary failure it
+     * would reduce to a `⟦WORKFLOW DEMO — no model⟧` placeholder, which is the honest label for
+     * an unreachable provider and a misleading one for our own bug: the run would report
+     * degraded-but-fine while something in the adapter is broken. It stays a FAILED stage,
+     * which is what the catch below did before the normalization existed.
+     */
+    if (isFailure(raw) && raw.reason_code === "adapter_threw") {
+      await failStage(new Error(raw.safe_message));
+      continue;
+    }
     /**
      * Settled BEFORE `degraded` is read, or the run and its artifact disagree.
      *
