@@ -116,6 +116,9 @@ describe("building a model's corpus", () => {
     expect(file.records.length + file.excluded.length).toBe(200);
     for (const r of file.records) expect(r.text).not.toMatch(/WORKFLOW DEMO/);
     for (const e of file.excluded) expect(e).toMatchObject({ case_id: expect.any(String), slice: expect.any(String) });
+    // Degraded covers a truncated or malformed answer too, where the model DID respond
+    // (ADR-0014); the outcome does not carry which, so the reason must not claim silence.
+    for (const e of file.excluded) expect(e.reason).not.toMatch(/did not answer/);
   });
 });
 
@@ -182,6 +185,37 @@ describe("refusals, before any model is asked", () => {
     expect(d.provider.calls).toBe(0);
     expect(lines.join("\n")).toMatch(/COMPATIBLE_OPENAI_API_KEY/);
     expect(lines.join("\n")).not.toMatch(/integrate\.api\.nvidia\.com/);
+  });
+
+  it("records which endpoint answered a hosted run, and nothing extra for a local one", async () => {
+    // A hosted fingerprint is `hosted-server:<model>` whichever endpoint served it, so a
+    // reseller's proxied model and the maker's own would be indistinguishable without this.
+    const texts: string[] = [];
+    const hostedEnv = { COMPATIBLE_OPENAI_API_KEY: "k", COMPATIBLE_OPENAI_BASE_URL: "https://kiraai.vn/api/v1" };
+    const h = deps({ env: hostedEnv, writeFile: (_p: string, t: string) => { texts.push(t); } });
+    await main(["--model", "glm-5.3-free", "--hosted"], h.deps);
+    const l = deps({ writeFile: (_p: string, t: string) => { texts.push(t); } });
+    await main(["--model", "llama3.1:8b"], l.deps);
+    expect(JSON.parse(texts[0]).endpoint).toBe("kiraai.vn");
+    expect("endpoint" in JSON.parse(texts[1])).toBe(false);
+    expect(texts[0]).not.toMatch(/"k"/);
+  });
+
+  it("checks a hosted endpoint with one real request, not the adapter's model-metadata probe", async () => {
+    // Measured 11 September 2026: NVIDIA answers /models/<id> only with the slash unencoded,
+    // and kiraai.vn has no per-model route at all, so the metadata probe would refuse both.
+    // One real request through the same path proves key, model id and route together.
+    const hostedEnv = { COMPATIBLE_OPENAI_API_KEY: "k", COMPATIBLE_OPENAI_BASE_URL: "https://kiraai.vn/api/v1" };
+    const failing = deps({ env: hostedEnv });
+    failing.provider.healthCheck = async () => ({ ok: false, checked_at: "", latency_ms: 0,
+      degradation_state: "UNAVAILABLE" as const, failing_dependency: "COMPATIBLE" });
+    expect(await main(["--model", "glm-5.3-free", "--hosted"], failing.deps)).toBe(0);
+
+    const down = new FakeOllama(() => true);
+    const refused = deps({ env: hostedEnv, makeProvider: () => down });
+    expect(await main(["--model", "glm-5.3-free", "--hosted"], refused.deps)).toBe(2);
+    expect(down.calls).toBe(1);
+    expect(refused.written).toEqual([]);
   });
 
   it("writes a hosted model's file under a path its slash cannot escape", async () => {
