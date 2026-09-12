@@ -73,21 +73,6 @@ export function deriveFirings(dir = CORPUS_DIR): Firing[] {
   return out;
 }
 
-/**
- * Gates whose finding is arithmetic, not a judgement about the text.
- *
- * Each compares a token estimate against a number the CALLER declares — a budget, a provider's
- * context limit, a cost ceiling against a baseline. `tokens > budget` is either true or false,
- * so there is no wrong-but-fired: only a policy set well or badly. Precision (TP / firings) is
- * the wrong question for them, and reporting them as "unmeasured" implies a measurement is
- * merely missing when none is owed.
- *
- * Named rather than derived, because the property is semantic. `check-precision.test.ts` keeps
- * the list honest behaviourally: each gate here must FLIP its verdict on one unchanged text
- * when only the caller's number moves, which a detector cannot do.
- */
-export const THRESHOLD_GATES: readonly string[] = ["CONTEXT_LIMIT", "QUTM_CEILING", "TOKEN_BUDGET"];
-
 export interface GateActivity {
   /** Prompts the gate was run over. */
   prompts: number;
@@ -128,6 +113,21 @@ export function deriveGateActivity(dir = CORPUS_DIR): Map<string, GateActivity> 
   }
   return out;
 }
+
+/**
+ * Gates whose finding is arithmetic, not a judgement about the text.
+ *
+ * Each compares a token estimate against a number the CALLER declares — a budget, a provider's
+ * context limit, a cost ceiling against a baseline. `tokens > budget` is either true or false,
+ * so there is no wrong-but-fired: only a policy set well or badly. Precision (TP / firings) is
+ * the wrong question for them, and reporting them as "unmeasured" implies a measurement is
+ * merely missing when none is owed.
+ *
+ * Named rather than derived, because the property is semantic. `check-precision.test.ts` keeps
+ * the list honest behaviourally: each gate here must FLIP its verdict on one unchanged text
+ * when only the caller's number moves, which a detector cannot do.
+ */
+export const THRESHOLD_GATES: readonly string[] = ["CONTEXT_LIMIT", "QUTM_CEILING", "TOKEN_BUDGET"];
 
 /**
  * The pin is on the text that was judged, not on the bytes it happens to sit in.
