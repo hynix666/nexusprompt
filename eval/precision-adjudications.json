@@ -13,8 +13,8 @@
     "                         matches here are literals copied from the brief. FALSE when only the",
     "                         pii_email heuristic matched, on an address the model invented at a",
     "                         placeholder domain.",
-    "  CLAIM_DISCIPLINE       FALSE when every sentence naming a guarantee denies or forbids one, or",
-    "                         quotes it as a phrase to avoid.",
+    "  CLAIM_DISCIPLINE       (no firings since gate 1.2.0 reads polarity, ADR-0020; its 19",
+    "                         labels were removed with the firings they described.)",
     "  GUARDRAIL_GAP          FALSE when the clause is present under a Unicode dash and the firing",
     "                         disappears once dashes are normalised; TRUE when no guardrails section",
     "                         exists at all.",
@@ -62,35 +62,11 @@
       "adjudicated_by": "claude"
     },
     {
-      "output_sha256": "2debf78a539855b860061fbf765def491a2424db52597c36d482c79b6d4cc9eb",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"*   If policy details are required, confirm that the answer is confined strictly to genera\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "99c5268cbff3c54917d33e7b78a9794bcd4d8889760d603f379597b062bca00e",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"*   *Disclaimer:* This assessment suggests a path but does not guarantee resolution\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
       "output_sha256": "99c5268cbff3c54917d33e7b78a9794bcd4d8889760d603f379597b062bca00e",
       "gate_id": "DUPLICATE_INSTRUCTION",
       "verdict": "WARN",
       "label": "FALSE",
       "reason": "The repeated block is the output schema followed by the worked example the compile template explicitly requires (\"Section 5 must include a worked example\"), so the duplication is mandated by the task rather than a defect in the prompt.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "579e327b52913684da23711b21e31d0d7fd12ae3ad1521a213e7fd6ec14b2374",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"The out-of-scope boundary is providing legal interpretations or making definitive complian\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
       "adjudicated_by": "claude"
     },
     {
@@ -99,14 +75,6 @@
       "verdict": "WARN",
       "label": "FALSE",
       "reason": "The repeated block is the output schema followed by the worked example the compile template explicitly requires (\"Section 5 must include a worked example\"), so the duplication is mandated by the task rather than a defect in the prompt.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "6bdf8b54c6f9e977b3d49c4e0012f5db91e08a84fd8f77b79117e0dad951e26c",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"Never state that a process is \"guaranteed\" to work; instead, state it is the *current docu\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
       "adjudicated_by": "claude"
     },
     {
@@ -126,27 +94,11 @@
       "adjudicated_by": "claude"
     },
     {
-      "output_sha256": "0f2935469d443de8dec850f0fe7ca3431f7698a1bf16099f93e22dbe66376a05",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- DOES NOT: issue refunds, credits, or waivers; modify accounts; access or confirm any thi\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
       "output_sha256": "b5b11ccddec67a8c52d54bb762c4959a8af6f4483467b9f9a2ac5f01196f5314",
       "gate_id": "PLACEHOLDER_AUDIT",
       "verdict": "FAIL",
       "label": "TRUE",
       "reason": "Leaves the stand-in COMPANY from the brief unresolved in the finished prompt, though the brief said it must name nothing it cannot resolve - the planted defect, caught.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "a08dbf45bc75f34ac6312f0822b0615cedbfc7e77007f50fb5a98ef39bcdf078",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: state shipment facts only from supplied context; never invent status\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
       "adjudicated_by": "claude"
     },
     {
@@ -334,27 +286,11 @@
       "adjudicated_by": "claude"
     },
     {
-      "output_sha256": "0e6acbf03763dc6844b5607333fa216743a5a0da13573c6f43233fb6e3ea38da",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Operational Scope**: This system does NOT facilitate scheduling for external parties, \". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
       "output_sha256": "185c99e3a58746bd103f410ba6f6085cf6a09ef9be506b4ae1271ea638d2f696",
       "gate_id": "SECRET_LEAK_SCAN",
       "verdict": "WARN",
       "label": "TRUE",
       "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "185c99e3a58746bd103f410ba6f6085cf6a09ef9be506b4ae1271ea638d2f696",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- \"Guarantee\" and \"certify\" assertions are restricted to contextually provided information\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
       "adjudicated_by": "claude"
     },
     {
@@ -414,27 +350,11 @@
       "adjudicated_by": "claude"
     },
     {
-      "output_sha256": "3071b91c6106eef07bc21a04ed8462fda3e8235074822a030333dfb33220e97d",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: Assertions restricted to the supplied context; no invented specifics\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
       "output_sha256": "f2e6dadd9bbf0e17c07e62a34880bcea8afc356a55197ffc076c614db0832980",
       "gate_id": "SECRET_LEAK_SCAN",
       "verdict": "WARN",
       "label": "TRUE",
       "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAHP...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "1d79c0eb0109687193c5fa26a213704a689b93f84f44649fab96c88f0af31d72",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: Assertions restricted to supplied onboarding materials and user-prov\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
       "adjudicated_by": "claude"
     },
     {
@@ -574,35 +494,11 @@
       "adjudicated_by": "claude"
     },
     {
-      "output_sha256": "6d4142e59331023e1e8c1a430c41e8272404f6eee0922c63f7c171b703ab3d62",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: Assertions limited to carrier API responses or published service map\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
       "output_sha256": "24ba621e5811f9687bd77f55d4789bbde8657491414add71a1ea5536e33d866e",
       "gate_id": "SECRET_LEAK_SCAN",
       "verdict": "WARN",
       "label": "FALSE",
       "reason": "Only the pii_email heuristic matched, on finance-ops@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "2c5323688094717478198e1e417d50f53e633d5de1ae09a304fc22de28933977",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"Include only facts from the current conversation or carrier APIs the user has authorized; \". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "e0abd37a5092aa3717b30db49405000d980c2c5c0def94542f1b13cfd1b048c1",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \", \"guaranteed refund\")\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
       "adjudicated_by": "claude"
     },
     {
@@ -643,14 +539,6 @@
       "verdict": "WARN",
       "label": "TRUE",
       "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-d99...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "71d89483385016e2e274ebd393fb5c98ed4912edd016b83bead348977ada0cda",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"You do **not** provide legal advice, interpret law beyond the supplied text, guarantee com\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
       "adjudicated_by": "claude"
     },
     {
@@ -742,14 +630,6 @@
       "adjudicated_by": "claude"
     },
     {
-      "output_sha256": "737312e8abd8bcf9062aa0e06bc47801df0153dda7075c23195a15227246642e",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- If the user asked for guarantees (e\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
       "output_sha256": "384525829404a8f7b6d18dd82f189f2b19e21de72ab5ab54f757080e40def662",
       "gate_id": "GUARDRAIL_GAP",
       "verdict": "WARN",
@@ -798,14 +678,6 @@
       "adjudicated_by": "claude"
     },
     {
-      "output_sha256": "f0c75ce229b96370a421653e8480a00328ebcc45cc4635b31206ff1197a748d2",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"It does NOT provide legal advice, perform substantive testing, or guarantee audit outcomes\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
       "output_sha256": "5a33441fe44f08b31b1cbc7da08890766328365a4ce715bc84453242067fb059",
       "gate_id": "GUARDRAIL_GAP",
       "verdict": "WARN",
@@ -822,35 +694,11 @@
       "adjudicated_by": "claude"
     },
     {
-      "output_sha256": "f8ed1edbc6e7fd0807b7dfb7a1cb7c35e4370f05e8b350872a02a719a8487cb6",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: All responses are based on supplied context and existing internal kn\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
       "output_sha256": "10c26903ad210e0eb781cf8f850e169270c4fb39bdaadfb648ad4d00b6bdd228",
       "gate_id": "SECRET_LEAK_SCAN",
       "verdict": "WARN",
       "label": "TRUE",
       "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAAM...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "a41934c5e91ccf1290f0730cc545df9382e4b9d6538f397d56996d8c77cfe023",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: No claims are made beyond the logistics scope; for instance, no guar\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
-      "adjudicated_by": "claude"
-    },
-    {
-      "output_sha256": "e356ee77620b52e8b2204edf9c7b6a2c1c697f6c4bd15a1e5d3ab40c33ff3a46",
-      "gate_id": "CLAIM_DISCIPLINE",
-      "verdict": "WARN",
-      "label": "FALSE",
-      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"No guarantees on absolute accuracy or real-time updates\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
       "adjudicated_by": "claude"
     },
     {

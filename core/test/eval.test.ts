@@ -20,8 +20,8 @@ const outcome = (over: Partial<PipelineOutcome> = {}): PipelineOutcome => ({
   stage_id: "compile",
   output: { text: "# SYSTEM PROMPT\n\nAnswer billing questions." },
   gate_results: [
-    { gate_id: "SECRET_LEAK_SCAN", gate_version: "1.1.0", verdict: "PASS", message: "", message_code: "ok", input_hash: "a".repeat(64), location: null },
-    { gate_id: "CLAIM_DISCIPLINE", gate_version: "1.1.0", verdict: "PASS", message: "", message_code: "ok", input_hash: "a".repeat(64), location: null },
+    { gate_id: "SECRET_LEAK_SCAN", gate_version: "1.2.0", verdict: "PASS", message: "", message_code: "ok", input_hash: "a".repeat(64), location: null },
+    { gate_id: "CLAIM_DISCIPLINE", gate_version: "1.2.0", verdict: "PASS", message: "", message_code: "ok", input_hash: "a".repeat(64), location: null },
   ],
   demo_mode: false,
   revision_id: "rev",

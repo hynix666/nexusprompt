@@ -45,9 +45,9 @@ that event is a failing build, not a note in a backlog.
 
 `oracle-proves-agreement-not-correctness` · probe `oracleScope`
 
-**Establishes.** All sixteen ported gates are compared verdict-for-verdict against the frozen Python linter they were ported from, and the linter is SHA-256 pinned in the source freeze so it cannot be edited into agreement. Where the port deliberately differs, the difference is declared with a reason and an ADR rather than reconciled or hidden — eight such divergences, from three ADRs. Two of those ADRs fix a source defect; the third (ADR-0017) does not, and the distinction matters to what this entry claims. Its four divergences EXTEND SECRET_LEAK_SCAN past the shapes the source scans for, so on those four the oracle is not being told the source is wrong — it is being told the port looks for more. Agreement with the source is therefore no longer available as evidence about them in either direction.
+**Establishes.** All sixteen ported gates are compared verdict-for-verdict against the frozen Python linter they were ported from, and the linter is SHA-256 pinned in the source freeze so it cannot be edited into agreement. Where the port deliberately differs, the difference is declared with a reason and an ADR rather than reconciled or hidden — nine such divergences, from four ADRs. Two fix a source defect; ADR-0017 does not, it extends; and ADR-0020 fixes one the oracle could never have found, because the source shares it — the distinction matters to what this entry claims. Its four divergences EXTEND SECRET_LEAK_SCAN past the shapes the source scans for, so on those four the oracle is not being told the source is wrong — it is being told the port looks for more. Agreement with the source is therefore no longer available as evidence about them in either direction.
 
-**Does not establish.** That either implementation is right. They are two expressions of one author's opinion about what makes a prompt bad, and an oracle can only tell you they still agree. Where they agree and are both wrong, this check is silent — the `CLAIM_DISCIPLINE` false positive is exactly that shape, which is why it is not in the allowlist: there is no divergence to declare. The gates also have no external validity here; no experiment in this repository connects a gate firing to any outcome a user would care about.
+**Does not establish.** That either implementation is right. They are two expressions of one author's opinion about what makes a prompt bad, and an oracle can only tell you they still agree. Where they agree and are both wrong, this check is silent. `CLAIM_DISCIPLINE` was exactly that shape until 12 September 2026: both implementations flagged a sentence that DENIED a guarantee, so the oracle reported agreement on 19 firings that a measurement later showed were all wrong (ADR-0020). Measuring the port against a corpus, not against the source, is what found it, and `guarantee-free` remains an agreed false positive with no divergence to declare. The gates also have no external validity here; no experiment in this repository connects a gate firing to any outcome a user would care about.
 
 **Pinned:**
 
@@ -56,11 +56,12 @@ that event is a failing build, not a note in a backlog.
   "gates_in_registry": 16,
   "gates_in_source_linter": 16,
   "gates_compared": 16,
-  "declared_divergences": 8,
+  "declared_divergences": 9,
   "divergence_adrs": [
     "ADR-0010",
     "ADR-0011",
-    "ADR-0017"
+    "ADR-0017",
+    "ADR-0020"
   ],
   "oracle_is_frozen": true
 }
@@ -163,7 +164,7 @@ that event is a failing build, not a note in a backlog.
 
 ```json
 {
-  "documentation_markdown_files": 59,
+  "documentation_markdown_files": 60,
   "gates_built": 16,
   "stages_built": 11,
   "adapters_built": [
@@ -320,16 +321,15 @@ that event is a failing build, not a note in a backlog.
 
 `gate-precision-measured-on-one-corpus` · probe `precisionSurface`
 
-**Establishes.** How often six of the sixteen gates are right when they fire, on 1,513 compiled prompts from eight models. Each of the 124 firings carries a TRUE/FALSE label with a reason, and `check:precision` reports an exact (Clopper-Pearson) interval per gate rather than a ratio: SECRET_LEAK_SCAN 69/84 (72.3%-89.6%), GUARDRAIL_GAP 2/15 (1.7%-40.5%), CLAIM_DISCIPLINE 0/19 (0.0%-17.6%), DUPLICATE_INSTRUCTION 0/3 (0.0%-70.8%), RUNTIME_KEY_UNDECLARED 2/2 (15.8%-100%), PLACEHOLDER_AUDIT 1/1 (2.5%-100%). Three false-positive classes are now measured rather than anecdotal: GUARDRAIL_GAP misses a clause spelled with a Unicode dash, CLAIM_DISCIPLINE fires on sentences that DENY a guarantee, and DUPLICATE_INSTRUCTION flags the worked example the compile template demands. The check fails if a firing loses its label, a label loses its firing, or a corpus file's text changes after it was judged.
+**Establishes.** How often six of the sixteen gates are right when they fire, on 1,513 compiled prompts from eight models. Each of the 105 firings carries a TRUE/FALSE label with a reason, and `check:precision` reports an exact (Clopper-Pearson) interval per gate rather than a ratio: SECRET_LEAK_SCAN 69/84 (72.3%-89.6%), GUARDRAIL_GAP 2/15 (1.7%-40.5%), DUPLICATE_INSTRUCTION 0/3 (0.0%-70.8%), RUNTIME_KEY_UNDECLARED 2/2 (15.8%-100%), PLACEHOLDER_AUDIT 1/1 (2.5%-100%). Two false-positive classes remain measured rather than anecdotal: GUARDRAIL_GAP misses a clause spelled with a Unicode dash, and DUPLICATE_INSTRUCTION flags the worked example the compile template demands. A third was fixed because of this measurement: CLAIM_DISCIPLINE fired 19 times, every one a sentence DENYING a guarantee, and gate 1.2.0 now reads polarity (ADR-0020), so it fires nowhere here. The check fails if a firing loses its label, a label loses its firing, or a corpus file's text changes after it was judged.
 
-**Does not establish.** That any gate has a precision, full stop. Ten of the sixteen never fired here at all, and a gate absent from the table has no measurement rather than a good one. Where it did fire the counts are mostly small: two gates rest on 1 and 2 firings, whose intervals reach 100% because nothing else is excludable at that size, and only SECRET_LEAK_SCAN has an interval narrower than 30 points. Every label is the judgement of an uncalibrated model made by Claude alone and reviewed by nobody, which ADR-0008 refuses for scoring elsewhere in this system. The figure belongs to THIS corpus: briefs generated from a template, half the pilot slice planting a credential or a stand-in on purpose, and three of the eight models drawn from endpoints that could not finish a run. Precision on prompts a person wrote is unmeasured. Recall and precision here come from different corpora and do not compose into an F-score or any other single number.
+**Does not establish.** That any gate has a precision, full stop. Eleven of the sixteen never fired here at all — CLAIM_DISCIPLINE joined them when ADR-0020 fixed it, so its precision is now unmeasured rather than 0.0%-17.6%, and measuring it again needs prompts that assert a guarantee, and a gate absent from the table has no measurement rather than a good one. Where it did fire the counts are mostly small: two gates rest on 1 and 2 firings, whose intervals reach 100% because nothing else is excludable at that size, and only SECRET_LEAK_SCAN has an interval narrower than 30 points. Every label is the judgement of an uncalibrated model made by Claude alone and reviewed by nobody, which ADR-0008 refuses for scoring elsewhere in this system. The figure belongs to THIS corpus: briefs generated from a template, half the pilot slice planting a credential or a stand-in on purpose, and three of the eight models drawn from endpoints that could not finish a run. Precision on prompts a person wrote is unmeasured. Recall and precision here come from different corpora and do not compose into an F-score or any other single number.
 
 **Pinned:**
 
 ```json
 {
   "precision_by_gate": [
-    "CLAIM_DISCIPLINE 0/19",
     "DUPLICATE_INSTRUCTION 0/3",
     "GUARDRAIL_GAP 2/15",
     "PLACEHOLDER_AUDIT 1/1",
@@ -337,7 +337,7 @@ that event is a failing build, not a note in a backlog.
     "SECRET_LEAK_SCAN 69/84"
   ],
   "precision_corpus_exists": true,
-  "adjudicated_firings": 124
+  "adjudicated_firings": 105
 }
 ```
 

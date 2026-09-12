@@ -178,6 +178,17 @@
       "port_verdict": "FAIL",
       "reason": "The source opens a manifest on `#+s*Runtime Variables`, and `s*` matches zero characters. CommonMark requires whitespace after the hash run, so `#Runtime Variables` is a paragraph: a reader of the compiled prompt sees no heading and no manifest, while the linter reads one and treats every declaration-shaped line beneath it as declaring. The same pattern accepts seven or more hashes, which CommonMark also renders as a paragraph. Both are the unsafe direction — a line that is not a heading silences the gate for the section under it, and nothing in the output says so. The port bounds the run to `#{1,6}` and requires a following space or tab, which is exactly what a Markdown renderer requires. The narrowing can only produce a visible FAIL an author clears by adding a space, which is the trade ADR-0010 already chose: an accepted non-manifest is a silent PASS nobody sees, so ambiguous shapes lose. Found by the fifth adversarial sweep; no case in the differential corpus exercises the shape, so the oracle could not have raised it and this entry is what records the decision.",
       "adr": "ADR-0010"
+    },
+    {
+      "gate": "CLAIM_DISCIPLINE",
+      "demonstration": {
+        "text": "# SYSTEM PROMPT\n\n- **Fact-Grounding**: No guarantees on absolute accuracy or real-time updates.\n",
+        "options": {}
+      },
+      "source_verdict": "WARN",
+      "port_verdict": "PASS",
+      "reason": "The source matches `guarantee[sd]?` anywhere in the text, with no regard for polarity, so a sentence REFUSING to guarantee something is flagged exactly like one asserting it. The port now reads the sentence around each match and ignores the match when that sentence negates, forbids or restricts the guarantee, or quotes it as a phrase to avoid. This is the first divergence in the allowlist justified by a measurement rather than by reading the source: on the precision corpus (eval/precision-corpus, 1,513 compiled prompts from eight models) the gate fired 19 times and every single firing was a denial, an exact 95% interval of 0.0%-17.6% for its firings being real defects. The compile stage's own system prompt instructs the model never to claim a guarantee, so the gate was penalising models for obeying the prompt it was checking. The unit is the sentence, not the document: a disclaimer in one place does not launder a claim made in another, and `guarantee-free` still WARNs in both implementations because a hyphen is a word boundary and neither treats it as a denial.",
+      "adr": "ADR-0020"
     }
   ]
 }

@@ -49,7 +49,7 @@ describe("gate versions are provenance, not decoration", () => {
       // 1.2.0 — four credential shapes the source does not carry (ADR-0017). The gate
       // reports WARN on inputs it previously called clean; no existing verdict reversed.
       SECRET_LEAK_SCAN: "1.2.0",
-      CLAIM_DISCIPLINE: "1.1.0",
+      CLAIM_DISCIPLINE: "1.2.0",
       PLACEHOLDER_AUDIT: "1.0.0",
       RUNTIME_KEY_UNDECLARED: "1.2.0",   // ADR-0010, amended twice — see its Decision section
       SOURCE_LEDGER_MISSING: "1.0.0",

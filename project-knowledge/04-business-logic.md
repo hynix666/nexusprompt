@@ -12,7 +12,7 @@ Pure functions of `(text, options) → GateResult` with verdict `PASS | WARN | F
 | Gate | v | Catches |
 |---|---|---|
 | `SECRET_LEAK_SCAN` | 1.1.0 | API keys, tokens, emails, phone numbers |
-| `CLAIM_DISCIPLINE` | 1.1.0 | "guarantee", "100% accurate" — unearned certainty |
+| `CLAIM_DISCIPLINE` | 1.2.0 | "guarantee", "100% accurate" — unearned certainty |
 | `PLACEHOLDER_AUDIT` | 1.0.0 | `<<ROLE>>` left unfilled |
 | `RUNTIME_KEY_UNDECLARED` | **1.1.0** | `[[API_HOST]]` with no declaration. Diverges from the source (ADR-0010) |
 | `SOURCE_LEDGER_MISSING` | 1.0.0 | citations with no ledger |
