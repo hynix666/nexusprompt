@@ -126,6 +126,49 @@ export class PinnedHostedModel implements ProviderTransport {
   }
 }
 
+/**
+ * Says which brief just came back, and how it went.
+ *
+ * The corpus is written once at the end, so without this a run in flight is silent: a slow
+ * endpoint and one refusing every call look identical. Three runs were lost to that —
+ * glm-5.3-free abandoned after 3h41m having written nothing, and b.ai and orcarouter both
+ * stopping mid-run, which only became visible hours later in the exclusion counts.
+ *
+ * The provider call is the only per-brief event available: `runSuite` runs a whole slice
+ * internally and offers no hook. The case id is recovered from `run_id`, which `runSuite`
+ * builds as `eval-<case_id>-t<trial>`.
+ */
+export class ProgressLogger implements ProviderTransport {
+  readonly provider_id: string;
+  private done = 0;
+
+  constructor(
+    private readonly inner: ProviderTransport,
+    private readonly total: number,
+    private readonly log: (line: string) => void,
+    private readonly now: () => number = Date.now,
+  ) {
+    this.provider_id = inner.provider_id;
+  }
+
+  async generate(req: GenerationRequest): Promise<GenerationResult | ProviderFailure> {
+    const started = this.now();
+    const out = await this.inner.generate(req);
+    this.done += 1;
+    const caseId = req.run_id.replace(/^eval-/, "").replace(/-t\d+$/, "");
+    const seconds = ((this.now() - started) / 1000).toFixed(1);
+    // Counts calls, not briefs, and may pass the total: a retry is another call, and hiding it
+    // would misreport what the endpoint actually cost.
+    const outcome = "category" in out ? `FAILED ${out.category}/${out.reason_code}` : "ok";
+    this.log(`  [${String(this.done).padStart(3)}/${this.total}] ${caseId.padEnd(22)} ${outcome.padEnd(34)} ${seconds}s`);
+    return out;
+  }
+
+  healthCheck() {
+    return this.inner.healthCheck();
+  }
+}
+
 function configurationFor(model: string): Configuration {
   const base = {
     prompt_template_ref: "core/src/stages/compile.ts",
@@ -293,7 +336,12 @@ export async function main(argv: string[], deps: MainDeps = realDeps): Promise<n
   }
 
   deps.log(`build:precision-corpus: ${model} — 2 × ${SLICE_SIZE} briefs through the compile stage.`);
-  const file = await buildPrecisionCorpus({ model, provider, generatedAt: deps.now(), endpoint });
+  const file = await buildPrecisionCorpus({
+    model,
+    provider: new ProgressLogger(provider, 2 * SLICE_SIZE, deps.log),
+    generatedAt: deps.now(),
+    endpoint,
+  });
   deps.writeFile(path, JSON.stringify(file, null, 2) + "\n");
   const kept = (s: Slice) => file.records.filter((r) => r.slice === s).length;
   deps.log(
