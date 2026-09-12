@@ -8,6 +8,7 @@ import {
   buildPrecisionCorpus,
   main,
   PinnedHostedModel,
+  ProgressLogger,
 } from "../scripts/build-precision-corpus.js";
 import type {
   GenerationRequest, GenerationResult, ProviderFailure, ProviderHealth, ProviderTransport,
@@ -170,10 +171,14 @@ describe("refusals, before any model is asked", () => {
     expect(d.provider.calls).toBe(0);
   });
 
-  it("writes the model's file when nothing refuses", async () => {
-    const d = deps();
+  it("writes the model's file when nothing refuses, reporting every brief on the way", async () => {
+    const lines: string[] = [];
+    const d = deps({ log: (l: string) => lines.push(l) });
     expect(await main(["--model", "llama3.1:8b"], d.deps)).toBe(0);
     expect(d.written).toEqual(["eval/precision-corpus/llama3.1_8b.json"]);
+    // The wiring, not just the decorator: 200 briefs, 200 progress lines, the last one numbered.
+    expect(lines.filter((l) => /^\s+\[\s*\d+\/200\]/.test(l))).toHaveLength(200);
+    expect(lines.some((l) => l.includes("[200/200]"))).toBe(true);
   });
 
   it("refuses --hosted without the endpoint's key and base URL, and never prints either", async () => {
@@ -222,6 +227,52 @@ describe("refusals, before any model is asked", () => {
     const d = deps({ env: { COMPATIBLE_OPENAI_API_KEY: "k", COMPATIBLE_OPENAI_BASE_URL: "https://integrate.api.nvidia.com/v1" } });
     expect(await main(["--model", "nvidia/nemotron-3-super-120b-a12b", "--hosted"], d.deps)).toBe(0);
     expect(d.written).toEqual(["eval/precision-corpus/nvidia_nemotron-3-super-120b-a12b.json"]);
+  });
+});
+
+describe("progress, so a stalled run is visible while it runs", () => {
+  // glm-5.3-free was abandoned after 3h41m having written nothing, and b.ai and orcarouter
+  // both stopped answering mid-run without a sign until the file landed hours later. The
+  // builder writes its corpus only at the end, so the provider call is the only per-brief event.
+  const req = (case_id: string): GenerationRequest => ({
+    request_id: "r", run_id: `eval-${case_id}-t0`, idempotency_key: "r",
+    messages: [{ role: "user", content: "brief" }],
+    model_policy: { preferred_models: ["m"], allow_fallback: false },
+    generation_options: { max_tokens: 100, effort: "medium" },
+  });
+
+  it("logs one line per answer, numbered against the total, naming the brief", async () => {
+    const lines: string[] = [];
+    const p = new ProgressLogger(new FakeOllama(), 200, (l) => lines.push(l));
+    await p.generate(req("brief-secret-0000"));
+    await p.generate(req("clean-0041"));
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain("1/200");
+    expect(lines[0]).toContain("brief-secret-0000");
+    expect(lines[1]).toContain("2/200");
+    expect(lines[1]).toContain("clean-0041");
+  });
+
+  it("names the failure category, which is what a dying endpoint looks like", async () => {
+    const lines: string[] = [];
+    const p = new ProgressLogger(new FakeOllama(() => true), 200, (l) => lines.push(l));
+    await p.generate(req("brief-secret-0000"));
+    expect(lines[0]).toContain("UNAVAILABLE");
+    expect(lines[0]).toContain("connection_failed");
+  });
+
+  it("keeps counting past the total rather than pretending, because a retry is another call", async () => {
+    const lines: string[] = [];
+    const p = new ProgressLogger(new FakeOllama(), 2, (l) => lines.push(l));
+    for (const c of ["a", "b", "c"]) await p.generate(req(c));
+    expect(lines[2]).toContain("3/2");
+  });
+
+  it("passes the answer through untouched", async () => {
+    const inner = new FakeOllama();
+    const out = await new ProgressLogger(inner, 1, () => {}).generate(req("x"));
+    expect("content" in out && out.content).toContain("SYSTEM PROMPT");
+    expect(inner.calls).toBe(1);
   });
 });
 
