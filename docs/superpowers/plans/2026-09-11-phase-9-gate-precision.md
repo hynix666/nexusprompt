@@ -57,6 +57,21 @@ The gates are defined over **complete compiled system prompts**, and the reposit
 - **D2, second hosted model.** The owner added `glm-5.3-free` from `kiraai.vn` (`https://kiraai.vn/api/v1`, OpenAI-compatible). It is a **reseller proxy**: its page names Z.ai as the source and says nothing about whether prompts are logged. Nothing here can verify which model actually answers, so the corpus records it as *what kiraai.vn serves under that id*, never as GLM 5.3 itself. A hosted fingerprint is `hosted-server:<model>` whichever endpoint served it, so hosted corpus files now record the answering `endpoint` host; local files omit the field.
 - **D2, third hosted model.** The owner added `laguna-s-2.1:free` (made by Poolside) via `api.unorouter.com`, another router. Its page says the free tier *"may use your inputs and outputs to train"*, so every brief and answer in that corpus may enter a third party's training data. The briefs are synthetic, so nothing sensitive is exposed, but that corpus's provenance must say so.
 - **D2, what actually ran (12 September 2026).** Four local models (`phi4-mini:latest`, `llama3.1:8b`, `qwen3-coder:30b`, `gemma4:e4b`) and, at the owner's request, hosted models across five endpoints: NVIDIA, `kiraai.vn`, `api.unorouter.com`, `api.b.ai`, `api.orcarouter.ai`. `qwen3.8:27b` was dropped on time (≈30 h). **`glm-5.3-free` was abandoned after 3h41m** having written nothing: the builder logs no per-brief progress, so a slow endpoint and one timing out on every call are indistinguishable while a run is in flight. Before any further hosted run, give the builder per-brief progress output; that blind spot cost a run and blocked the queue behind it.
+- **D2, what the endpoints actually delivered (12 September 2026).** Local models and the two serious endpoints produced complete corpora; the three free reseller routers did not, and their failures are worth recording because they are the argument against adding more of them:
+
+  | Model | Endpoint | Kept (pilot/clean) | How it ended |
+  |---|---|---|---|
+  | `phi4-mini:latest`, `llama3.1:8b`, `qwen3-coder:30b`, `gemma4:e4b` | local Ollama | 100/100 | complete |
+  | `nemotron-3-super-120b-a12b` | NVIDIA | 100/100 | complete |
+  | `laguna-s-2.1:free` | UnoRouter | 99/100 | complete, 1 degraded |
+  | `nemotron-3-ultra-550b-a55b:free` | UnoRouter | 100/90 | 10 scattered failures; kept |
+  | `glm-5.3-flash` | b.ai | 98/26 | stopped dead after 126 answers; kept, clean slice thin |
+  | `deepseek/deepseek-v4-flash-free` | orcarouter | 48/0 | stopped dead after 48; **rejected**, no clean slice at all |
+  | `qwen3.8-flash-free` | kiraai | 5/5 | ~95% of calls refused over 9h40m; **rejected** |
+  | `glm-5.3-free` | kiraai | — | abandoned after 3h41m, nothing written |
+  | `mimo-v2.5-free` | kiraai | — | stopped deliberately after kiraai's two prior failures |
+
+  Rejected corpora are not committed: a slice of 0 or 5 briefs cannot carry a precision figure, and the endpoint that produced it cannot be relied on for provenance either. kiraai consumed about 13 hours across three attempts for 10 usable prompts.
 - **D3 → add a clean-brief slice.** Correction to D3's premise: brief-pilot plants a hazard in only two of its four shapes (`secret` and `placeholder`, 25 each); `unicode` and `structure` briefs carry none. The clean slice is 100 `structure`-shape briefs taken from `buildBriefCorpus` at seed 2, deduplicated against each other and against brief-pilot's briefs (8 × 4 × 4 × 4 = 512 are possible). This needs no Core change. Each record carries `slice: "pilot" | "clean"`, and every reported interval is split by slice, so false positives on briefs with nothing planted are visible on their own.
 
 ## Global constraints
