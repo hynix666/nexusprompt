@@ -56,10 +56,58 @@ export interface InvokeResult {
  */
 const MAX_BACKOFF_MS = 120_000;
 
+/**
+ * A failure this function made up, rather than one an adapter classified.
+ *
+ * `attempt: 1` because nothing was attempted at the provider — the count is of provider calls,
+ * and claiming more would misreport what a run cost.
+ */
+const refuse = (
+  request: GenerationRequest,
+  category: ProviderFailure["category"],
+  reason_code: string,
+  safe_message: string,
+): ProviderFailure => ({
+  request_id: request.request_id,
+  category,
+  reason_code,
+  safe_message,
+  retriable: false,
+  retry_after_ms: null,
+  attempt: 1,
+  provider_id: "application",
+});
+
 export async function invokeWithRetry(
   request: GenerationRequest,
   opts: InvokeOptions,
 ): Promise<InvokeResult> {
+  /**
+   * Fallback is refused here rather than implemented anywhere (Phase 8 spec §7).
+   *
+   * Choosing a second model on failure needs retry classification, aggregate call-budget
+   * accounting, idempotency, deterministic ordering, and provenance recording WHICH model
+   * answered. None of that exists. An adapter silently taking `preferred_models[0]` would
+   * report a run against a model the caller did not get, which is the failure this repository
+   * exists to prevent — so the request is refused before a provider is asked.
+   *
+   * Unreachable from a Shell today: `core/src/stages/stage-kit.ts` is the only producer of a
+   * `model_policy` and always names one model. The guard is at the boundary such a request
+   * would arrive through, which is what stays true when a Shell starts accepting one.
+   */
+  if (request.model_policy.preferred_models.length > 1 && request.model_policy.allow_fallback) {
+    const outcome = refuse(
+      request,
+      "INVALID_REQUEST",
+      "fallback_not_implemented",
+      `This deployment executes one model per request. ${request.model_policy.preferred_models.length} ` +
+      "preferred models were named with allow_fallback set, and falling back is not implemented: " +
+      "name one model, or clear allow_fallback and accept that only the first is used.",
+    );
+    opts.onAttempt?.({ phase: "failed", attempt: 1, duration_ms: 0, outcome });
+    return { outcome, attempts: 1 };
+  }
+
   // `maxAttempts: 0` made the loop body never run and `last!` throw a TypeError — a config
   // mistake surfacing as a crash in unrelated code. One attempt is the floor: "do not call
   // the provider" is not something this function can express, and should not pretend to.
@@ -70,7 +118,33 @@ export async function invokeWithRetry(
     const started = opts.now().getTime();
     opts.onAttempt?.({ phase: "started", attempt, duration_ms: 0 });
 
-    const outcome = await opts.provider.generate(request);
+    /**
+     * An adapter that throws becomes a value here (Phase 8 spec, exception normalization).
+     *
+     * Every first-party adapter returns a typed failure from every catch, so this is a guard
+     * on the port rather than a fix for a known bug: `ProviderTransport` is a plugin seam, and
+     * an exception crossing it bypasses retry classification entirely — `pipeline.ts` catches
+     * it outside the loop and marks the stage failed with no category, while `orchestrator.ts`
+     * does not catch it at all.
+     *
+     * Non-retriable, and INTERNAL rather than UNAVAILABLE: an adapter that throws has not told
+     * us whether anything reached the far end, so a retry might duplicate a side effect, and
+     * re-running an unclassified defect three times only hides it. The exception's own text is
+     * dropped rather than reported — it is the likeliest place for a host, a path or a key
+     * fragment to appear (#169).
+     */
+    let outcome: GenerationResult | ProviderFailure;
+    try {
+      outcome = await opts.provider.generate(request);
+    } catch {
+      outcome = refuse(
+        request,
+        "INTERNAL",
+        "adapter_threw",
+        `The provider adapter threw instead of returning a classified failure. ` +
+        "Its message is withheld deliberately; the adapter is the place to classify this.",
+      );
+    }
     const duration_ms = opts.now().getTime() - started;
 
     if (!isFailure(outcome)) {

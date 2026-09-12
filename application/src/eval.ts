@@ -218,6 +218,26 @@ export async function runSuite(opts: RunSuiteOptions): Promise<SuiteResult> {
    * assumes a warm cache authorises a spend it cannot bound on a cold one — and the cold
    * run is the one right after a configuration changes.
    */
+  /**
+   * A named routing policy is refused, not accepted and ignored (Phase 8 spec §8).
+   *
+   * `core/src/routing/policy.ts` is not wired to the pipeline: nothing reads this field at
+   * execution time. It IS hashed into `configuration_id`, so accepting one would produce a
+   * distinct configuration — and an `EvalRun` attributed to a router that never ran, which
+   * reads as evidence about routing to anyone comparing two configuration ids later.
+   *
+   * Unreachable today: every `Configuration` in this repository is built in `scripts/` with
+   * `router_policy_ref: null`. The refusal sits where an external one would first be executed.
+   */
+  if (configuration.router_policy_ref != null) {
+    throw new Error(
+      `Suite "${suite.suite_id}" declares router_policy_ref ${JSON.stringify(configuration.router_policy_ref)}, ` +
+      "and routing is not connected to execution in this deployment.\n" +
+      "  The reference would be hashed into the configuration id and change nothing about the run,\n" +
+      "  so the result would be attributed to a router that never ran. Set it to null. Nothing was spent.",
+    );
+  }
+
   const planned = plannedCalls(suite.case_ids.length, trials, decoding);
   const admission = admitRun({ budget: configuration.budget, plannedCalls: planned });
   if (!admission.admit) {
