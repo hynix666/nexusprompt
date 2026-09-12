@@ -72,6 +72,7 @@
     "check:examples": "tsx scripts/examples.ts --check",
     "docs:examples": "tsx scripts/examples.ts --write",
     "build:judge-calibration": "tsx scripts/build-judge-calibration.ts",
+    "build:precision-corpus": "tsx scripts/build-precision-corpus.ts",
     "check:judge": "tsx scripts/check-judge.ts",
     "judge": "tsx scripts/judge.ts",
     "judge:pilot": "tsx scripts/judge-pilot.ts",
