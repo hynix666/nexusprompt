@@ -67,10 +67,21 @@ export function deriveFirings(dir = CORPUS_DIR): Firing[] {
   return out;
 }
 
+/**
+ * The pin is on the text that was judged, not on the bytes it happens to sit in.
+ *
+ * Hashing raw bytes failed CI on the first attempt: this repository is developed on Windows
+ * with `autocrlf` and verified on Linux, so every corpus hashed differently for a difference
+ * no label depends on. Line endings are normalised before hashing, as `check-counts.mjs`
+ * already does when it reads a document.
+ */
+export const contentHash = (text: string): string =>
+  createHash("sha256").update(text.replace(/\r\n/g, "\n"), "utf8").digest("hex");
+
 export function corpusHashes(dir = CORPUS_DIR): Record<string, string> {
   const out: Record<string, string> = {};
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
-    out[file] = createHash("sha256").update(readFileSync(join(dir, file))).digest("hex");
+    out[file] = contentHash(readFileSync(join(dir, file), "utf8"));
   }
   return out;
 }

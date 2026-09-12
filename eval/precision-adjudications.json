@@ -27,14 +27,14 @@
     "under the same name, and check:precision fails rather than let old labels describe new prompts."
   ],
   "corpora": {
-    "gemma4_e4b.json": "33b2fe8d457a5bbd5ddaf70c5a4e3d1a379bf343cb7f2f5189078ed17c2c0bfd",
-    "glm-5.3-flash.json": "14b6729610c20fe3f09022ac5e8114a18b51ff291f9d4aa6d988e7922101779a",
-    "laguna-s-2.1_free.json": "d1987522ed76aa93e4fb094a01581fe2bbd06ed2fb03d91ade3c11e794b35171",
-    "llama3.1_8b.json": "a37f81aaf2647fa0bcfc5fa3015ab484158d421930879b6436442eae03c86e9b",
-    "nemotron-3-ultra-550b-a55b_free.json": "e1b7cbad3f173b3def6e48ea43f40e9c1862180ac63067830c9a4a1a1a2d803b",
-    "nvidia_nemotron-3-super-120b-a12b.json": "1ee11dd2266c58adae224aa04f0454c787f98cf5d77ae8aebbd4d2a474752a42",
-    "phi4-mini_latest.json": "5aa5d8173049878e51c40f87acc9c07ddb76ba53a68a2f26b71c8ee7b64bf4f4",
-    "qwen3-coder_30b.json": "407d9a64c0f774e32b89354cb895e97977a9acfd3001da1cda597285068c7811"
+    "gemma4_e4b.json": "826f6aa25e799bc2a966aae623472c324529a1c2734324dd3c87242b555cd399",
+    "glm-5.3-flash.json": "9dd97b33e953d6bd7314e189726658d16a7818aa0f8867f470a92f336dbdf231",
+    "laguna-s-2.1_free.json": "eb69d258694e625489c3bdb67333df778b75bf9425a250c117eafce178a0e40b",
+    "llama3.1_8b.json": "395a178e23f9f262a6e7e1c82e4e698dea01d2faa16f0f1e7b31c82301838355",
+    "nemotron-3-ultra-550b-a55b_free.json": "759e705720a18558b0d49b3f364dd2f0b0efb5e7285931373c61756761c9bc4b",
+    "nvidia_nemotron-3-super-120b-a12b.json": "068c6bc99c50dc8991161b1cbd8031c78810b94c64fd480ac2544e219dc50f9c",
+    "phi4-mini_latest.json": "5b5bc248f73b4f50d222d8bace8b165c8e0990fa767c6b35c8043c7df1aeaddd",
+    "qwen3-coder_30b.json": "1df57ce65d4015903fa2bf4d49374e070be8f2427586f84e92510389fa69d9e0"
   },
   "adjudications": [
     {

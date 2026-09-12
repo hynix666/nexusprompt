@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
-import { validate, deriveFirings, firingKey, type Adjudication } from "../scripts/check-precision.js";
+import { validate, deriveFirings, firingKey, contentHash, corpusHashes, type Adjudication } from "../scripts/check-precision.js";
 
 /**
  * check:precision (Phase 9, Task 3) — the guard that keeps adjudications and firings in step.
@@ -73,6 +73,17 @@ describe("what check:precision refuses", () => {
   });
 });
 
+describe("the hash pins content, not line endings", () => {
+  it("gives one hash whether the file was checked out CRLF or LF", () => {
+    // Hashing raw bytes failed CI on the first try: this repository is developed on Windows
+    // (autocrlf) and verified on Linux, so all eight corpora hashed differently for a
+    // difference no label depends on. The pin is on what was judged, which is the text.
+    const lf = '{\n  "records": [\n    { "text": "a" }\n  ]\n}\n';
+    expect(contentHash(lf.replace(/\n/g, "\r\n"))).toBe(contentHash(lf));
+    expect(contentHash(lf + "x")).not.toBe(contentHash(lf));
+  });
+});
+
 describe("the committed corpus and its adjudications", () => {
   const path = "eval/precision-adjudications.json";
 
@@ -82,7 +93,10 @@ describe("the committed corpus and its adjudications", () => {
     const file = JSON.parse(readFileSync(path, "utf8"));
     const firings = deriveFirings("eval/precision-corpus");
     expect(firings.length).toBeGreaterThan(0);
-    expect(validate(firings, file.adjudications, file.corpora, file.corpora)).toEqual([]);
+    // The hashes are re-derived from the corpus, never compared against themselves: passing
+    // `file.corpora` for both sides made this test vacuous and let a byte-hash pin reach CI,
+    // where a Linux checkout hashed all eight differently.
+    expect(validate(firings, file.adjudications, corpusHashes("eval/precision-corpus"), file.corpora)).toEqual([]);
   });
 
   it("records who judged, and every reason is a sentence rather than a placeholder", () => {
