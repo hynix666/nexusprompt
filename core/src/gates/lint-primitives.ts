@@ -69,15 +69,41 @@ export const halfUp2 = (x: number): number => Math.floor(x * 100 + 0.5) / 100;
 const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * Left-anchored word-boundary clause match.
+ * Left-anchored word-boundary clause match, tolerant of how the dash is spelled.
  *
  * `\bscope` rejects "telescope" and accepts "scope:" and "scoped". The right edge stays
  * free so a stem like "sanitiz" still matches its inflections. The unanchored `clause in
  * low` this replaced counted a clause as present inside any unrelated word — a false-clean
  * on a safety gate, which is the worst direction for one to fail in.
+ *
+ * DIVERGES FROM THE SOURCE — declared in scripts/divergence-allowlist.json, ADR-0021.
+ *
+ * The source matches the clause literally, so `anti-override` is found only when the dash
+ * is U+002D. Phase 9 measured what that costs: GUARDRAIL_GAP fired 15 times over the
+ * 1,513-prompt precision corpus and 13 were one shape — a model writing `**Anti‑Override**`
+ * or `**Fact‑Grounding**` with U+2011 NON-BREAKING HYPHEN, which several emit inside a bold
+ * heading. The clause was present in every one of the 13. The gate reported it missing, so
+ * the finding was about our regex rather than about the prompt.
+ *
+ * A clause's own dash therefore matches `\p{Pd}`, Unicode's Dash_Punctuation category.
+ * The category rather than a list of codepoints, because a hand-picked set of the dashes
+ * that happened to appear in one corpus is precisely the shape of guard this repository has
+ * been bitten by before, and it would leave the same defect waiting behind the next dash a
+ * model reaches for. U+002D is itself a member, so the ASCII spelling keeps matching under
+ * the same rule rather than as a special case.
+ *
+ * DASHES ONLY, and the distinction is load-bearing. `anti override` and `anti_override`
+ * still read as absent: a different dash is a typographic variant of the clause the author
+ * wrote, while a different separator is a different string, and nothing measured asks for
+ * that. Every widening here can only make a safety-adjacent gate fire LESS, so each one
+ * needs evidence, and the evidence covers dashes.
+ *
+ * The clause is split on the ASCII hyphen and rejoined, so only a dash the CLAUSE spells is
+ * made flexible — no other character of the haystack changes meaning. Clauses without a
+ * hyphen ("scope", "sanitiz", "bias") compile to exactly the pattern they did before.
  */
 export const clausePresent = (clause: string, low: string): boolean =>
-  new RegExp(`\\b${escapeRegExp(clause)}`).test(low);
+  new RegExp(`\\b${clause.split("-").map(escapeRegExp).join("\\p{Pd}")}`, "u").test(low);
 
 /**
  * Runtime Variables must be declared in a manifest section. Read from RAW text, not audit text.

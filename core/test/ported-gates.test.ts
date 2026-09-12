@@ -54,7 +54,7 @@ describe("gate versions are provenance, not decoration", () => {
       RUNTIME_KEY_UNDECLARED: "1.2.0",   // ADR-0010, amended twice — see its Decision section
       SOURCE_LEDGER_MISSING: "1.0.0",
       ORPHAN_CLAIMS: "1.0.0",
-      GUARDRAIL_GAP: "1.0.0",
+      GUARDRAIL_GAP: "1.1.0",             // ADR-0021 — a clause spelled with a Unicode dash is present
       TOKEN_SPAM: "1.0.0",
       RECURSION_MACHINERY_PRESENT: "1.0.0",
       RAG_SHIELD_GAP: "1.0.0",
@@ -484,6 +484,45 @@ describe("GUARDRAIL_GAP", () => {
      * than discovered.
      */
     expect(guardrailGap(`${GUARDRAILS} sanitisation recursion conflict bias`, { safetyTier: true }).verdict).toBe("FAIL");
+  });
+
+  /**
+   * A clause spelled with a Unicode dash IS present, and the gate used to miss it.
+   *
+   * Phase 9 measured what that costs. GUARDRAIL_GAP fired 15 times over the 1,513-prompt
+   * precision corpus and 13 of them were this one shape: `**Anti\u2011Override**` and
+   * `**Fact\u2011Grounding**` written with U+2011 NON-BREAKING HYPHEN, which is what several
+   * models emit inside a bold heading. The clause was there. The ASCII literal was not
+   * looking for it.
+   *
+   * The dashes are written as escapes rather than pasted, because U+2011 and U+002D are
+   * indistinguishable on screen and a reviewer must be able to see which one is under test.
+   *
+   * The rule is Unicode's own Dash_Punctuation category, not an enumeration of the dashes
+   * that happened to appear in this corpus \u2014 a hand-picked list is the shape of guard
+   * this repository has been bitten by before. U+002D is itself a member, so the ASCII
+   * spelling keeps working by the same rule rather than by a special case.
+   *
+   * The source shares the defect, so this is a declared divergence: entry 10 in
+   * scripts/divergence-allowlist.json, ADR-0021.
+   */
+  it("recognises a clause spelled with a Unicode dash", () => {
+    expect(guardrailGap("anti\u2011override scope fact\u2011grounding").verdict).toBe("PASS");
+    expect(guardrailGap("anti\u2013override scope fact\u2014grounding").verdict).toBe("PASS");
+    expect(guardrailGap(GUARDRAILS).verdict).toBe("PASS");
+  });
+
+  it("widens to dashes only \u2014 a clause is not present because a space sits where the dash was", () => {
+    /**
+     * The two firings this corpus adjudicated TRUE are prompts carrying no guardrail
+     * section at all, and they must keep firing. Tolerating a different DASH is a
+     * typography fix; tolerating a different SEPARATOR would be a semantic one, and
+     * nothing measured asks for it. A gate that stops firing is the worst direction
+     * for this repository to move a safety-adjacent check without evidence.
+     */
+    expect(guardrailGap("scope").verdict).toBe("WARN");
+    expect(guardrailGap("anti override scope fact grounding").verdict).toBe("WARN");
+    expect(guardrailGap("anti_override scope fact_grounding").verdict).toBe("WARN");
   });
 });
 

@@ -12,7 +12,9 @@ import {
 } from "./lint-primitives.js";
 import type { GateResult } from "../../../contracts/index.js";
 
-export const GUARDRAIL_GATE_VERSION = "1.0.0";
+// 1.1.0 — ADR-0021: a clause spelled with a Unicode dash is present. Minor, not patch: it
+// returns PASS where it returned WARN, which changes lint outcomes for callers.
+export const GUARDRAIL_GATE_VERSION = "1.1.0";
 export const TOKEN_SPAM_GATE_VERSION = "1.0.0";
 export const RECURSION_GATE_VERSION = "1.0.0";
 export const RAG_SHIELD_GATE_VERSION = "1.0.0";
