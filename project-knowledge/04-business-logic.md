@@ -24,7 +24,7 @@ Pure functions of `(text, options) → GateResult` with verdict `PASS | WARN | F
 | `DUPLICATE_INSTRUCTION` | 1.0.0 | repeated blocks (60-character floor) |
 | `DELIMITER_ENTROPY` | 1.0.0 | delimiters under a 32-hex minimum |
 | `TOKEN_BUDGET` | 1.0.0 | estimate over a declared ceiling |
-| `QUTM_CEILING` | **1.1.0** | ratio ceiling, not armed below a 120-token baseline. Diverges from the source (ADR-0011) |
+| `QUTM_CEILING` | **1.1.1** | ratio ceiling, not armed below a 120-token baseline. Diverges from the source (ADR-0011) |
 | `CONTEXT_LIMIT` | 1.0.0 | context overflow |
 | `ADVERSARIAL_RESILIENCE` | 1.0.0 | takes an **injected** corpus |
 
