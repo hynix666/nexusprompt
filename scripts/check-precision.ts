@@ -73,6 +73,47 @@ export function deriveFirings(dir = CORPUS_DIR): Firing[] {
   return out;
 }
 
+export interface GateActivity {
+  /** Prompts the gate was run over. */
+  prompts: number;
+  /** Prompts on which it was actually armed — able to report a finding at all. */
+  armed: number;
+  /** The gate's own words for why it was not armed, or null when it always was. */
+  notArmedMessage: string | null;
+}
+
+/**
+ * Which gates could report anything at all over this corpus.
+ *
+ * Six of the sixteen return PASS immediately unless an option is set, and the corpus runs
+ * `runGates(text, {})`: TOKEN_BUDGET wants a budget, QUTM_CEILING a stakes tier, CONTEXT_LIMIT
+ * a provider, RECURSION_MACHINERY_PRESENT and RAG_SHIELD_GAP their targets, and
+ * ADVERSARIAL_RESILIENCE a corpus. Reporting those as "never fired" invites the reading "the
+ * models never produced that defect", which is not what happened — they were switched off.
+ *
+ * Derived from each gate's own `.not_armed` message code, never from a list of gate names: a
+ * hand-kept list encodes what its author remembered, and the next option-gated gate would be
+ * misreported exactly as these six were.
+ */
+export function deriveGateActivity(dir = CORPUS_DIR): Map<string, GateActivity> {
+  const out = new Map<string, GateActivity>();
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const corpus = JSON.parse(readFileSync(join(dir, file), "utf8"));
+    for (const record of corpus.records) {
+      for (const gate of runGates(record.text, {})) {
+        const seen = out.get(gate.gate_id) ?? { prompts: 0, armed: 0, notArmedMessage: null };
+        const armed = gate.message_code !== `${gate.gate_id}.not_armed`;
+        out.set(gate.gate_id, {
+          prompts: seen.prompts + 1,
+          armed: seen.armed + (armed ? 1 : 0),
+          notArmedMessage: armed ? seen.notArmedMessage : seen.notArmedMessage ?? gate.message,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 /**
  * The pin is on the text that was judged, not on the bytes it happens to sit in.
  *
@@ -134,6 +175,9 @@ export interface GateSummary {
   tp: number;
   interval: ReturnType<typeof precisionInterval>;
   bySlice: Record<"pilot" | "clean", { n: number; tp: number }>;
+  /** Prompts on which the gate was armed. 0 means it could not have fired at all. */
+  armed: number;
+  notArmedMessage: string | null;
 }
 
 /**
@@ -147,8 +191,14 @@ export interface GateSummary {
  * plant a hazard on purpose, so a gate's true-positive share there says nothing about how it
  * behaves on the clean briefs, where nothing was planted.
  */
-export function summarise(firings: Firing[], labelOf: Map<string, string>, gateIds: readonly string[]): GateSummary[] {
+export function summarise(
+  firings: Firing[],
+  labelOf: Map<string, string>,
+  gateIds: readonly string[],
+  activity: Map<string, GateActivity> = new Map(),
+): GateSummary[] {
   return gateIds.map((gate) => {
+    const seen = activity.get(gate);
     const mine = firings.filter((f) => f.gate_id === gate);
     const tp = mine.filter((f) => labelOf.get(firingKey(f)) === "TRUE").length;
     const forSlice = (slice: "pilot" | "clean") => {
@@ -159,6 +209,8 @@ export function summarise(firings: Firing[], labelOf: Map<string, string>, gateI
       gate, n: mine.length, tp,
       interval: precisionInterval(tp, mine.length, CONFIDENCE),
       bySlice: { pilot: forSlice("pilot"), clean: forSlice("clean") },
+      armed: seen?.armed ?? 0,
+      notArmedMessage: seen?.notArmedMessage ?? null,
     };
   });
 }
@@ -179,7 +231,7 @@ function main(): number {
   }
 
   const labelOf = new Map<string, string>(file.adjudications.map((a: Adjudication) => [firingKey(a), a.label]));
-  const rows = summarise(firings, labelOf, listGates().map((g) => g.id));
+  const rows = summarise(firings, labelOf, listGates().map((g) => g.id), deriveGateActivity());
 
   const files = readdirSync(CORPUS_DIR).filter((f) => f.endsWith(".json"));
   const corpora = files.map((f) => JSON.parse(readFileSync(join(CORPUS_DIR, f), "utf8")));
@@ -193,7 +245,14 @@ function main(): number {
 
   for (const r of [...rows].sort((a, b) => b.n - a.n || a.gate.localeCompare(b.gate))) {
     if (r.n === 0) {
-      console.log(`  ${r.gate.padEnd(28)} ${"—".padStart(12)}   never fired on this corpus`);
+      // Three states, not two. A gate that was never armed could not have fired whatever the
+      // models wrote, and calling that "never fired" reads as evidence about the models.
+      console.log(
+        `  ${r.gate.padEnd(28)} ${"—".padStart(12)}   ` +
+        (r.armed === 0
+          ? `NOT ARMED on any prompt — ${r.notArmedMessage ?? "the gate needs an option this corpus does not set"}`
+          : `armed on ${r.armed} prompt(s), never fired`),
+      );
       continue;
     }
     const i = r.interval!;
@@ -214,7 +273,9 @@ function main(): number {
     "  nobody (adjudicated_by: claude). The figure belongs to THIS corpus — generated briefs, half\n" +
     "  the pilot slice planting a hazard on purpose — not to the gate: a gate's precision on prompts\n" +
     "  a person wrote is unmeasured. Recall and precision come from different corpora and do not\n" +
-    "  compose. A gate that never fired has no precision here, which is not a precision of 1.",
+    "  compose. A gate that never fired has no precision here, which is not a precision of 1 —\n" +
+    "  and a gate marked NOT ARMED did not even get the chance: it needs an option this corpus\n" +
+    "  does not set, so its silence says nothing at all about what the models wrote.",
   );
   return 0;
 }

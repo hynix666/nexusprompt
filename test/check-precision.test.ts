@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
-import { validate, deriveFirings, firingKey, contentHash, corpusHashes, summarise, type Adjudication } from "../scripts/check-precision.js";
+import { validate, deriveFirings, firingKey, contentHash, corpusHashes, summarise, deriveGateActivity, type Adjudication } from "../scripts/check-precision.js";
 
 /**
  * check:precision (Phase 9, Task 3) — the guard that keeps adjudications and firings in step.
@@ -119,6 +119,47 @@ describe("what the report says", () => {
     const quiet = rows.find((r) => r.gate === "TOKEN_BUDGET")!;
     expect(quiet.n).toBe(0);
     expect(quiet.interval).toBeNull();
+  });
+});
+
+describe("a gate that was switched off is not a gate that stayed quiet", () => {
+  /**
+   * Six gates return PASS immediately unless an option is set — `runGates(text, {})` never
+   * arms TOKEN_BUDGET, QUTM_CEILING, CONTEXT_LIMIT, RECURSION_MACHINERY_PRESENT,
+   * RAG_SHIELD_GAP or ADVERSARIAL_RESILIENCE. Reporting those as "never fired on this corpus"
+   * invites the reading "the models never produced that defect", which is not what happened.
+   *
+   * Derived from the gates' own `.not_armed` message codes, never from a list of gate names:
+   * a hand-kept list encodes what its author remembered, and the next option-gated gate would
+   * be misreported exactly as these six were.
+   */
+  it("separates a never-armed gate from an armed one with no firings", () => {
+    const activity = new Map([
+      ["TOKEN_BUDGET", { prompts: 3, armed: 0, notArmedMessage: "No token budget declared; check not armed." }],
+      ["DELIMITER_ENTROPY", { prompts: 3, armed: 3, notArmedMessage: null }],
+    ]);
+    const rows = summarise([], new Map(), ["TOKEN_BUDGET", "DELIMITER_ENTROPY"], activity);
+    expect(rows.find((r) => r.gate === "TOKEN_BUDGET")!.armed).toBe(0);
+    expect(rows.find((r) => r.gate === "DELIMITER_ENTROPY")!.armed).toBe(3);
+  });
+
+  it("finds the never-armed gates in the real corpus by their own message code", () => {
+    const activity = deriveGateActivity("eval/precision-corpus");
+    const neverArmed = [...activity].filter(([, a]) => a.armed === 0).map(([g]) => g).sort();
+    expect(neverArmed).toEqual([
+      "ADVERSARIAL_RESILIENCE", "CONTEXT_LIMIT", "QUTM_CEILING",
+      "RAG_SHIELD_GAP", "RECURSION_MACHINERY_PRESENT", "TOKEN_BUDGET",
+    ]);
+    // And the rest really were armed on every prompt, so their silence is a measurement.
+    for (const [gate, a] of activity) {
+      if (a.armed > 0) expect(a.armed, gate).toBe(a.prompts);
+    }
+  });
+
+  it("carries the gate's own explanation, so the report does not invent one", () => {
+    const activity = deriveGateActivity("eval/precision-corpus");
+    expect(activity.get("TOKEN_BUDGET")!.notArmedMessage).toMatch(/not armed/i);
+    expect(activity.get("SECRET_LEAK_SCAN")!.notArmedMessage).toBeNull();
   });
 });
 
