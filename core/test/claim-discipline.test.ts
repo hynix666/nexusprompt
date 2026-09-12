@@ -84,6 +84,47 @@ describe("CLAIM_DISCIPLINE — verdicts confirmed against the frozen linter", ()
   }
 });
 
+/**
+ * A denial of a guarantee is not a guarantee (ADR-0020).
+ *
+ * Measured, not supposed: on the precision corpus this gate fired 19 times and every one was a
+ * sentence refusing to guarantee something — a 95% interval of 0.0%-17.6% for its firings being
+ * real. Worse, the compile stage's own system prompt orders the model never to claim a
+ * guarantee, so the gate was penalising models for obeying the prompt it was checking.
+ *
+ * The source shares the flaw, so this is a deliberate divergence with an allowlist entry.
+ */
+describe("CLAIM_DISCIPLINE — polarity", () => {
+  const sentences: Array<[string, string, "PASS" | "WARN"]> = [
+    ["a plain denial", "No guarantees on absolute accuracy or real-time updates.", "PASS"],
+    ["a scope exclusion", "It does NOT provide legal advice or guarantee audit outcomes.", "PASS"],
+    ["an instruction not to claim one", 'Never state that a process is "guaranteed" to work.', "PASS"],
+    ["a gerund denial", "Confine answers to the provided context, avoiding authoritative guarantees.", "PASS"],
+    ["a banned-phrase list", 'Avoid certainty language, e.g. "you must", "this ensures", "we guarantee".', "PASS"],
+    ["a restriction", "Guarantee claims are restricted to contextually provided information.", "PASS"],
+    ["100% accurate, denied", "The assistant is never 100% accurate about shipping dates.", "PASS"],
+
+    // The claim itself still fires. A gate that stopped flagging these would be worthless.
+    ["an affirmative claim", "We guarantee delivery within 24 hours.", "WARN"],
+    ["an affirmative claim of accuracy", "This prompt is 100% accurate.", "WARN"],
+  ];
+
+  for (const [label, text, expected] of sentences) {
+    it(`${label} → ${expected}`, () => {
+      expect(claimDiscipline(text).verdict).toBe(expected);
+    });
+  }
+
+  it("still fires when one sentence denies a guarantee and another makes one", () => {
+    // The unit is the sentence, not the document: a disclaimer elsewhere must not launder a
+    // claim made here, which is the failure mode a document-wide exemption would introduce.
+    const r = claimDiscipline("We make no guarantees about delivery.\nOur uptime is guaranteed.");
+    expect(r.verdict).toBe("WARN");
+    expect(r.message).toContain("guaranteed");
+    expect(r.message).not.toContain("guarantees,");
+  });
+});
+
 describe("CLAIM_DISCIPLINE — the message names what it found", () => {
   it("lists the offending phrases, sorted and de-duplicated", () => {
     const r = claimDiscipline("We guarantee it. We guarantee it again. 100% safe.");

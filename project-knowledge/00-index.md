@@ -90,7 +90,7 @@ sentence in this knowledge base saying *stubbed* or *never executed* stops being
 | [05-configuration-and-deployment.md](./05-configuration-and-deployment.md) | Env vars, tsconfig, CI, `verify` composition, the corpus |
 | [06-testing-and-quality.md](./06-testing-and-quality.md) | Vitest projects, mutation probes, the differential oracle, fixture discipline |
 | [07-dependencies.md](./07-dependencies.md) | Eight dev dependencies and why each one is there |
-| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 19 ADRs, the truth boundary, the open register, and the recurring defect patterns |
+| [08-known-issues-and-decisions.md](./08-known-issues-and-decisions.md) | 20 ADRs, the truth boundary, the open register, and the recurring defect patterns |
 | [09-commands-and-workflows.md](./09-commands-and-workflows.md) | Every npm script, what it checks, and the common workflows |
 | [10-source-code-summary.md](./10-source-code-summary.md) | Key modules, reusable patterns, code idioms worth keeping |
 
@@ -120,10 +120,10 @@ excluded — see `05-configuration-and-deployment.md` for what those are.
 | `shells/api/` | The API Shell (ADR-0012). The only part of the tree with runtime dependencies |
 | `scripts/` | 36 checkers and runners. Each fails the build rather than warning |
 | `spec/` | Behavioural specs that ARE the tests and generate their own documentation. Two files: `manifest-shapes.json` (161 shapes one gate reads, across eleven sweeps; 13 recorded known limits) and `truth-boundary.json` (9 entries stating what this repository establishes and what it does not) |
-| `scripts/divergence-allowlist.json` | 8 declared divergences from the frozen linter, each self-proving (ADR-0007) |
+| `scripts/divergence-allowlist.json` | 9 declared divergences from the frozen linter, each self-proving (ADR-0007) |
 | `eval/` | 4 suites: compile-smoke, compile-adversarial, pipeline-smoke, gate-recall-anchor |
 | `sources/` | **420 frozen, SHA-256-pinned files** from prior versions. Read only; never write |
-| `Documentation/` | 59 Markdown files: 19 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary, nine 2026 planning documents added 2 September 2026, and the repository audit and remediation strategy added 9 September 2026 |
+| `Documentation/` | 60 Markdown files: 20 ADRs, implementation plan, architecture, references, the generated manifest spec, the generated truth boundary, nine 2026 planning documents added 2 September 2026, and the repository audit and remediation strategy added 9 September 2026 |
 | `docs/superpowers/specs/` | The corpus-grounded spec that drove Phases α–ζ |
 | `test/` | Cross-cutting: contract conformance, evidence conformance, checker tests |
 | `.github/workflows/verify.yml` | CI. Runs `npm run verify` on every push and PR. Actions pinned to commit SHAs, not mutable tags |
