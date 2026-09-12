@@ -127,9 +127,9 @@ Needs no decision. Lands first, and alone it already retires an unstated gap.
 
 ### Task 5: Report, and flip the truth entry
 
-- [ ] `check:precision` prints, per gate and for the heuristic, `n`, TP and the exact 95% interval, plus the corpus composition. It prints **"never fired on this corpus"** for `n = 0`.
-- [ ] Rewrite `gate-precision-is-unmeasured` into a measured entry. Pin `n` and the bounds, not a rounded point estimate. `does_not_establish` states the result is corpus-relative (D3) and that recall and precision still come from different corpora.
-- [ ] If a gate's upper bound sits below an obvious bar, that is a finding to report, not something to fix in this phase. Fixing a gate is a divergence-allowlist decision with its own ADR.
+- [x] `check:precision` prints, per gate and for the heuristic, `n`, TP and the exact 95% interval, plus the corpus composition. It prints **"never fired on this corpus"** for `n = 0`.
+- [x] Rewrite `gate-precision-is-unmeasured` into a measured entry. Pin `n` and the bounds, not a rounded point estimate. `does_not_establish` states the result is corpus-relative (D3) and that recall and precision still come from different corpora.
+- [x] If a gate's upper bound sits below an obvious bar, that is a finding to report, not something to fix in this phase. Fixing a gate is a divergence-allowlist decision with its own ADR.
 
 ## Out of scope
 

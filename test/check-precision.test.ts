@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
-import { validate, deriveFirings, firingKey, contentHash, corpusHashes, type Adjudication } from "../scripts/check-precision.js";
+import { validate, deriveFirings, firingKey, contentHash, corpusHashes, summarise, type Adjudication } from "../scripts/check-precision.js";
 
 /**
  * check:precision (Phase 9, Task 3) — the guard that keeps adjudications and firings in step.
@@ -81,6 +81,44 @@ describe("the hash pins content, not line endings", () => {
     const lf = '{\n  "records": [\n    { "text": "a" }\n  ]\n}\n';
     expect(contentHash(lf.replace(/\n/g, "\r\n"))).toBe(contentHash(lf));
     expect(contentHash(lf + "x")).not.toBe(contentHash(lf));
+  });
+});
+
+describe("what the report says", () => {
+  const labels = new Map([
+    [`${"a".repeat(64)}:CLAIM_DISCIPLINE:WARN`, "FALSE"],
+    [`${"b".repeat(64)}:SECRET_LEAK_SCAN:WARN`, "TRUE"],
+    [`${"c".repeat(64)}:SECRET_LEAK_SCAN:WARN`, "FALSE"],
+  ]);
+  const firings = [
+    firing(),
+    firing({ output_sha256: "b".repeat(64), gate_id: "SECRET_LEAK_SCAN" }),
+    firing({ output_sha256: "c".repeat(64), gate_id: "SECRET_LEAK_SCAN", slice: "clean" }),
+  ];
+
+  it("reports n, true positives and an exact interval for every gate that fired", () => {
+    const rows = summarise(firings, labels, ["SECRET_LEAK_SCAN", "CLAIM_DISCIPLINE"]);
+    const secret = rows.find((r) => r.gate === "SECRET_LEAK_SCAN")!;
+    expect(secret.n).toBe(2);
+    expect(secret.tp).toBe(1);
+    // 1 of 2 is uninformative and the interval must show it, not round to "50%".
+    expect(secret.interval!.lower).toBeLessThan(0.03);
+    expect(secret.interval!.upper).toBeGreaterThan(0.97);
+  });
+
+  it("splits by slice, because the pilot slice plants hazards and the clean slice does not", () => {
+    const secret = summarise(firings, labels, ["SECRET_LEAK_SCAN"]).find((r) => r.gate === "SECRET_LEAK_SCAN")!;
+    expect(secret.bySlice.pilot).toEqual({ n: 1, tp: 1 });
+    expect(secret.bySlice.clean).toEqual({ n: 1, tp: 0 });
+  });
+
+  it("names a gate that never fired instead of leaving it out", () => {
+    // Absent from a table reads as "fine". A gate with no firings has no precision here, and
+    // that is a different statement from a precision of 1.
+    const rows = summarise(firings, labels, ["SECRET_LEAK_SCAN", "TOKEN_BUDGET"]);
+    const quiet = rows.find((r) => r.gate === "TOKEN_BUDGET")!;
+    expect(quiet.n).toBe(0);
+    expect(quiet.interval).toBeNull();
   });
 });
 
