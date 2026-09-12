@@ -61,7 +61,7 @@ describe("gate versions are provenance, not decoration", () => {
       DUPLICATE_INSTRUCTION: "1.0.0",
       DELIMITER_ENTROPY: "1.0.0",
       TOKEN_BUDGET: "1.0.0",
-      QUTM_CEILING: "1.1.0",             // ADR-0011 — baseline floor added
+      QUTM_CEILING: "1.1.1",             // ADR-0011 floor; .1 names the baseline in the message
       CONTEXT_LIMIT: "1.0.0",
       ADVERSARIAL_RESILIENCE: "1.0.0",
     });
@@ -610,6 +610,27 @@ describe("the arithmetic trio", () => {
     expect(qutmCeiling(long, { stakes: "low" }).message_code).toBe("QUTM_CEILING.exceeded");
     expect(qutmCeiling(long, { stakes: "low" }).verdict).toBe("FAIL"); // default 400 -> 2.5 > 1.2
     expect(qutmCeiling("abcd", { stakes: "low" }).verdict).toBe("PASS");
+  });
+
+  it("QUTM_CEILING says which baseline it divided by, and whether anyone declared it", () => {
+    /**
+     * The verdict is a ratio, and the message named the ratio and the ceiling but never the
+     * denominator. On the precision corpus that mattered: with no `naiveTokens`, the gate
+     * divides by a built-in 400 — the source's stand-in for "a one-paragraph unstructured
+     * prompt" — and FAILs 572 of 1,513 compiled prompts at medium stakes. A reader could not
+     * tell that figure from one measured against a baseline the caller actually supplied.
+     *
+     * Message text only. No verdict changes, and `differential.ts` compares gate and severity.
+     */
+    const long = "a".repeat(4000); // est 1000
+    const assumed = qutmCeiling(long, { stakes: "low" });
+    expect(assumed.verdict).toBe("FAIL");
+    expect(assumed.message).toMatch(/400/);
+    expect(assumed.message).toMatch(/assumed|default/i);
+
+    const declared = qutmCeiling(long, { stakes: "low", naiveTokens: 500 });
+    expect(declared.message).toMatch(/500/);
+    expect(declared.message).not.toMatch(/assumed|default/i);
   });
 
   it("QUTM_CEILING does not arm below the baseline floor, and does at it", () => {

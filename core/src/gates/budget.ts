@@ -29,8 +29,12 @@ import type { GateResult } from "../../../contracts/index.js";
  * itself — the same defect class as an input_hash covering the wrong inputs.
  */
 export const TOKEN_BUDGET_GATE_VERSION = "1.0.0";
-/** 1.1.0 — ADR-0011 added the QUTM_MIN_BASELINE_TOKENS floor. Behaviour changed; version moves. */
-export const QUTM_GATE_VERSION = "1.1.0";
+/**
+ * 1.1.0 — ADR-0011 added the QUTM_MIN_BASELINE_TOKENS floor. Behaviour changed; version moves.
+ * 1.1.1 — the cost-ratio message names the baseline it divided by. Message text only: the same
+ * inputs produce the same verdicts, which is why this is a patch and not a minor.
+ */
+export const QUTM_GATE_VERSION = "1.1.1";
 export const CONTEXT_LIMIT_GATE_VERSION = "1.0.0";
 
 export const TOKEN_BUDGET_GATE_ID = "TOKEN_BUDGET";
@@ -82,6 +86,18 @@ export function qutmCeiling(text: string, options: GateOptions = {}): GateResult
       "QUTM_CEILING.unknown_tier", hash);
   }
   const baseline = options.naiveTokens !== undefined ? options.naiveTokens : 400;
+  /**
+   * The denominator, said out loud.
+   *
+   * The verdict is a ratio and the message named the ratio and the ceiling but never what it
+   * divided by. Measured on the precision corpus: with no `naiveTokens` the gate divides by
+   * the built-in 400 — the source's stand-in for "a one-paragraph unstructured prompt" — and
+   * FAILs 572 of 1,513 compiled prompts at medium stakes. Those verdicts are arithmetically
+   * right and easy to misread as measured against a baseline somebody chose.
+   */
+  const against = options.naiveTokens !== undefined
+    ? `${baseline}-token baseline`
+    : `assumed ${baseline}-token naive-prompt baseline (no naiveTokens declared)`;
 
   // The baseline floor is checked AFTER the unknown-tier refusal, not before. A misspelled
   // tier is a configuration error and must be reported whatever the baseline is; letting a
@@ -97,11 +113,11 @@ export function qutmCeiling(text: string, options: GateOptions = {}): GateResult
 
   if (costRatio <= ceiling) {
     return result(QUTM_GATE_ID, QUTM_GATE_VERSION, "PASS",
-      `Cost ratio ${costRatio} within the ${ceiling}× ceiling for ${options.stakes}.`,
+      `Cost ratio ${costRatio} within the ${ceiling}× ceiling for ${options.stakes}, against the ${against}.`,
       "QUTM_CEILING.within", hash);
   }
   return result(QUTM_GATE_ID, QUTM_GATE_VERSION, "FAIL",
-    `Cost ratio ${costRatio} > ${ceiling} ceiling for ${options.stakes}.`,
+    `Cost ratio ${costRatio} > ${ceiling} ceiling for ${options.stakes}, against the ${against}.`,
     "QUTM_CEILING.exceeded", hash);
 }
 

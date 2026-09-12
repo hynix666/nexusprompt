@@ -115,6 +115,21 @@ export function deriveGateActivity(dir = CORPUS_DIR): Map<string, GateActivity> 
 }
 
 /**
+ * Gates whose finding is arithmetic, not a judgement about the text.
+ *
+ * Each compares a token estimate against a number the CALLER declares — a budget, a provider's
+ * context limit, a cost ceiling against a baseline. `tokens > budget` is either true or false,
+ * so there is no wrong-but-fired: only a policy set well or badly. Precision (TP / firings) is
+ * the wrong question for them, and reporting them as "unmeasured" implies a measurement is
+ * merely missing when none is owed.
+ *
+ * Named rather than derived, because the property is semantic. `check-precision.test.ts` keeps
+ * the list honest behaviourally: each gate here must FLIP its verdict on one unchanged text
+ * when only the caller's number moves, which a detector cannot do.
+ */
+export const THRESHOLD_GATES: readonly string[] = ["CONTEXT_LIMIT", "QUTM_CEILING", "TOKEN_BUDGET"];
+
+/**
  * The pin is on the text that was judged, not on the bytes it happens to sit in.
  *
  * Hashing raw bytes failed CI on the first attempt: this repository is developed on Windows
@@ -244,6 +259,12 @@ function main(): number {
   console.log(`  ${"gate".padEnd(28)} ${"defect/fired".padStart(12)}   exact ${pct(CONFIDENCE)} interval        pilot     clean`);
 
   for (const r of [...rows].sort((a, b) => b.n - a.n || a.gate.localeCompare(b.gate))) {
+    if (THRESHOLD_GATES.includes(r.gate)) {
+      // Not "unmeasured": nothing is owed. Its verdict is tokens against a number the caller
+      // declares, so a firing cannot be wrong about the text — only the policy can be.
+      console.log(`  ${r.gate.padEnd(28)} ${"n/a".padStart(12)}   threshold gate — fires by arithmetic against a declared number; precision is not the question`);
+      continue;
+    }
     if (r.n === 0) {
       // Three states, not two. A gate that was never armed could not have fired whatever the
       // models wrote, and calling that "never fired" reads as evidence about the models.
