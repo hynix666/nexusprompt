@@ -1,0 +1,1033 @@
+{
+  "_comment": [
+    "Phase 9, Task 3. One record per gate firing in eval/precision-corpus/, labelled TRUE (a real",
+    "defect) or FALSE (the gate was wrong to fire). Checked by scripts/check-precision.ts.",
+    "",
+    "Every label was made by Claude alone - the owner's D1 decision - which is an uncalibrated",
+    "model judging text, a weaker warrant than a human review. adjudicated_by records that on every",
+    "record, so no reader takes a precision figure on trust. An owner review that overturns a label",
+    "is a new record with adjudicated_by: owner, never an edit of one of these.",
+    "",
+    "The criteria, each verified against the corpus before being applied:",
+    "  SECRET_LEAK_SCAN       TRUE when a credential-shaped literal is in the prompt. All 104 such",
+    "                         matches here are literals copied from the brief. FALSE when only the",
+    "                         pii_email heuristic matched, on an address the model invented at a",
+    "                         placeholder domain.",
+    "  CLAIM_DISCIPLINE       FALSE when every sentence naming a guarantee denies or forbids one, or",
+    "                         quotes it as a phrase to avoid.",
+    "  GUARDRAIL_GAP          FALSE when the clause is present under a Unicode dash and the firing",
+    "                         disappears once dashes are normalised; TRUE when no guardrails section",
+    "                         exists at all.",
+    "  DUPLICATE_INSTRUCTION  FALSE: the repeat is the schema plus the worked example the compile",
+    "                         template requires.",
+    "  RUNTIME_KEY_UNDECLARED / PLACEHOLDER_AUDIT  TRUE: the brief's stand-in survived into the",
+    "                         finished prompt, which is the planted defect.",
+    "",
+    "corpora pins the bytes each label was made against. Re-running a model writes different text",
+    "under the same name, and check:precision fails rather than let old labels describe new prompts."
+  ],
+  "corpora": {
+    "gemma4_e4b.json": "826f6aa25e799bc2a966aae623472c324529a1c2734324dd3c87242b555cd399",
+    "glm-5.3-flash.json": "9dd97b33e953d6bd7314e189726658d16a7818aa0f8867f470a92f336dbdf231",
+    "laguna-s-2.1_free.json": "eb69d258694e625489c3bdb67333df778b75bf9425a250c117eafce178a0e40b",
+    "llama3.1_8b.json": "395a178e23f9f262a6e7e1c82e4e698dea01d2faa16f0f1e7b31c82301838355",
+    "nemotron-3-ultra-550b-a55b_free.json": "759e705720a18558b0d49b3f364dd2f0b0efb5e7285931373c61756761c9bc4b",
+    "nvidia_nemotron-3-super-120b-a12b.json": "068c6bc99c50dc8991161b1cbd8031c78810b94c64fd480ac2544e219dc50f9c",
+    "phi4-mini_latest.json": "5b5bc248f73b4f50d222d8bace8b165c8e0990fa767c6b35c8043c7df1aeaddd",
+    "qwen3-coder_30b.json": "1df57ce65d4015903fa2bf4d49374e070be8f2427586f84e92510389fa69d9e0"
+  },
+  "adjudications": [
+    {
+      "output_sha256": "db27658e6f11bab2349ae4013fb7140d62696d63fff4a0caf2dce8a2c78ab571",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAHP...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "3e46939b0bff8263ba24ba6ec21a696c157621e493240d901ebbd28bc794c099",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-awb...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "fa606c3de9905bd6fed944c62842c68aaf69a955385ea00419090d013a75eb95",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAAM...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "2debf78a539855b860061fbf765def491a2424db52597c36d482c79b6d4cc9eb",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"*   If policy details are required, confirm that the answer is confined strictly to genera\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "99c5268cbff3c54917d33e7b78a9794bcd4d8889760d603f379597b062bca00e",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"*   *Disclaimer:* This assessment suggests a path but does not guarantee resolution\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "99c5268cbff3c54917d33e7b78a9794bcd4d8889760d603f379597b062bca00e",
+      "gate_id": "DUPLICATE_INSTRUCTION",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The repeated block is the output schema followed by the worked example the compile template explicitly requires (\"Section 5 must include a worked example\"), so the duplication is mandated by the task rather than a defect in the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "579e327b52913684da23711b21e31d0d7fd12ae3ad1521a213e7fd6ec14b2374",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"The out-of-scope boundary is providing legal interpretations or making definitive complian\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "408c11fbea9c66c263f60640199d9f1b4fb12f083cbffb38869cd0f1c35efabc",
+      "gate_id": "DUPLICATE_INSTRUCTION",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The repeated block is the output schema followed by the worked example the compile template explicitly requires (\"Section 5 must include a worked example\"), so the duplication is mandated by the task rather than a defect in the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "6bdf8b54c6f9e977b3d49c4e0012f5db91e08a84fd8f77b79117e0dad951e26c",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"Never state that a process is \"guaranteed\" to work; instead, state it is the *current docu\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "f7fa76ec6b523c97c8d72c879a1df708a2f3eff0866258f7c8b14223ae79327b",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "The compiled prompt carries no guardrails section at all (236 characters), so the clauses the gate names are genuinely absent.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "291b57ffc9272ff4a8004579144aaa0641766e231a860ca807e142e5bca568ef",
+      "gate_id": "RUNTIME_KEY_UNDECLARED",
+      "verdict": "FAIL",
+      "label": "TRUE",
+      "reason": "Leaves the stand-in COMPANY from the brief unresolved in the finished prompt, though the brief said it must name nothing it cannot resolve - the planted defect, caught.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "0f2935469d443de8dec850f0fe7ca3431f7698a1bf16099f93e22dbe66376a05",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- DOES NOT: issue refunds, credits, or waivers; modify accounts; access or confirm any thi\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "b5b11ccddec67a8c52d54bb762c4959a8af6f4483467b9f9a2ac5f01196f5314",
+      "gate_id": "PLACEHOLDER_AUDIT",
+      "verdict": "FAIL",
+      "label": "TRUE",
+      "reason": "Leaves the stand-in COMPANY from the brief unresolved in the finished prompt, though the brief said it must name nothing it cannot resolve - the planted defect, caught.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "a08dbf45bc75f34ac6312f0822b0615cedbfc7e77007f50fb5a98ef39bcdf078",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: state shipment facts only from supplied context; never invent status\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "34adf2909e5613e9663fbf87ecf4e097eda12252db02da47c5219031bc933d8f",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAHP...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "c3d90dca789b942e90cbc9953f219cea07c007d11c29f1c0d47300dec8786e5e",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "257abe1487488cbff00b4f025351fb50975aaf3067c01b3609d2629da4cfb2cf",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-awb...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "42f0fcf3192890d20b70665b8d766f9069d2c86e4a6deb3951f2bc24d8046b6a",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAMA...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "ad50270391b41223e3ab75e55cbb6b5a01c87a019e35b49ff71b4885b624c54a",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAFJ...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "197e57f5098f2648160872eeb18b5d510474eedb907b8d0d185df167afc3f45d",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "806b66abe1c11b8dcc2fae0d011b2bc5fbdbf0caa7d5a51a6e38f1ec73f7548b",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-81i...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "6f1cee1704700a21879d5750c195ff21fdaacea9d08c4d138cf15cd70a6ecf7f",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "6f1cee1704700a21879d5750c195ff21fdaacea9d08c4d138cf15cd70a6ecf7f",
+      "gate_id": "DUPLICATE_INSTRUCTION",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The repeated block is the output schema followed by the worked example the compile template explicitly requires (\"Section 5 must include a worked example\"), so the duplication is mandated by the task rather than a defect in the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "045b1f3e6cc304066627c680da8042798cdfa7f21478b1bd01d6850100fe97e9",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAWR...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "c3591455d07c9a66b59906a8e29f7fcfabe64f318b849251c80a8c03656b2027",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on hr-servicedesk@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "6dc7a7a2e378cc56fd79e1659ee94980065dc823dc056a9b809d712d32536ab0",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on user@example.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "9e46ef8d01a817cb330b9effe5b2eedc609b84541e584f40b4c36c01cf9fe5a8",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "The compiled prompt carries no guardrails section at all (1273 characters), so the clauses the gate names are genuinely absent.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "32ea0f9ab9d271d39f01e9919ebb3093366e96a09c90e9fb93c5179b9ea74648",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on s.lin@auditco.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "e9779084cbe20e3f7d7fbb056dff3aba47aa19fdfec18201d93af8651c323993",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAHP...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "b5ba263f61e2f0b3d87cdef57367894ff564b9aa82728fb8ab9e8243268bd155",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-oif...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "e8c6c40f8b0925b9adb7b95c8990f22c68bb839cce8122fc3a6168d1f214d45f",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-lxs...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "a1c6d1650e097b936144207ade7755ec4af4e7e29d9374235bab50797db4da60",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "f1f131d7ebc0204e02ca1dec4b70c8a081705f067ce739f5bfacae60b97acdff",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "aa890b9e68bcc08208d9bd031ef57895af79a6b9e4ed884901927e7e07ad06b1",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-awb...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "4b93c4d7d112a6184c60bb303be5ce705deefe7632671d1a38a522bbae2c68da",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAMA...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "fea8509de2ec2463707064d68c5c8cb585a91ebad374bc903f73202dde25d484",
+      "gate_id": "RUNTIME_KEY_UNDECLARED",
+      "verdict": "FAIL",
+      "label": "TRUE",
+      "reason": "Leaves the stand-in COMPANY from the brief unresolved in the finished prompt, though the brief said it must name nothing it cannot resolve - the planted defect, caught.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "9f7f1c1753918b2bbbf202b01d9d1482d361cd82fd422f83565404c9486f0012",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAFJ...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "0e6acbf03763dc6844b5607333fa216743a5a0da13573c6f43233fb6e3ea38da",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Operational Scope**: This system does NOT facilitate scheduling for external parties, \". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "185c99e3a58746bd103f410ba6f6085cf6a09ef9be506b4ae1271ea638d2f696",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "185c99e3a58746bd103f410ba6f6085cf6a09ef9be506b4ae1271ea638d2f696",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- \"Guarantee\" and \"certify\" assertions are restricted to contextually provided information\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "eb4df10cfabe0b911e702ef6f91282ea8a1d46aa91c361863a0e72b2e3181e81",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAAM...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "5b6fd6c91ac8856c3fa8b898821dbd2a3321dfad3f53aeaf7d96564722513f38",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (github_token, ghp_8x...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "29cef9c07d85f21300a2eda94ee951d54bd1abbc811b5d566e402e3f02d14a4b",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "adefd4f75e6032a60337e8b6193fa9dbb23014c0f53d85f7ba6d0a94aed990e3",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "cba227f25ddd3e002e8e7971b1bf44000084c00ba92f4e3532190070ff8328b4",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "13be4c5435ddbfe865cdeafead0fead9ed041e5fa6985cc1a61dc754d39cb3aa",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAWR...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "06324427ff9ff466ac0e23354e779e6df411ce39af62b7115bea094f232f2451",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "3071b91c6106eef07bc21a04ed8462fda3e8235074822a030333dfb33220e97d",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: Assertions restricted to the supplied context; no invented specifics\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "f2e6dadd9bbf0e17c07e62a34880bcea8afc356a55197ffc076c614db0832980",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAHP...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "1d79c0eb0109687193c5fa26a213704a689b93f84f44649fab96c88f0af31d72",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: Assertions restricted to supplied onboarding materials and user-prov\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "f0b0d8bbdfb02fd617d23dc2fd3e569440410abc7aa1f264ac0d4f791254c039",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "cc0885e0e9e8ab504e6d85ba0bc135f3e94e3de63a38369bd9bab7bec01e2eee",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (github_token, ghp_n8...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "546eb30ca5b103bc516e47a09b0bccde1065d0622d7bf9cdddad3dc045e23620",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAMA...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "4f3f0e8a1267b4e4d46212cbb4b8ea5e32efed2b14e8ce5ff324b8d425b7ca24",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "0815fae989c07aa8817c9584bae3c26c045f71630fc2a45cb051067fc0dd9962",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAFJ...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "e85adbe952b3813bcfad001a13c290a687f25beeb974d84946de69f6bc542c37",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "3eeecdeb85116d08fdb6d1c55b109ec82d0dfe0fd3bf454c3b508bbe6f1aa5b9",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on phish@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "1ce8b4be371ad7e3d48b61e0eee5b61346c731235a11bc1830ea94d51113a5b2",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAAM...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "eacce6760bd7094e8fe8e59d0abc798ae2c671df5fa2b6b11ae4daff660517f4",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on warranty@example.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "e9dad253b41adcc3676095f108908a6788c663265e2a487eb1745aa9faa449d5",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-81i...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "3f324364ba320ed5a4e4d5c925453347c399151d9de766e9c918f9b035f69a4c",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "9e33b264068c126d3c458b4a149b513cc906d294fbbdf91ff8a9042411485682",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on legal@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "ecb70c905e18d6d3e7a4d93b7533060230e1d76206dd5d9e3651a76c34ee413c",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on legal@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "a852c35f9a9e9800ae41f85813db0094928c5b1ad55e989086bbb677c2701e77",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (github_token, ghp_30...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "3766a389d26a22fee8fa928de8a54cca673ccdc90028fe6b80dae785df9312ec",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on legal@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "39bc45c582b453bc4ce336c7fffc169afc0e1eb78ac351afc8da2a98fc94a20f",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on support@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "87d11d4cd68c4175482bff70299ab616a89794781b82aa2eb806873f6d51aad0",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on hr@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "6d4142e59331023e1e8c1a430c41e8272404f6eee0922c63f7c171b703ab3d62",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: Assertions limited to carrier API responses or published service map\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "24ba621e5811f9687bd77f55d4789bbde8657491414add71a1ea5536e33d866e",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on finance-ops@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "2c5323688094717478198e1e417d50f53e633d5de1ae09a304fc22de28933977",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"Include only facts from the current conversation or carrier APIs the user has authorized; \". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "e0abd37a5092aa3717b30db49405000d980c2c5c0def94542f1b13cfd1b048c1",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \", \"guaranteed refund\")\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "721ffffa4c9445da92f1427c43cf0bdef057f87044864e738d00a7305ec89109",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on support@merchant.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "ad6cdf4f47545b56d20fabf0ec559420d2bc3fd53b31424c4c3a0c5136ec08fa",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on legal-hr@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "d544bb480b850c78804467357983028b2959f78a0dcd6e012049cd30cece799f",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "c2059092376103342d3854ba6a3238524d9d72934c93fab7689b66fc857d6e11",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "ecb685711ca36bd078b3f119fcef13d5d8d60899264ccc80ecb89d96c1581812",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-d99...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "71d89483385016e2e274ebd393fb5c98ed4912edd016b83bead348977ada0cda",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"You do **not** provide legal advice, interpret law beyond the supplied text, guarantee com\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "71d89483385016e2e274ebd393fb5c98ed4912edd016b83bead348977ada0cda",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "690f1cafdff97bf627d263daf028c87cbe2dcb069f82b8de7f147e661ffeab5a",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "7c5e16aee778af8c0fa8e9c765bc4be92504d8a8f9e7d6de7b5db8534ad6e5dc",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "a935c0a28071e867f68e567c595ed1f33dcddaacbd2af7e0bad016494f1baed1",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAMA...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "213b425ef1c2085915791699a87710d870529f858823c71cdb985017479b2cb7",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "a5dbcee9f85f6f5f58aa6d8fd7cfa5d67858843996b10837ad3fcc8889ac630b",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAFJ...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "2e07096ed0c3046d1079f2567df6fd03626fae827d49893a028ddb9a8ba9e6e5",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "fc30c534f4ef761448be1ae62990ed14f7cf1745a9f25af78c328d7c7111fe92",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "a3ead2e7db27d161ce6ae10f997a5f9fd0f8ab58224892c9256d48390c26c9b0",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "69dd6547a343bd5ffbe74c8d471e387626322e0fa9dc2173d41000e7a0772082",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "737312e8abd8bcf9062aa0e06bc47801df0153dda7075c23195a15227246642e",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (github_token, ghp_30...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "737312e8abd8bcf9062aa0e06bc47801df0153dda7075c23195a15227246642e",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- If the user asked for guarantees (e\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "384525829404a8f7b6d18dd82f189f2b19e21de72ab5ab54f757080e40def662",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "4b5e6f2f726420fb70c6a46ab5d3a4c3aca73cf8222c0d6d0093902223eb636f",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "a307024990df5933b9ab0565fea1905521cba0b16d26ae6c4357aaadc1c9a4d2",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "18ee0eeeeb35f6ed260b34c85043b824fcf3f767198019c55a350fb527cc6a80",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "cf158c1b46096844d26a0617186a46676ed5b0ee602e078cbca6149b3fcda3d8",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "74f5c51f679df6757351de819b718fc50e9eef3867504b55cec2b977642c3f94",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "f0c75ce229b96370a421653e8480a00328ebcc45cc4635b31206ff1197a748d2",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"It does NOT provide legal advice, perform substantive testing, or guarantee audit outcomes\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "5a33441fe44f08b31b1cbc7da08890766328365a4ce715bc84453242067fb059",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "46f02ef854e0e72a9e5e942a0d5e90f67bddddbb8fe6896a9229e97320de592e",
+      "gate_id": "GUARDRAIL_GAP",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "The named clause is present but spelled with a Unicode dash (U+2011 rather than U+002D); the firing disappears once dashes are normalised to ASCII, so the gate's literal match failed, not the prompt.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "f8ed1edbc6e7fd0807b7dfb7a1cb7c35e4370f05e8b350872a02a719a8487cb6",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: All responses are based on supplied context and existing internal kn\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "10c26903ad210e0eb781cf8f850e169270c4fb39bdaadfb648ad4d00b6bdd228",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAAM...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "a41934c5e91ccf1290f0730cc545df9382e4b9d6538f397d56996d8c77cfe023",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"- **Fact-Grounding**: No claims are made beyond the logistics scope; for instance, no guar\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "e356ee77620b52e8b2204edf9c7b6a2c1c697f6c4bd15a1e5d3ab40c33ff3a46",
+      "gate_id": "CLAIM_DISCIPLINE",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Every sentence naming a guarantee denies or forbids one - e.g. \"No guarantees on absolute accuracy or real-time updates\". The gate matches the word regardless of polarity, and the compile stage's own system prompt instructs the model never to claim a guarantee.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "17837639a7f52deff87ac84a717a94ef705f2f7e7b498f575b97d4287407bd90",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAHP...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "844ff4cf13372eea23c79d38da94403c561134e04eb7aeef505c11adff659c0d",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "ba21e5403ea72d270a79348dcfb2254940965e220d622ba774d1f5d6f69b4583",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "abd3bd66b42e37b96a8407ea5425a5ab9af303e1e03b538260dc91f7140f7461",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-d99...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "1c3d85c3a645a393d856aa42cfa6d91c6314f24fe0de970e60a00307300a12df",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (github_token, ghp_un...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "3f1e5c2433d0424f5ffa172389527ef022a0e0bf285ce8cb48745dbae19585ef",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-awb...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "be04f70a1adb15468335cd9dd4411cc2ab81955d7ebfdf06ffb681d8399a8580",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "0a281f15d3ff5c537f5da911b6b3a8011596325449ec64aef063bdf1f158b30e",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (github_token, ghp_n8...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "8d43bddd7a3cfb02a7a35c5e8c8c3e01ea6f44b235394c8a0b3e48db548f685e",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAMA...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "efaa87ae83a134841f1f18d78fc94a801d8e03a7b6922ccafc1bf5771bcbb28a",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "8d3a13ab4d6ec3ceb009157f98b7e22ca8165fda46fec6205cec17434bb3ecd9",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAFJ...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "829781b0e7c073d3e73ec4aa0fa1333a41ac5fcee4271fd0e233fa599c1b969d",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "64ad98ae6f2a9cd91ef268799240733418cde70371f91618ea5bf85a7fcc84a7",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAAM...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "1f4d6e1a94937a0def801e464f849cd1b32b75fec07224959ca649b485a6c2f9",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (github_token, ghp_8x...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "c6034842f2d7b8bf7453721079304707bf4dd5fff6981402915d035e689164d5",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "85e3c2dd1ea5be44a9a13b79a3bba947096fe7106f25e902406bec8c0ace166c",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (generic_sk_key, sk-81i...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "9c4db9983cddb436fb4e9ccd77875bf9cf8eb774e617dac6c30606b0b6de9c89",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "f6ffeb5d02650aa5968857f59397b281eea24de4cdef9b56d662fd086acc7cf8",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (aws_access_key_id, AKIAWR...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "9ac3c0b68611e261d699a56152fcaf7d59550dd43994216c51d4196f013468d9",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (anthropic_api_key, sk-ant...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "c7830fe195f687a81c805298b25cdf793c7a67157c010e4cc6044b6d351ea5f2",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "TRUE",
+      "reason": "Echoes the credential planted in the brief (github_token, ghp_30...) verbatim into the compiled prompt, whose own Input Sanitization clause says credentials are used without being echoed back.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "ceb4cdfc9a2546f1bde2362558441c5982fdd4c5deff704a8e20c8b38f6cb1a8",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on it-support@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    },
+    {
+      "output_sha256": "0e109c5d3c7e44111fecb24bc8853cfd3ec5dbf1b15d3aa8b37d962be86de80f",
+      "gate_id": "SECRET_LEAK_SCAN",
+      "verdict": "WARN",
+      "label": "FALSE",
+      "reason": "Only the pii_email heuristic matched, on finance-support@company.com - an address the model invented at a placeholder domain. Nothing from the brief, and no real person's data.",
+      "adjudicated_by": "claude"
+    }
+  ]
+}

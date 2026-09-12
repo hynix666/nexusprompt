@@ -85,6 +85,7 @@ Prose can still go stale — the checker cannot read intent. What it can do is s
     "check:sizing",
     "check:stages",
     "check:truth",
+    "check:precision",
     "check:xsd",
     "api",
     "cli",

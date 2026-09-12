@@ -12,7 +12,7 @@
     "shells/*"
   ],
   "scripts": {
-    "verify": "npm run check:hygiene && npm run lint:boundaries && npm run check:core-callbacks && npm run typecheck && npm run verify:sources && npm run check:counts && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run check:sizing && npm run check:noise && npm run check:judge && npm run check:anchor && npm run check:brief-pilot && npm run check:matrix && npm run check:contracts && npm run check:schema-self-reference && npm run check:manifest-spec && npm run check:truth && npm run check:fence-explanation && npm run check:hash && npm run check:fingerprint && npm run check:examples && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run eval:pipeline && npm run eval:anchor && npm run test && npm run differential",
+    "verify": "npm run check:hygiene && npm run lint:boundaries && npm run check:core-callbacks && npm run typecheck && npm run verify:sources && npm run check:counts && npm run check:plan && npm run check:citations && npm run check:catalog && npm run check:xsd && npm run check:depth && npm run check:stages && npm run check:sizing && npm run check:noise && npm run check:judge && npm run check:anchor && npm run check:brief-pilot && npm run check:matrix && npm run check:contracts && npm run check:schema-self-reference && npm run check:manifest-spec && npm run check:truth && npm run check:precision && npm run check:fence-explanation && npm run check:hash && npm run check:fingerprint && npm run check:examples && npm run eval && npm run eval:compare && npm run eval:adversarial && npm run eval:pipeline && npm run eval:anchor && npm run test && npm run differential",
     "lint:boundaries": "node scripts/check-boundaries.mjs",
     "check:core-callbacks": "tsx scripts/check-core-callbacks.ts",
     "check:plan": "node scripts/check-plan.mjs",
@@ -60,6 +60,7 @@
     "check:manifest-spec": "node scripts/generate-manifest-spec.mjs --check",
     "docs:truth": "tsx scripts/check-truth-boundary.ts",
     "check:truth": "tsx scripts/check-truth-boundary.ts --check",
+    "check:precision": "tsx scripts/check-precision.ts",
     "check:hygiene": "node scripts/check-repo-hygiene.mjs",
     "docs:fence-explanation": "tsx scripts/generate-fence-explanation-data.ts",
     "check:fence-explanation": "tsx scripts/generate-fence-explanation-data.ts --check",

@@ -274,20 +274,29 @@
         "cli_declares_a_bin": false
       },
       "crossed_when": "A build step lands, `tsx` moves to `dependencies`, or `shells/cli` gains a `bin`. Any of the three changes what this repository can hand to someone, and the entry should then be rewritten as a delivery claim rather than renumbered.",
-      "evidence": ["package.json", "shells/cli/package.json", "Documentation/USER_GUIDE.md"]
+      "evidence": [
+        "package.json",
+        "shells/cli/package.json",
+        "Documentation/USER_GUIDE.md"
+      ]
     },
     {
       "id": "gate-precision-is-unmeasured",
-      "title": "Nothing here measures how often a gate is wrong when it fires",
+      "title": "Gate firings are counted and labelled; no precision figure is reported yet",
       "probe": "precisionSurface",
-      "establishes": "Recall, and which figures depend on the quantity that is missing. `anchor-measures-its-own-registry` measures whether a gate set catches a planted defect, and the smoke and adversarial suites check that gates fire when they should. Of the eleven detectors in `core/src/eval/detectors.ts`, three read gate verdicts (`no-gate-failures`, `no-gate-warnings`, `gate-verdict`) and one is a keyword list (`no-fabrication-when-degraded`); those four inherit whatever the gates' precision is. The other seven test exact conditions and do not.",
-      "does_not_establish": "That any gate is right when it fires. Precision — the share of a gate's FAIL and WARN verdicts that are real defects — has never been measured, and `IMPLEMENTATION_PLAN.md` has listed it as open since Phase 2b: a detector with a moderate false-positive rate would pass every suite here, because every suite counts hits. The rate is known not to be zero. `CLAIM_DISCIPLINE` flags `guarantee-free` on a hyphen boundary, and ADR-0007 records that the frozen Python source shares that false positive — which is exactly why the differential oracle cannot see it, since agreement with a source that is wrong the same way is still agreement. The anchor cannot see it either: its labels come from gate behaviour, so a gate that fires wrongly is credited with the planted defect. And nothing in the tree is a corpus to measure it on: the 40 frozen fixtures are what the differential oracle replays, so a rate measured there is agreement with the port's own regression set. A corpus now exists — compiled prompts from several models under `eval/precision-corpus/`, one file per model — and it changes nothing about this boundary on its own. Firings can be counted from it, but a firing is not a defect until someone says which it is, and `adjudicated_firings` is still 0. Counting firings and calling the count precision is exactly the error this entry exists to prevent.",
+      "establishes": "That the question now has data behind it. 124 firings over 1,513 compiled prompts from eight models carry a TRUE/FALSE label with a reason, checked by check:precision, which fails when a firing has no label, when a label describes no firing, or when a corpus file changed after it was judged. The labels are concentrated, not scattered: SECRET_LEAK_SCAN fired 84 times and every credential-shaped match is a literal copied from the brief, while CLAIM_DISCIPLINE fired 19 times and not one of those sentences asserts a guarantee.",
+      "does_not_establish": "That any gate has a measured precision. No interval has been computed (Phase 9, Task 4), and a ratio quoted without one would be the point estimate this phase exists to avoid, on gates whose counts run from 1 firing to 84. Every label is the judgement of an uncalibrated model, made by Claude alone under the owner's D1 decision and reviewed by nobody: ADR-0008 refuses exactly this kind of judge elsewhere in the system, and `adjudicated_by` records it on all 124 records. The figure is also corpus-relative in two ways: the briefs are generated, half of the pilot slice plants a hazard on purpose, and three of the eight models come from endpoints that could not finish a run. None of it says how a gate behaves on prompts a person wrote.",
       "expect": {
         "precision_corpus_exists": true,
-        "adjudicated_firings": 0
+        "adjudicated_firings": 124
       },
-      "crossed_when": "The corpus half was crossed on 12 September 2026 and this entry rewritten rather than renumbered. What remains is `adjudicated_firings` leaving 0, in `eval/precision-adjudications.json` (Phase 9, Task 3). The entry is then rewritten as a measured claim that pins, per gate, the number of firings and the exact interval bounds — never a rounded point estimate — and says the figure belongs to that corpus, not to the gate.",
-      "evidence": ["Documentation/IMPLEMENTATION_PLAN.md", "core/src/eval/detectors.ts", "core/src/eval/anchor.ts", "Documentation/0007-permanent-differential-oracle.md"]
+      "crossed_when": "The corpus and the labels were both crossed on 12 September 2026, and this entry rewritten rather than renumbered each time. adjudicated_firings moving means a gate started firing somewhere new, a model was added, or a label was revisited — each of which changes what the counts describe. It becomes a measured claim only when Task 4 computes an interval per gate, and this entry must then pin n and the bounds rather than a rounded ratio.",
+      "evidence": [
+        "Documentation/IMPLEMENTATION_PLAN.md",
+        "core/src/eval/detectors.ts",
+        "core/src/eval/anchor.ts",
+        "Documentation/0007-permanent-differential-oracle.md"
+      ]
     }
   ]
 }
